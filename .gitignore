@@ -1,0 +1,22 @@
+bin/
+obj/
+.vs/
+.idea/
+.vscode/
+TestResults/
+artifacts/
+out/
+*.user
+*.suo
+*.nupkg
+*.snupkg
+
+# Captures, golden data, reports, and confidential evidence stay local.
+golden/**/*
+captures/**/*
+*.sal
+*.mp4
+*.nvtevidence.zip
+*.nvtreplay.json
+!golden/README.md
+!captures/README.md
