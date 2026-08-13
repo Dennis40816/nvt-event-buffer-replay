@@ -1,0 +1,84 @@
+using System.Text;
+using Nvt.Replay.Core;
+using Nvt.Replay.Sources;
+
+namespace Nvt.Replay.Tests;
+
+public sealed class NdsCommunicationLogAdapterTests : IDisposable
+{
+    private readonly string temporaryDirectory = Path.Combine(Path.GetTempPath(), $"nvt-replay-{Guid.NewGuid():N}");
+
+    public NdsCommunicationLogAdapterTests()
+    {
+        Directory.CreateDirectory(temporaryDirectory);
+    }
+
+    [Fact]
+    public async Task Probe_recognizes_NDS_read_write_grammar()
+    {
+        var path = WriteCapture(
+            """
+            2026-07-29 14:52:41:241 Read TP 0x99060 1 0xA3
+            2026-07-29 14:52:41:243 Write TP 0x99050 2 0x00 0xBB
+            2026-07-29 14:52:41:267 Read TP 0x99051 3 0xBB 0x01 0x00
+            """);
+        var adapter = new NdsCommunicationLogAdapter();
+
+        var result = await adapter.ProbeAsync(path);
+
+        Assert.Equal(ProbeConfidence.High, result.Confidence);
+    }
+
+    [Fact]
+    public async Task Reader_joins_continuation_bytes_and_preserves_source_line()
+    {
+        var path = WriteCapture(
+            """
+            2026-07-29 14:52:41:405 Read TP 0x8EC98 6 0x00 0x01
+            0x02 0x03 0xFE 0xFF
+            """);
+        var adapter = new NdsCommunicationLogAdapter();
+
+        var records = new List<SourceRecord>();
+        await foreach (var record in adapter.ReadAsync(new SourceOpenContext(path, "capture-a")))
+        {
+            records.Add(record);
+        }
+
+        var parsed = Assert.Single(records);
+        Assert.Equal(BusOperation.Read, parsed.Operation);
+        Assert.Equal(0x8EC98u, parsed.Address);
+        Assert.Equal([0x00, 0x01, 0x02, 0x03, 0xFE, 0xFF], parsed.Data);
+        Assert.Equal(1, parsed.Location.LineNumber);
+        Assert.Equal("capture-a:L1", parsed.StableId);
+    }
+
+    [Fact]
+    public async Task Reader_does_not_mistake_two_digit_address_for_payload()
+    {
+        var path = WriteCapture("2026-07-29 14:52:41:241 Read TP 0x50 1 0xA3");
+        var adapter = new NdsCommunicationLogAdapter();
+
+        SourceRecord? parsed = null;
+        await foreach (var record in adapter.ReadAsync(new SourceOpenContext(path, "capture-b")))
+        {
+            parsed = record;
+        }
+
+        Assert.NotNull(parsed);
+        Assert.Equal([0xA3], parsed.Data);
+    }
+
+    public void Dispose()
+    {
+        Directory.Delete(temporaryDirectory, recursive: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private string WriteCapture(string content)
+    {
+        var path = Path.Combine(temporaryDirectory, "capture.txt");
+        File.WriteAllText(path, content.ReplaceLineEndings(Environment.NewLine), Encoding.UTF8);
+        return path;
+    }
+}

@@ -14,6 +14,16 @@ Milestone 1, **C# Parity Core**, is in progress. The committed product boundary
 is documented in [the product specification](docs/product-spec.md) and
 [roadmap](ROADMAP.md).
 
+The first vertical slice includes:
+
+- a streaming NDS communication-log probe/reader with continuation-line support
+  and stable source locations;
+- an explicit format registry for Common `0x82`–`0x85` and Desay `0x97`;
+- source detection that never silently chooses Event Buffer Version or Benz Palm;
+- CLI discovery and probe commands with optional JSON output; and
+- an Avalonia shell centered on Paint, Review Queue, Inspector, and the
+  physical/logical/evidence timeline.
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.
@@ -23,6 +33,7 @@ dotnet restore
 dotnet build --no-restore
 dotnet test --no-build
 dotnet run --project src/Nvt.Replay.Cli -- formats
+dotnet run --project src/Nvt.Replay.Cli -- probe ./capture.txt --json
 dotnet run --project src/Nvt.Replay.Avalonia
 ```
 

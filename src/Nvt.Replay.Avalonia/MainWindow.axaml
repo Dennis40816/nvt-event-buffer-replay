@@ -1,0 +1,161 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Nvt.Replay.Avalonia.MainWindow"
+        Title="NVT Event Buffer Replay"
+        Width="1440"
+        Height="900"
+        MinWidth="1120"
+        MinHeight="700"
+        Background="#101316"
+        FontFamily="avares://Avalonia.Fonts.Inter/Assets#Inter">
+  <Window.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#7E898F" />
+      <Setter Property="LetterSpacing" Value="1.2" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#C7F36B" />
+      <Setter Property="Foreground" Value="#101610" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Padding" Value="18,9" />
+    </Style>
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#C7CFD3" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+    <Style Selector="Border.rule">
+      <Setter Property="BorderBrush" Value="#283036" />
+      <Setter Property="BorderThickness" Value="0,0,1,0" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="56,*,188">
+    <Border Grid.Row="0" Background="#15191D" BorderBrush="#283036" BorderThickness="0,0,0,1">
+      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,10,Auto">
+        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
+          <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="#F1F5F3" />
+          <TextBlock Text="REPLAY WORKSTATION" FontSize="9" FontWeight="SemiBold" LetterSpacing="2.1" Foreground="#7E898F" />
+        </StackPanel>
+        <Border Grid.Column="1" Width="1" Height="26" Background="#30383E" HorizontalAlignment="Center" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="14">
+          <TextBlock Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="#7E898F" VerticalAlignment="Center" />
+          <TextBlock Text="Source and format are selected independently" FontSize="11" Foreground="#58636A" VerticalAlignment="Center" />
+        </StackPanel>
+        <Button Grid.Column="3" Classes="ghost" Content="Export" IsEnabled="False" />
+        <Button Grid.Column="5" Classes="primary" Content="Load capture" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="252,*,320">
+      <Border Grid.Column="0" Classes="rule" Background="#121619" Padding="16,18">
+        <Grid RowDefinitions="Auto,14,Auto,12,*,Auto">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <TextBlock Classes="section" Text="REVIEW QUEUE" VerticalAlignment="Center" />
+            <Border Grid.Column="1" Background="#252D31" CornerRadius="9" Padding="7,2">
+              <TextBlock Text="0" FontSize="10" Foreground="#A8B1B5" />
+            </Border>
+          </Grid>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6">
+            <Button Classes="ghost" Content="All" />
+            <Button Classes="ghost" Content="Warnings" />
+            <Button Classes="ghost" Content="ASIL" />
+          </StackPanel>
+          <Grid Grid.Row="4">
+            <StackPanel VerticalAlignment="Center" Spacing="8">
+              <TextBlock Text="No review events" FontSize="13" FontWeight="SemiBold" Foreground="#AAB3B7" HorizontalAlignment="Center" />
+              <TextBlock Text="Warnings, bookmarks, and ASIL alarms appear here." Width="180" TextWrapping="Wrap" TextAlignment="Center" FontSize="11" Foreground="#657078" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+          <Border Grid.Row="5" BorderBrush="#283036" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+            <StackPanel Spacing="7">
+              <TextBlock Classes="section" Text="SESSION" />
+              <TextBlock Text="Evidence stays linked to source lines." FontSize="11" Foreground="#657078" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Column="1" Background="#0C0F11">
+        <Border Margin="24" BorderBrush="#293238" BorderThickness="1" Background="#101518">
+          <Grid RowDefinitions="44,*">
+            <Grid Margin="14,0" ColumnDefinitions="*,Auto,12,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Ellipse Width="7" Height="7" Fill="#C7F36B" />
+                <TextBlock Text="PAINT · HOST VIEW" FontSize="11" FontWeight="SemiBold" Foreground="#ADB7BB" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="FRAME —" FontFamily="Cascadia Mono" FontSize="11" Foreground="#68747A" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="3" Text="0 TOUCH" FontFamily="Cascadia Mono" FontSize="11" Foreground="#68747A" VerticalAlignment="Center" />
+            </Grid>
+            <Grid Grid.Row="1" Margin="34,12,34,30">
+              <Canvas Background="#0B0E10">
+                <Border Canvas.Left="22" Canvas.Top="20" Width="520" Height="360" BorderBrush="#252D32" BorderThickness="1" />
+                <Line StartPoint="282,20" EndPoint="282,380" Stroke="#1B2226" StrokeThickness="1" />
+                <Line StartPoint="22,200" EndPoint="542,200" Stroke="#1B2226" StrokeThickness="1" />
+                <TextBlock Canvas.Left="42" Canvas.Top="42" Text="Load a capture to reconstruct host-visible touch state" FontSize="12" Foreground="#59646B" />
+                <TextBlock Canvas.Left="42" Canvas.Top="66" Text="Reported Frame and Host State remain separately inspectable" FontSize="11" Foreground="#3F494F" />
+              </Canvas>
+            </Grid>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <Border Grid.Column="2" Background="#14181B" Padding="18,18,16,16">
+        <Grid RowDefinitions="Auto,18,Auto,12,Auto,20,Auto,12,*,Auto">
+          <TextBlock Grid.Row="0" Classes="section" Text="INSPECTOR" />
+          <StackPanel Grid.Row="2" Spacing="7">
+            <TextBlock Text="No event selected" FontSize="16" FontWeight="SemiBold" Foreground="#DEE4E2" />
+            <TextBlock Text="Select a timeline event to inspect decoded fields and source evidence." FontSize="11" Foreground="#69757B" TextWrapping="Wrap" />
+          </StackPanel>
+          <Border Grid.Row="4" BorderBrush="#2A3338" BorderThickness="0,1,0,1" Padding="0,13">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Evidence status" FontSize="11" Foreground="#7C878D" />
+              <TextBlock Grid.Column="1" Text="—" FontSize="11" FontWeight="SemiBold" Foreground="#AAB3B7" />
+            </Grid>
+          </Border>
+          <StackPanel Grid.Row="6" Spacing="12">
+            <TextBlock Classes="section" Text="DECODE CONTEXT" />
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,10,Auto,10,Auto">
+              <TextBlock Text="Source adapter" FontSize="11" Foreground="#707C82" />
+              <TextBlock Grid.Column="1" Text="Not selected" FontSize="11" Foreground="#AAB3B7" />
+              <TextBlock Grid.Row="2" Text="Event Buffer Version" FontSize="11" Foreground="#707C82" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="Required" FontSize="11" Foreground="#D8AD62" />
+              <TextBlock Grid.Row="4" Text="Benz Palm" FontSize="11" Foreground="#707C82" />
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="For 0x97" FontSize="11" Foreground="#69757B" />
+            </Grid>
+          </StackPanel>
+          <Border Grid.Row="9" Background="#101417" BorderBrush="#293238" BorderThickness="1" Padding="12">
+            <TextBlock Text="RAW EVIDENCE · source location preserved" FontFamily="Cascadia Mono" FontSize="10" Foreground="#667279" />
+          </Border>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="2" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,1,0,0">
+      <Grid Margin="18,12" RowDefinitions="32,*,32">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,14,Auto,14,Auto,*,Auto,10,160">
+          <Button Grid.Column="0" Classes="ghost" Content="◀" IsEnabled="False" />
+          <Button Grid.Column="2" Classes="primary" Content="▶  PLAY" IsEnabled="False" />
+          <Button Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" />
+          <TextBlock Grid.Column="6" Text="1.0×" FontFamily="Cascadia Mono" FontSize="11" Foreground="#AAB3B7" VerticalAlignment="Center" />
+          <Slider Grid.Column="8" Minimum="0.1" Maximum="8" Value="1" IsEnabled="False" VerticalAlignment="Center" />
+        </Grid>
+        <Grid Grid.Row="1" Margin="0,8" RowDefinitions="18,18,18" ColumnDefinitions="86,*">
+          <TextBlock Text="PHYSICAL" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
+          <Border Grid.Column="1" Background="#101417" BorderBrush="#252D32" BorderThickness="0,0,0,1" />
+          <TextBlock Grid.Row="1" Text="LOGICAL" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
+          <Border Grid.Row="1" Grid.Column="1" Background="#101417" BorderBrush="#252D32" BorderThickness="0,0,0,1" />
+          <TextBlock Grid.Row="2" Text="EVIDENCE" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
+          <Border Grid.Row="2" Grid.Column="1" Background="#101417" />
+        </Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto">
+          <TextBlock Text="00:00.000" FontFamily="Cascadia Mono" FontSize="10" Foreground="#59646B" VerticalAlignment="Bottom" />
+          <TextBlock Grid.Column="1" Text="No capture loaded" FontSize="10" Foreground="#59646B" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+          <TextBlock Grid.Column="2" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="10" Foreground="#59646B" VerticalAlignment="Bottom" />
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
