@@ -5,6 +5,7 @@
     <ProjectReference Include="..\Nvt.Replay.Sources\Nvt.Replay.Sources.csproj" />
     <ProjectReference Include="..\Nvt.Replay.Formats\Nvt.Replay.Formats.csproj" />
     <ProjectReference Include="..\Nvt.Replay.Analysis\Nvt.Replay.Analysis.csproj" />
+    <ProjectReference Include="..\Nvt.Replay.Rendering\Nvt.Replay.Rendering.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

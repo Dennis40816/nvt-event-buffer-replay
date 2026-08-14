@@ -66,6 +66,11 @@ state, and visibility preferences round-trip through a versioned
 capture/configuration mismatches require explicit operator confirmation, and
 missing or changed evidence stays visible. See [replay review sidecars](docs/replay-sidecar.md).
 
+The Analysis workspace and `nvt-replay analyze` export the same reproducible
+anomaly/ASIL aggregates, parsed event and diagnostic JSON/CSV, source/config
+manifest, and deterministic Reported Frame heatmap PNG. Every aggregate links
+back to diagnostic, event, and physical source IDs. See [analysis outputs](docs/analysis-outputs.md).
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.
@@ -77,6 +82,7 @@ dotnet test --no-build
 dotnet run --project src/Nvt.Replay.Cli -- formats
 dotnet run --project src/Nvt.Replay.Cli -- probe ./capture.txt --json
 dotnet run --project src/Nvt.Replay.Cli -- inspect ./capture.txt --event-buffer-version 0x83
+dotnet run --project src/Nvt.Replay.Cli -- analyze ./capture.txt --event-buffer-version 0x83 --output ./analysis
 dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
 ```

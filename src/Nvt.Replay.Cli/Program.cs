@@ -5,6 +5,7 @@ using Nvt.Replay.Core;
 using Nvt.Replay.Formats;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Formats.Desay97;
+using Nvt.Replay.Rendering;
 using Nvt.Replay.Sources;
 
 return await ReplayCli.RunAsync(args, Console.Out, Console.Error);
@@ -47,6 +48,8 @@ internal static class ReplayCli
                     return await ProbeAsync(operands[1], output, error, json);
                 case "inspect":
                     return await InspectAsync(operands[1..], output, error, json);
+                case "analyze":
+                    return await AnalyzeAsync(operands[1..], output, error, json);
                 default:
                     await error.WriteLineAsync("Unknown or incomplete command. Run 'nvt-replay help'.");
                     return UsageError;
@@ -57,6 +60,139 @@ internal static class ReplayCli
             await error.WriteLineAsync($"Input error: {exception.Message}");
             return InputError;
         }
+    }
+
+    private static async Task<int> AnalyzeAsync(
+        string[] operands,
+        TextWriter output,
+        TextWriter error,
+        bool json)
+    {
+        if (operands.Length < 5 ||
+            !TryReadOption(operands, "--event-buffer-version", out var versionText) ||
+            !TryReadOption(operands, "--output", out var outputDirectory))
+        {
+            await error.WriteLineAsync("Usage: nvt-replay analyze <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> --output <directory> [--range <first:last>] [--heatmap-size <width>x<height>] [--source-adapter <id>] [--desay97-profile <standard|benz-palm>] [--json]");
+            return UsageError;
+        }
+        var path = operands[0];
+        if (!File.Exists(path))
+        {
+            await error.WriteLineAsync($"Input file does not exist: {path}");
+            return InputError;
+        }
+        var adapterId = TryReadOption(operands, "--source-adapter", out var selectedSource) ? selectedSource : null;
+        var heatmapWidth = 640;
+        var heatmapHeight = 360;
+        if (TryReadOption(operands, "--heatmap-size", out var sizeText) && !TryParseSize(sizeText, out heatmapWidth, out heatmapHeight))
+        {
+            await error.WriteLineAsync("--heatmap-size must be WIDTHxHEIGHT with positive integers.");
+            return UsageError;
+        }
+
+        var capture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
+        ITouchReplaySession replay;
+        IReadOnlyList<ReplayDiagnostic> diagnostics;
+        ReplayDecodeConfiguration configuration;
+        EvidenceStatus evidenceStatus;
+        if (versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase) || versionText.Equals("97", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!TryReadOption(operands, "--desay97-profile", out var profileText) || !TryParseDesay97Profile(profileText, out var profile))
+            {
+                await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
+                return UsageError;
+            }
+            var decoded = capture.DecodeDesay97(profile);
+            replay = new Desay97ReplaySession(decoded.Frames);
+            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
+            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId);
+            evidenceStatus = EvidenceStatus.Provisional;
+        }
+        else
+        {
+            if (!CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
+            {
+                await error.WriteLineAsync($"Unsupported Event Buffer Version: {versionText}");
+                return UsageError;
+            }
+            var decoded = capture.DecodeCommon(version);
+            replay = new CommonReplaySession(decoded.Frames);
+            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
+            var canonicalVersion = VersionText(version);
+            configuration = new ReplayDecodeConfiguration(canonicalVersion, null, capture.Probe.AdapterId);
+            evidenceStatus = canonicalVersion is "0x83" or "0x84" ? EvidenceStatus.Verified : EvidenceStatus.Provisional;
+        }
+        if (replay.Count == 0)
+        {
+            await error.WriteLineAsync("No decoded frames are available for analysis.");
+            return DecodeError;
+        }
+
+        AnalysisRange? range = null;
+        if (TryReadOption(operands, "--range", out var rangeText))
+        {
+            if (!TryParseRange(rangeText, replay.Count, out range))
+            {
+                await error.WriteLineAsync($"--range must be a 1-based inclusive FIRST:LAST within 1:{replay.Count}.");
+                return UsageError;
+            }
+        }
+        var sourceIndices = Enumerable.Range(0, replay.Count)
+            .SelectMany(index => replay.Seek(index).PhysicalRecords.Select(item => (item.StableId, Index: index)))
+            .GroupBy(item => item.StableId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last().Index, StringComparer.Ordinal);
+        var review = new ReviewSession(diagnostics, sourceIndices);
+        var report = new CaptureAnalyzer().Analyze(
+            capture.SourcePath,
+            capture.SourceSha256,
+            configuration,
+            evidenceStatus,
+            replay,
+            diagnostics,
+            review,
+            range,
+            heatmapPixelWidth: heatmapWidth,
+            heatmapPixelHeight: heatmapHeight);
+        var result = await new AnalysisOutputWriter().WriteAsync(outputDirectory, report);
+        if (json)
+        {
+            await output.WriteLineAsync(JsonSerializer.Serialize(new
+            {
+                result.Directory,
+                Frames = report.Events.Count,
+                Diagnostics = report.Diagnostics.Count,
+                HotspotSamples = report.Hotspot.SampleCount,
+                report.Asil,
+                Files = result,
+            }, JsonOptions));
+        }
+        else
+        {
+            await output.WriteLineAsync($"Analysis {result.Directory}");
+            await output.WriteLineAsync($"Frames   {report.Events.Count:N0} ({report.Manifest.Clock.Domain})");
+            await output.WriteLineAsync($"Findings {report.Diagnostics.Count:N0} · {report.DiagnosticAggregates.Count:N0} groups");
+            await output.WriteLineAsync($"ASIL     {report.Asil.Assertions} assert · {report.Asil.Clears} clear · {report.Asil.UnresolvedAlarmGroups} unresolved");
+            await output.WriteLineAsync($"Hotspot  {report.Hotspot.SampleCount:N0} samples · {report.Manifest.HeatmapPixelWidth}x{report.Manifest.HeatmapPixelHeight} PNG");
+            await output.WriteLineAsync("Outputs  analysis-report.json, events.json/csv, diagnostics.json/csv, manifest.json, heatmap.png");
+        }
+        return 0;
+    }
+
+    private static bool TryParseRange(string value, int count, out AnalysisRange? range)
+    {
+        range = null;
+        var parts = value.Split(':', StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !int.TryParse(parts[0], out var first) || !int.TryParse(parts[1], out var last) || first < 1 || last < first || last > count)
+            return false;
+        range = new AnalysisRange(first - 1, last - 1);
+        return true;
+    }
+
+    private static bool TryParseSize(string value, out int width, out int height)
+    {
+        width = height = 0;
+        var parts = value.ToLowerInvariant().Split('x', StringSplitOptions.TrimEntries);
+        return parts.Length == 2 && int.TryParse(parts[0], out width) && int.TryParse(parts[1], out height) && width > 0 && height > 0;
     }
 
     private static async Task<int> InspectAsync(
@@ -328,6 +464,12 @@ internal static class ReplayCli
                                  --desay97-profile <standard|benz-palm>
                                  [--source-adapter <id>] [--json]
                                            Assemble and decode Desay reads
+              nvt-replay analyze <file> --event-buffer-version <version>
+                                 --output <directory> [--range <first:last>]
+                                 [--heatmap-size <width>x<height>]
+                                 [--source-adapter <id>]
+                                 [--desay97-profile <standard|benz-palm>] [--json]
+                                           Export deterministic analysis JSON/CSV/PNG
 
             Source detection is ranked and may require --source-adapter when ambiguous.
             Event Buffer Version and Benz Palm remain explicit operator choices.
