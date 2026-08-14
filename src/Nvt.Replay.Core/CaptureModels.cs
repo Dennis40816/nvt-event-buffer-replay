@@ -20,7 +20,16 @@ public sealed record SourceRecord(
     int? DeclaredByteCount,
     IReadOnlyList<byte> Data,
     string RawText,
-    SourceLocation Location);
+    SourceLocation Location,
+    I2cTransport? I2c = null,
+    IReadOnlyDictionary<string, string>? SourceFields = null);
+
+public sealed record I2cTransport(
+    int SlaveAddress,
+    IReadOnlyList<IReadOnlyList<byte>> WriteCommands,
+    IReadOnlyList<bool> Acked,
+    bool? AddressAcknowledged,
+    string? Error = null);
 
 public enum ProbeConfidence
 {
@@ -36,7 +45,10 @@ public sealed record SourceProbeResult(
     ProbeConfidence Confidence,
     IReadOnlyList<string> Reasons);
 
-public sealed record SourceOpenContext(string Path, string SourceId);
+public sealed record SourceOpenContext(
+    string Path,
+    string SourceId,
+    Action<ReplayDiagnostic>? DiagnosticSink = null);
 
 public interface ISourceAdapter
 {

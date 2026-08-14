@@ -16,19 +16,25 @@ is documented in [the product specification](docs/product-spec.md) and
 
 The first vertical slice includes:
 
-- a streaming NDS communication-log probe/reader with continuation-line support
-  and stable source locations;
+- streaming NDS, Saleae, KingstVIS, DSL, Excel, and canonical I2C adapters with
+  stable source locations and transport provenance;
 - an explicit format registry for Common `0x82`–`0x85` and Desay `0x97`;
 - source detection that never silently chooses Event Buffer Version or Benz Palm;
 - CLI discovery and probe commands with optional JSON output; and
 - an Avalonia shell centered on Paint, Review Queue, Inspector, and the
   physical/logical/evidence timeline.
 
-The desktop now loads and indexes NDS captures in the background, opens
+The desktop now loads and indexes supported captures in the background, opens
 in Raw Explorer before semantic configuration is complete, and keeps the
 indexed records in memory while the operator switches among Common
 `0x82`–`0x85`. Selecting a decoded frame synchronizes its physical record,
 source location, stable ID, raw evidence, and decoded fields in the Inspector.
+
+Decoded-I2C adapters normalize LA exports into the same physical record model.
+Page/write tracking resolves reads such as `FF 09 90 00` to `0x99000`, while
+the Raw Explorer retains slave, commands, ACK/NAK data, source-specific fields,
+and diagnostics. A C# simulator produces equivalent Saleae, KingstVIS, DSL,
+Excel, and canonical TXT fixtures. See [source adapters](docs/source-adapters.md).
 
 Common `0x82`–`0x85` decoding is now available through the NDS inspection
 slice. Shared finger semantics are implemented once; version-specific tails,

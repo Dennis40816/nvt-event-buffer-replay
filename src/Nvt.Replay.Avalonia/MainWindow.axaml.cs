@@ -17,7 +17,7 @@ namespace Nvt.Replay.Avalonia;
 public partial class MainWindow : Window
 {
     private CancellationTokenSource? operationCancellation;
-    private NdsCaptureSession? session;
+    private CaptureSession? session;
     private ITouchReplaySession? replaySession;
     private Dictionary<string, RawRecordRow> rawRowsById = [];
     private Dictionary<string, DecodedFrameRow> decodedRowsBySourceId = [];
@@ -30,6 +30,8 @@ public partial class MainWindow : Window
     private double replaySpeed = 1;
     private bool maxReplaySpeed;
     private bool synchronizingSelection;
+    private string? pendingSourcePath;
+    private bool configuringSourceChoice;
 
     public MainWindow()
     {
@@ -40,11 +42,11 @@ public partial class MainWindow : Window
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Load NDS communication log",
+            Title = "Load capture",
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType("NDS communication log") { Patterns = ["*.txt", "*.log"] },
+                new FilePickerFileType("Supported captures") { Patterns = ["*.txt", "*.log", "*.csv", "*.xlsx", "*.xlsm"] },
                 FilePickerFileTypes.All,
             ],
         });
@@ -57,7 +59,7 @@ public partial class MainWindow : Window
         await OpenCaptureAsync(path);
     }
 
-    internal async Task OpenCaptureAsync(string path)
+    internal async Task OpenCaptureAsync(string path, string? adapterId = null)
     {
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
@@ -74,7 +76,7 @@ public partial class MainWindow : Window
                 SessionStatusText.Text = item.Phase + count;
             });
             session = await Task.Run(
-                () => NdsCaptureSession.LoadAsync(path, progress, cancellationToken),
+                () => CaptureSession.LoadAsync(path, progress, cancellationToken, adapterId),
                 cancellationToken);
             var rawRows = await Task.Run(
                 () => session.Records.Select(record => new RawRecordRow(record)).ToArray(),
@@ -82,15 +84,21 @@ public partial class MainWindow : Window
 
             rawRowsById = rawRows.ToDictionary(row => row.Record.StableId, StringComparer.Ordinal);
             RawRecordsList.ItemsSource = rawRows;
+            diagnosticRows = session.SourceDiagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
+            DiagnosticListBox.ItemsSource = diagnosticRows;
+            DiagnosticCountText.Text = diagnosticRows.Length.ToString(CultureInfo.InvariantCulture);
             CaptureNameText.Text = Path.GetFileName(session.SourcePath).ToUpperInvariant();
-            SessionStatusText.Text = $"{session.Records.Count:N0} physical records indexed · semantic format required";
+            SessionStatusText.Text = $"{session.Records.Count:N0} physical records indexed · {diagnosticRows.Length:N0} source diagnostics · semantic format required";
             SourceAdapterText.Text = session.Probe.DisplayName;
+            SourceAdapterText.IsVisible = true;
+            SourceAdapterComboBox.IsVisible = false;
+            pendingSourcePath = null;
             SourceConfidenceText.Text = $"{session.Probe.Confidence} confidence · {session.Probe.Reasons.FirstOrDefault()}";
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
             DecodeButton.IsEnabled = true;
             ConfigurationHintText.Text = "Select the operator-confirmed version; source detection does not infer it.";
-            TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · 0 logical · 0 evidence";
+            TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · 0 logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = "Raw capture indexed; semantic replay remains disabled until Decode";
             WorkspaceTabs.SelectedIndex = 0;
             if (rawRows.Length > 0)
@@ -102,10 +110,25 @@ public partial class MainWindow : Window
         {
             SessionStatusText.Text = "Load cancelled; no partial session was committed";
         }
+        catch (SourceSelectionRequiredException exception)
+        {
+            pendingSourcePath = path;
+            configuringSourceChoice = true;
+            SourceAdapterComboBox.ItemsSource = exception.Candidates
+                .Select(candidate => new SourceAdapterChoice(candidate.AdapterId, candidate.DisplayName, candidate.Confidence))
+                .ToArray();
+            SourceAdapterComboBox.SelectedIndex = -1;
+            SourceAdapterComboBox.IsVisible = true;
+            SourceAdapterText.IsVisible = false;
+            configuringSourceChoice = false;
+            SessionStatusText.Text = "Source selection required; no adapter was chosen automatically";
+            SourceConfidenceText.Text = "The highest-confidence probe is tied";
+            ConfigurationHintText.Text = "Choose the correct source adapter; Event Buffer Version remains a separate decision.";
+        }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             SessionStatusText.Text = $"Load failed · {exception.Message}";
-            ConfigurationHintText.Text = "Choose another file or verify that this is an NDS communication log.";
+            ConfigurationHintText.Text = "Choose another file, inspect its schema, or select a supported adapter explicitly.";
         }
         finally
         {
@@ -313,9 +336,7 @@ public partial class MainWindow : Window
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
-        TransportText.Text =
-            $"{record.Operation} {record.Target} 0x{record.Address:X}\n" +
-            $"declared={record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—"} actual={record.Data.Count}";
+        TransportText.Text = FormatTransport(record);
         RawBytesText.Text = FormatBytes(record.Data);
         DecodedFieldsText.Text = frame switch
         {
@@ -323,6 +344,47 @@ public partial class MainWindow : Window
             Desay97Frame desay => FormatDecodedFields(desay),
             _ => "No decoded event is linked to this physical record.",
         };
+    }
+
+    private async void SourceAdapterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (configuringSourceChoice || pendingSourcePath is not { } path ||
+            SourceAdapterComboBox.SelectedItem is not SourceAdapterChoice choice)
+            return;
+        await OpenCaptureAsync(path, choice.AdapterId);
+    }
+
+    private static string FormatTransport(SourceRecord record)
+    {
+        var text = new StringBuilder()
+            .Append(record.Operation).Append(' ').Append(record.Target).Append(' ')
+            .Append(record.Address is { } address ? $"0x{address:X}" : "address=—")
+            .AppendLine()
+            .Append("declared=").Append(record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—")
+            .Append(" actual=").Append(record.Data.Count);
+        if (record.I2c is { } i2c)
+        {
+            text.AppendLine().Append($"slave=0x{i2c.SlaveAddress:X2} address-ack={AckText(i2c.AddressAcknowledged)}");
+            text.AppendLine().Append("write commands=")
+                .Append(i2c.WriteCommands.Count == 0 ? "—" : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes)));
+            text.AppendLine().Append("data ACKs=")
+                .Append(i2c.Acked.Count == 0 ? "—" : string.Join(' ', i2c.Acked.Select(value => value ? "ACK" : "NAK")));
+            if (!string.IsNullOrWhiteSpace(i2c.Error)) text.AppendLine().Append("transport error=").Append(i2c.Error);
+        }
+        if (record.SourceFields is { Count: > 0 })
+        {
+            text.AppendLine().AppendLine().Append("source fields");
+            foreach (var field in record.SourceFields.OrderBy(item => item.Key, StringComparer.Ordinal))
+                text.AppendLine().Append(field.Key).Append('=').Append(field.Value);
+        }
+        return text.ToString();
+    }
+
+    private static string AckText(bool? value) => value switch { true => "ACK", false => "NAK", null => "—" };
+
+    private sealed record SourceAdapterChoice(string AdapterId, string DisplayName, ProbeConfidence Confidence)
+    {
+        public override string ToString() => $"{DisplayName} · {Confidence}";
     }
 
     private void ClearSession()

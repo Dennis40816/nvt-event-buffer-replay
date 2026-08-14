@@ -2,12 +2,12 @@
 
 ## M1 — C# Parity Core
 
-- [ ] Stable domain records, diagnostics, provenance, and format descriptors
-- [ ] Source probing and NDS/Saleae/KingstVIS/DSL/Excel/Canonical adapters
+- [x] Stable domain records, diagnostics, provenance, and format descriptors
+- [x] Source probing and NDS/Saleae/KingstVIS/DSL/Excel/Canonical adapters
 - [x] Common 0x82-0x85 decoding and semantic parity
 - [x] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
 - [ ] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
-- [ ] Frozen Python semantic reference and synthetic/public fixtures
+- [ ] Frozen Python semantic reference and synthetic/public fixtures (decoded-I2C simulator complete; semantic golden freeze pending)
 
 ## M2 — Replay Slice
 

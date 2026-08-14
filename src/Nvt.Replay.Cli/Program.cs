@@ -32,22 +32,30 @@ internal static class ReplayCli
             return 0;
         }
 
-        switch (operands[0].ToLowerInvariant())
+        try
         {
-            case "formats":
-                await WriteAsync(output, BuiltInFormats.All, json);
-                return 0;
-            case "sources":
-                var sources = BuiltInSources.All.Select(source => new { source.Id, source.DisplayName });
-                await WriteAsync(output, sources, json);
-                return 0;
-            case "probe" when operands.Length == 2:
-                return await ProbeAsync(operands[1], output, error, json);
-            case "inspect":
-                return await InspectAsync(operands[1..], output, error, json);
-            default:
-                await error.WriteLineAsync("Unknown or incomplete command. Run 'nvt-replay help'.");
-                return UsageError;
+            switch (operands[0].ToLowerInvariant())
+            {
+                case "formats":
+                    await WriteAsync(output, BuiltInFormats.All, json);
+                    return 0;
+                case "sources":
+                    var sources = BuiltInSources.All.Select(source => new { source.Id, source.DisplayName });
+                    await WriteAsync(output, sources, json);
+                    return 0;
+                case "probe" when operands.Length == 2:
+                    return await ProbeAsync(operands[1], output, error, json);
+                case "inspect":
+                    return await InspectAsync(operands[1..], output, error, json);
+                default:
+                    await error.WriteLineAsync("Unknown or incomplete command. Run 'nvt-replay help'.");
+                    return UsageError;
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or SourceSelectionRequiredException or ArgumentException)
+        {
+            await error.WriteLineAsync($"Input error: {exception.Message}");
+            return InputError;
         }
     }
 
@@ -59,11 +67,12 @@ internal static class ReplayCli
     {
         if (operands.Length < 3 || !TryReadOption(operands, "--event-buffer-version", out var versionText))
         {
-            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> [--source-adapter <id>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
 
         var path = operands[0];
+        var sourceAdapterId = TryReadOption(operands, "--source-adapter", out var selectedSource) ? selectedSource : null;
         if (!File.Exists(path))
         {
             await error.WriteLineAsync($"Input file does not exist: {path}");
@@ -80,7 +89,7 @@ internal static class ReplayCli
                 return UsageError;
             }
 
-            var desayReport = await new Desay97NdsInspector().InspectAsync(path, profile);
+            var desayReport = await new Desay97NdsInspector().InspectAsync(path, profile, sourceAdapterId: sourceAdapterId);
             if (json)
             {
                 await output.WriteLineAsync(JsonSerializer.Serialize(desayReport, JsonOptions));
@@ -100,7 +109,7 @@ internal static class ReplayCli
             return UsageError;
         }
 
-        var report = await new CommonNdsInspector().InspectAsync(path, version);
+        var report = await new CommonNdsInspector().InspectAsync(path, version, sourceAdapterId);
         if (json)
         {
             await output.WriteLineAsync(JsonSerializer.Serialize(report, JsonOptions));
@@ -312,13 +321,16 @@ internal static class ReplayCli
               nvt-replay sources [--json]   List available input adapters
               nvt-replay probe <file> [--json]
                                            Suggest a source adapter without selecting a format
-              nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85> [--json]
-                                           Decode Common NDS Paint records
+              nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85>
+                                 [--source-adapter <id>] [--json]
+                                           Decode Common records from any supported source
               nvt-replay inspect <file> --event-buffer-version 0x97
-                                 --desay97-profile <standard|benz-palm> [--json]
-                                           Assemble and decode Desay NDS reads
+                                 --desay97-profile <standard|benz-palm>
+                                 [--source-adapter <id>] [--json]
+                                           Assemble and decode Desay reads
 
-            Source detection is advisory. Event Buffer Version and Benz Palm remain explicit choices.
+            Source detection is ranked and may require --source-adapter when ambiguous.
+            Event Buffer Version and Benz Palm remain explicit operator choices.
             """);
     }
 }
