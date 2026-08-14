@@ -84,6 +84,9 @@ The desktop UI includes a keyboard-first command palette, explicit automation
 names, textual severity cues, and reviewed dark/light palettes. See
 [UI interaction and accessibility](docs/ui-accessibility.md).
 
+Supported inputs and deliberately evidence-gated post-MVP work are summarized
+in [MVP evidence boundaries and deferrals](docs/mvp-limitations.md).
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.

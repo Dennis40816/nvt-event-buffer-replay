@@ -36,15 +36,15 @@ try {
         throw 'Release archive must contain exactly one package directory.'
     }
     $PackageRoot = $PackageDirectories[0].FullName
-    $AllowedFiles = @('NvtEventBufferReplay.exe', 'RELEASE.json', 'SHA256SUMS.txt')
+    $AllowedFiles = @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json', 'SHA256SUMS.txt')
     $ActualFiles = @(Get-ChildItem -LiteralPath $PackageRoot -File | ForEach-Object Name | Sort-Object)
     if (Compare-Object -ReferenceObject ($AllowedFiles | Sort-Object) -DifferenceObject $ActualFiles) {
         throw 'Extracted release differs from the closed file allowlist.'
     }
 
     $InnerChecksumLines = @(Get-Content -LiteralPath (Join-Path $PackageRoot 'SHA256SUMS.txt'))
-    if ($InnerChecksumLines.Count -ne 2) {
-        throw 'Inner checksum manifest must contain exactly two entries.'
+    if ($InnerChecksumLines.Count -ne 3) {
+        throw 'Inner checksum manifest must contain exactly three entries.'
     }
     $InnerChecksumNames = @()
     foreach ($Line in $InnerChecksumLines) {
@@ -58,7 +58,7 @@ try {
         }
         $InnerChecksumNames += $Parts[1]
     }
-    if (Compare-Object -ReferenceObject @('NvtEventBufferReplay.exe', 'RELEASE.json') -DifferenceObject ($InnerChecksumNames | Sort-Object)) {
+    if (Compare-Object -ReferenceObject @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json') -DifferenceObject ($InnerChecksumNames | Sort-Object)) {
         throw 'Inner checksum manifest differs from the required payload set.'
     }
 
@@ -67,9 +67,17 @@ try {
         $Identity.version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$' -or
         $Identity.sourceCommit -notmatch '^[0-9a-f]{40}$' -or
         $Identity.runtime -ne 'win-x64' -or
-        $Identity.selfContained -ne $true) {
+        $Identity.selfContained -ne $true -or
+        $Identity.offlineDefaults -ne $true -or
+        $Identity.telemetry -ne $false) {
         throw 'Release identity is incomplete or invalid.'
     }
+
+    $CliExecutable = Join-Path $PackageRoot 'nvt-replay.exe'
+    $Formats = & $CliExecutable formats --json
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI formats smoke failed.' }
+    $FormatObjects = ($Formats -join [Environment]::NewLine) | ConvertFrom-Json
+    if (@($FormatObjects).Count -lt 5) { throw 'Packaged CLI did not report every built-in format.' }
 
     if (-not $SkipUiLaunch) {
         $Executable = Join-Path $PackageRoot 'NvtEventBufferReplay.exe'

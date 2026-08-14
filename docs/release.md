@@ -3,6 +3,8 @@
 The Windows release is a self-contained `win-x64` archive. Its product version
 comes from `VERSION`; its source identity is one exact protected-`main` commit.
 NuGet dependencies are restored from committed lock files.
+The archive contains both the desktop workstation and headless CLI; neither
+requires a machine-wide .NET installation or network access at runtime.
 
 ## Local or review preview
 
@@ -12,6 +14,7 @@ From a clean commit, run:
 $version = (Get-Content ./VERSION -Raw).Trim()
 $commit = (git rev-parse HEAD).Trim()
 dotnet restore Nvt.EventBufferReplay.sln --locked-mode
+./scripts/verify.ps1
 ./scripts/package.ps1 -Version $version -Commit $commit
 ./scripts/smoke-release.ps1 -PackagePath "./artifacts/release/NvtEventBufferReplay-v$version-win-x64.zip"
 ```
@@ -34,12 +37,24 @@ file. A final read-only job downloads and verifies the published archive.
 
 ## Package contract
 
-The archive has one top-level directory and exactly three files:
+The archive has one top-level directory and exactly four files:
 
 - `NvtEventBufferReplay.exe`
-- `RELEASE.json` with version, commit, commit time, runtime, and self-contained status
-- `SHA256SUMS.txt` covering the executable and release identity
+- `nvt-replay.exe`
+- `RELEASE.json` with version, commit, commit time, runtime, self-contained status, offline defaults, telemetry status, and payload names
+- `SHA256SUMS.txt` covering both executables and release identity
 
 The adjacent `.zip.sha256` covers the complete archive. Packaging starts from
 empty repository-owned staging directories, rejects dirty worktrees, and fails
 if the staged file set differs from this closed allowlist.
+
+`scripts/verify.ps1` is the shared local, preview, and stable-candidate gate. It
+performs locked restore, warning-free Release build, tests, handwritten line
+budget, and the performance smoke gate. `smoke-release.ps1` verifies the outer
+and inner hashes, identity, allowlist, packaged CLI format inventory, and—when
+not skipped—a visible desktop window from a fresh temporary extraction.
+
+The desktop manifest declares Windows 10 compatibility and the package is
+win-x64 self-contained. Release evidence must include a Windows 11 UI smoke;
+Windows 10 remains a manual compatibility smoke on available project hardware
+because GitHub-hosted runners are Windows Server rather than client Windows.

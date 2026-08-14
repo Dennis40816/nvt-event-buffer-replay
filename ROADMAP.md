@@ -37,7 +37,7 @@
 - [x] One-GB/one-million-record/eight-hour performance gate
 - [x] Cancellation, recovery journal, and atomic output
 - [x] Keyboard, command palette, scaling, theme, and accessibility checks
-- [ ] Windows self-contained portable package and release gates
+- [x] Windows self-contained portable package and release gates
 
 ## Post-MVP evidence gates
 
