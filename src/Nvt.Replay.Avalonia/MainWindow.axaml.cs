@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private readonly List<ReplayMarker> markers = [];
     private ReplayDecodeConfiguration? decodeConfiguration;
     private ReplaySidecarOpenResult? pendingSidecar;
+    private ReplayExtent replayExtent = new(2304, 1280);
     private CancellationTokenSource? playbackCancellation;
     private int currentLogicalIndex = -1;
     private int? loopIn;
@@ -316,6 +317,68 @@ public partial class MainWindow : Window
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             SessionStatusText.Text = $"Analysis export failed · {exception.Message}";
+        }
+        finally
+        {
+            SetBusy(false, SessionStatusText.Text ?? "Ready");
+        }
+    }
+
+    private async void ExportReplayButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (session is null || replaySession is null || decodeConfiguration is null || replaySession.Count == 0) return;
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export replay MP4",
+            SuggestedFileName = Path.GetFileNameWithoutExtension(session.SourcePath) + ".replay.mp4",
+            DefaultExtension = "mp4",
+            FileTypeChoices = [new FilePickerFileType("MPEG-4 video") { Patterns = ["*.mp4"] }],
+        });
+        var path = file?.TryGetLocalPath();
+        if (path is null) return;
+
+        operationCancellation?.Cancel();
+        operationCancellation?.Dispose();
+        operationCancellation = new CancellationTokenSource();
+        var cancellationToken = operationCancellation.Token;
+        SetBusy(true, "Rendering replay export");
+        try
+        {
+            var range = loopIn is { } start && loopOut is { } end
+                ? new AnalysisRange(Math.Min(start, end), Math.Max(start, end))
+                : new AnalysisRange(0, replaySession.Count - 1);
+            var options = new ReplayExportOptions(
+                path,
+                range,
+                1280,
+                720,
+                30,
+                maxReplaySpeed ? 10 : replaySpeed,
+                ClockModeComboBox.SelectedIndex == 1 ? ReplayExportClock.Frame : ReplayExportClock.Recorded,
+                PaintSurface.Mode,
+                SourceFileName: Path.GetFileName(session.SourcePath),
+                SourceSha256: session.SourceSha256,
+                DecodeConfiguration: decodeConfiguration);
+            var result = await new ReplayRangeExporter().ExportAsync(
+                replaySession,
+                index => ReplaySceneFactory.Create(replaySession.Seek(index), replaySession.Count, replayExtent, reviewSession?.Diagnostics, markers),
+                options,
+                cancellationToken);
+            AnalysisOutputText.Text =
+                $"{result.Kind} · {result.OutputPath}\n{result.OutputFrameCount:N0} frames · {result.Duration.TotalSeconds:0.###} s\nmanifest={result.ManifestPath}" +
+                (result.Warning is null ? string.Empty : $"\nWARNING: {result.Warning}");
+            WorkspaceTabs.SelectedItem = AnalysisTab;
+            SessionStatusText.Text = result.Kind == ReplayExportKind.Mp4
+                ? "Replay MP4 exported"
+                : "FFmpeg unavailable · PNG sequence exported safely";
+        }
+        catch (OperationCanceledException)
+        {
+            SessionStatusText.Text = "Replay export cancelled; no partial output was kept";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+        {
+            SessionStatusText.Text = $"Replay export failed · {exception.Message}";
         }
         finally
         {
@@ -869,7 +932,7 @@ public partial class MainWindow : Window
         LogicalTimelineProgress.Maximum = maximum;
         PhysicalTimelineProgress.Maximum = Math.Max(1, session.Records.Count - 1);
         EvidenceTimelineProgress.Maximum = Math.Max(1, diagnosticRows.Length);
-        PaintSurface.SetExtent(replaySession.AllReportedContacts);
+        replayExtent = ReplayExtent.Measure(replaySession.AllReportedContacts);
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
     }
 
@@ -883,7 +946,12 @@ public partial class MainWindow : Window
         var clampedIndex = Math.Clamp(logicalIndex, 0, replaySession.Count - 1);
         var snapshot = replaySession.Seek(clampedIndex);
         currentLogicalIndex = clampedIndex;
-        PaintSurface.Show(snapshot);
+        PaintSurface.Show(ReplaySceneFactory.Create(
+            snapshot,
+            replaySession.Count,
+            replayExtent,
+            reviewSession?.Diagnostics,
+            markers));
         PaintStatusText.Text =
             $"#{clampedIndex + 1:N0}/{replaySession.Count:N0} · reported {snapshot.ReportedContacts.Count} · host {snapshot.HostContacts.Count}" +
             (snapshot.GlobalPalm ? " · GLOBAL PALM" : string.Empty) +
@@ -1096,9 +1164,9 @@ public partial class MainWindow : Window
     {
         var mode = (sender as ComboBox)?.SelectedIndex switch
         {
-            0 => ReplayPaintMode.HostState,
-            1 => ReplayPaintMode.ReportedFrame,
-            _ => ReplayPaintMode.Compare,
+            0 => ReplayRenderMode.HostState,
+            1 => ReplayRenderMode.ReportedFrame,
+            _ => ReplayRenderMode.Compare,
         };
         PaintSurface?.SetMode(mode);
     }

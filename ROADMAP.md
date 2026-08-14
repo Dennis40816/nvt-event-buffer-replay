@@ -26,8 +26,8 @@
 
 ## M4 — Export Slice
 
-- [ ] Shared ReplayScene
-- [ ] Selected-range FFmpeg MP4 with PNG fallback
+- [x] Shared ReplayScene
+- [x] Selected-range FFmpeg MP4 with PNG fallback
 - [x] Heatmap PNG
 - [x] Parsed/diagnostic JSON and CSV
 - [x] Source/config/hash manifest

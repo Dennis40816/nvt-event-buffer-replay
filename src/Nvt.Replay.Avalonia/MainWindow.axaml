@@ -218,7 +218,10 @@
                   <TextBlock Text="REPRODUCIBLE ANALYSIS" Classes="section" />
                   <TextBlock Text="Transmission anomalies · ASIL lifecycle · Reported Frame hotspots" FontSize="12" Foreground="#B8C1C4" />
                 </StackPanel>
-                <Button Grid.Column="1" Classes="primary" Content="Export JSON / CSV / PNG" Click="ExportAnalysisButton_OnClick" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                  <Button Classes="ghost" Content="Export replay" Click="ExportReplayButton_OnClick" />
+                  <Button Classes="primary" Content="Export JSON / CSV / PNG" Click="ExportAnalysisButton_OnClick" />
+                </StackPanel>
               </Grid>
               <Border Grid.Row="2" Background="#0A0D0F" BorderBrush="#20282D" BorderThickness="1" Padding="22">
                 <StackPanel Spacing="12">
