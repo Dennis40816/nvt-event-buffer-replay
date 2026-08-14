@@ -1,0 +1,187 @@
+name: Stable release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact 40-character protected-main commit to release
+        required: true
+        type: string
+      confirm_publish:
+        description: Prepare a candidate only, or publish after release-environment approval
+        required: true
+        default: PREPARE_ONLY
+        type: choice
+        options:
+          - PREPARE_ONLY
+          - PUBLISH
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/main' && inputs.source_sha == github.sha
+    runs-on: windows-latest
+    timeout-minutes: 25
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      tag: ${{ steps.identity.outputs.tag }}
+      artifact-name: ${{ steps.identity.outputs.artifact-name }}
+    steps:
+      - name: Check out exact protected-main source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+
+      - name: Validate source identity
+        id: identity
+        shell: pwsh
+        run: |
+          if ('${{ inputs.source_sha }}' -notmatch '^[0-9a-f]{40}$') {
+            throw 'source_sha must be a lowercase 40-character Git SHA.'
+          }
+          $head = (git rev-parse HEAD).Trim()
+          if ($head -ne '${{ inputs.source_sha }}' -or $head -ne '${{ github.sha }}') {
+            throw 'Candidate source is not the exact workflow commit on protected main.'
+          }
+          $version = (Get-Content -LiteralPath ./VERSION -Raw).Trim()
+          if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') {
+            throw 'Stable VERSION must be X.Y.Z.'
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "tag=v$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "artifact-name=NvtEventBufferReplay-v$version-candidate-${{ github.run_id }}" |
+            Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore, build, and test
+        shell: pwsh
+        run: |
+          dotnet restore Nvt.EventBufferReplay.sln --locked-mode
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
+          dotnet build Nvt.EventBufferReplay.sln --configuration Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+          dotnet test Nvt.EventBufferReplay.sln --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
+
+      - name: Build and smoke candidate
+        shell: pwsh
+        run: |
+          ./scripts/package.ps1 -Version '${{ steps.identity.outputs.version }}' -Commit '${{ inputs.source_sha }}'
+          if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
+          $package = Get-Item -LiteralPath "./artifacts/release/NvtEventBufferReplay-v${{ steps.identity.outputs.version }}-win-x64.zip"
+          ./scripts/smoke-release.ps1 -PackagePath $package.FullName -SkipUiLaunch
+
+      - name: Upload immutable candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.identity.outputs.artifact-name }}
+          path: artifacts/release/*
+          if-no-files-found: error
+          retention-days: 3
+
+  promote:
+    if: inputs.confirm_publish == 'PUBLISH'
+    needs: candidate
+    runs-on: windows-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download reviewed candidate
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: ${{ needs.candidate.outputs.artifact-name }}
+          path: artifacts/release
+
+      - name: Create immutable annotated tag and GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NVT_REPOSITORY: ${{ github.repository }}
+          NVT_SOURCE_SHA: ${{ inputs.source_sha }}
+          NVT_TAG: ${{ needs.candidate.outputs.tag }}
+        run: |
+          gh api "repos/$env:NVT_REPOSITORY/git/ref/tags/$env:NVT_TAG" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Tag $env:NVT_TAG already exists." }
+          $newline = [Environment]::NewLine
+          $message = "NVT Event Buffer Replay $env:NVT_TAG" + $newline + "source-sha: $env:NVT_SOURCE_SHA" + $newline + "run-id: ${{ github.run_id }}"
+          $tagArguments = @(
+            'api', '--method', 'POST', "repos/$env:NVT_REPOSITORY/git/tags",
+            '-f', "tag=$env:NVT_TAG",
+            '-f', "message=$message",
+            '-f', "object=$env:NVT_SOURCE_SHA",
+            '-f', 'type=commit',
+            '--jq', '.sha'
+          )
+          $tagObject = gh @tagArguments
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($tagObject)) {
+            throw 'Annotated tag object creation failed.'
+          }
+          $refArguments = @(
+            'api', '--method', 'POST', "repos/$env:NVT_REPOSITORY/git/refs",
+            '-f', "ref=refs/tags/$env:NVT_TAG",
+            '-f', "sha=$tagObject"
+          )
+          gh @refArguments *> $null
+          if ($LASTEXITCODE -ne 0) { throw 'Annotated tag ref creation failed.' }
+          $assets = @(Get-ChildItem -LiteralPath ./artifacts/release -File | ForEach-Object FullName)
+          $releaseArguments = @(
+            'release', 'create', $env:NVT_TAG
+          ) + $assets + @(
+            '--repo', $env:NVT_REPOSITORY,
+            '--verify-tag',
+            '--title', "NVT Event Buffer Replay $env:NVT_TAG",
+            '--notes', "Windows win-x64 self-contained release from $env:NVT_SOURCE_SHA. Verify the adjacent SHA-256 file before extraction."
+          )
+          gh @releaseArguments
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release publication failed.' }
+
+  published-smoke:
+    if: inputs.confirm_publish == 'PUBLISH'
+    needs:
+      - candidate
+      - promote
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out reviewed smoke tooling
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+
+      - name: Download published assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NVT_REPOSITORY: ${{ github.repository }}
+          NVT_TAG: ${{ needs.candidate.outputs.tag }}
+        run: |
+          New-Item -ItemType Directory -Force -Path ./artifacts/published | Out-Null
+          $downloadArguments = @(
+            'release', 'download', $env:NVT_TAG,
+            '--repo', $env:NVT_REPOSITORY,
+            '--dir', './artifacts/published',
+            '--pattern', 'NvtEventBufferReplay-*-win-x64*'
+          )
+          gh @downloadArguments
+          if ($LASTEXITCODE -ne 0) { throw 'Published asset download failed.' }
+
+      - name: Smoke published archive without a GitHub token
+        shell: pwsh
+        run: |
+          if ((Test-Path Env:GH_TOKEN) -or (Test-Path Env:GITHUB_TOKEN)) {
+            throw 'Published package smoke must not receive a GitHub token.'
+          }
+          $package = Get-Item -LiteralPath "./artifacts/published/NvtEventBufferReplay-v${{ needs.candidate.outputs.version }}-win-x64.zip"
+          ./scripts/smoke-release.ps1 -PackagePath $package.FullName -SkipUiLaunch

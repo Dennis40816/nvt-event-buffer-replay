@@ -14,15 +14,17 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore Nvt.EventBufferReplay.sln
+        run: dotnet restore Nvt.EventBufferReplay.sln --locked-mode
 
       - name: Build
         run: dotnet build Nvt.EventBufferReplay.sln --configuration Release --no-restore
