@@ -51,6 +51,10 @@ dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
 ```
 
+Windows preview and stable packaging use a pinned version, committed dependency
+locks, a closed payload allowlist, SHA-256 manifests, and fresh-extraction
+smoke checks. See the [release process](docs/release.md).
+
 Private captures, firmware, QA records, and golden payloads must not be
 committed. Commit only synthetic fixtures, schemas, hashes, provenance, and
 reviewed observations.
