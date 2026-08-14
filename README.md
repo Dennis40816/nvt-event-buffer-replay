@@ -24,6 +24,12 @@ The first vertical slice includes:
 - an Avalonia shell centered on Paint, Review Queue, Inspector, and the
   physical/logical/evidence timeline.
 
+The desktop now loads and indexes NDS captures in the background, opens
+in Raw Explorer before semantic configuration is complete, and keeps the
+indexed records in memory while the operator switches among Common
+`0x82`–`0x85`. Selecting a decoded frame synchronizes its physical record,
+source location, stable ID, raw evidence, and decoded fields in the Inspector.
+
 Common `0x82`–`0x85` decoding is now available through the NDS inspection
 slice. Shared finger semantics are implemented once; version-specific tails,
 CRC evidence, ASIL transitions, All Break/Break, bus counters, EMS bitmap, and
@@ -42,6 +48,7 @@ dotnet run --project src/Nvt.Replay.Cli -- formats
 dotnet run --project src/Nvt.Replay.Cli -- probe ./capture.txt --json
 dotnet run --project src/Nvt.Replay.Cli -- inspect ./capture.txt --event-buffer-version 0x83
 dotnet run --project src/Nvt.Replay.Avalonia
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
 ```
 
 Private captures, firmware, QA records, and golden payloads must not be

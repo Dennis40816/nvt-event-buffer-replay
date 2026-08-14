@@ -1,148 +1,231 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Nvt.Replay.Avalonia.ViewModels"
         x:Class="Nvt.Replay.Avalonia.MainWindow"
         Title="NVT Event Buffer Replay"
-        Width="1440"
-        Height="900"
+        Width="1480"
+        Height="920"
         MinWidth="1120"
         MinHeight="700"
-        Background="#101316"
+        Background="#0F1215"
         FontFamily="avares://Avalonia.Fonts.Inter/Assets#Inter">
   <Window.Styles>
     <Style Selector="TextBlock.section">
-      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="#7E898F" />
-      <Setter Property="LetterSpacing" Value="1.2" />
+      <Setter Property="Foreground" Value="#7D888E" />
+      <Setter Property="LetterSpacing" Value="1.35" />
     </Style>
     <Style Selector="Button.primary">
-      <Setter Property="Background" Value="#C7F36B" />
-      <Setter Property="Foreground" Value="#101610" />
+      <Setter Property="Background" Value="#C8F36C" />
+      <Setter Property="Foreground" Value="#111710" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Padding" Value="18,9" />
+      <Setter Property="Padding" Value="16,8" />
     </Style>
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#C7CFD3" />
+      <Setter Property="Foreground" Value="#C2CACD" />
       <Setter Property="Padding" Value="12,8" />
     </Style>
-    <Style Selector="Border.rule">
-      <Setter Property="BorderBrush" Value="#283036" />
-      <Setter Property="BorderThickness" Value="0,0,1,0" />
+    <Style Selector="ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="TabItem">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Padding" Value="16,9" />
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="56,*,188">
-    <Border Grid.Row="0" Background="#15191D" BorderBrush="#283036" BorderThickness="0,0,0,1">
+  <Grid RowDefinitions="56,54,*,154">
+    <Border Grid.Row="0" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,0,0,1">
       <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,10,Auto">
         <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
-          <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="#F1F5F3" />
+          <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="#F0F4F2" />
           <TextBlock Text="REPLAY WORKSTATION" FontSize="9" FontWeight="SemiBold" LetterSpacing="2.1" Foreground="#7E898F" />
         </StackPanel>
         <Border Grid.Column="1" Width="1" Height="26" Background="#30383E" HorizontalAlignment="Center" />
-        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="14">
-          <TextBlock Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="#7E898F" VerticalAlignment="Center" />
-          <TextBlock Text="Source and format are selected independently" FontSize="11" Foreground="#58636A" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+          <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="#AEB7BB" />
+          <TextBlock x:Name="SessionStatusText" Text="Load an NDS communication log to begin" FontSize="10" Foreground="#657078" />
         </StackPanel>
         <Button Grid.Column="3" Classes="ghost" Content="Export" IsEnabled="False" />
-        <Button Grid.Column="5" Classes="primary" Content="Load capture" />
+        <Button x:Name="CancelButton" Grid.Column="5" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" />
+        <Button x:Name="LoadButton" Grid.Column="5" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" />
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="252,*,320">
-      <Border Grid.Column="0" Classes="rule" Background="#121619" Padding="16,18">
-        <Grid RowDefinitions="Auto,14,Auto,12,*,Auto">
+    <Border Grid.Row="1" Background="#121619" BorderBrush="#252D32" BorderThickness="0,0,0,1">
+      <Grid Margin="18,0" ColumnDefinitions="Auto,12,260,28,Auto,12,150,12,Auto,*,180">
+        <TextBlock Grid.Column="0" Classes="section" Text="SOURCE" VerticalAlignment="Center" />
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+          <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="11" Foreground="#D3D9D7" />
+          <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" FontSize="9" Foreground="#657078" />
+        </StackPanel>
+        <Border Grid.Column="3" Width="1" Height="28" Background="#2B3338" HorizontalAlignment="Center" />
+        <TextBlock Grid.Column="4" Classes="section" Text="EVENT BUFFER VERSION" VerticalAlignment="Center" />
+        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False">
+          <ComboBoxItem Content="0x82" />
+          <ComboBoxItem Content="0x83" />
+          <ComboBoxItem Content="0x84" />
+          <ComboBoxItem Content="0x85" />
+        </ComboBox>
+        <Button x:Name="DecodeButton" Grid.Column="8" Classes="primary" Content="Decode" IsEnabled="False" Click="DecodeButton_OnClick" />
+        <TextBlock x:Name="ConfigurationHintText" Grid.Column="9" Margin="14,0" Text="Raw Explorer opens before semantic configuration." FontSize="10" Foreground="#657078" VerticalAlignment="Center" />
+        <ProgressBar x:Name="LoadingProgress" Grid.Column="10" Height="3" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="270,*,342">
+      <Border Grid.Column="0" Background="#121619" BorderBrush="#293137" BorderThickness="0,0,1,0">
+        <Grid Margin="16,16,14,14" RowDefinitions="Auto,12,Auto,10,*">
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <TextBlock Classes="section" Text="REVIEW QUEUE" VerticalAlignment="Center" />
             <Border Grid.Column="1" Background="#252D31" CornerRadius="9" Padding="7,2">
-              <TextBlock Text="0" FontSize="10" Foreground="#A8B1B5" />
+              <TextBlock x:Name="DiagnosticCountText" Text="0" FontSize="10" Foreground="#A8B1B5" />
             </Border>
           </Grid>
           <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6">
             <Button Classes="ghost" Content="All" />
-            <Button Classes="ghost" Content="Warnings" />
-            <Button Classes="ghost" Content="ASIL" />
+            <Button Classes="ghost" Content="Warnings" IsEnabled="False" />
+            <Button Classes="ghost" Content="ASIL" IsEnabled="False" />
           </StackPanel>
-          <Grid Grid.Row="4">
-            <StackPanel VerticalAlignment="Center" Spacing="8">
-              <TextBlock Text="No review events" FontSize="13" FontWeight="SemiBold" Foreground="#AAB3B7" HorizontalAlignment="Center" />
-              <TextBlock Text="Warnings, bookmarks, and ASIL alarms appear here." Width="180" TextWrapping="Wrap" TextAlignment="Center" FontSize="11" Foreground="#657078" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Grid>
-          <Border Grid.Row="5" BorderBrush="#283036" BorderThickness="0,1,0,0" Padding="0,14,0,0">
-            <StackPanel Spacing="7">
-              <TextBlock Classes="section" Text="SESSION" />
-              <TextBlock Text="Evidence stays linked to source lines." FontSize="11" Foreground="#657078" TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
+          <ListBox x:Name="DiagnosticListBox" Grid.Row="4" SelectionChanged="DiagnosticListBox_OnSelectionChanged">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:DiagnosticRow">
+                <Border BorderBrush="#242C31" BorderThickness="0,0,0,1" Padding="8,10">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding Code}" FontSize="10" FontWeight="SemiBold" Foreground="#C9D0D2" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Text="{Binding Severity}" FontSize="9" Foreground="#D8AD62" />
+                    </Grid>
+                    <TextBlock Text="{Binding Message}" FontSize="10" Foreground="#707B81" TextWrapping="Wrap" MaxHeight="44" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </Grid>
       </Border>
 
-      <Grid Grid.Column="1" Background="#0C0F11">
-        <Border Margin="24" BorderBrush="#293238" BorderThickness="1" Background="#101518">
-          <Grid RowDefinitions="44,*">
-            <Grid Margin="14,0" ColumnDefinitions="*,Auto,12,Auto">
-              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Ellipse Width="7" Height="7" Fill="#C7F36B" />
-                <TextBlock Text="PAINT · HOST VIEW" FontSize="11" FontWeight="SemiBold" Foreground="#ADB7BB" />
-              </StackPanel>
-              <TextBlock Grid.Column="1" Text="FRAME —" FontFamily="Cascadia Mono" FontSize="11" Foreground="#68747A" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="3" Text="0 TOUCH" FontFamily="Cascadia Mono" FontSize="11" Foreground="#68747A" VerticalAlignment="Center" />
+      <Border Grid.Column="1" Background="#0C0F11">
+        <TabControl x:Name="WorkspaceTabs" Margin="18,10,18,14">
+          <TabItem Header="RAW EXPLORER">
+            <Grid RowDefinitions="34,*">
+              <Grid Grid.Row="0" ColumnDefinitions="64,100,74,90,92,92,*" Margin="10,0">
+                <TextBlock Classes="section" Text="INDEX" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Classes="section" Text="PC TIME" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Classes="section" Text="OP" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Classes="section" Text="TARGET" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="4" Classes="section" Text="ADDRESS" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="5" Classes="section" Text="BYTES" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="6" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
+              </Grid>
+              <ListBox x:Name="RawRecordsList" Grid.Row="1" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:RawRecordRow">
+                    <Border BorderBrush="#20272B" BorderThickness="0,0,0,1" Padding="10,8">
+                      <Grid ColumnDefinitions="64,100,74,90,92,92,*">
+                        <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
+                        <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
+                        <TextBlock Grid.Column="2" Text="{Binding Operation}" FontSize="10" Foreground="#C8F36C" />
+                        <TextBlock Grid.Column="3" Text="{Binding Target}" FontSize="10" Foreground="#9AA4A8" />
+                        <TextBlock Grid.Column="4" Text="{Binding Address}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#C8CED0" />
+                        <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
+                        <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#68747A" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </Grid>
-            <Grid Grid.Row="1" Margin="34,12,34,30">
-              <Canvas Background="#0B0E10">
-                <Border Canvas.Left="22" Canvas.Top="20" Width="520" Height="360" BorderBrush="#252D32" BorderThickness="1" />
-                <Line StartPoint="282,20" EndPoint="282,380" Stroke="#1B2226" StrokeThickness="1" />
-                <Line StartPoint="22,200" EndPoint="542,200" Stroke="#1B2226" StrokeThickness="1" />
-                <TextBlock Canvas.Left="42" Canvas.Top="42" Text="Load a capture to reconstruct host-visible touch state" FontSize="12" Foreground="#59646B" />
-                <TextBlock Canvas.Left="42" Canvas.Top="66" Text="Reported Frame and Host State remain separately inspectable" FontSize="11" Foreground="#3F494F" />
-              </Canvas>
-            </Grid>
-          </Grid>
-        </Border>
-      </Grid>
+          </TabItem>
 
-      <Border Grid.Column="2" Background="#14181B" Padding="18,18,16,16">
-        <Grid RowDefinitions="Auto,18,Auto,12,Auto,20,Auto,12,*,Auto">
-          <TextBlock Grid.Row="0" Classes="section" Text="INSPECTOR" />
-          <StackPanel Grid.Row="2" Spacing="7">
-            <TextBlock Text="No event selected" FontSize="16" FontWeight="SemiBold" Foreground="#DEE4E2" />
-            <TextBlock Text="Select a timeline event to inspect decoded fields and source evidence." FontSize="11" Foreground="#69757B" TextWrapping="Wrap" />
-          </StackPanel>
-          <Border Grid.Row="4" BorderBrush="#2A3338" BorderThickness="0,1,0,1" Padding="0,13">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Text="Evidence status" FontSize="11" Foreground="#7C878D" />
-              <TextBlock Grid.Column="1" Text="—" FontSize="11" FontWeight="SemiBold" Foreground="#AAB3B7" />
+          <TabItem Header="DECODED EVENTS">
+            <Grid RowDefinitions="34,*">
+              <Grid Grid.Row="0" ColumnDefinitions="70,110,90,90,100,*" Margin="10,0">
+                <TextBlock Classes="section" Text="FRAME" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Classes="section" Text="PC TIME" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Classes="section" Text="TOUCHES" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Classes="section" Text="CRC" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="4" Classes="section" Text="STATE" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="5" Classes="section" Text="SOURCE" VerticalAlignment="Center" />
+              </Grid>
+              <ListBox x:Name="DecodedFramesList" Grid.Row="1" SelectionChanged="DecodedFramesList_OnSelectionChanged">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:DecodedFrameRow">
+                    <Border BorderBrush="#20272B" BorderThickness="0,0,0,1" Padding="10,8">
+                      <Grid ColumnDefinitions="70,110,90,90,100,*">
+                        <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
+                        <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
+                        <TextBlock Grid.Column="2" Text="{Binding Touches}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#D2D8D6" />
+                        <TextBlock Grid.Column="3" Text="{Binding Crc}" FontSize="10" Foreground="#C8F36C" />
+                        <TextBlock Grid.Column="4" Text="{Binding State}" FontSize="10" Foreground="#D8AD62" />
+                        <TextBlock Grid.Column="5" Text="{Binding SourceId}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#68747A" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </Grid>
-          </Border>
-          <StackPanel Grid.Row="6" Spacing="12">
-            <TextBlock Classes="section" Text="DECODE CONTEXT" />
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,10,Auto,10,Auto">
-              <TextBlock Text="Source adapter" FontSize="11" Foreground="#707C82" />
-              <TextBlock Grid.Column="1" Text="Not selected" FontSize="11" Foreground="#AAB3B7" />
-              <TextBlock Grid.Row="2" Text="Event Buffer Version" FontSize="11" Foreground="#707C82" />
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="Required" FontSize="11" Foreground="#D8AD62" />
-              <TextBlock Grid.Row="4" Text="Benz Palm" FontSize="11" Foreground="#707C82" />
-              <TextBlock Grid.Row="4" Grid.Column="1" Text="For 0x97" FontSize="11" Foreground="#69757B" />
+          </TabItem>
+
+          <TabItem Header="PAINT" IsEnabled="False">
+            <Grid>
+              <TextBlock Text="Host State replay arrives in the next slice." Foreground="#657078" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
+          </TabItem>
+        </TabControl>
+      </Border>
+
+      <Border Grid.Column="2" Background="#14181B" BorderBrush="#293137" BorderThickness="1,0,0,0">
+        <ScrollViewer>
+          <StackPanel Margin="18,16" Spacing="14">
+            <TextBlock Classes="section" Text="INSPECTOR" />
+            <StackPanel Spacing="4">
+              <TextBlock x:Name="InspectorTitleText" Text="No record selected" FontSize="16" FontWeight="SemiBold" Foreground="#E0E5E3" />
+              <TextBlock x:Name="InspectorSubtitleText" Text="Select a physical record or decoded event." FontSize="10" Foreground="#69757B" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border BorderBrush="#2A3338" BorderThickness="0,1,0,1" Padding="0,12">
+              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,8,Auto,8,Auto">
+                <TextBlock Text="Source line" FontSize="10" Foreground="#707C82" />
+                <TextBlock x:Name="SourceLineText" Grid.Column="1" Text="—" FontFamily="Cascadia Mono" FontSize="10" Foreground="#C4CCCE" />
+                <TextBlock Grid.Row="2" Text="Byte offset" FontSize="10" Foreground="#707C82" />
+                <TextBlock x:Name="SourceOffsetText" Grid.Row="2" Grid.Column="1" Text="—" FontFamily="Cascadia Mono" FontSize="10" Foreground="#C4CCCE" />
+                <TextBlock Grid.Row="4" Text="Stable ID" FontSize="10" Foreground="#707C82" />
+                <TextBlock x:Name="StableIdText" Grid.Row="4" Grid.Column="1" MaxWidth="210" Text="—" FontFamily="Cascadia Mono" FontSize="9" Foreground="#869197" TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </Border>
+
+            <TextBlock Classes="section" Text="TRANSPORT" />
+            <TextBlock x:Name="TransportText" Text="No transport selected" FontFamily="Cascadia Mono" FontSize="10" Foreground="#A6B0B4" TextWrapping="Wrap" />
+
+            <TextBlock Classes="section" Text="DECODED FIELDS" />
+            <TextBlock x:Name="DecodedFieldsText" Text="Choose Event Buffer Version, then Decode." FontFamily="Cascadia Mono" FontSize="10" Foreground="#A6B0B4" TextWrapping="Wrap" />
+
+            <TextBlock Classes="section" Text="RAW EVIDENCE" />
+            <Border Background="#0E1214" BorderBrush="#293238" BorderThickness="1" Padding="12">
+              <TextBlock x:Name="RawBytesText" Text="—" FontFamily="Cascadia Mono" FontSize="10" Foreground="#8E999E" TextWrapping="Wrap" />
+            </Border>
+
+            <TextBlock Classes="section" Text="SOURCE IDENTITY" />
+            <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="9" Foreground="#667279" TextWrapping="Wrap" />
           </StackPanel>
-          <Border Grid.Row="9" Background="#101417" BorderBrush="#293238" BorderThickness="1" Padding="12">
-            <TextBlock Text="RAW EVIDENCE · source location preserved" FontFamily="Cascadia Mono" FontSize="10" Foreground="#667279" />
-          </Border>
-        </Grid>
+        </ScrollViewer>
       </Border>
     </Grid>
 
-    <Border Grid.Row="2" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,1,0,0">
-      <Grid Margin="18,12" RowDefinitions="32,*,32">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,14,Auto,14,Auto,*,Auto,10,160">
-          <Button Grid.Column="0" Classes="ghost" Content="◀" IsEnabled="False" />
+    <Border Grid.Row="3" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,1,0,0">
+      <Grid Margin="18,10" RowDefinitions="30,*,24">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,12,Auto,12,Auto,*,Auto">
+          <Button Classes="ghost" Content="◀" IsEnabled="False" />
           <Button Grid.Column="2" Classes="primary" Content="▶  PLAY" IsEnabled="False" />
           <Button Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" />
-          <TextBlock Grid.Column="6" Text="1.0×" FontFamily="Cascadia Mono" FontSize="11" Foreground="#AAB3B7" VerticalAlignment="Center" />
-          <Slider Grid.Column="8" Minimum="0.1" Maximum="8" Value="1" IsEnabled="False" VerticalAlignment="Center" />
+          <TextBlock x:Name="TimelineSummaryText" Grid.Column="6" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="10" Foreground="#737F85" VerticalAlignment="Center" />
         </Grid>
-        <Grid Grid.Row="1" Margin="0,8" RowDefinitions="18,18,18" ColumnDefinitions="86,*">
+        <Grid Grid.Row="1" Margin="0,8" RowDefinitions="17,17,17" ColumnDefinitions="86,*">
           <TextBlock Text="PHYSICAL" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
           <Border Grid.Column="1" Background="#101417" BorderBrush="#252D32" BorderThickness="0,0,0,1" />
           <TextBlock Grid.Row="1" Text="LOGICAL" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
@@ -151,9 +234,9 @@
           <Border Grid.Row="2" Grid.Column="1" Background="#101417" />
         </Grid>
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto">
-          <TextBlock Text="00:00.000" FontFamily="Cascadia Mono" FontSize="10" Foreground="#59646B" VerticalAlignment="Bottom" />
-          <TextBlock Grid.Column="1" Text="No capture loaded" FontSize="10" Foreground="#59646B" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
-          <TextBlock Grid.Column="2" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="10" Foreground="#59646B" VerticalAlignment="Bottom" />
+          <TextBlock Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="#59646B" VerticalAlignment="Bottom" />
+          <TextBlock x:Name="TimelineStatusText" Grid.Column="1" Text="Load a capture to index physical records" FontSize="9" Foreground="#59646B" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+          <TextBlock Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="#59646B" VerticalAlignment="Bottom" />
         </Grid>
       </Grid>
     </Border>
