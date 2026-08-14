@@ -36,6 +36,13 @@ CRC evidence, ASIL transitions, All Break/Break, bus counters, EMS bitmap, and
 global Palm diagnostics remain traceable to the source record. See the
 [Common Event Buffer contract](docs/common-event-buffer.md).
 
+The Common replay slice reduces each logical frame into separate Reported
+Frame and Host State views. Paint supports deterministic forward/backward
+seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.1×–10×
+and MAX playback, idle-gap compression, and an In/Out loop. Invalid frames
+remain visible as evidence without mutating Host State; a capture that ends
+with active contacts raises a warning instead of inventing an All Break.
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.

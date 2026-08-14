@@ -53,7 +53,13 @@ public sealed record CommonFinger(
     TouchStatus Status,
     ushort X,
     ushort Y,
-    IReadOnlyList<byte> Reserved);
+    IReadOnlyList<byte> Reserved)
+{
+    public bool IsUnused =>
+        RawMeta == 0xFF && X == 0xFFFF && Y == 0xFFFF && Reserved.All(value => value == 0xFF);
+
+    public bool IsReported => !IsUnused && (Status != TouchStatus.NoFinger || Type == TouchType.Palm);
+}
 
 public sealed record ButtonStatus(
     IReadOnlyList<byte> Raw,

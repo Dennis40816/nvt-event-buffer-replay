@@ -21,9 +21,9 @@ public sealed record RawRecordRow(SourceRecord Record)
     public string Preview => string.Join(' ', Record.Data.Take(16).Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
 }
 
-public sealed record DecodedFrameRow(CommonEventBufferFrame Frame)
+public sealed record DecodedFrameRow(int LogicalIndex, CommonEventBufferFrame Frame)
 {
-    public long Index => Frame.Source.Index;
+    public int Index => LogicalIndex + 1;
 
     public string Timestamp => Frame.Source.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "—";
 
