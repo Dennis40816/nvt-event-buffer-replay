@@ -21,6 +21,8 @@ Splitting these axes keeps each result diagnostic: a regression can be attribute
 
 CI runs `-Mode Smoke` with smaller fixtures but the same invariants and code paths. Full thresholds are 2 GiB peak working set per process, five minutes load time per fixture, and at least 60 FPS for 640×360 deterministic Paint rendering. Smoke uses 1 GiB and one minute. Both emit a machine-readable report beneath `artifacts/performance`; generated fixtures and reports are intentionally git-ignored.
 
+The current release-machine full result is recorded in [Windows MVP performance baseline](performance-baseline.md).
+
 Source offsets and record indices are 64-bit. Logical replay indices remain 32-bit because the one-million-record requirement fits safely and compactly. Host State checkpoints are created every 256 logical frames plus the final frame; tests assert sparse cardinality and backward/forward reconstruction.
 
 Load, hashing, source iteration, analysis, sidecar writes, and replay export observe cancellation tokens. A cancelled operation never returns a partially constructed `CaptureSession`; file outputs use temporary files or staging directories before replacement.
