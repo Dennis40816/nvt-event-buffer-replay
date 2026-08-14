@@ -58,7 +58,7 @@
     </Border>
 
     <Border Grid.Row="1" Background="#121619" BorderBrush="#252D32" BorderThickness="0,0,0,1">
-      <Grid Margin="18,0" ColumnDefinitions="Auto,12,260,28,Auto,12,150,12,Auto,*,180">
+      <Grid Margin="18,0" ColumnDefinitions="Auto,12,260,28,Auto,12,112,8,126,8,Auto,*,180">
         <TextBlock Grid.Column="0" Classes="section" Text="SOURCE" VerticalAlignment="Center" />
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
           <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="11" Foreground="#D3D9D7" />
@@ -66,15 +66,20 @@
         </StackPanel>
         <Border Grid.Column="3" Width="1" Height="28" Background="#2B3338" HorizontalAlignment="Center" />
         <TextBlock Grid.Column="4" Classes="section" Text="EVENT BUFFER VERSION" VerticalAlignment="Center" />
-        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False">
+        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged">
           <ComboBoxItem Content="0x82" />
           <ComboBoxItem Content="0x83" />
           <ComboBoxItem Content="0x84" />
           <ComboBoxItem Content="0x85" />
+          <ComboBoxItem Content="0x97" />
         </ComboBox>
-        <Button x:Name="DecodeButton" Grid.Column="8" Classes="primary" Content="Decode" IsEnabled="False" Click="DecodeButton_OnClick" />
-        <TextBlock x:Name="ConfigurationHintText" Grid.Column="9" Margin="14,0" Text="Raw Explorer opens before semantic configuration." FontSize="10" Foreground="#657078" VerticalAlignment="Center" />
-        <ProgressBar x:Name="LoadingProgress" Grid.Column="10" Height="3" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Center" />
+        <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="8" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1">
+          <ComboBoxItem Content="Standard" />
+          <ComboBoxItem Content="Benz Palm" />
+        </ComboBox>
+        <Button x:Name="DecodeButton" Grid.Column="10" Classes="primary" Content="Decode" IsEnabled="False" Click="DecodeButton_OnClick" />
+        <TextBlock x:Name="ConfigurationHintText" Grid.Column="11" Margin="14,0" Text="Raw Explorer opens before semantic configuration." FontSize="10" Foreground="#657078" VerticalAlignment="Center" />
+        <ProgressBar x:Name="LoadingProgress" Grid.Column="12" Height="3" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Center" />
       </Grid>
     </Border>
 

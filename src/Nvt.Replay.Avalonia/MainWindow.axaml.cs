@@ -8,6 +8,7 @@ using Avalonia.Platform.Storage;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
+using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
 
@@ -17,9 +18,9 @@ public partial class MainWindow : Window
 {
     private CancellationTokenSource? operationCancellation;
     private NdsCaptureSession? session;
-    private CommonInspectionReport? report;
-    private CommonReplaySession? replaySession;
+    private ITouchReplaySession? replaySession;
     private Dictionary<string, RawRecordRow> rawRowsById = [];
+    private Dictionary<string, DecodedFrameRow> decodedRowsBySourceId = [];
     private DecodedFrameRow[] decodedRows = [];
     private DiagnosticRow[] diagnosticRows = [];
     private CancellationTokenSource? playbackCancellation;
@@ -120,10 +121,31 @@ public partial class MainWindow : Window
         }
 
         if (EventVersionComboBox.SelectedItem is not ComboBoxItem selected ||
-            selected.Content is not string versionText ||
-            !CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
+            selected.Content is not string versionText)
         {
             ConfigurationHintText.Text = "Event Buffer Version is required and must be confirmed by the operator.";
+            return;
+        }
+
+        var isDesay97 = versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase);
+        Desay97Profile? desayProfile = null;
+        if (isDesay97)
+        {
+            desayProfile = Desay97ProfileComboBox.SelectedItem is ComboBoxItem profileItem &&
+                           profileItem.Content?.ToString() == "Benz Palm"
+                ? Desay97Profile.BenzPalm
+                : Desay97ProfileComboBox.SelectedItem is ComboBoxItem
+                    ? Desay97Profile.Standard
+                    : null;
+            if (desayProfile is null)
+            {
+                ConfigurationHintText.Text = "Desay 0x97 requires an explicit Standard or Benz Palm selection.";
+                return;
+            }
+        }
+        else if (!CommonEventBufferDecoder.TryParseVersion(versionText, out _))
+        {
+            ConfigurationHintText.Text = "The selected Event Buffer Version is not supported.";
             return;
         }
 
@@ -131,17 +153,37 @@ public partial class MainWindow : Window
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
         var cancellationToken = operationCancellation.Token;
-        SetBusy(true, $"Decoding Common {versionText}");
+        SetBusy(true, $"Decoding {(isDesay97 ? "Desay" : "Common")} {versionText}");
 
         try
         {
-            report = await Task.Run(() => session.DecodeCommon(version), cancellationToken);
-            replaySession = await Task.Run(() => new CommonReplaySession(report.Frames), cancellationToken);
-            decodedRows = await Task.Run(
-                () => report.Frames.Select((frame, index) => new DecodedFrameRow(index, frame)).ToArray(),
-                cancellationToken);
+            IReadOnlyList<ReplayDiagnostic> decodeDiagnostics;
+            string formatLabel;
+            if (isDesay97)
+            {
+                var profile = desayProfile ?? throw new InvalidOperationException("Desay profile was validated before decoding.");
+                var report = await Task.Run(() => session.DecodeDesay97(profile), cancellationToken);
+                replaySession = await Task.Run(() => new Desay97ReplaySession(report.Frames), cancellationToken);
+                decodedRows = report.Frames.Select((frame, index) => DecodedFrameRow.FromDesay97(index, frame)).ToArray();
+                decodeDiagnostics = report.Diagnostics;
+                formatLabel = $"Desay 0x97 / {ProfileText(profile)}";
+            }
+            else
+            {
+                CommonEventBufferDecoder.TryParseVersion(versionText, out var version);
+                var report = await Task.Run(() => session.DecodeCommon(version), cancellationToken);
+                replaySession = await Task.Run(() => new CommonReplaySession(report.Frames), cancellationToken);
+                decodedRows = report.Frames.Select((frame, index) => DecodedFrameRow.FromCommon(index, frame)).ToArray();
+                decodeDiagnostics = report.Diagnostics;
+                formatLabel = $"Common {versionText}";
+            }
+
+            decodedRowsBySourceId = decodedRows
+                .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, Row: row)))
+                .GroupBy(item => item.StableId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.Last().Row, StringComparer.Ordinal);
             diagnosticRows = await Task.Run(
-                () => report.Diagnostics
+                () => decodeDiagnostics
                     .Concat(replaySession.Diagnostics)
                     .Select(diagnostic => new DiagnosticRow(diagnostic))
                     .ToArray(),
@@ -150,8 +192,8 @@ public partial class MainWindow : Window
             DecodedFramesList.ItemsSource = decodedRows;
             DiagnosticListBox.ItemsSource = diagnosticRows;
             DiagnosticCountText.Text = diagnosticRows.Length.ToString(CultureInfo.InvariantCulture);
-            SessionStatusText.Text = $"Common {versionText} · {decodedRows.Length:N0} decoded frames · {diagnosticRows.Length:N0} diagnostics";
-            ConfigurationHintText.Text = $"Common {versionText} selected manually · raw source remains unchanged";
+            SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} decoded frames · {diagnosticRows.Length:N0} diagnostics";
+            ConfigurationHintText.Text = $"{formatLabel} selected manually · raw source remains unchanged";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = "Logical replay ready · Space play/pause · ←/→ step · I/O loop";
             InitializeReplay();
@@ -176,6 +218,28 @@ public partial class MainWindow : Window
         operationCancellation?.Cancel();
     }
 
+    private void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var isDesay97 = (sender as ComboBox)?.SelectedItem is ComboBoxItem item &&
+                        item.Content?.ToString() == "0x97";
+        if (Desay97ProfileComboBox is null)
+        {
+            return;
+        }
+
+        Desay97ProfileComboBox.IsVisible = isDesay97;
+        if (!isDesay97)
+        {
+            Desay97ProfileComboBox.SelectedIndex = -1;
+        }
+        if (session is not null)
+        {
+            ConfigurationHintText.Text = isDesay97
+                ? "Desay 0x97 requires Standard or Benz Palm; the application never auto-detects it."
+                : "Select the operator-confirmed version; source detection does not infer it.";
+        }
+    }
+
     private void RawRecordsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (RawRecordsList.SelectedItem is RawRecordRow row)
@@ -183,7 +247,8 @@ public partial class MainWindow : Window
             ShowRecord(row.Record, FindFrame(row.Record.StableId));
             if (!synchronizingSelection && replaySession is not null)
             {
-                var logicalIndex = Array.FindIndex(decodedRows, item => item.Frame.Source.StableId == row.Record.StableId);
+                var logicalIndex = Array.FindIndex(decodedRows, item =>
+                    item.PhysicalRecords.Any(source => source.StableId == row.Record.StableId));
                 if (logicalIndex >= 0)
                 {
                     SeekReplay(logicalIndex);
@@ -205,8 +270,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        ShowRecord(row.Frame.Source, row.Frame);
-        if (rawRowsById.TryGetValue(row.Frame.Source.StableId, out var rawRow))
+        var physical = row.PhysicalRecords[^1];
+        ShowRecord(physical, row.Frame);
+        if (rawRowsById.TryGetValue(physical.StableId, out var rawRow))
         {
             RawRecordsList.SelectedItem = rawRow;
             RawRecordsList.ScrollIntoView(rawRow);
@@ -230,15 +296,20 @@ public partial class MainWindow : Window
         InspectorSubtitleText.Text = $"{row.Diagnostic.Severity} · {row.Diagnostic.Code} · {row.Diagnostic.Message}";
     }
 
-    private CommonEventBufferFrame? FindFrame(string sourceId) =>
-        report?.Frames.FirstOrDefault(frame => frame.Source.StableId == sourceId);
+    private object? FindFrame(string sourceId) =>
+        decodedRowsBySourceId.GetValueOrDefault(sourceId)?.Frame;
 
-    private void ShowRecord(SourceRecord record, CommonEventBufferFrame? frame)
+    private void ShowRecord(SourceRecord record, object? frame)
     {
         InspectorTitleText.Text = $"Physical #{record.Index}";
-        InspectorSubtitleText.Text = frame is null
-            ? "Raw physical record · semantic decoding not available for this transaction"
-            : $"Common {VersionText(frame.Version)} · {(frame.HostStateEligible ? "Host-State eligible" : "Evidence only")}";
+        InspectorSubtitleText.Text = frame switch
+        {
+            CommonEventBufferFrame common =>
+                $"Common {VersionText(common.Version)} · {(common.HostStateEligible ? "Host-State eligible" : "Evidence only")}",
+            Desay97Frame desay =>
+                $"Desay 0x97 / {ProfileText(desay.Profile)} · 2 physical transactions · {(desay.HostStateEligible ? "Host-State eligible" : "Evidence only")}",
+            _ => "Raw physical record · semantic decoding not available for this transaction",
+        };
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
@@ -246,18 +317,21 @@ public partial class MainWindow : Window
             $"{record.Operation} {record.Target} 0x{record.Address:X}\n" +
             $"declared={record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—"} actual={record.Data.Count}";
         RawBytesText.Text = FormatBytes(record.Data);
-        DecodedFieldsText.Text = frame is null
-            ? "No Common event is linked to this physical record."
-            : FormatDecodedFields(frame);
+        DecodedFieldsText.Text = frame switch
+        {
+            CommonEventBufferFrame common => FormatDecodedFields(common),
+            Desay97Frame desay => FormatDecodedFields(desay),
+            _ => "No decoded event is linked to this physical record.",
+        };
     }
 
     private void ClearSession()
     {
         StopPlayback();
         session = null;
-        report = null;
         replaySession = null;
         rawRowsById = [];
+        decodedRowsBySourceId = [];
         decodedRows = [];
         diagnosticRows = [];
         currentLogicalIndex = -1;
@@ -268,6 +342,8 @@ public partial class MainWindow : Window
         DiagnosticListBox.ItemsSource = null;
         EventVersionComboBox.SelectedIndex = -1;
         EventVersionComboBox.IsEnabled = false;
+        Desay97ProfileComboBox.SelectedIndex = -1;
+        Desay97ProfileComboBox.IsVisible = false;
         DecodeButton.IsEnabled = false;
         PaintTab.IsEnabled = false;
         PreviousFrameButton.IsEnabled = false;
@@ -286,7 +362,7 @@ public partial class MainWindow : Window
         ReplayClockText.Text = "00:00.000";
         ReplayEndClockText.Text = "00:00.000";
         LoopRangeText.Text = "Loop —";
-        PaintStatusText.Text = "Decode a Common capture to replay";
+        PaintStatusText.Text = "Decode a capture to replay";
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
         SourceAdapterText.Text = "Probing…";
@@ -302,6 +378,7 @@ public partial class MainWindow : Window
         CancelButton.IsVisible = busy;
         DecodeButton.IsEnabled = !busy && session is not null;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
+        Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
         SessionStatusText.Text = status;
     }
 
@@ -323,7 +400,7 @@ public partial class MainWindow : Window
         LogicalTimelineProgress.Maximum = maximum;
         PhysicalTimelineProgress.Maximum = Math.Max(1, session.Records.Count - 1);
         EvidenceTimelineProgress.Maximum = Math.Max(1, diagnosticRows.Length);
-        PaintSurface.SetExtent(report?.Frames ?? []);
+        PaintSurface.SetExtent(replaySession.AllReportedContacts);
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
     }
 
@@ -345,9 +422,9 @@ public partial class MainWindow : Window
         ReplayClockText.Text = FormatClock(SelectedTime(snapshot.Timeline));
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
         LogicalTimelineProgress.Value = clampedIndex;
-        PhysicalTimelineProgress.Value = Math.Min(PhysicalTimelineProgress.Maximum, snapshot.Frame.Source.Index);
+        PhysicalTimelineProgress.Value = Math.Min(PhysicalTimelineProgress.Maximum, snapshot.PrimarySource.Index);
         EvidenceTimelineProgress.Value = diagnosticRows.Count(row =>
-            row.Diagnostic.Location.LineNumber <= snapshot.Frame.Source.Location.LineNumber);
+            row.Diagnostic.Location.LineNumber <= snapshot.PrimarySource.Location.LineNumber);
 
         synchronizingSelection = true;
         try
@@ -356,7 +433,8 @@ public partial class MainWindow : Window
             var decodedRow = decodedRows[clampedIndex];
             DecodedFramesList.SelectedItem = decodedRow;
             DecodedFramesList.ScrollIntoView(decodedRow);
-            if (rawRowsById.TryGetValue(snapshot.Frame.Source.StableId, out var rawRow))
+            var primaryPhysical = snapshot.PhysicalRecords[^1];
+            if (rawRowsById.TryGetValue(primaryPhysical.StableId, out var rawRow))
             {
                 RawRecordsList.SelectedItem = rawRow;
                 RawRecordsList.ScrollIntoView(rawRow);
@@ -367,7 +445,7 @@ public partial class MainWindow : Window
             synchronizingSelection = false;
         }
 
-        ShowRecord(snapshot.Frame.Source, snapshot.Frame);
+        ShowRecord(snapshot.PhysicalRecords[^1], snapshot.DecodedFrame);
     }
 
     private void PreviousFrameButton_OnClick(object? sender, RoutedEventArgs e)
@@ -688,6 +766,25 @@ public partial class MainWindow : Window
         return builder.ToString().TrimEnd();
     }
 
+    private static string FormatDecodedFields(Desay97Frame frame)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"profile       {ProfileText(frame.Profile)}");
+        builder.AppendLine($"touches       {frame.NumTouches}");
+        builder.AppendLine($"all break     {frame.AllBreak}");
+        builder.AppendLine($"crc           {(frame.CrcValid ? "OK" : $"FAIL ({frame.CapturedCrc:X2}/{frame.ComputedCrc:X2})")}");
+        builder.AppendLine($"short/open    {frame.Short}/{frame.Open}");
+        builder.AppendLine($"TP ASIL       {frame.TpAsilError}");
+        builder.AppendLine($"phase 1       Physical #{frame.Packet.Probe.Index} · L{frame.Packet.Probe.Location.LineNumber}");
+        builder.AppendLine($"phase 2       Physical #{frame.Packet.PayloadRead.Index} · L{frame.Packet.PayloadRead.Location.LineNumber}");
+        foreach (var finger in frame.Fingers)
+        {
+            var semantic = finger.Invalid ? "Invalid" : finger.Palm ? "Palm" : "Finger";
+            builder.AppendLine($"id {finger.Id,2}  {semantic,-8} {finger.Status,-8} x={finger.X,5} y={finger.Y,5}");
+        }
+        return builder.ToString().TrimEnd();
+    }
+
     private static bool IsReportedFinger(CommonFinger finger) =>
         finger.IsReported;
 
@@ -698,6 +795,13 @@ public partial class MainWindow : Window
         CommonEventBufferVersion.V84 => "0x84",
         CommonEventBufferVersion.V85 => "0x85",
         _ => throw new ArgumentOutOfRangeException(nameof(version)),
+    };
+
+    private static string ProfileText(Desay97Profile profile) => profile switch
+    {
+        Desay97Profile.Standard => "Standard",
+        Desay97Profile.BenzPalm => "Benz Palm",
+        _ => throw new ArgumentOutOfRangeException(nameof(profile)),
     };
 
 }

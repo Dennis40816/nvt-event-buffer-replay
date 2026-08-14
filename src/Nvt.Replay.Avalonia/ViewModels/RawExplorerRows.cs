@@ -1,6 +1,7 @@
 using System.Globalization;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
+using Nvt.Replay.Formats.Desay97;
 
 namespace Nvt.Replay.Avalonia.ViewModels;
 
@@ -21,19 +22,31 @@ public sealed record RawRecordRow(SourceRecord Record)
     public string Preview => string.Join(' ', Record.Data.Take(16).Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
 }
 
-public sealed record DecodedFrameRow(int LogicalIndex, CommonEventBufferFrame Frame)
+public sealed record DecodedFrameRow(
+    int LogicalIndex,
+    object Frame,
+    SourceRecord Source,
+    IReadOnlyList<SourceRecord> PhysicalRecords,
+    byte Touches,
+    bool CrcValid,
+    bool AllBreak,
+    bool HostStateEligible)
 {
     public int Index => LogicalIndex + 1;
 
-    public string Timestamp => Frame.Source.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "—";
+    public string Timestamp => Source.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "—";
 
-    public byte Touches => Frame.NumTouches;
+    public string Crc => CrcValid ? "OK" : "FAIL";
 
-    public string Crc => Frame.CrcValid ? "OK" : "FAIL";
+    public string State => AllBreak ? "ALL BREAK" : HostStateEligible ? "VALID" : "EVIDENCE";
 
-    public string State => Frame.AllBreak ? "ALL BREAK" : Frame.HostStateEligible ? "VALID" : "EVIDENCE";
+    public string SourceId => Source.StableId;
 
-    public string SourceId => Frame.Source.StableId;
+    public static DecodedFrameRow FromCommon(int index, CommonEventBufferFrame frame) =>
+        new(index, frame, frame.Source, [frame.Source], frame.NumTouches, frame.CrcValid, frame.AllBreak, frame.HostStateEligible);
+
+    public static DecodedFrameRow FromDesay97(int index, Desay97Frame frame) =>
+        new(index, frame, frame.Source, frame.Packet.PhysicalRecords, frame.NumTouches, frame.CrcValid, frame.AllBreak, frame.HostStateEligible);
 }
 
 public sealed record DiagnosticRow(ReplayDiagnostic Diagnostic)

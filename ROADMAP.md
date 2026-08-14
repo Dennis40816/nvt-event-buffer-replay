@@ -5,7 +5,7 @@
 - [ ] Stable domain records, diagnostics, provenance, and format descriptors
 - [ ] Source probing and NDS/Saleae/KingstVIS/DSL/Excel/Canonical adapters
 - [x] Common 0x82-0x85 decoding and semantic parity
-- [ ] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
+- [x] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
 - [ ] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
 - [ ] Frozen Python semantic reference and synthetic/public fixtures
 
