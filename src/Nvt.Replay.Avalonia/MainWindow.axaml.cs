@@ -2,11 +2,16 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
@@ -45,10 +50,101 @@ public partial class MainWindow : Window
     private bool synchronizingSelection;
     private string? pendingSourcePath;
     private bool configuringSourceChoice;
+    private int themeMode;
+    private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
+    private static readonly HashSet<uint> DarkLiteralTextColors =
+    [
+        0xFF59646B, 0xFF657078, 0xFF667279, 0xFF68747A, 0xFF69757B, 0xFF707B81,
+        0xFF707C82, 0xFF737F85, 0xFF77848A, 0xFF78848A, 0xFF7C878C, 0xFF7D888E,
+        0xFF7E898F, 0xFF869197, 0xFF8A969B, 0xFF8D989D, 0xFF8E999E, 0xFF9AA4A8,
+        0xFF9FB6BE, 0xFFA6B0B4, 0xFFA8B1B5, 0xFFAAB3B6, 0xFFAEB7BB, 0xFFB8C1C4,
+        0xFFC2CACD, 0xFFC4CCCE, 0xFFC8CED0, 0xFFC9D0D2, 0xFFD2D8D6, 0xFFD3D9D7,
+        0xFFD8AD62, 0xFFDDE3E1, 0xFFE0E5E3, 0xFFF0F4F2, 0xFFC8F36C, 0xFF58C7D9,
+    ];
 
     public MainWindow()
     {
         InitializeComponent();
+        Opened += (_, _) => ScheduleThemeContrast();
+        if (Application.Current is { } application) application.ActualThemeVariantChanged += Application_OnActualThemeVariantChanged;
+    }
+
+    private void Application_OnActualThemeVariantChanged(object? sender, EventArgs e) => ScheduleThemeContrast();
+
+    private void ScheduleThemeContrast() => Dispatcher.UIThread.Post(ApplyThemeContrast, DispatcherPriority.Loaded);
+
+    private void ApplyThemeContrast()
+    {
+        var isLight = Application.Current?.RequestedThemeVariant == ThemeVariant.Light;
+        if (!isLight)
+        {
+            foreach (var pair in originalTextBrushes) pair.Key.Foreground = pair.Value;
+            originalTextBrushes.Clear();
+            return;
+        }
+        foreach (var textBlock in this.GetVisualDescendants().OfType<TextBlock>())
+        {
+            if (textBlock.Foreground is not ISolidColorBrush brush || !DarkLiteralTextColors.Contains(brush.Color.ToUInt32())) continue;
+            originalTextBrushes.TryAdd(textBlock, textBlock.Foreground);
+            var color = brush.Color.ToUInt32() switch
+            {
+                0xFFC8F36C => Color.Parse("#537D00"),
+                0xFFD8AD62 => Color.Parse("#8A5900"),
+                0xFF58C7D9 => Color.Parse("#006B78"),
+                var value when ((value >> 16) & 0xff) + ((value >> 8) & 0xff) + (value & 0xff) > 480 => Color.Parse("#17201B"),
+                _ => Color.Parse("#536159"),
+            };
+            textBlock.Foreground = new SolidColorBrush(color);
+        }
+    }
+
+    private void CommandPaletteButton_OnClick(object? sender, RoutedEventArgs e) => ToggleCommandPalette();
+
+    private void CloseCommandPaletteButton_OnClick(object? sender, RoutedEventArgs e) => CloseCommandPalette();
+
+    private void CommandPaletteOverlay_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        CloseCommandPalette();
+        e.Handled = true;
+    }
+
+    private void ToggleCommandPalette()
+    {
+        CommandPaletteOverlay.IsVisible = !CommandPaletteOverlay.IsVisible;
+        if (CommandPaletteOverlay.IsVisible) CommandPaletteOverlay.Focus();
+    }
+
+    private void CloseCommandPalette()
+    {
+        CommandPaletteOverlay.IsVisible = false;
+        Focus();
+    }
+
+    private void CommandPaletteAction_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var action = (sender as Button)?.Tag?.ToString();
+        CloseCommandPalette();
+        switch (action)
+        {
+            case "load": LoadButton_OnClick(sender, e); break;
+            case "decode" when DecodeButton.IsEnabled: DecodeButton_OnClick(sender, e); break;
+            case "play" when PlayPauseButton.IsEnabled: PlayPauseButton_OnClick(sender, e); break;
+            case "step" when NextFrameButton.IsEnabled: NextFrameButton_OnClick(sender, e); break;
+            case "mark" when AddMarkerButton.IsEnabled: AddMarkerButton_OnClick(sender, e); break;
+            case "analysis" when ExportAnalysisButton.IsEnabled: ExportAnalysisButton_OnClick(sender, e); break;
+            case "video" when AnalysisTab.IsEnabled: ExportReplayButton_OnClick(sender, e); break;
+            case "theme": ThemeButton_OnClick(sender, e); break;
+        }
+    }
+
+    private void ThemeButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        themeMode = (themeMode + 1) % 2;
+        var variant = themeMode == 0 ? ThemeVariant.Dark : ThemeVariant.Light;
+        if (Application.Current is { } application) application.RequestedThemeVariant = variant;
+        ThemeButton.Content = themeMode == 0 ? "Theme: Dark" : "Theme: Light";
+        SessionStatusText.Text = $"Color theme · {ThemeButton.Content?.ToString()?.Replace("Theme: ", string.Empty)}";
     }
 
     private async void LoadButton_OnClick(object? sender, RoutedEventArgs e)
@@ -117,6 +213,7 @@ public partial class MainWindow : Window
             {
                 RawRecordsList.SelectedIndex = 0;
             }
+            ScheduleThemeContrast();
         }
         catch (OperationCanceledException)
         {
@@ -250,6 +347,7 @@ public partial class MainWindow : Window
             {
                 SeekReplay(0);
             }
+            ScheduleThemeContrast();
         }
         catch (OperationCanceledException)
         {
@@ -1226,7 +1324,32 @@ public partial class MainWindow : Window
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Key == Key.Space)
+        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            ToggleCommandPalette();
+            e.Handled = true;
+        }
+        else if (CommandPaletteOverlay.IsVisible)
+        {
+            if (e.Key == Key.Escape) CloseCommandPalette();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.O && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            LoadButton_OnClick(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        else if (e.Key == Key.S && e.KeyModifiers.HasFlag(KeyModifiers.Control) && SaveReviewButton.IsEnabled)
+        {
+            SaveReviewButton_OnClick(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        else if (e.Key == Key.E && e.KeyModifiers.HasFlag(KeyModifiers.Control) && ExportAnalysisButton.IsEnabled)
+        {
+            ExportAnalysisButton_OnClick(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Space)
         {
             PlayPauseButton_OnClick(this, new RoutedEventArgs());
             e.Handled = true;
@@ -1263,6 +1386,11 @@ public partial class MainWindow : Window
             LoopOutButton_OnClick(this, new RoutedEventArgs());
             e.Handled = true;
         }
+        else if (e.Key == Key.M)
+        {
+            AddMarkerButton_OnClick(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -1270,6 +1398,7 @@ public partial class MainWindow : Window
         StopPlayback();
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
+        if (Application.Current is { } application) application.ActualThemeVariantChanged -= Application_OnActualThemeVariantChanged;
         base.OnClosed(e);
     }
 
