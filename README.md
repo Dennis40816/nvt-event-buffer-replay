@@ -54,6 +54,12 @@ and MAX playback, idle-gap compression, and an In/Out loop. Invalid frames
 remain visible as evidence without mutating Host State; a capture that ends
 with active contacts raises a warning instead of inventing an All Break.
 
+The Review Queue groups recurring diagnostics without dropping occurrences,
+keeps captured ASIL Assert/Clear separate from human acknowledgement and
+disposition, and pauses replay on Alarm or QA Fail by default. Selecting an
+occurrence synchronizes Paint, decoded fields, transport, raw evidence, and
+source location. See [Review Queue and ASIL lifecycle](docs/review-queue.md).
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.

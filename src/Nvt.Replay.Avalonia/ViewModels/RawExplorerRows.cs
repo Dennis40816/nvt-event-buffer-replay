@@ -1,4 +1,5 @@
 using System.Globalization;
+using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Formats.Desay97;
@@ -56,4 +57,20 @@ public sealed record DiagnosticRow(ReplayDiagnostic Diagnostic)
     public string Severity => Diagnostic.Severity.ToString().ToUpperInvariant();
 
     public string Message => Diagnostic.Message;
+}
+
+public sealed record ReviewGroupRow(ReviewEventGroup Group)
+{
+    public string Code => Group.Code;
+    public string Severity => Group.Severity.ToString().ToUpperInvariant();
+    public string Message => Group.Message;
+    public string Count => Group.Occurrences.Count == 1 ? "1 occurrence" : $"{Group.Occurrences.Count} occurrences";
+    public string State => Group.AsilLifecycle?.ToString().ToUpperInvariant() ?? Group.WorkflowState.ToString().ToUpperInvariant();
+    public string Disposition => Group.Disposition == ReviewDisposition.None ? string.Empty : Group.Disposition.ToString().ToUpperInvariant();
+}
+
+public sealed record ReviewOccurrenceRow(int Number, ReviewOccurrence Occurrence)
+{
+    public override string ToString() =>
+        $"#{Number} · L{Occurrence.Diagnostic.Location.LineNumber} · {Occurrence.CapturedAlarmState}";
 }
