@@ -24,6 +24,12 @@ The first vertical slice includes:
 - an Avalonia shell centered on Paint, Review Queue, Inspector, and the
   physical/logical/evidence timeline.
 
+Common `0x82`–`0x85` decoding is now available through the NDS inspection
+slice. Shared finger semantics are implemented once; version-specific tails,
+CRC evidence, ASIL transitions, All Break/Break, bus counters, EMS bitmap, and
+global Palm diagnostics remain traceable to the source record. See the
+[Common Event Buffer contract](docs/common-event-buffer.md).
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.
@@ -34,6 +40,7 @@ dotnet build --no-restore
 dotnet test --no-build
 dotnet run --project src/Nvt.Replay.Cli -- formats
 dotnet run --project src/Nvt.Replay.Cli -- probe ./capture.txt --json
+dotnet run --project src/Nvt.Replay.Cli -- inspect ./capture.txt --event-buffer-version 0x83
 dotnet run --project src/Nvt.Replay.Avalonia
 ```
 
