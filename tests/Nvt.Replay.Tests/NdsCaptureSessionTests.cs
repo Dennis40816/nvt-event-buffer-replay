@@ -21,7 +21,7 @@ public sealed class NdsCaptureSessionTests : IDisposable
         var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
         var path = WriteLog(Record("Paint", "0x01", packet));
 
-        var session = await NdsCaptureSession.LoadAsync(path);
+        var session = await CaptureSession.LoadAsync(path);
         File.Delete(path);
 
         var report = session.DecodeCommon(CommonEventBufferVersion.V83);
@@ -37,9 +37,9 @@ public sealed class NdsCaptureSessionTests : IDisposable
         var path = WriteLog("this is not an NDS communication log");
 
         var error = await Assert.ThrowsAsync<InvalidDataException>(
-            () => NdsCaptureSession.LoadAsync(path));
+            () => CaptureSession.LoadAsync(path));
 
-        Assert.Contains("NDS communication-log grammar", error.Message);
+        Assert.Contains("supported capture-source schema", error.Message);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class NdsCaptureSessionTests : IDisposable
         var updates = new List<CaptureLoadProgress>();
         var progress = new InlineProgress<CaptureLoadProgress>(updates.Add);
 
-        await NdsCaptureSession.LoadAsync(path, progress);
+        await CaptureSession.LoadAsync(path, progress);
 
         Assert.Equal(
             ["Probing source", "Hashing source", "Indexing records", "Ready for configuration"],

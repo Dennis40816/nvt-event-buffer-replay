@@ -49,7 +49,7 @@
         <Border Grid.Column="1" Width="1" Height="26" Background="#30383E" HorizontalAlignment="Center" />
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
           <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="#AEB7BB" />
-          <TextBlock x:Name="SessionStatusText" Text="Load an NDS communication log to begin" FontSize="10" Foreground="#657078" />
+          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" FontSize="10" Foreground="#657078" />
         </StackPanel>
         <Button Grid.Column="3" Classes="ghost" Content="Export" IsEnabled="False" />
         <Button x:Name="CancelButton" Grid.Column="5" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" />
@@ -62,6 +62,7 @@
         <TextBlock Grid.Column="0" Classes="section" Text="SOURCE" VerticalAlignment="Center" />
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
           <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="11" Foreground="#D3D9D7" />
+          <ComboBox x:Name="SourceAdapterComboBox" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
           <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" FontSize="9" Foreground="#657078" />
         </StackPanel>
         <Border Grid.Column="3" Width="1" Height="28" Background="#2B3338" HorizontalAlignment="Center" />

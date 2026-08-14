@@ -17,9 +17,10 @@ public sealed class Desay97NdsInspector
         string path,
         Desay97Profile profile,
         uint eventBufferBase = 0x99000,
+        string? sourceAdapterId = null,
         CancellationToken cancellationToken = default)
     {
-        var session = await NdsCaptureSession.LoadAsync(path, cancellationToken: cancellationToken);
+        var session = await CaptureSession.LoadAsync(path, cancellationToken: cancellationToken, adapterId: sourceAdapterId);
         return session.DecodeDesay97(profile, eventBufferBase);
     }
 }

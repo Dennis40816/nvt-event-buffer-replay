@@ -14,9 +14,10 @@ public sealed class CommonNdsInspector
     public async Task<CommonInspectionReport> InspectAsync(
         string path,
         CommonEventBufferVersion version,
+        string? sourceAdapterId = null,
         CancellationToken cancellationToken = default)
     {
-        var session = await NdsCaptureSession.LoadAsync(path, cancellationToken: cancellationToken);
+        var session = await CaptureSession.LoadAsync(path, cancellationToken: cancellationToken, adapterId: sourceAdapterId);
         return session.DecodeCommon(version);
     }
 }
