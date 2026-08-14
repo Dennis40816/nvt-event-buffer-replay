@@ -1,6 +1,7 @@
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
+using Nvt.Replay.Rendering;
 
 namespace Nvt.Replay.Tests;
 
@@ -36,9 +37,15 @@ public sealed class KingstVisMotionFixtureTests
         var firstBreak = replay.Seek(13);
         Assert.Equal(TouchStatus.Break, firstBreak.ReportedContacts.Single(contact => contact.Id == 1).Status);
         Assert.Equal(2, firstBreak.Frame.NumTouches);
+        var trails = ReplaySceneFactory.BuildTrails(replay, 13);
+        Assert.Equal([1, 2, 3], trails.Select(trail => (int)trail.Id));
+        Assert.Equal(TouchStatus.Break, trails.Single(trail => trail.Id == 1).Points[^1].Status);
+        Assert.All(trails, trail => Assert.True(trail.Points.Count >= 2));
+
         var allBreak = replay.Seek(18);
         Assert.True(allBreak.Frame.AllBreak);
         Assert.Empty(allBreak.HostContacts);
+        Assert.Empty(ReplaySceneFactory.BuildTrails(replay, 18));
         Assert.DoesNotContain(replay.Diagnostics, diagnostic => diagnostic.Code == "CAPTURE_END_ACTIVE_CONTACTS");
     }
 }

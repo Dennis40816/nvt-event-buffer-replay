@@ -459,7 +459,13 @@ public partial class MainWindow : Window
                 DecodeConfiguration: decodeConfiguration);
             var result = await new ReplayRangeExporter().ExportAsync(
                 replaySession,
-                index => ReplaySceneFactory.Create(replaySession.Seek(index), replaySession.Count, replayExtent, reviewSession?.Diagnostics, markers),
+                index => ReplaySceneFactory.Create(
+                    replaySession.Seek(index),
+                    replaySession.Count,
+                    replayExtent,
+                    reviewSession?.Diagnostics,
+                    markers,
+                    ReplaySceneFactory.BuildTrails(replaySession, index)),
                 options,
                 cancellationToken);
             AnalysisOutputText.Text =
@@ -1049,11 +1055,14 @@ public partial class MainWindow : Window
             replaySession.Count,
             replayExtent,
             reviewSession?.Diagnostics,
-            markers));
+            markers,
+            ReplaySceneFactory.BuildTrails(replaySession, clampedIndex)));
+        var activeIds = snapshot.HostContacts.Where(contact => contact.IsActive).Select(contact => $"#{contact.Id}").ToArray();
         PaintStatusText.Text =
-            $"#{clampedIndex + 1:N0}/{replaySession.Count:N0} · reported {snapshot.ReportedContacts.Count} · host {snapshot.HostContacts.Count}" +
-            (snapshot.GlobalPalm ? " · GLOBAL PALM" : string.Empty) +
-            (!snapshot.HostStateUpdated ? " · EVIDENCE ONLY" : string.Empty);
+            $"FRAME {clampedIndex + 1:00}/{replaySession.Count:00}  ·  ACTIVE {(activeIds.Length == 0 ? "—" : string.Join(' ', activeIds))}" +
+            (snapshot.ReportedContacts.Any(contact => contact.Status == TouchStatus.Break) ? "  ·  BREAK" : string.Empty) +
+            (snapshot.GlobalPalm ? "  ·  GLOBAL PALM" : string.Empty) +
+            (!snapshot.HostStateUpdated ? "  ·  EVIDENCE ONLY" : string.Empty);
         ReplayClockText.Text = FormatClock(SelectedTime(snapshot.Timeline));
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
         LogicalTimelineProgress.Value = clampedIndex;
@@ -1445,9 +1454,11 @@ public partial class MainWindow : Window
             builder.AppendLine($"global palm   {packet.PalmOn}");
         }
 
+        if (frame.Fingers.Any(IsReportedFinger))
+            builder.AppendLine("\nCONTACTS      TYPE     STATE        X     Y");
         foreach (var finger in frame.Fingers.Where(IsReportedFinger))
         {
-            builder.AppendLine($"id {finger.Id,2}  {finger.Type,-8} {finger.Status,-8} x={finger.X,5} y={finger.Y,5}");
+            builder.AppendLine($"#{finger.Id,-2}           {finger.Type,-8} {finger.Status,-8} {finger.X,5} {finger.Y,5}");
         }
 
         return builder.ToString().TrimEnd();
@@ -1464,10 +1475,12 @@ public partial class MainWindow : Window
         builder.AppendLine($"TP ASIL       {frame.TpAsilError}");
         builder.AppendLine($"phase 1       Physical #{frame.Packet.Probe.Index} · L{frame.Packet.Probe.Location.LineNumber}");
         builder.AppendLine($"phase 2       Physical #{frame.Packet.PayloadRead.Index} · L{frame.Packet.PayloadRead.Location.LineNumber}");
+        if (frame.Fingers.Count > 0)
+            builder.AppendLine("\nCONTACTS      TYPE     STATE        X     Y");
         foreach (var finger in frame.Fingers)
         {
             var semantic = finger.Invalid ? "Invalid" : finger.Palm ? "Palm" : "Finger";
-            builder.AppendLine($"id {finger.Id,2}  {semantic,-8} {finger.Status,-8} x={finger.X,5} y={finger.Y,5}");
+            builder.AppendLine($"#{finger.Id,-2}           {semantic,-8} {finger.Status,-8} {finger.X,5} {finger.Y,5}");
         }
         return builder.ToString().TrimEnd();
     }
