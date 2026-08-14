@@ -6,7 +6,7 @@
 - [x] Source probing and NDS/Saleae/KingstVIS/DSL/Excel/Canonical adapters
 - [x] Common 0x82-0x85 decoding and semantic parity
 - [x] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
-- [ ] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
+- [x] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
 - [ ] Frozen Python semantic reference and synthetic/public fixtures (decoded-I2C simulator complete; semantic golden freeze pending)
 
 ## M2 — Replay Slice
@@ -28,9 +28,9 @@
 
 - [ ] Shared ReplayScene
 - [ ] Selected-range FFmpeg MP4 with PNG fallback
-- [ ] Heatmap PNG
-- [ ] Parsed/diagnostic JSON and CSV
-- [ ] Source/config/hash manifest
+- [x] Heatmap PNG
+- [x] Parsed/diagnostic JSON and CSV
+- [x] Source/config/hash manifest
 
 ## M5 — Hardening
 

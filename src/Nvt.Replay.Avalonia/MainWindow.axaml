@@ -41,7 +41,7 @@
 
   <Grid RowDefinitions="56,54,*,154">
     <Border Grid.Row="0" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,0,0,1">
-      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,8,Auto,8,Auto">
+      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,8,Auto,8,Auto,8,Auto">
         <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
           <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="#F0F4F2" />
           <TextBlock Text="REPLAY WORKSTATION" FontSize="9" FontWeight="SemiBold" LetterSpacing="2.1" Foreground="#7E898F" />
@@ -54,8 +54,9 @@
         <Button x:Name="SaveReviewButton" Grid.Column="3" Classes="ghost" Content="Save review" IsEnabled="False" Click="SaveReviewButton_OnClick" />
         <Button x:Name="LoadReviewButton" Grid.Column="5" Classes="ghost" Content="Open review" IsEnabled="False" Click="LoadReviewButton_OnClick" />
         <Button x:Name="ApplySidecarButton" Grid.Column="5" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
-        <Button x:Name="CancelButton" Grid.Column="7" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" />
-        <Button x:Name="LoadButton" Grid.Column="7" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" />
+        <Button x:Name="ExportAnalysisButton" Grid.Column="7" Classes="ghost" Content="Export analysis" IsEnabled="False" Click="ExportAnalysisButton_OnClick" />
+        <Button x:Name="CancelButton" Grid.Column="9" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" />
+        <Button x:Name="LoadButton" Grid.Column="9" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" />
       </Grid>
     </Border>
 
@@ -206,6 +207,25 @@
               </Grid>
               <Border Grid.Row="1" Background="#0A0D0F" BorderBrush="#20282D" BorderThickness="1">
                 <controls:ReplayPaintSurface x:Name="PaintSurface" AutomationProperties.Name="Touch replay Paint surface" />
+              </Border>
+            </Grid>
+          </TabItem>
+
+          <TabItem x:Name="AnalysisTab" Header="ANALYSIS" IsEnabled="False">
+            <Grid Margin="16" RowDefinitions="Auto,18,*">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="REPRODUCIBLE ANALYSIS" Classes="section" />
+                  <TextBlock Text="Transmission anomalies · ASIL lifecycle · Reported Frame hotspots" FontSize="12" Foreground="#B8C1C4" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="primary" Content="Export JSON / CSV / PNG" Click="ExportAnalysisButton_OnClick" />
+              </Grid>
+              <Border Grid.Row="2" Background="#0A0D0F" BorderBrush="#20282D" BorderThickness="1" Padding="22">
+                <StackPanel Spacing="12">
+                  <TextBlock x:Name="AnalysisSummaryText" Text="Decode a capture to generate analysis." FontSize="18" FontWeight="SemiBold" Foreground="#DDE3E1" TextWrapping="Wrap" />
+                  <TextBlock Text="Outputs use the same selected replay range and decoder configuration as Paint. Invalid frames remain evidence and never contribute invented hotspot coordinates." FontSize="11" Foreground="#77848A" TextWrapping="Wrap" />
+                  <TextBlock x:Name="AnalysisOutputText" Text="No output written" FontFamily="Cascadia Mono" FontSize="10" Foreground="#8E999E" TextWrapping="Wrap" />
+                </StackPanel>
               </Border>
             </Grid>
           </TabItem>

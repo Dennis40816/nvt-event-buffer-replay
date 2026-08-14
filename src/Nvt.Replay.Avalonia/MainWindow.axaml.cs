@@ -11,6 +11,7 @@ using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Formats.Desay97;
+using Nvt.Replay.Rendering;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
 
@@ -239,6 +240,9 @@ public partial class MainWindow : Window
             InitializeReplay();
             SaveReviewButton.IsEnabled = true;
             LoadReviewButton.IsEnabled = true;
+            ExportAnalysisButton.IsEnabled = true;
+            AnalysisTab.IsEnabled = true;
+            AnalysisSummaryText.Text = $"Ready · {decodedRows.Length:N0} frames · export the full replay or current In/Out range";
             AddMarkerButton.IsEnabled = decodedRows.Length > 0;
             WorkspaceTabs.SelectedIndex = 2;
             if (decodedRows.Length > 0)
@@ -259,6 +263,64 @@ public partial class MainWindow : Window
     private void CancelButton_OnClick(object? sender, RoutedEventArgs e)
     {
         operationCancellation?.Cancel();
+    }
+
+    private async void ExportAnalysisButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewSession is null || replaySession.Count == 0) return;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Export analysis outputs",
+            AllowMultiple = false,
+        });
+        var directory = folders.SingleOrDefault()?.TryGetLocalPath();
+        if (directory is null) return;
+
+        operationCancellation?.Cancel();
+        operationCancellation?.Dispose();
+        operationCancellation = new CancellationTokenSource();
+        var cancellationToken = operationCancellation.Token;
+        SetBusy(true, "Analyzing selected replay range");
+        try
+        {
+            var range = loopIn is { } start && loopOut is { } end
+                ? new AnalysisRange(Math.Min(start, end), Math.Max(start, end))
+                : new AnalysisRange(0, replaySession.Count - 1);
+            var evidence = decodeConfiguration.EventBufferVersion is "0x83" or "0x84"
+                ? EvidenceStatus.Verified
+                : EvidenceStatus.Provisional;
+            var report = await Task.Run(() => new CaptureAnalyzer().Analyze(
+                session.SourcePath,
+                session.SourceSha256,
+                decodeConfiguration,
+                evidence,
+                replaySession,
+                reviewSession.Diagnostics,
+                reviewSession,
+                range,
+                cancellationToken: cancellationToken), cancellationToken);
+            var result = await new AnalysisOutputWriter().WriteAsync(directory, report, cancellationToken);
+            AnalysisSummaryText.Text =
+                $"{report.Events.Count:N0} frames · {report.DiagnosticAggregates.Count:N0} finding groups · " +
+                $"{report.Asil.Assertions} ASIL assert / {report.Asil.Clears} clear · {report.Hotspot.SampleCount:N0} hotspot samples";
+            AnalysisOutputText.Text =
+                $"{result.Directory}\nanalysis-report.json · events.json/csv · diagnostics.json/csv · manifest.json · heatmap.png\n" +
+                $"clock={report.Manifest.Clock.Domain} · range={range.StartLogicalIndex + 1}:{range.EndLogicalIndex + 1} · SHA-256={report.Manifest.SourceSha256}";
+            WorkspaceTabs.SelectedItem = AnalysisTab;
+            SessionStatusText.Text = $"Analysis exported atomically · {report.Events.Count:N0} frames";
+        }
+        catch (OperationCanceledException)
+        {
+            SessionStatusText.Text = "Analysis cancelled; prior complete output was preserved";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            SessionStatusText.Text = $"Analysis export failed · {exception.Message}";
+        }
+        finally
+        {
+            SetBusy(false, SessionStatusText.Text ?? "Ready");
+        }
     }
 
     private void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -749,6 +811,10 @@ public partial class MainWindow : Window
         AddMarkerButton.IsEnabled = false;
         SaveReviewButton.IsEnabled = false;
         LoadReviewButton.IsEnabled = false;
+        ExportAnalysisButton.IsEnabled = false;
+        AnalysisTab.IsEnabled = false;
+        AnalysisSummaryText.Text = "Decode a capture to generate analysis.";
+        AnalysisOutputText.Text = "No output written";
         LoadReviewButton.IsVisible = true;
         ApplySidecarButton.IsVisible = false;
         ReplaySeekSlider.Maximum = 1;
@@ -781,6 +847,7 @@ public partial class MainWindow : Window
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
         SaveReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         LoadReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
+        ExportAnalysisButton.IsEnabled = !busy && replaySession is { Count: > 0 };
         SessionStatusText.Text = status;
     }
 
