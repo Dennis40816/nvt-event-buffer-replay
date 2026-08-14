@@ -50,6 +50,8 @@ internal static class ReplayCli
                     return await InspectAsync(operands[1..], output, error, json);
                 case "analyze":
                     return await AnalyzeAsync(operands[1..], output, error, json);
+                case "export":
+                    return await ExportReplayAsync(operands[1..], output, error, json);
                 default:
                     await error.WriteLineAsync("Unknown or incomplete command. Run 'nvt-replay help'.");
                     return UsageError;
@@ -60,6 +62,140 @@ internal static class ReplayCli
             await error.WriteLineAsync($"Input error: {exception.Message}");
             return InputError;
         }
+    }
+
+    private static async Task<int> ExportReplayAsync(
+        string[] operands,
+        TextWriter output,
+        TextWriter error,
+        bool json)
+    {
+        if (operands.Length < 5 ||
+            !TryReadOption(operands, "--event-buffer-version", out var versionText) ||
+            !TryReadOption(operands, "--output", out var outputPath))
+        {
+            await error.WriteLineAsync("Usage: nvt-replay export <file> --event-buffer-version <version> --output <file.mp4> [--range <first:last>] [--size <width>x<height>] [--fps <1-120>] [--speed <value>] [--clock <recorded|frame>] [--ffmpeg <path>] [--review <sidecar>] [--source-adapter <id>] [--desay97-profile <standard|benz-palm>] [--json]");
+            return UsageError;
+        }
+        var path = operands[0];
+        if (!File.Exists(path))
+        {
+            await error.WriteLineAsync($"Input file does not exist: {path}");
+            return InputError;
+        }
+        var adapterId = TryReadOption(operands, "--source-adapter", out var sourceText) ? sourceText : null;
+        var capture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
+        ITouchReplaySession replay;
+        IReadOnlyList<ReplayDiagnostic> diagnostics;
+        ReplayDecodeConfiguration configuration;
+        if (versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase) || versionText.Equals("97", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!TryReadOption(operands, "--desay97-profile", out var profileText) || !TryParseDesay97Profile(profileText, out var profile))
+            {
+                await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
+                return UsageError;
+            }
+            var decoded = capture.DecodeDesay97(profile);
+            replay = new Desay97ReplaySession(decoded.Frames);
+            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
+            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId);
+        }
+        else
+        {
+            if (!CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
+            {
+                await error.WriteLineAsync($"Unsupported Event Buffer Version: {versionText}");
+                return UsageError;
+            }
+            var decoded = capture.DecodeCommon(version);
+            replay = new CommonReplaySession(decoded.Frames);
+            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
+            configuration = new ReplayDecodeConfiguration(VersionText(version), null, capture.Probe.AdapterId);
+        }
+        if (replay.Count == 0)
+        {
+            await error.WriteLineAsync("No decoded frames are available for export.");
+            return DecodeError;
+        }
+
+        AnalysisRange range = new(0, replay.Count - 1);
+        AnalysisRange? selectedRange = null;
+        if (TryReadOption(operands, "--range", out var rangeText) && !TryParseRange(rangeText, replay.Count, out selectedRange))
+        {
+            await error.WriteLineAsync($"--range must be a 1-based inclusive FIRST:LAST within 1:{replay.Count}.");
+            return UsageError;
+        }
+        else if (selectedRange is not null) range = selectedRange;
+        var width = 1280;
+        var height = 720;
+        if (TryReadOption(operands, "--size", out var sizeText) && !TryParseSize(sizeText, out width, out height))
+        {
+            await error.WriteLineAsync("--size must be an even WIDTHxHEIGHT, at least 320x180.");
+            return UsageError;
+        }
+        if (width < 320 || height < 180 || width % 2 != 0 || height % 2 != 0)
+        {
+            await error.WriteLineAsync("--size must be an even WIDTHxHEIGHT, at least 320x180.");
+            return UsageError;
+        }
+        var frameRate = 30;
+        if (TryReadOption(operands, "--fps", out var fpsText) && (!int.TryParse(fpsText, out frameRate) || frameRate is < 1 or > 120))
+        {
+            await error.WriteLineAsync("--fps must be between 1 and 120.");
+            return UsageError;
+        }
+        var speed = 1d;
+        if (TryReadOption(operands, "--speed", out var speedText) && (!double.TryParse(speedText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out speed) || speed is <= 0 or > 100))
+        {
+            await error.WriteLineAsync("--speed must be greater than 0 and no more than 100.");
+            return UsageError;
+        }
+        var clock = ReplayExportClock.Recorded;
+        if (TryReadOption(operands, "--clock", out var clockText))
+        {
+            clock = clockText.ToLowerInvariant() switch
+            {
+                "recorded" => ReplayExportClock.Recorded,
+                "frame" => ReplayExportClock.Frame,
+                _ => (ReplayExportClock)(-1),
+            };
+            if ((int)clock < 0)
+            {
+                await error.WriteLineAsync("--clock must be recorded or frame.");
+                return UsageError;
+            }
+        }
+
+        IReadOnlyList<ReplayMarker> markers = [];
+        if (TryReadOption(operands, "--review", out var reviewPath))
+        {
+            var sidecar = await new ReplaySidecarStore().LoadAsync(reviewPath, capture.SourceSha256, configuration);
+            if (sidecar.RequiresExplicitConfirmation)
+            {
+                await error.WriteLineAsync("Review sidecar source/configuration mismatch; headless export will not apply it.");
+                return InputError;
+            }
+            markers = sidecar.Document.Markers;
+        }
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var ffmpeg = TryReadOption(operands, "--ffmpeg", out var ffmpegPath) ? ffmpegPath : null;
+        var options = new ReplayExportOptions(
+            outputPath, range, width, height, frameRate, speed, clock, ReplayRenderMode.Compare, ffmpeg,
+            Path.GetFileName(capture.SourcePath), capture.SourceSha256, configuration);
+        var result = await new ReplayRangeExporter().ExportAsync(
+            replay,
+            index => ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent, diagnostics, markers),
+            options);
+        if (json)
+            await output.WriteLineAsync(JsonSerializer.Serialize(result, JsonOptions));
+        else
+        {
+            await output.WriteLineAsync($"Export   {result.Kind} · {result.OutputPath}");
+            await output.WriteLineAsync($"Frames   {result.OutputFrameCount:N0} · {result.Duration.TotalSeconds:0.###}s · {width}x{height} @ {frameRate} fps");
+            await output.WriteLineAsync($"Manifest {result.ManifestPath}");
+            if (result.Warning is not null) await error.WriteLineAsync($"WARNING  {result.Warning}");
+        }
+        return 0;
     }
 
     private static async Task<int> AnalyzeAsync(
@@ -470,6 +606,14 @@ internal static class ReplayCli
                                  [--source-adapter <id>]
                                  [--desay97-profile <standard|benz-palm>] [--json]
                                            Export deterministic analysis JSON/CSV/PNG
+              nvt-replay export <file> --event-buffer-version <version>
+                                --output <file.mp4> [--range <first:last>]
+                                [--size <width>x<height>] [--fps <1-120>]
+                                [--speed <value>] [--clock <recorded|frame>]
+                                [--ffmpeg <path>] [--review <sidecar>]
+                                [--source-adapter <id>]
+                                [--desay97-profile <standard|benz-palm>] [--json]
+                                           Export MP4 or atomic PNG fallback
 
             Source detection is ranked and may require --source-adapter when ambiguous.
             Event Buffer Version and Benz Palm remain explicit operator choices.

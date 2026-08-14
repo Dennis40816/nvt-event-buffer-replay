@@ -16,6 +16,31 @@ internal static class DeterministicPng
     {
         if (hotspot.Counts.Count != hotspot.Columns * hotspot.Rows)
             throw new InvalidDataException("Hotspot cell count does not match its dimensions.");
+        var intensity = Blur(hotspot);
+        var maximum = Math.Max(1, intensity.Max());
+        var rgb = new byte[height * width * 3];
+        for (var y = 0; y < height; y++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var rowOffset = y * width * 3;
+            var gridY = Math.Min(hotspot.Rows - 1, y * hotspot.Rows / height);
+            for (var x = 0; x < width; x++)
+            {
+                var gridX = Math.Min(hotspot.Columns - 1, x * hotspot.Columns / width);
+                var density = Math.Log(1 + intensity[(gridY * hotspot.Columns) + gridX]) / Math.Log(1 + maximum);
+                var (red, green, blue) = Color(density);
+                var offset = rowOffset + (x * 3);
+                rgb[offset] = red;
+                rgb[offset + 1] = green;
+                rgb[offset + 2] = blue;
+            }
+        }
+        await WriteRgbAsync(output, rgb, width, height, cancellationToken);
+    }
+
+    public static async Task WriteRgbAsync(Stream output, byte[] rgb, int width, int height, CancellationToken cancellationToken)
+    {
+        if (rgb.Length != width * height * 3) throw new ArgumentException("RGB data does not match the requested dimensions.", nameof(rgb));
         await output.WriteAsync(Signature, cancellationToken);
         var header = new byte[13];
         BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(0, 4), width);
@@ -23,27 +48,9 @@ internal static class DeterministicPng
         header[8] = 8;
         header[9] = 2;
         await WriteChunkAsync(output, "IHDR"u8.ToArray(), header, cancellationToken);
-
-        var intensity = Blur(hotspot);
-        var maximum = Math.Max(1, intensity.Max());
         var pixels = new byte[height * (1 + (width * 3))];
         for (var y = 0; y < height; y++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var rowOffset = y * (1 + (width * 3));
-            pixels[rowOffset] = 0;
-            var gridY = Math.Min(hotspot.Rows - 1, y * hotspot.Rows / height);
-            for (var x = 0; x < width; x++)
-            {
-                var gridX = Math.Min(hotspot.Columns - 1, x * hotspot.Columns / width);
-                var density = Math.Log(1 + intensity[(gridY * hotspot.Columns) + gridX]) / Math.Log(1 + maximum);
-                var (red, green, blue) = Color(density);
-                var offset = rowOffset + 1 + (x * 3);
-                pixels[offset] = red;
-                pixels[offset + 1] = green;
-                pixels[offset + 2] = blue;
-            }
-        }
+            Buffer.BlockCopy(rgb, y * width * 3, pixels, (y * (1 + (width * 3))) + 1, width * 3);
         await WriteChunkAsync(output, "IDAT"u8.ToArray(), ZlibStored(pixels), cancellationToken);
         await WriteChunkAsync(output, "IEND"u8.ToArray(), [], cancellationToken);
     }

@@ -3,15 +3,9 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
+using Nvt.Replay.Rendering;
 
 namespace Nvt.Replay.Avalonia.Controls;
-
-public enum ReplayPaintMode
-{
-    HostState,
-    ReportedFrame,
-    Compare,
-}
 
 public sealed class ReplayPaintSurface : Control
 {
@@ -23,41 +17,25 @@ public sealed class ReplayPaintSurface : Control
     private static readonly IBrush PalmBrush = new SolidColorBrush(Color.Parse("#D477B8"));
     private static readonly IBrush AlarmBrush = new SolidColorBrush(Color.Parse("#DD665E"));
     private static readonly IBrush InvalidBrush = new SolidColorBrush(Color.Parse("#E56C6C"));
-    private IReadOnlyList<ReplayContact> reportedContacts = [];
-    private IReadOnlyList<ReplayContact> hostContacts = [];
-    private double extentX = 4095;
-    private double extentY = 2160;
-    private bool globalPalm;
+    private ReplayScene? scene;
 
-    public ReplayPaintMode Mode { get; private set; } = ReplayPaintMode.Compare;
+    public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.Compare;
 
-    public void SetMode(ReplayPaintMode mode)
+    public void SetMode(ReplayRenderMode mode)
     {
         Mode = mode;
         InvalidateVisual();
     }
 
-    public void SetExtent(IEnumerable<ReplayContact> contacts)
+    public void Show(ReplayScene value)
     {
-        var reported = contacts.ToArray();
-        extentX = NiceExtent(reported.Select(contact => (double)contact.X).DefaultIfEmpty(1920).Max(), 1920);
-        extentY = NiceExtent(reported.Select(contact => (double)contact.Y).DefaultIfEmpty(1080).Max(), 1080);
-        InvalidateVisual();
-    }
-
-    public void Show(ITouchReplaySnapshot snapshot)
-    {
-        reportedContacts = snapshot.ReportedContacts;
-        hostContacts = snapshot.HostContacts;
-        globalPalm = snapshot.GlobalPalm;
+        scene = value;
         InvalidateVisual();
     }
 
     public void Clear()
     {
-        reportedContacts = [];
-        hostContacts = [];
-        globalPalm = false;
+        scene = null;
         InvalidateVisual();
     }
 
@@ -82,31 +60,32 @@ public sealed class ReplayPaintSurface : Control
             context.DrawLine(new Pen(GridBrush, 1), new Point(viewport.X, y), new Point(viewport.Right, y));
         }
 
-        if (Mode is ReplayPaintMode.ReportedFrame or ReplayPaintMode.Compare)
+        if (scene is null) return;
+        if (Mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
         {
-            foreach (var contact in reportedContacts)
+            foreach (var contact in scene.ReportedContacts)
             {
-                DrawContact(context, viewport, contact, reported: true);
+                DrawContact(context, viewport, contact, scene.Extent, reported: true);
             }
         }
-        if (Mode is ReplayPaintMode.HostState or ReplayPaintMode.Compare)
+        if (Mode is ReplayRenderMode.HostState or ReplayRenderMode.Compare)
         {
-            foreach (var contact in hostContacts)
+            foreach (var contact in scene.HostContacts)
             {
-                DrawContact(context, viewport, contact, reported: false);
+                DrawContact(context, viewport, contact, scene.Extent, reported: false);
             }
         }
 
-        if (globalPalm)
+        if (scene.GlobalPalm)
         {
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
         }
     }
 
-    private void DrawContact(DrawingContext context, Rect viewport, ReplayContact contact, bool reported)
+    private void DrawContact(DrawingContext context, Rect viewport, ReplayContact contact, ReplayExtent extent, bool reported)
     {
-        var x = viewport.X + (contact.X / extentX * viewport.Width);
-        var y = viewport.Y + (contact.Y / extentY * viewport.Height);
+        var x = viewport.X + (contact.X / extent.MaximumX * viewport.Width);
+        var y = viewport.Y + (contact.Y / extent.MaximumY * viewport.Height);
         var center = new Point(x, y);
         if (contact.Invalid)
         {
@@ -135,9 +114,4 @@ public sealed class ReplayPaintSurface : Control
         }
     }
 
-    private static double NiceExtent(double maximum, double minimum)
-    {
-        var required = Math.Max(minimum, maximum * 1.08);
-        return Math.Ceiling(required / 256) * 256;
-    }
 }

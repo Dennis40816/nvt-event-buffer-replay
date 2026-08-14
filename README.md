@@ -71,6 +71,11 @@ anomaly/ASIL aggregates, parsed event and diagnostic JSON/CSV, source/config
 manifest, and deterministic Reported Frame heatmap PNG. Every aggregate links
 back to diagnostic, event, and physical source IDs. See [analysis outputs](docs/analysis-outputs.md).
 
+Avalonia Paint and deterministic headless export now share one `ReplayScene`.
+`nvt-replay export` renders selected ranges to raw RGB and pipes them to an
+operator-reviewed FFmpeg executable, or atomically falls back to a PNG
+sequence when no compatible encoder is available. See [replay video export](docs/video-export.md).
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.
@@ -83,6 +88,7 @@ dotnet run --project src/Nvt.Replay.Cli -- formats
 dotnet run --project src/Nvt.Replay.Cli -- probe ./capture.txt --json
 dotnet run --project src/Nvt.Replay.Cli -- inspect ./capture.txt --event-buffer-version 0x83
 dotnet run --project src/Nvt.Replay.Cli -- analyze ./capture.txt --event-buffer-version 0x83 --output ./analysis
+dotnet run --project src/Nvt.Replay.Cli -- export ./capture.txt --event-buffer-version 0x83 --output ./replay.mp4
 dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
 ```
