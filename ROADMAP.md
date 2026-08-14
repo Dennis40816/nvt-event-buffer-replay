@@ -22,7 +22,7 @@
 - [x] Protocol diagnostics and ASIL lifecycle
 - [x] Review Queue and occurrence grouping
 - [x] Event/Raw/Transport/Evidence inspector
-- [ ] Marker and `.nvtreplay.json` round trip
+- [x] Marker and `.nvtreplay.json` round trip
 
 ## M4 — Export Slice
 
@@ -35,7 +35,7 @@
 ## M5 — Hardening
 
 - [ ] One-GB/one-million-record/eight-hour performance gate
-- [ ] Cancellation, recovery journal, and atomic output
+- [ ] Cancellation, recovery journal, and atomic output (sidecar atomic output complete)
 - [ ] Keyboard, command palette, scaling, theme, and accessibility checks
 - [ ] Windows self-contained portable package and release gates
 

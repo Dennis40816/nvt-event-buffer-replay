@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -27,6 +29,11 @@ public partial class MainWindow : Window
     private ReviewGroupRow[] reviewRows = [];
     private ReviewQueueFilter reviewFilter = ReviewQueueFilter.All;
     private string? selectedReviewGroupId;
+    private string? selectedMarkerId;
+    private IReadOnlyList<ReplayDiagnostic> baseDiagnostics = [];
+    private readonly List<ReplayMarker> markers = [];
+    private ReplayDecodeConfiguration? decodeConfiguration;
+    private ReplaySidecarOpenResult? pendingSidecar;
     private CancellationTokenSource? playbackCancellation;
     private int currentLogicalIndex = -1;
     private int? loopIn;
@@ -204,6 +211,14 @@ public partial class MainWindow : Window
                 formatLabel = $"Common {versionText}";
             }
 
+            var nextConfiguration = new ReplayDecodeConfiguration(
+                versionText,
+                isDesay97 ? ProfileText(desayProfile!.Value) : null,
+                session.Probe.AdapterId);
+            if (decodeConfiguration is not null && decodeConfiguration != nextConfiguration)
+                markers.Clear();
+            decodeConfiguration = nextConfiguration;
+
             decodedRowsBySourceId = decodedRows
                 .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, Row: row)))
                 .GroupBy(item => item.StableId, StringComparer.Ordinal)
@@ -222,6 +237,9 @@ public partial class MainWindow : Window
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = "Logical replay ready · Space play/pause · ←/→ step · I/O loop";
             InitializeReplay();
+            SaveReviewButton.IsEnabled = true;
+            LoadReviewButton.IsEnabled = true;
+            AddMarkerButton.IsEnabled = decodedRows.Length > 0;
             WorkspaceTabs.SelectedIndex = 2;
             if (decodedRows.Length > 0)
             {
@@ -311,6 +329,12 @@ public partial class MainWindow : Window
             return;
         }
         selectedReviewGroupId = row.Group.Id;
+        var details = row.Group.Occurrences.FirstOrDefault()?.Diagnostic.Details;
+        selectedMarkerId = details?.GetValueOrDefault("marker_id");
+        AnnotationMetadataPanel.IsVisible = selectedMarkerId is not null;
+        MarkerQaCaseTextBox.Text = selectedMarkerId is null
+            ? string.Empty
+            : string.Join(", ", markers.FirstOrDefault(marker => marker.Id == selectedMarkerId)?.QaCaseIds ?? []);
         ReviewActionsPanel.IsVisible = true;
         ReviewOccurrenceComboBox.ItemsSource = row.Group.Occurrences
             .Select((occurrence, index) => new ReviewOccurrenceRow(index + 1, occurrence))
@@ -387,22 +411,49 @@ public partial class MainWindow : Window
 
     private void UpdateReviewState(ReviewEventGroup group)
     {
+        var details = group.Occurrences.FirstOrDefault()?.Diagnostic.Details;
+        var qa = details?.GetValueOrDefault("qa_case_ids");
+        var evidence = details?.GetValueOrDefault("evidence");
         ReviewStateText.Text =
             $"captured={group.CurrentCapturedAlarmState} · workflow={group.WorkflowState} · " +
-            $"lifecycle={group.AsilLifecycle?.ToString() ?? "—"} · disposition={group.Disposition}";
+            $"lifecycle={group.AsilLifecycle?.ToString() ?? "—"} · disposition={group.Disposition}" +
+            (string.IsNullOrWhiteSpace(qa) ? string.Empty : $"\nQA={qa}") +
+            (string.IsNullOrWhiteSpace(evidence) || evidence == "—" ? string.Empty : $"\nevidence={evidence}");
     }
 
     private void CreateReviewSession(IReadOnlyList<ReplayDiagnostic> diagnostics)
     {
+        var previousState = reviewSession?.ExportState() ?? [];
+        baseDiagnostics = diagnostics;
         var logicalIndices = decodedRows
             .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, row.LogicalIndex)))
             .GroupBy(item => item.StableId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Last().LogicalIndex, StringComparer.Ordinal);
         reviewSession = new ReviewSession(
-            diagnostics,
+            diagnostics.Concat(markers.Select(MarkerDiagnostic)).ToArray(),
             logicalIndices,
             new ReviewSessionOptions(PauseOnAlarmCheckBox.IsChecked == true, PauseOnAlarmCheckBox.IsChecked == true));
+        reviewSession.ImportState(previousState);
         RefreshReviewQueue();
+    }
+
+    private ReplayDiagnostic MarkerDiagnostic(ReplayMarker marker)
+    {
+        var index = Math.Clamp(marker.StartLogicalIndex, 0, Math.Max(0, decodedRows.Length - 1));
+        var source = decodedRows.Length > 0 ? decodedRows[index].Source : session?.Records.FirstOrDefault();
+        var evidence = marker.Evidence ?? [];
+        return new ReplayDiagnostic(
+            DiagnosticSeverity.Info,
+            "ANNOTATION_MARKER",
+            marker.IsRange ? $"{marker.Label} · frames {marker.StartLogicalIndex + 1}–{marker.EndLogicalIndex + 1}" : $"{marker.Label} · frame {marker.StartLogicalIndex + 1}",
+            source?.StableId ?? session?.SourceSha256 ?? "sidecar",
+            source?.Location ?? new SourceLocation(0, 0),
+            new Dictionary<string, string>
+            {
+                ["marker_id"] = marker.Id,
+                ["qa_case_ids"] = string.Join(", ", marker.QaCaseIds ?? []),
+                ["evidence"] = evidence.Count == 0 ? "—" : string.Join("; ", evidence.Select(item => $"{item.Kind}:{item.Label ?? Path.GetFileName(item.Path)}:{(File.Exists(item.Path) ? "available" : "missing")}")),
+            });
     }
 
     private void RefreshReviewQueue(string? selectGroupId = null)
@@ -412,6 +463,180 @@ public partial class MainWindow : Window
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
         var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
         if (selected is not null) DiagnosticListBox.SelectedItem = selected;
+    }
+
+    private void AddMarkerButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (currentLogicalIndex < 0) return;
+        var start = loopIn ?? currentLogicalIndex;
+        var end = loopOut ?? currentLogicalIndex;
+        if (end < start) (start, end) = (end, start);
+        var marker = new ReplayMarker(
+            $"marker-{Guid.NewGuid():N}",
+            $"Marker {markers.Count + 1}",
+            start,
+            end,
+            DateTimeOffset.UtcNow);
+        markers.Add(marker);
+        CreateReviewSession(baseDiagnostics);
+        RefreshReviewQueue($"ANNOTATION_MARKER:{marker.Id}");
+        SessionStatusText.Text = marker.IsRange
+            ? $"Added range marker · frames {start + 1}–{end + 1}"
+            : $"Added marker · frame {start + 1}";
+    }
+
+    private void ApplyMarkerQaButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedMarker(out var marker, out var index)) return;
+        var qaCaseIds = (MarkerQaCaseTextBox.Text ?? string.Empty)
+            .Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        markers[index] = marker with { QaCaseIds = qaCaseIds };
+        RefreshMarkerReview(marker.Id, $"QA references updated · {qaCaseIds.Length} IDs");
+    }
+
+    private async void AttachMarkerEvidenceButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedMarker(out var marker, out var index)) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Attach raw Kernel / FW log",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Raw log evidence") { Patterns = ["*.log", "*.txt", "*.dmesg", "*.trace"] }, FilePickerFileTypes.All],
+        });
+        var path = files.SingleOrDefault()?.TryGetLocalPath();
+        if (path is null) return;
+        try
+        {
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024, true);
+            var hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(stream));
+            var name = Path.GetFileName(path);
+            var lowerName = name.ToLowerInvariant();
+            var kind = lowerName.Contains("kernel") || lowerName.Contains("dmesg")
+                ? ReplayEvidenceKind.KernelLog
+                : lowerName.Contains("fw") || lowerName.Contains("firmware")
+                    ? ReplayEvidenceKind.FirmwareLog
+                    : ReplayEvidenceKind.Other;
+            var evidence = (marker.Evidence ?? []).Append(new ReplayEvidenceReference(
+                $"evidence-{Guid.NewGuid():N}", kind, path, hash, name)).ToArray();
+            markers[index] = marker with { Evidence = evidence };
+            RefreshMarkerReview(marker.Id, $"Raw evidence attached · {name} · SHA-256 recorded");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            SessionStatusText.Text = $"Evidence attach failed · {exception.Message}";
+        }
+    }
+
+    private bool TryGetSelectedMarker(out ReplayMarker marker, out int index)
+    {
+        index = selectedMarkerId is null ? -1 : markers.FindIndex(item => item.Id == selectedMarkerId);
+        marker = index >= 0 ? markers[index] : null!;
+        return index >= 0;
+    }
+
+    private void RefreshMarkerReview(string markerId, string status)
+    {
+        CreateReviewSession(baseDiagnostics);
+        RefreshReviewQueue($"ANNOTATION_MARKER:{markerId}");
+        SessionStatusText.Text = status;
+    }
+
+    private async void SaveReviewButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (session is null || decodeConfiguration is null || reviewSession is null) return;
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save replay review",
+            SuggestedFileName = Path.GetFileNameWithoutExtension(session.SourcePath) + ".nvtreplay.json",
+            DefaultExtension = "json",
+            FileTypeChoices = [new FilePickerFileType("NVT replay review") { Patterns = ["*.nvtreplay.json"] }],
+        });
+        var path = file?.TryGetLocalPath();
+        if (path is null) return;
+        try
+        {
+            var document = new ReplaySidecarDocument(
+                ReplaySidecarDocument.CurrentSchemaVersion,
+                session.SourceSha256,
+                Path.GetFileName(session.SourcePath),
+                decodeConfiguration,
+                markers.ToArray(),
+                reviewSession.ExportState(),
+                new Dictionary<string, bool>
+                {
+                    ["pauseOnAlarm"] = PauseOnAlarmCheckBox.IsChecked == true,
+                    ["compressIdle"] = CompressIdleCheckBox.IsChecked == true,
+                },
+                DateTimeOffset.UtcNow);
+            await new ReplaySidecarStore().SaveAsync(path, document);
+            SessionStatusText.Text = $"Review saved atomically · {Path.GetFileName(path)}";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            SessionStatusText.Text = $"Review save failed · {exception.Message}";
+        }
+    }
+
+    private async void LoadReviewButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (session is null || decodeConfiguration is null) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open replay review",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("NVT replay review") { Patterns = ["*.nvtreplay.json"] }],
+        });
+        var path = files.SingleOrDefault()?.TryGetLocalPath();
+        if (path is null) return;
+        try
+        {
+            var loaded = await new ReplaySidecarStore().LoadAsync(path, session.SourceSha256, decodeConfiguration);
+            if (loaded.RequiresExplicitConfirmation)
+            {
+                pendingSidecar = loaded;
+                ApplySidecarButton.IsVisible = true;
+                LoadReviewButton.IsVisible = false;
+                SessionStatusText.Text = $"Review mismatch not applied · {string.Join(" ", loaded.Warnings)}";
+                return;
+            }
+            ApplySidecar(loaded);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or JsonException or UnsupportedReplaySidecarVersionException)
+        {
+            SessionStatusText.Text = $"Review open failed · {exception.Message}";
+        }
+    }
+
+    private void ApplySidecarButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (pendingSidecar is { } loaded) ApplySidecar(loaded);
+    }
+
+    private void ApplySidecar(ReplaySidecarOpenResult loaded)
+    {
+        var resolvedById = loaded.Evidence.ToDictionary(item => item.Reference.Id, item => item.ResolvedPath, StringComparer.Ordinal);
+        markers.Clear();
+        markers.AddRange(loaded.Document.Markers.Select(marker => marker with
+        {
+            Evidence = marker.Evidence?.Select(reference => reference with
+            {
+                Path = resolvedById.GetValueOrDefault(reference.Id, reference.Path),
+            }).ToArray(),
+        }));
+        if (loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnAlarm")) PauseOnAlarmCheckBox.IsChecked = true;
+        if (loaded.Document.VisibilityPreferences.TryGetValue("compressIdle", out var compress)) CompressIdleCheckBox.IsChecked = compress;
+        CreateReviewSession(baseDiagnostics);
+        var unresolved = reviewSession?.ImportState(loaded.Document.ReviewStates) ?? [];
+        RefreshReviewQueue();
+        pendingSidecar = null;
+        ApplySidecarButton.IsVisible = false;
+        LoadReviewButton.IsVisible = true;
+        SessionStatusText.Text =
+            $"Review opened · {markers.Count} markers · {loaded.Evidence.Count} evidence refs" +
+            (loaded.Warnings.Count > 0 ? $" · {loaded.Warnings.Count} warnings" : string.Empty) +
+            (unresolved.Count > 0 ? $" · {unresolved.Count} stale review groups" : string.Empty);
     }
 
     private object? FindFrame(string sourceId) =>
@@ -495,6 +720,11 @@ public partial class MainWindow : Window
         reviewRows = [];
         reviewFilter = ReviewQueueFilter.All;
         selectedReviewGroupId = null;
+        selectedMarkerId = null;
+        baseDiagnostics = [];
+        markers.Clear();
+        decodeConfiguration = null;
+        pendingSidecar = null;
         currentLogicalIndex = -1;
         loopIn = null;
         loopOut = null;
@@ -503,6 +733,8 @@ public partial class MainWindow : Window
         DiagnosticListBox.ItemsSource = null;
         ReviewOccurrenceComboBox.ItemsSource = null;
         ReviewActionsPanel.IsVisible = false;
+        AnnotationMetadataPanel.IsVisible = false;
+        MarkerQaCaseTextBox.Text = string.Empty;
         EventVersionComboBox.SelectedIndex = -1;
         EventVersionComboBox.IsEnabled = false;
         Desay97ProfileComboBox.SelectedIndex = -1;
@@ -514,6 +746,11 @@ public partial class MainWindow : Window
         NextFrameButton.IsEnabled = false;
         LoopInButton.IsEnabled = false;
         LoopOutButton.IsEnabled = false;
+        AddMarkerButton.IsEnabled = false;
+        SaveReviewButton.IsEnabled = false;
+        LoadReviewButton.IsEnabled = false;
+        LoadReviewButton.IsVisible = true;
+        ApplySidecarButton.IsVisible = false;
         ReplaySeekSlider.Maximum = 1;
         ReplaySeekSlider.Value = 0;
         PhysicalTimelineProgress.Maximum = 1;
@@ -542,6 +779,8 @@ public partial class MainWindow : Window
         DecodeButton.IsEnabled = !busy && session is not null;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
+        SaveReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
+        LoadReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         SessionStatusText.Text = status;
     }
 

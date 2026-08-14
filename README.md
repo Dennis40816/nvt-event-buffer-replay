@@ -60,6 +60,12 @@ disposition, and pauses replay on Alarm or QA Fail by default. Selecting an
 occurrence synchronizes Paint, decoded fields, transport, raw evidence, and
 source location. See [Review Queue and ASIL lifecycle](docs/review-queue.md).
 
+Markers, ranges, QA case references, raw Kernel/FW log attachments, review
+state, and visibility preferences round-trip through a versioned
+`.nvtreplay.json` sidecar without modifying the capture. Saves are atomic;
+capture/configuration mismatches require explicit operator confirmation, and
+missing or changed evidence stays visible. See [replay review sidecars](docs/replay-sidecar.md).
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.

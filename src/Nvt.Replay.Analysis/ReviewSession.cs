@@ -79,6 +79,11 @@ public sealed record ReviewSessionOptions(bool PauseOnAlarm, bool PauseOnQaFail)
     public static ReviewSessionOptions Default { get; } = new(true, true);
 }
 
+public sealed record ReviewStateSnapshot(
+    string GroupId,
+    ReviewWorkflowState WorkflowState,
+    ReviewDisposition Disposition);
+
 public sealed class ReviewSession
 {
     private readonly IReadOnlyList<ReplayDiagnostic> diagnostics;
@@ -102,6 +107,28 @@ public sealed class ReviewSession
     public IReadOnlyList<ReviewEventGroup> Groups => BuildGroups(ReviewQueueFilter.All);
 
     public IReadOnlyList<ReviewEventGroup> Filter(ReviewQueueFilter filter) => BuildGroups(filter);
+
+    public IReadOnlyList<ReviewStateSnapshot> ExportState() => humanState
+        .OrderBy(item => item.Key, StringComparer.Ordinal)
+        .Select(item => new ReviewStateSnapshot(item.Key, item.Value.WorkflowState, item.Value.Disposition))
+        .ToArray();
+
+    public IReadOnlyList<string> ImportState(IEnumerable<ReviewStateSnapshot> snapshots)
+    {
+        ArgumentNullException.ThrowIfNull(snapshots);
+        var known = Groups.Select(group => group.Id).ToHashSet(StringComparer.Ordinal);
+        var unresolved = new List<string>();
+        foreach (var snapshot in snapshots)
+        {
+            if (!known.Contains(snapshot.GroupId))
+            {
+                unresolved.Add(snapshot.GroupId);
+                continue;
+            }
+            humanState[snapshot.GroupId] = new HumanReviewState(snapshot.WorkflowState, snapshot.Disposition);
+        }
+        return unresolved;
+    }
 
     public bool ShouldPauseAt(int logicalIndex) => BuildOccurrences().Any(item =>
         item.LogicalIndex == logicalIndex &&
@@ -200,6 +227,8 @@ public sealed class ReviewSession
     private static string CorrelationKey(ReplayDiagnostic diagnostic)
     {
         if (diagnostic.Code is "COMMON_ASIL_ALARM" or "COMMON_ASIL_CLEARED") return "COMMON_ASIL";
+        if (diagnostic.Code.StartsWith("ANNOTATION_", StringComparison.Ordinal) && diagnostic.Details?.GetValueOrDefault("marker_id") is { } markerId)
+            return $"{diagnostic.Code}:{markerId}";
         if (diagnostic.Code == "COMMON_BUS_COUNTER_INCREASED" && diagnostic.Details?.GetValueOrDefault("counter") is { } counter)
             return $"{diagnostic.Code}:{counter}";
         return diagnostic.Code;

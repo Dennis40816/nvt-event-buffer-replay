@@ -41,7 +41,7 @@
 
   <Grid RowDefinitions="56,54,*,154">
     <Border Grid.Row="0" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,0,0,1">
-      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,10,Auto">
+      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,8,Auto,8,Auto">
         <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
           <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="#F0F4F2" />
           <TextBlock Text="REPLAY WORKSTATION" FontSize="9" FontWeight="SemiBold" LetterSpacing="2.1" Foreground="#7E898F" />
@@ -51,9 +51,11 @@
           <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="#AEB7BB" />
           <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" FontSize="10" Foreground="#657078" />
         </StackPanel>
-        <Button Grid.Column="3" Classes="ghost" Content="Export" IsEnabled="False" />
-        <Button x:Name="CancelButton" Grid.Column="5" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" />
-        <Button x:Name="LoadButton" Grid.Column="5" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" />
+        <Button x:Name="SaveReviewButton" Grid.Column="3" Classes="ghost" Content="Save review" IsEnabled="False" Click="SaveReviewButton_OnClick" />
+        <Button x:Name="LoadReviewButton" Grid.Column="5" Classes="ghost" Content="Open review" IsEnabled="False" Click="LoadReviewButton_OnClick" />
+        <Button x:Name="ApplySidecarButton" Grid.Column="5" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
+        <Button x:Name="CancelButton" Grid.Column="7" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" />
+        <Button x:Name="LoadButton" Grid.Column="7" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" />
       </Grid>
     </Border>
 
@@ -230,6 +232,13 @@
                 <Button Classes="ghost" Content="Expected" Tag="Expected" Click="DispositionReviewButton_OnClick" />
                 <Button Classes="ghost" Content="False positive" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
               </StackPanel>
+              <StackPanel x:Name="AnnotationMetadataPanel" Spacing="5" IsVisible="False">
+                <TextBox x:Name="MarkerQaCaseTextBox" PlaceholderText="QA case IDs (comma separated)" FontSize="10" />
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Button Classes="ghost" Content="Apply QA refs" Click="ApplyMarkerQaButton_OnClick" />
+                  <Button Classes="ghost" Content="Attach raw log" Click="AttachMarkerEvidenceButton_OnClick" />
+                </StackPanel>
+              </StackPanel>
               <TextBlock x:Name="ReviewStateText" FontFamily="Cascadia Mono" FontSize="9" Foreground="#8A969B" TextWrapping="Wrap" />
             </StackPanel>
 
@@ -264,7 +273,7 @@
 
     <Border Grid.Row="3" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,1,0,0">
       <Grid Margin="18,10" RowDefinitions="30,*,24">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,6,Auto,6,Auto,18,Auto,6,120,12,Auto,6,Auto,6,Auto,12,Auto,*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,6,Auto,6,Auto,18,Auto,6,120,12,Auto,6,Auto,6,Auto,12,Auto,6,Auto,*,Auto">
           <Button x:Name="PreviousFrameButton" Classes="ghost" Content="◀" IsEnabled="False" Click="PreviousFrameButton_OnClick" />
           <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" Content="▶ PLAY" IsEnabled="False" Click="PlayPauseButton_OnClick" />
           <Button x:Name="NextFrameButton" Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" Click="NextFrameButton_OnClick" />
@@ -286,8 +295,9 @@
           </ComboBox>
           <Button x:Name="LoopInButton" Grid.Column="14" Classes="ghost" Content="IN" IsEnabled="False" Click="LoopInButton_OnClick" />
           <Button x:Name="LoopOutButton" Grid.Column="16" Classes="ghost" Content="OUT" IsEnabled="False" Click="LoopOutButton_OnClick" />
-          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="17" Content="Compress idle" IsChecked="True" FontSize="10" Foreground="#7C878C" HorizontalAlignment="Right" VerticalAlignment="Center" />
-          <TextBlock x:Name="TimelineSummaryText" Grid.Column="18" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="10" Foreground="#737F85" VerticalAlignment="Center" Margin="14,0,0,0" />
+          <Button x:Name="AddMarkerButton" Grid.Column="18" Classes="ghost" Content="MARK" IsEnabled="False" Click="AddMarkerButton_OnClick" />
+          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="19" Content="Compress idle" IsChecked="True" FontSize="10" Foreground="#7C878C" HorizontalAlignment="Right" VerticalAlignment="Center" />
+          <TextBlock x:Name="TimelineSummaryText" Grid.Column="20" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="10" Foreground="#737F85" VerticalAlignment="Center" Margin="14,0,0,0" />
         </Grid>
         <Grid Grid.Row="1" Margin="0,8" RowDefinitions="17,17,17" ColumnDefinitions="86,*">
           <TextBlock Text="PHYSICAL" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
