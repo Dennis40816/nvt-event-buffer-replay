@@ -19,6 +19,7 @@ public sealed record AnalysisOutputResult(
 
 public sealed class AnalysisOutputWriter
 {
+    private const string JournalFileName = "analysis-journal.json";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -33,6 +34,7 @@ public sealed class AnalysisOutputWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(report);
+        cancellationToken.ThrowIfCancellationRequested();
         var fullDirectory = Path.GetFullPath(directory);
         Directory.CreateDirectory(fullDirectory);
         var result = new AnalysisOutputResult(
@@ -45,12 +47,22 @@ public sealed class AnalysisOutputWriter
             Path.Combine(fullDirectory, "manifest.json"),
             Path.Combine(fullDirectory, "heatmap.png"));
 
+        var journalPath = Path.Combine(fullDirectory, JournalFileName);
+        var previousManifestHash = File.Exists(result.ManifestJson)
+            ? Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(result.ManifestJson, cancellationToken)))
+            : null;
+        await WriteJsonAsync(journalPath, new AnalysisRecoveryJournal(
+            "1.0",
+            DateTimeOffset.UtcNow,
+            report.Manifest.SourceSha256,
+            previousManifestHash,
+            ["analysis-report.json", "events.json", "events.csv", "diagnostics.json", "diagnostics.csv", "heatmap.png", "manifest.json"]), cancellationToken);
+
         await WriteJsonAsync(result.ReportJson, report, cancellationToken);
         await WriteJsonAsync(result.EventsJson, report.Events, cancellationToken);
         await WriteTextAsync(result.EventsCsv, EventsCsv(report.Events), cancellationToken);
         await WriteJsonAsync(result.DiagnosticsJson, report.Diagnostics, cancellationToken);
         await WriteTextAsync(result.DiagnosticsCsv, DiagnosticsCsv(report.Diagnostics), cancellationToken);
-        await WriteJsonAsync(result.ManifestJson, report.Manifest, cancellationToken);
         await AtomicOutput.WriteAsync(
             result.HeatmapPng,
             (stream, token) => DeterministicPng.WriteHeatmapAsync(
@@ -60,6 +72,8 @@ public sealed class AnalysisOutputWriter
                 report.Manifest.HeatmapPixelHeight,
                 token),
             cancellationToken);
+        await WriteJsonAsync(result.ManifestJson, report.Manifest, cancellationToken);
+        File.Delete(journalPath);
         return result;
     }
 
@@ -137,3 +151,10 @@ public sealed class AnalysisOutputWriter
     private static string Csv(string value) =>
         value.IndexOfAny([',', '"', '\r', '\n']) < 0 ? value : $"\"{value.Replace("\"", "\"\"")}\"";
 }
+
+internal sealed record AnalysisRecoveryJournal(
+    string SchemaVersion,
+    DateTimeOffset StartedUtc,
+    string SourceSha256,
+    string? PreviousManifestSha256,
+    IReadOnlyList<string> TargetFiles);
