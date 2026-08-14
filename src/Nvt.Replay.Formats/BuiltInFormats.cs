@@ -13,7 +13,7 @@ public static class BuiltInFormats
             "Common",
             version,
             $"Common {version}",
-            EvidenceStatus.Provisional,
+            version is "0x83" or "0x84" ? EvidenceStatus.Verified : EvidenceStatus.Provisional,
             [
                 new ConfigurationField(
                     "event-buffer-version",

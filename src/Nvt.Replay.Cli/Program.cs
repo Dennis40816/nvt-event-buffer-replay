@@ -1,5 +1,9 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Nvt.Replay.Analysis;
+using Nvt.Replay.Core;
 using Nvt.Replay.Formats;
+using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Sources;
 
 return await ReplayCli.RunAsync(args, Console.Out, Console.Error);
@@ -8,6 +12,13 @@ internal static class ReplayCli
 {
     private const int UsageError = 2;
     private const int InputError = 3;
+    private const int DecodeError = 4;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     public static async Task<int> RunAsync(string[] args, TextWriter output, TextWriter error)
     {
@@ -31,10 +42,52 @@ internal static class ReplayCli
                 return 0;
             case "probe" when operands.Length == 2:
                 return await ProbeAsync(operands[1], output, error, json);
+            case "inspect":
+                return await InspectAsync(operands[1..], output, error, json);
             default:
                 await error.WriteLineAsync("Unknown or incomplete command. Run 'nvt-replay help'.");
                 return UsageError;
         }
+    }
+
+    private static async Task<int> InspectAsync(
+        string[] operands,
+        TextWriter output,
+        TextWriter error,
+        bool json)
+    {
+        if (operands.Length != 3 || operands[1] != "--event-buffer-version")
+        {
+            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85> [--json]");
+            return UsageError;
+        }
+
+        var path = operands[0];
+        if (!File.Exists(path))
+        {
+            await error.WriteLineAsync($"Input file does not exist: {path}");
+            return InputError;
+        }
+
+        if (!CommonEventBufferDecoder.TryParseVersion(operands[2], out var version))
+        {
+            await error.WriteLineAsync($"Unsupported Common Event Buffer Version: {operands[2]}");
+            return UsageError;
+        }
+
+        var report = await new CommonNdsInspector().InspectAsync(path, version);
+        if (json)
+        {
+            await output.WriteLineAsync(JsonSerializer.Serialize(report, JsonOptions));
+        }
+        else
+        {
+            await WriteInspectionAsync(report, output, error);
+        }
+
+        return report.Diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            ? DecodeError
+            : 0;
     }
 
     private static async Task<int> ProbeAsync(string path, TextWriter output, TextWriter error, bool json)
@@ -60,7 +113,7 @@ internal static class ReplayCli
     {
         if (json)
         {
-            await output.WriteLineAsync(JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+            await output.WriteLineAsync(JsonSerializer.Serialize(value, JsonOptions));
             return;
         }
 
@@ -76,15 +129,81 @@ internal static class ReplayCli
             case IEnumerable<object> items:
                 foreach (var item in items)
                 {
-                    await output.WriteLineAsync(JsonSerializer.Serialize(item));
+                    await output.WriteLineAsync(JsonSerializer.Serialize(item, JsonOptions));
                 }
 
                 break;
             default:
-                await output.WriteLineAsync(JsonSerializer.Serialize(value));
+                await output.WriteLineAsync(JsonSerializer.Serialize(value, JsonOptions));
                 break;
         }
     }
+
+    private static async Task WriteInspectionAsync(
+        CommonInspectionReport report,
+        TextWriter output,
+        TextWriter error)
+    {
+        await output.WriteLineAsync($"Source  {report.SourcePath}");
+        await output.WriteLineAsync($"SHA-256 {report.SourceSha256}");
+        await output.WriteLineAsync($"Format  Common {VersionText(report.Version)} (operator selected)");
+        await output.WriteLineAsync($"Frames  {report.Frames.Count}");
+
+        foreach (var frame in report.Frames)
+        {
+            var timestamp = frame.Source.Timestamp?.ToString("HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture) ?? "--:--:--.---";
+            var flags = new List<string>();
+            if (frame.AllBreak)
+            {
+                flags.Add("ALL BREAK");
+            }
+
+            if (frame.Asil.Alarm || frame.TpAsilError)
+            {
+                flags.Add($"ASIL=0x{frame.Asil.Raw:X2}");
+            }
+
+            if (!frame.CrcValid)
+            {
+                flags.Add("CRC FAIL");
+            }
+
+            var suffix = flags.Count > 0 ? $"  [{string.Join(", ", flags)}]" : string.Empty;
+            await output.WriteLineAsync(
+                $"#{frame.Source.Index,6}  {timestamp}  touches={frame.NumTouches,2}  crc={(frame.CrcValid ? "OK" : "FAIL"),4}  {frame.Source.StableId}{suffix}");
+
+            foreach (var finger in frame.Fingers.Where(IsReportedFinger))
+            {
+                await output.WriteLineAsync(
+                    $"          id={finger.Id,2}  {finger.Type,-8} {finger.Status,-8} x={finger.X,5} y={finger.Y,5}");
+            }
+        }
+
+        foreach (var diagnostic in report.Diagnostics)
+        {
+            await error.WriteLineAsync(
+                $"{diagnostic.Severity.ToString().ToUpperInvariant(),-7} {diagnostic.Code} L{diagnostic.Location.LineNumber}: {diagnostic.Message}");
+        }
+    }
+
+    private static bool IsReportedFinger(CommonFinger finger) =>
+        !IsAllFfSlot(finger) &&
+        (finger.Status != TouchStatus.NoFinger || finger.Type == TouchType.Palm);
+
+    private static bool IsAllFfSlot(CommonFinger finger) =>
+        finger.RawMeta == 0xFF &&
+        finger.X == 0xFFFF &&
+        finger.Y == 0xFFFF &&
+        finger.Reserved.All(value => value == 0xFF);
+
+    private static string VersionText(CommonEventBufferVersion version) => version switch
+    {
+        CommonEventBufferVersion.V82 => "0x82",
+        CommonEventBufferVersion.V83 => "0x83",
+        CommonEventBufferVersion.V84 => "0x84",
+        CommonEventBufferVersion.V85 => "0x85",
+        _ => throw new ArgumentOutOfRangeException(nameof(version)),
+    };
 
     private static Task WriteHelpAsync(TextWriter output)
     {
@@ -97,6 +216,8 @@ internal static class ReplayCli
               nvt-replay sources [--json]   List available input adapters
               nvt-replay probe <file> [--json]
                                            Suggest a source adapter without selecting a format
+              nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85> [--json]
+                                           Decode Common NDS Paint records with an explicit format
 
             Source detection is advisory. Event Buffer Version and Benz Palm remain explicit choices.
             """);

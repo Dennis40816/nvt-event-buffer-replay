@@ -69,6 +69,28 @@ public sealed class NdsCommunicationLogAdapterTests : IDisposable
         Assert.Equal([0xA3], parsed.Data);
     }
 
+    [Fact]
+    public async Task Reader_supports_NDS_Paint_and_keeps_extra_payload_evidence()
+    {
+        var path = WriteCapture(
+            """
+            2026-07-29 14:52:41:241 Paint TP 0x01 2 0xA3 0x55
+              0x66
+            """);
+        var adapter = new NdsCommunicationLogAdapter();
+
+        var records = new List<SourceRecord>();
+        await foreach (var record in adapter.ReadAsync(new SourceOpenContext(path, "paint")))
+        {
+            records.Add(record);
+        }
+
+        var parsed = Assert.Single(records);
+        Assert.Equal(BusOperation.Paint, parsed.Operation);
+        Assert.Equal(2, parsed.DeclaredByteCount);
+        Assert.Equal([0xA3, 0x55, 0x66], parsed.Data);
+    }
+
     public void Dispose()
     {
         Directory.Delete(temporaryDirectory, recursive: true);

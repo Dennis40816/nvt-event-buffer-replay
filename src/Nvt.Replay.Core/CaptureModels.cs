@@ -3,6 +3,7 @@ namespace Nvt.Replay.Core;
 public enum BusOperation
 {
     Unknown,
+    Paint,
     Read,
     Write,
 }

@@ -45,8 +45,8 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
         };
 
         IReadOnlyList<string> reasons = matched > 0
-            ? [$"Matched {matched} NDS Read/Write record(s) in the first {inspected} non-empty lines."]
-            : ["No NDS timestamp + Read/Write + target + address header was found."];
+            ? [$"Matched {matched} NDS Paint/Read/Write record(s) in the first {inspected} non-empty lines."]
+            : ["No NDS timestamp + Paint/Read/Write + target + address header was found."];
 
         return new SourceProbeResult(Id, DisplayName, confidence, reasons);
     }
@@ -86,23 +86,12 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
                 }
 
                 pending = PendingRecord.FromHeader(match, line, lineNumber, lineOffset);
-                if (pending.IsComplete)
-                {
-                    yield return pending.ToSourceRecord(recordIndex++, context.SourceId);
-                    pending = null;
-                }
-
                 continue;
             }
 
             if (pending is not null && ByteTokenPattern().IsMatch(line))
             {
                 pending.Append(line);
-                if (pending.IsComplete)
-                {
-                    yield return pending.ToSourceRecord(recordIndex++, context.SourceId);
-                    pending = null;
-                }
             }
         }
 
@@ -113,7 +102,7 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
     }
 
     [GeneratedRegex(
-        @"^(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}:\d{3})\s+(?<operation>Read|Write)\s+(?<target>\S+)\s+(?<address>0x[0-9A-Fa-f]+)\s+(?<count>\d+)\s*(?<data>.*)$",
+        @"^(?<timestamp>\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}:\d{3})\s+(?<operation>Paint|Read|Write)\s+(?<target>\S+)\s+(?<address>0x[0-9A-Fa-f]+)\s+(?<count>\d+)\s*(?<data>.*)$",
         RegexOptions.CultureInvariant)]
     private static partial Regex HeaderPattern();
 
@@ -157,8 +146,6 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
 
         public long ByteOffset { get; }
 
-        public bool IsComplete => data.Count >= DeclaredByteCount;
-
         public static PendingRecord FromHeader(Match match, string line, int lineNumber, long byteOffset)
         {
             var timestamp = DateTimeOffset.ParseExact(
@@ -190,10 +177,7 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
         {
             foreach (Match match in ByteTokenPattern().Matches(text))
             {
-                if (data.Count < DeclaredByteCount)
-                {
-                    data.Add(byte.Parse(match.ValueSpan[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture));
-                }
+                data.Add(byte.Parse(match.ValueSpan[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture));
             }
         }
 

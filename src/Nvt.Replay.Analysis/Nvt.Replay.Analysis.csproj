@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Nvt.Replay.Core\Nvt.Replay.Core.csproj" />
     <ProjectReference Include="..\Nvt.Replay.Formats\Nvt.Replay.Formats.csproj" />
+    <ProjectReference Include="..\Nvt.Replay.Sources\Nvt.Replay.Sources.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
