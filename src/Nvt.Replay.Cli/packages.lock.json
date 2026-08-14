@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "nvt.replay.analysis": {
+        "type": "Project",
+        "dependencies": {
+          "Nvt.Replay.Core": "[1.0.0, )",
+          "Nvt.Replay.Formats": "[1.0.0, )",
+          "Nvt.Replay.Sources": "[1.0.0, )"
+        }
+      },
+      "nvt.replay.core": {
+        "type": "Project"
+      },
+      "nvt.replay.formats": {
+        "type": "Project",
+        "dependencies": {
+          "Nvt.Replay.Core": "[1.0.0, )"
+        }
+      },
+      "nvt.replay.sources": {
+        "type": "Project",
+        "dependencies": {
+          "Nvt.Replay.Core": "[1.0.0, )"
+        }
+      }
+    }
+  }
+}
