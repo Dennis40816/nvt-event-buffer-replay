@@ -7,7 +7,7 @@
 - [x] Common 0x82-0x85 decoding and semantic parity
 - [x] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
 - [x] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
-- [ ] Frozen Python semantic reference and synthetic/public fixtures (decoded-I2C simulator complete; semantic golden freeze pending)
+- [x] Frozen Python parity observation plus synthetic/public fixtures and deterministic artifact goldens
 
 ## M2 — Replay Slice
 
