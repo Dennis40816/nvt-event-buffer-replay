@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
+using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Analysis;
@@ -129,6 +130,31 @@ public sealed class NdsCaptureSession
         }
 
         return new CommonInspectionReport(SourcePath, SourceSha256, version, frames, diagnostics);
+    }
+
+    public Desay97InspectionReport DecodeDesay97(Desay97Profile profile, uint eventBufferBase = 0x99000)
+    {
+        var assembly = new Desay97Assembler(eventBufferBase).Assemble(Records);
+        var decoder = new Desay97Decoder();
+        var frames = new List<Desay97Frame>();
+        var diagnostics = new List<ReplayDiagnostic>(assembly.Diagnostics);
+        foreach (var packet in assembly.Packets)
+        {
+            var decoded = decoder.Decode(packet, profile);
+            diagnostics.AddRange(decoded.Diagnostics);
+            if (decoded.Frame is { } frame)
+            {
+                frames.Add(frame);
+            }
+        }
+
+        return new Desay97InspectionReport(
+            SourcePath,
+            SourceSha256,
+            profile,
+            eventBufferBase,
+            frames,
+            diagnostics);
     }
 
     private static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)

@@ -36,6 +36,11 @@ CRC evidence, ASIL transitions, All Break/Break, bus counters, EMS bitmap, and
 global Palm diagnostics remain traceable to the source record. See the
 [Common Event Buffer contract](docs/common-event-buffer.md).
 
+Desay `0x97` uses a dedicated two-transaction assembler before decoding and
+requires an explicit Standard or Benz Palm profile. The current offset `0x00`
+full-reread contract and its remaining Benz evidence gate are documented in
+the [Desay Event Buffer contract](docs/desay97-event-buffer.md).
+
 The Common replay slice reduces each logical frame into separate Reported
 Frame and Host State views. Paint supports deterministic forward/backward
 seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.1×–10×

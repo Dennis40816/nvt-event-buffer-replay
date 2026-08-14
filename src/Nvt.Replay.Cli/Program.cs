@@ -4,6 +4,7 @@ using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats;
 using Nvt.Replay.Formats.Common;
+using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Sources;
 
 return await ReplayCli.RunAsync(args, Console.Out, Console.Error);
@@ -56,9 +57,9 @@ internal static class ReplayCli
         TextWriter error,
         bool json)
     {
-        if (operands.Length != 3 || operands[1] != "--event-buffer-version")
+        if (operands.Length < 3 || !TryReadOption(operands, "--event-buffer-version", out var versionText))
         {
-            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85> [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
 
@@ -69,9 +70,33 @@ internal static class ReplayCli
             return InputError;
         }
 
-        if (!CommonEventBufferDecoder.TryParseVersion(operands[2], out var version))
+        if (versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase) ||
+            versionText.Equals("97", StringComparison.OrdinalIgnoreCase))
         {
-            await error.WriteLineAsync($"Unsupported Common Event Buffer Version: {operands[2]}");
+            if (!TryReadOption(operands, "--desay97-profile", out var profileText) ||
+                !TryParseDesay97Profile(profileText, out var profile))
+            {
+                await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
+                return UsageError;
+            }
+
+            var desayReport = await new Desay97NdsInspector().InspectAsync(path, profile);
+            if (json)
+            {
+                await output.WriteLineAsync(JsonSerializer.Serialize(desayReport, JsonOptions));
+            }
+            else
+            {
+                await WriteDesay97InspectionAsync(desayReport, output, error);
+            }
+            return desayReport.Diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                ? DecodeError
+                : 0;
+        }
+
+        if (!CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
+        {
+            await error.WriteLineAsync($"Unsupported Event Buffer Version: {versionText}");
             return UsageError;
         }
 
@@ -89,6 +114,77 @@ internal static class ReplayCli
             ? DecodeError
             : 0;
     }
+
+    private static async Task WriteDesay97InspectionAsync(
+        Desay97InspectionReport report,
+        TextWriter output,
+        TextWriter error)
+    {
+        await output.WriteLineAsync($"Source  {report.SourcePath}");
+        await output.WriteLineAsync($"SHA-256 {report.SourceSha256}");
+        await output.WriteLineAsync($"Format  Desay 0x97 / {ProfileText(report.Profile)} (operator selected)");
+        await output.WriteLineAsync($"Base    0x{report.EventBufferBase:X}");
+        await output.WriteLineAsync($"Frames  {report.Frames.Count}");
+
+        foreach (var frame in report.Frames)
+        {
+            var timestamp = frame.Source.Timestamp?.ToString("HH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture) ?? "--:--:--.---";
+            var flags = new List<string>();
+            if (frame.AllBreak) flags.Add("ALL BREAK");
+            if (frame.Short) flags.Add("SHORT");
+            if (frame.Open) flags.Add("OPEN");
+            if (frame.TpAsilError) flags.Add("TP ASIL");
+            var suffix = flags.Count > 0 ? $"  [{string.Join(", ", flags)}]" : string.Empty;
+            await output.WriteLineAsync(
+                $"#{frame.Source.Index,6}  {timestamp}  touches={frame.NumTouches,2}  crc=  OK  {frame.Packet.StableId}{suffix}");
+            await output.WriteLineAsync(
+                $"          physical={frame.Packet.Probe.StableId}, {frame.Packet.PayloadRead.StableId}");
+            foreach (var finger in frame.Fingers)
+            {
+                var semantic = finger.Invalid ? "INVALID" : finger.Palm ? "PALM" : "FINGER";
+                await output.WriteLineAsync(
+                    $"          id={finger.Id,2}  {semantic,-8} {finger.Status,-8} x={finger.X,5} y={finger.Y,5}");
+            }
+        }
+
+        foreach (var diagnostic in report.Diagnostics)
+        {
+            await error.WriteLineAsync(
+                $"{diagnostic.Severity.ToString().ToUpperInvariant(),-7} {diagnostic.Code} L{diagnostic.Location.LineNumber}: {diagnostic.Message}");
+        }
+    }
+
+    private static bool TryReadOption(string[] operands, string name, out string value)
+    {
+        var index = Array.FindIndex(operands, operand => operand.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (index >= 0 && index + 1 < operands.Length)
+        {
+            value = operands[index + 1];
+            return true;
+        }
+
+        value = string.Empty;
+        return false;
+    }
+
+    private static bool TryParseDesay97Profile(string value, out Desay97Profile profile)
+    {
+        var normalized = value.Trim().Replace('_', '-').ToLowerInvariant();
+        profile = normalized switch
+        {
+            "standard" => Desay97Profile.Standard,
+            "benz" or "benz-palm" => Desay97Profile.BenzPalm,
+            _ => default,
+        };
+        return normalized is "standard" or "benz" or "benz-palm";
+    }
+
+    private static string ProfileText(Desay97Profile profile) => profile switch
+    {
+        Desay97Profile.Standard => "Standard",
+        Desay97Profile.BenzPalm => "Benz Palm",
+        _ => throw new ArgumentOutOfRangeException(nameof(profile)),
+    };
 
     private static async Task<int> ProbeAsync(string path, TextWriter output, TextWriter error, bool json)
     {
@@ -217,7 +313,10 @@ internal static class ReplayCli
               nvt-replay probe <file> [--json]
                                            Suggest a source adapter without selecting a format
               nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85> [--json]
-                                           Decode Common NDS Paint records with an explicit format
+                                           Decode Common NDS Paint records
+              nvt-replay inspect <file> --event-buffer-version 0x97
+                                 --desay97-profile <standard|benz-palm> [--json]
+                                           Assemble and decode Desay NDS reads
 
             Source detection is advisory. Event Buffer Version and Benz Palm remain explicit choices.
             """);

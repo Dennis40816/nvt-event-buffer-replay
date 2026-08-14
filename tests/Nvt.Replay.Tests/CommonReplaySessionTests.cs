@@ -205,7 +205,7 @@ public sealed class CommonReplaySessionTests
         return Assert.IsType<CommonEventBufferFrame>(new CommonEventBufferDecoder().Decode(source, version).Frame);
     }
 
-    private static CommonReplayOptions Options(int checkpointInterval) => new(
+    private static TouchReplayOptions Options(int checkpointInterval) => new(
         checkpointInterval,
         Milliseconds(10),
         TimeSpan.FromSeconds(1),
