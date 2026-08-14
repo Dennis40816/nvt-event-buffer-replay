@@ -16,3 +16,13 @@ scoped observations, and which tests were skipped when evidence was absent.
 - Scope: validates NDS Paint reconstruction, shared finger core, the 0x83 tail,
   CRC parameters, provenance, and CLI streaming. It does not promote 0x82 or
   0x85 tails beyond Provisional evidence.
+
+## Frozen public regression surface
+
+The private payload is not copied into this repository. Its reviewed parity
+counts above are frozen as a provenance observation. Executable regression is
+provided by the synthetic/public fixtures under `tests/fixtures`, unit-level
+Common and Desay packets, decoded-I2C adapter fixtures, and fixed SHA-256
+goldens for deterministic heatmap and replay PNG outputs. Python remains a
+historical demo oracle only; all shipped parser, CLI, UI, simulator, analysis,
+and release logic is C#.

@@ -15,12 +15,14 @@ $RepoRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $ArtifactsRoot = Join-Path $RepoRoot 'artifacts'
 $ReleaseRoot = Join-Path $ArtifactsRoot 'release'
 $WorkRoot = Join-Path $ArtifactsRoot 'package-work'
-$PublishRoot = Join-Path $WorkRoot 'publish'
+$UiPublishRoot = Join-Path $WorkRoot 'publish-ui'
+$CliPublishRoot = Join-Path $WorkRoot 'publish-cli'
 $PackageName = "NvtEventBufferReplay-v$Version-win-x64"
 $PackageRoot = Join-Path $WorkRoot $PackageName
 $ZipPath = Join-Path $ReleaseRoot "$PackageName.zip"
 $ChecksumPath = "$ZipPath.sha256"
-$ProjectPath = Join-Path $RepoRoot 'src/Nvt.Replay.Avalonia/Nvt.Replay.Avalonia.csproj'
+$UiProjectPath = Join-Path $RepoRoot 'src/Nvt.Replay.Avalonia/Nvt.Replay.Avalonia.csproj'
+$CliProjectPath = Join-Path $RepoRoot 'src/Nvt.Replay.Cli/Nvt.Replay.Cli.csproj'
 
 function Assert-SafeChildPath {
     param(
@@ -76,41 +78,44 @@ if ($LASTEXITCODE -ne 0 -or $DirtyState.Count -ne 0) {
 [IO.Directory]::CreateDirectory($ArtifactsRoot) | Out-Null
 Reset-Directory -Path $ReleaseRoot -Parent $ArtifactsRoot
 Reset-Directory -Path $WorkRoot -Parent $ArtifactsRoot
-[IO.Directory]::CreateDirectory($PublishRoot) | Out-Null
+[IO.Directory]::CreateDirectory($UiPublishRoot) | Out-Null
+[IO.Directory]::CreateDirectory($CliPublishRoot) | Out-Null
 [IO.Directory]::CreateDirectory($PackageRoot) | Out-Null
 
-$PublishArguments = @(
-    'publish', $ProjectPath,
-    '--configuration', 'Release',
-    '--runtime', 'win-x64',
-    '--self-contained', 'true',
-    '--no-restore',
-    '--output', $PublishRoot,
-    '-p:PublishSingleFile=true',
-    '-p:IncludeNativeLibrariesForSelfExtract=true',
-    '-p:DebugType=None',
-    '-p:DebugSymbols=false',
-    "-p:Version=$Version",
-    "-p:SourceRevisionId=$Commit",
-    '-p:ContinuousIntegrationBuild=true'
-)
-dotnet @PublishArguments
-if ($LASTEXITCODE -ne 0) {
-    throw 'dotnet publish failed.'
+function Publish-Executable([string]$ProjectPath, [string]$OutputPath) {
+    $PublishArguments = @(
+        'publish', $ProjectPath,
+        '--configuration', 'Release',
+        '--runtime', 'win-x64',
+        '--self-contained', 'true',
+        '--no-restore',
+        '--output', $OutputPath,
+        '-p:PublishSingleFile=true',
+        '-p:IncludeNativeLibrariesForSelfExtract=true',
+        '-p:DebugType=None',
+        '-p:DebugSymbols=false',
+        "-p:Version=$Version",
+        "-p:SourceRevisionId=$Commit",
+        '-p:ContinuousIntegrationBuild=true'
+    )
+    dotnet @PublishArguments
+    if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed: $ProjectPath" }
 }
 
-$PublishedFiles = @(Get-ChildItem -LiteralPath $PublishRoot -File)
-$UnexpectedFiles = @($PublishedFiles | Where-Object { $_.Name -ne 'Nvt.Replay.Avalonia.exe' -and $_.Extension -ne '.pdb' })
-if ($UnexpectedFiles.Count -ne 0) {
-    throw "Single-file publish produced unexpected package candidates: $($UnexpectedFiles.Name -join ', ')"
-}
-$PublishedExecutable = Join-Path $PublishRoot 'Nvt.Replay.Avalonia.exe'
-if (-not (Test-Path -LiteralPath $PublishedExecutable -PathType Leaf)) {
-    throw 'Single-file publish did not produce Nvt.Replay.Avalonia.exe.'
+Publish-Executable -ProjectPath $UiProjectPath -OutputPath $UiPublishRoot
+Publish-Executable -ProjectPath $CliProjectPath -OutputPath $CliPublishRoot
+
+foreach ($Published in @(
+    [ordered]@{ Directory = $UiPublishRoot; Name = 'Nvt.Replay.Avalonia.exe' },
+    [ordered]@{ Directory = $CliPublishRoot; Name = 'Nvt.Replay.Cli.exe' }
+)) {
+    $UnexpectedFiles = @(Get-ChildItem -LiteralPath $Published.Directory -File | Where-Object { $_.Name -ne $Published.Name -and $_.Extension -ne '.pdb' })
+    if ($UnexpectedFiles.Count -ne 0) { throw "Single-file publish produced unexpected package candidates: $($UnexpectedFiles.Name -join ', ')" }
+    if (-not (Test-Path -LiteralPath (Join-Path $Published.Directory $Published.Name) -PathType Leaf)) { throw "Single-file publish did not produce $($Published.Name)." }
 }
 
-$PackagedExecutable = Join-Path $PackageRoot 'NvtEventBufferReplay.exe'
-Copy-Item -LiteralPath $PublishedExecutable -Destination $PackagedExecutable
+Copy-Item -LiteralPath (Join-Path $UiPublishRoot 'Nvt.Replay.Avalonia.exe') -Destination (Join-Path $PackageRoot 'NvtEventBufferReplay.exe')
+Copy-Item -LiteralPath (Join-Path $CliPublishRoot 'Nvt.Replay.Cli.exe') -Destination (Join-Path $PackageRoot 'nvt-replay.exe')
 $CommitTime = (git -C $RepoRoot show -s --format=%cI $Commit).Trim()
 $ReleaseIdentity = [ordered]@{
     schemaVersion = '1.0'
@@ -120,12 +125,15 @@ $ReleaseIdentity = [ordered]@{
     sourceCommitTime = $CommitTime
     runtime = 'win-x64'
     selfContained = $true
+    offlineDefaults = $true
+    telemetry = $false
+    payloads = @('NvtEventBufferReplay.exe', 'nvt-replay.exe')
 }
 $IdentityPath = Join-Path $PackageRoot 'RELEASE.json'
 $ReleaseIdentity | ConvertTo-Json | Set-Content -LiteralPath $IdentityPath -Encoding utf8NoBOM
 
-$AllowedPackageFiles = @('NvtEventBufferReplay.exe', 'RELEASE.json', 'SHA256SUMS.txt')
-$HashLines = foreach ($Name in @('NvtEventBufferReplay.exe', 'RELEASE.json')) {
+$AllowedPackageFiles = @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json', 'SHA256SUMS.txt')
+$HashLines = foreach ($Name in @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json')) {
     $Path = Join-Path $PackageRoot $Name
     "$(Get-LowerSha256 -Path $Path)  $Name"
 }

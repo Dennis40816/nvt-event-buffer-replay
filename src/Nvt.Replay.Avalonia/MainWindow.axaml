@@ -8,24 +8,24 @@
         Height="920"
         MinWidth="1120"
         MinHeight="700"
-        Background="#0F1215"
+        Background="{DynamicResource WindowBrush}"
         FontFamily="avares://Avalonia.Fonts.Inter/Assets#Inter">
   <Window.Styles>
     <Style Selector="TextBlock.section">
       <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="#7D888E" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
       <Setter Property="LetterSpacing" Value="1.35" />
     </Style>
     <Style Selector="Button.primary">
-      <Setter Property="Background" Value="#C8F36C" />
-      <Setter Property="Foreground" Value="#111710" />
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Padding" Value="16,8" />
     </Style>
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#C2CACD" />
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
       <Setter Property="Padding" Value="12,8" />
     </Style>
     <Style Selector="ListBoxItem">
@@ -40,27 +40,29 @@
   </Window.Styles>
 
   <Grid RowDefinitions="56,54,*,154">
-    <Border Grid.Row="0" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,0,0,1">
-      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,8,Auto,8,Auto,8,Auto">
+    <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,8,Auto,8,Auto,8,Auto,8,Auto,8,Auto">
         <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
-          <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="#F0F4F2" />
-          <TextBlock Text="REPLAY WORKSTATION" FontSize="9" FontWeight="SemiBold" LetterSpacing="2.1" Foreground="#7E898F" />
+          <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" />
+          <TextBlock Text="REPLAY WORKSTATION" FontSize="9" FontWeight="SemiBold" LetterSpacing="2.1" Foreground="{DynamicResource MutedTextBrush}" />
         </StackPanel>
         <Border Grid.Column="1" Width="1" Height="26" Background="#30383E" HorizontalAlignment="Center" />
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-          <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="#AEB7BB" />
-          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" FontSize="10" Foreground="#657078" />
+          <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
         <Button x:Name="SaveReviewButton" Grid.Column="3" Classes="ghost" Content="Save review" IsEnabled="False" Click="SaveReviewButton_OnClick" />
         <Button x:Name="LoadReviewButton" Grid.Column="5" Classes="ghost" Content="Open review" IsEnabled="False" Click="LoadReviewButton_OnClick" />
         <Button x:Name="ApplySidecarButton" Grid.Column="5" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
         <Button x:Name="ExportAnalysisButton" Grid.Column="7" Classes="ghost" Content="Export analysis" IsEnabled="False" Click="ExportAnalysisButton_OnClick" />
-        <Button x:Name="CancelButton" Grid.Column="9" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" />
-        <Button x:Name="LoadButton" Grid.Column="9" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" />
+        <Button Grid.Column="9" Classes="ghost" Content="Commands  Ctrl+K" Click="CommandPaletteButton_OnClick" AutomationProperties.Name="Open command palette" />
+        <Button x:Name="ThemeButton" Grid.Column="11" Classes="ghost" Content="Theme: Dark" Click="ThemeButton_OnClick" AutomationProperties.Name="Change color theme" />
+        <Button x:Name="CancelButton" Grid.Column="13" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
+        <Button x:Name="LoadButton" Grid.Column="13" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" AutomationProperties.Name="Load capture file" />
       </Grid>
     </Border>
 
-    <Border Grid.Row="1" Background="#121619" BorderBrush="#252D32" BorderThickness="0,0,0,1">
+    <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid Margin="18,0" ColumnDefinitions="Auto,12,260,28,Auto,12,112,8,126,8,Auto,*,180">
         <TextBlock Grid.Column="0" Classes="section" Text="SOURCE" VerticalAlignment="Center" />
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
@@ -70,7 +72,7 @@
         </StackPanel>
         <Border Grid.Column="3" Width="1" Height="28" Background="#2B3338" HorizontalAlignment="Center" />
         <TextBlock Grid.Column="4" Classes="section" Text="EVENT BUFFER VERSION" VerticalAlignment="Center" />
-        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged">
+        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" AutomationProperties.Name="Event Buffer Version">
           <ComboBoxItem Content="0x82" />
           <ComboBoxItem Content="0x83" />
           <ComboBoxItem Content="0x84" />
@@ -81,14 +83,14 @@
           <ComboBoxItem Content="Standard" />
           <ComboBoxItem Content="Benz Palm" />
         </ComboBox>
-        <Button x:Name="DecodeButton" Grid.Column="10" Classes="primary" Content="Decode" IsEnabled="False" Click="DecodeButton_OnClick" />
+        <Button x:Name="DecodeButton" Grid.Column="10" Classes="primary" Content="Decode" IsEnabled="False" Click="DecodeButton_OnClick" AutomationProperties.Name="Decode capture" />
         <TextBlock x:Name="ConfigurationHintText" Grid.Column="11" Margin="14,0" Text="Raw Explorer opens before semantic configuration." FontSize="10" Foreground="#657078" VerticalAlignment="Center" />
         <ProgressBar x:Name="LoadingProgress" Grid.Column="12" Height="3" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Center" />
       </Grid>
     </Border>
 
     <Grid Grid.Row="2" ColumnDefinitions="270,*,342">
-      <Border Grid.Column="0" Background="#121619" BorderBrush="#293137" BorderThickness="0,0,1,0">
+      <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
         <Grid Margin="16,16,14,14" RowDefinitions="Auto,12,Auto,10,*">
           <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
             <TextBlock Classes="section" Text="REVIEW QUEUE" VerticalAlignment="Center" />
@@ -105,7 +107,7 @@
             </StackPanel>
             <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause replay on Alarm / QA Fail" IsChecked="True" FontSize="10" Foreground="#8D989D" IsCheckedChanged="PauseOnAlarmCheckBox_OnIsCheckedChanged" />
           </StackPanel>
-          <ListBox x:Name="DiagnosticListBox" Grid.Row="4" SelectionChanged="DiagnosticListBox_OnSelectionChanged">
+          <ListBox x:Name="DiagnosticListBox" Grid.Row="4" SelectionChanged="DiagnosticListBox_OnSelectionChanged" AutomationProperties.Name="Review queue findings">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ReviewGroupRow">
                 <Border BorderBrush="#242C31" BorderThickness="0,0,0,1" Padding="8,10">
@@ -128,7 +130,7 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" Background="#0C0F11">
+      <Border Grid.Column="1" Background="{DynamicResource WorkspaceBrush}">
         <TabControl x:Name="WorkspaceTabs" Margin="18,10,18,14">
           <TabItem Header="RAW EXPLORER">
             <Grid RowDefinitions="34,*">
@@ -141,7 +143,7 @@
                 <TextBlock Grid.Column="5" Classes="section" Text="BYTES" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="6" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
               </Grid>
-              <ListBox x:Name="RawRecordsList" Grid.Row="1" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged">
+              <ListBox x:Name="RawRecordsList" Grid.Row="1" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:RawRecordRow">
                     <Border BorderBrush="#20272B" BorderThickness="0,0,0,1" Padding="10,8">
@@ -171,7 +173,7 @@
                 <TextBlock Grid.Column="4" Classes="section" Text="STATE" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="5" Classes="section" Text="SOURCE" VerticalAlignment="Center" />
               </Grid>
-              <ListBox x:Name="DecodedFramesList" Grid.Row="1" SelectionChanged="DecodedFramesList_OnSelectionChanged">
+              <ListBox x:Name="DecodedFramesList" Grid.Row="1" SelectionChanged="DecodedFramesList_OnSelectionChanged" AutomationProperties.Name="Decoded logical frames">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:DecodedFrameRow">
                     <Border BorderBrush="#20272B" BorderThickness="0,0,0,1" Padding="10,8">
@@ -205,7 +207,7 @@
                 <TextBlock Grid.Column="8" Text="REPORTED" FontSize="9" Foreground="#78848A" VerticalAlignment="Center" />
                 <TextBlock x:Name="PaintStatusText" Grid.Column="9" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="10" Foreground="#68747A" HorizontalAlignment="Right" VerticalAlignment="Center" />
               </Grid>
-              <Border Grid.Row="1" Background="#0A0D0F" BorderBrush="#20282D" BorderThickness="1">
+              <Border Grid.Row="1" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                 <controls:ReplayPaintSurface x:Name="PaintSurface" AutomationProperties.Name="Touch replay Paint surface" />
               </Border>
             </Grid>
@@ -223,7 +225,7 @@
                   <Button Classes="primary" Content="Export JSON / CSV / PNG" Click="ExportAnalysisButton_OnClick" />
                 </StackPanel>
               </Grid>
-              <Border Grid.Row="2" Background="#0A0D0F" BorderBrush="#20282D" BorderThickness="1" Padding="22">
+              <Border Grid.Row="2" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">
                 <StackPanel Spacing="12">
                   <TextBlock x:Name="AnalysisSummaryText" Text="Decode a capture to generate analysis." FontSize="18" FontWeight="SemiBold" Foreground="#DDE3E1" TextWrapping="Wrap" />
                   <TextBlock Text="Outputs use the same selected replay range and decoder configuration as Paint. Invalid frames remain evidence and never contribute invented hotspot coordinates." FontSize="11" Foreground="#77848A" TextWrapping="Wrap" />
@@ -235,7 +237,7 @@
         </TabControl>
       </Border>
 
-      <Border Grid.Column="2" Background="#14181B" BorderBrush="#293137" BorderThickness="1,0,0,0">
+      <Border Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
         <ScrollViewer>
           <StackPanel Margin="18,16" Spacing="14">
             <TextBlock Classes="section" Text="INSPECTOR" />
@@ -294,19 +296,19 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="3" Background="#15191D" BorderBrush="#2A3237" BorderThickness="0,1,0,0">
+    <Border Grid.Row="3" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
       <Grid Margin="18,10" RowDefinitions="30,*,24">
         <Grid Grid.Row="0" ColumnDefinitions="Auto,6,Auto,6,Auto,18,Auto,6,120,12,Auto,6,Auto,6,Auto,12,Auto,6,Auto,*,Auto">
-          <Button x:Name="PreviousFrameButton" Classes="ghost" Content="◀" IsEnabled="False" Click="PreviousFrameButton_OnClick" />
-          <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" Content="▶ PLAY" IsEnabled="False" Click="PlayPauseButton_OnClick" />
-          <Button x:Name="NextFrameButton" Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" Click="NextFrameButton_OnClick" />
+          <Button x:Name="PreviousFrameButton" Classes="ghost" Content="◀" IsEnabled="False" Click="PreviousFrameButton_OnClick" AutomationProperties.Name="Previous logical frame" />
+          <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" Content="▶ PLAY" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play or pause replay" />
+          <Button x:Name="NextFrameButton" Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" Click="NextFrameButton_OnClick" AutomationProperties.Name="Next logical frame" />
           <TextBlock Grid.Column="6" Classes="section" Text="CLOCK" VerticalAlignment="Center" />
-          <ComboBox x:Name="ClockModeComboBox" Grid.Column="8" SelectedIndex="0" SelectionChanged="ClockModeComboBox_OnSelectionChanged">
+          <ComboBox x:Name="ClockModeComboBox" Grid.Column="8" SelectedIndex="0" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
             <ComboBoxItem Content="Recorded" />
             <ComboBoxItem Content="Frame" />
           </ComboBox>
           <TextBlock Grid.Column="10" Classes="section" Text="SPEED" VerticalAlignment="Center" />
-          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="12" Width="72" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged">
+          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="12" Width="72" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
             <ComboBoxItem Content="0.1×" Tag="0.1" />
             <ComboBoxItem Content="0.25×" Tag="0.25" />
             <ComboBoxItem Content="0.5×" Tag="0.5" />
@@ -329,7 +331,7 @@
           <ProgressBar x:Name="LogicalTimelineProgress" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="#101417" Foreground="#C8F36C" />
           <TextBlock Grid.Row="2" Text="EVIDENCE" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
           <ProgressBar x:Name="EvidenceTimelineProgress" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="#101417" Foreground="#D8AD62" />
-          <Slider x:Name="ReplaySeekSlider" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Minimum="0" Maximum="1" Value="0" Opacity="0.72" ValueChanged="ReplaySeekSlider_OnValueChanged" />
+          <Slider x:Name="ReplaySeekSlider" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Minimum="0" Maximum="1" Value="0" Opacity="0.72" ValueChanged="ReplaySeekSlider_OnValueChanged" AutomationProperties.Name="Replay position" />
         </Grid>
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,12,Auto">
           <TextBlock x:Name="ReplayClockText" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="#AAB3B6" VerticalAlignment="Bottom" />
@@ -338,6 +340,29 @@
           <TextBlock x:Name="ReplayEndClockText" Grid.Column="4" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="#59646B" VerticalAlignment="Bottom" />
         </Grid>
       </Grid>
+    </Border>
+
+    <Border x:Name="CommandPaletteOverlay" Grid.RowSpan="4" IsVisible="False" Focusable="True" ZIndex="100" Background="#B0000000" KeyDown="CommandPaletteOverlay_OnKeyDown" AutomationProperties.Name="Command palette">
+      <Border Width="520" MaxHeight="620" Padding="22" CornerRadius="10" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel>
+              <TextBlock Text="COMMAND PALETTE" Classes="section" />
+              <TextBlock Text="Replay actions and keyboard shortcuts" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="ghost" Content="Esc" Click="CloseCommandPaletteButton_OnClick" AutomationProperties.Name="Close command palette" />
+          </Grid>
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Load capture                                      Ctrl+O" Tag="load" Click="CommandPaletteAction_OnClick" />
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Decode selected format" Tag="decode" Click="CommandPaletteAction_OnClick" />
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Play / pause replay                              Space" Tag="play" Click="CommandPaletteAction_OnClick" />
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Previous / next frame                            ← / →" Tag="step" Click="CommandPaletteAction_OnClick" />
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Mark current frame                               M" Tag="mark" Click="CommandPaletteAction_OnClick" />
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export analysis                                  Ctrl+E" Tag="analysis" Click="CommandPaletteAction_OnClick" />
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export replay video" Tag="video" Click="CommandPaletteAction_OnClick" />
+          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Toggle Dark / Light theme" Tag="theme" Click="CommandPaletteAction_OnClick" />
+          <TextBlock Text="Home / End seek capture bounds · I / O set loop range" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
+        </StackPanel>
+      </Border>
     </Border>
   </Grid>
 </Window>

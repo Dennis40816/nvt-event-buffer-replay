@@ -2,7 +2,41 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Nvt.Replay.Avalonia.App"
              RequestedThemeVariant="Dark">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="WindowBrush" Color="#0F1215" />
+                    <SolidColorBrush x:Key="HeaderBrush" Color="#15191D" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#121619" />
+                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#0C0F11" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#0A0D0F" />
+                    <SolidColorBrush x:Key="BorderBrush" Color="#293137" />
+                    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#E0E5E3" />
+                    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#AEB7BB" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#707C82" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#C8F36C" />
+                    <SolidColorBrush x:Key="AccentTextBrush" Color="#111710" />
+                    <SolidColorBrush x:Key="WarningBrush" Color="#D8AD62" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WindowBrush" Color="#F3F5F2" />
+                    <SolidColorBrush x:Key="HeaderBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#E8ECE8" />
+                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#F8FAF7" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#111518" />
+                    <SolidColorBrush x:Key="BorderBrush" Color="#BEC7C1" />
+                    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#17201B" />
+                    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#3F4C45" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#637168" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#537D00" />
+                    <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="WarningBrush" Color="#8A5900" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 
     <Application.Styles>
         <FluentTheme DensityStyle="Compact" />

@@ -39,3 +39,10 @@ The CLI range is one-based and inclusive. Without `--range`, all decoded
 frames are included. Each file is written through same-directory temporary
 storage and atomically replaces its prior version only after a successful
 flush; cancellation preserves the prior valid file.
+
+Multi-file export also writes `analysis-journal.json` before changing any
+payload. `manifest.json` is committed last and the journal is removed only
+after the complete generation succeeds. If a process is interrupted, the
+prior manifest remains the last committed generation and the surviving
+journal identifies the unfinished target set; a successful retry replaces the
+journal and completes normally.

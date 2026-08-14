@@ -60,15 +60,9 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore, build, and test
+      - name: Verify source and quality gates
         shell: pwsh
-        run: |
-          dotnet restore Nvt.EventBufferReplay.sln --locked-mode
-          if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }
-          dotnet build Nvt.EventBufferReplay.sln --configuration Release --no-restore
-          if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
-          dotnet test Nvt.EventBufferReplay.sln --configuration Release --no-build
-          if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
+        run: ./scripts/verify.ps1
 
       - name: Build and smoke candidate
         shell: pwsh

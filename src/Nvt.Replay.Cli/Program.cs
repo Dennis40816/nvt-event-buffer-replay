@@ -52,6 +52,8 @@ internal static class ReplayCli
                     return await AnalyzeAsync(operands[1..], output, error, json);
                 case "export":
                     return await ExportReplayAsync(operands[1..], output, error, json);
+                case "benchmark":
+                    return await BenchmarkAsync(operands[1..], output, error, json);
                 default:
                     await error.WriteLineAsync("Unknown or incomplete command. Run 'nvt-replay help'.");
                     return UsageError;
@@ -62,6 +64,53 @@ internal static class ReplayCli
             await error.WriteLineAsync($"Input error: {exception.Message}");
             return InputError;
         }
+    }
+
+    private static async Task<int> BenchmarkAsync(string[] operands, TextWriter output, TextWriter error, bool json)
+    {
+        if (operands.Length < 3 || !TryReadOption(operands, "--event-buffer-version", out var versionText))
+        {
+            await error.WriteLineAsync("Usage: nvt-replay benchmark <file> --event-buffer-version <0x82|0x83|0x84|0x85> [--source-adapter <id>] [--sample-seeks <count>] [--render-frames <count>] [--json]");
+            return UsageError;
+        }
+        if (!File.Exists(operands[0]))
+        {
+            await error.WriteLineAsync($"Input file does not exist: {operands[0]}");
+            return InputError;
+        }
+        if (!CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
+        {
+            await error.WriteLineAsync("Benchmark currently supports Common 0x82-0x85 captures.");
+            return UsageError;
+        }
+        if (!TryReadNonNegativeInt(operands, "--sample-seeks", 10_000, out var seekSamples) ||
+            !TryReadNonNegativeInt(operands, "--render-frames", 60, out var renderFrames))
+        {
+            await error.WriteLineAsync("--sample-seeks and --render-frames must be non-negative integers.");
+            return UsageError;
+        }
+        var adapterId = TryReadOption(operands, "--source-adapter", out var sourceText) ? sourceText : null;
+        var report = await PerformanceBenchmark.RunCommonAsync(operands[0], version, adapterId, seekSamples, renderFrames);
+        if (json) await output.WriteLineAsync(JsonSerializer.Serialize(report, JsonOptions));
+        else
+        {
+            await output.WriteLineAsync($"Input    {report.SourceBytes:N0} bytes · {report.PhysicalRecords:N0} physical records · max offset {report.MaximumByteOffset:N0}");
+            await output.WriteLineAsync($"Replay   {report.LogicalFrames:N0} frames · {report.Checkpoints:N0} sparse checkpoints · {report.TimelineDuration:c}");
+            await output.WriteLineAsync($"Timing   load {report.LoadMilliseconds:N0} ms · decode/index {report.DecodeAndIndexMilliseconds:N0} ms · {report.SeekSamples:N0} seeks {report.SeekMilliseconds:N0} ms");
+            await output.WriteLineAsync($"Render   {report.RenderedFrames:N0} frames · {report.RenderFramesPerSecond:N1} fps");
+            await output.WriteLineAsync($"Memory   peak working set {report.PeakWorkingSetBytes / 1_048_576d:N1} MiB");
+        }
+        return 0;
+    }
+
+    private static bool TryReadNonNegativeInt(string[] operands, string name, int fallback, out int value)
+    {
+        if (!TryReadOption(operands, name, out var text))
+        {
+            value = fallback;
+            return true;
+        }
+        return int.TryParse(text, out value) && value >= 0;
     }
 
     private static async Task<int> ExportReplayAsync(
@@ -614,6 +663,10 @@ internal static class ReplayCli
                                 [--source-adapter <id>]
                                 [--desay97-profile <standard|benz-palm>] [--json]
                                            Export MP4 or atomic PNG fallback
+              nvt-replay benchmark <file> --event-buffer-version <0x82|0x83|0x84|0x85>
+                                   [--source-adapter <id>] [--sample-seeks <count>]
+                                   [--render-frames <count>] [--json]
+                                           Measure load, decode/index, seek, render, and peak memory
 
             Source detection is ranked and may require --source-adapter when ambiguous.
             Event Buffer Version and Benz Palm remain explicit operator choices.

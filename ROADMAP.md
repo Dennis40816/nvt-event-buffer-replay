@@ -7,7 +7,7 @@
 - [x] Common 0x82-0x85 decoding and semantic parity
 - [x] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
 - [x] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
-- [ ] Frozen Python semantic reference and synthetic/public fixtures (decoded-I2C simulator complete; semantic golden freeze pending)
+- [x] Frozen Python parity observation plus synthetic/public fixtures and deterministic artifact goldens
 
 ## M2 — Replay Slice
 
@@ -34,10 +34,10 @@
 
 ## M5 — Hardening
 
-- [ ] One-GB/one-million-record/eight-hour performance gate
-- [ ] Cancellation, recovery journal, and atomic output (sidecar atomic output complete)
-- [ ] Keyboard, command palette, scaling, theme, and accessibility checks
-- [ ] Windows self-contained portable package and release gates
+- [x] One-GB/one-million-record/eight-hour performance gate
+- [x] Cancellation, recovery journal, and atomic output
+- [x] Keyboard, command palette, scaling, theme, and accessibility checks
+- [x] Windows self-contained portable package and release gates
 
 ## Post-MVP evidence gates
 

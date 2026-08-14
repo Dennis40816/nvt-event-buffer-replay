@@ -85,7 +85,9 @@ public sealed class CaptureAnalysisTests : IDisposable
         Assert.Equal("d641a1948d29207a90e832a42066bd13c2b4139600cd5b80ecb333e6295c27e6", goldenHash);
         Assert.Equal([137, 80, 78, 71, 13, 10, 26, 10], (await File.ReadAllBytesAsync(first.HeatmapPng))[..8]);
         Assert.Contains("event-00000000-source-0", await File.ReadAllTextAsync(first.EventsCsv));
+        Assert.Contains("3000000000", await File.ReadAllTextAsync(first.DiagnosticsCsv));
         Assert.Contains("heatmapTransform", await File.ReadAllTextAsync(first.ManifestJson));
+        Assert.False(File.Exists(Path.Combine(first.Directory, "analysis-journal.json")));
     }
 
     [Fact]
@@ -107,6 +109,26 @@ public sealed class CaptureAnalysisTests : IDisposable
 
         Assert.Equal("prior-valid-report", await File.ReadAllTextAsync(reportPath));
         Assert.Empty(Directory.GetFiles(output, ".*.tmp"));
+        Assert.False(File.Exists(Path.Combine(output, "analysis-journal.json")));
+    }
+
+    [Fact]
+    public async Task Successful_retry_replaces_a_stale_recovery_journal_and_commits_manifest_last()
+    {
+        var output = Path.Combine(directory, "recovery");
+        Directory.CreateDirectory(output);
+        var journal = Path.Combine(output, "analysis-journal.json");
+        await File.WriteAllTextAsync(journal, "stale interrupted generation");
+        var replay = Replay();
+        var report = new CaptureAnalyzer().Analyze(
+            "capture.txt", new string('a', 64), new ReplayDecodeConfiguration("0x83", null, "synthetic"),
+            EvidenceStatus.Verified, replay, Diagnostics(replay));
+
+        var result = await new AnalysisOutputWriter().WriteAsync(output, report);
+
+        Assert.False(File.Exists(journal));
+        Assert.True(File.Exists(result.ManifestJson));
+        Assert.Contains(new string('a', 64), await File.ReadAllTextAsync(result.ManifestJson));
     }
 
     public void Dispose()
@@ -117,7 +139,7 @@ public sealed class CaptureAnalysisTests : IDisposable
 
     private static IReadOnlyList<ReplayDiagnostic> Diagnostics(ITouchReplaySession replay) =>
     [
-        new(DiagnosticSeverity.Alarm, "COMMON_ASIL_ALARM", "asserted", "source-0", new SourceLocation(10, 1)),
+        new(DiagnosticSeverity.Alarm, "COMMON_ASIL_ALARM", "asserted", "source-0", new SourceLocation(3_000_000_000, 1)),
         new(DiagnosticSeverity.Info, "COMMON_ASIL_CLEARED", "cleared", "source-1", new SourceLocation(20, 2)),
     ];
 

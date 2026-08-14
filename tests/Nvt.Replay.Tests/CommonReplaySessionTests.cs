@@ -137,6 +137,8 @@ public sealed class CommonReplaySessionTests
             .ToArray();
         var replay = new CommonReplaySession(frames, Options(checkpointInterval: 256));
 
+        Assert.Equal(197, replay.CheckpointCount);
+
         foreach (var index in new[] { frameCount - 1, 32_768, 12_345, 256, 1, 0 })
         {
             var snapshot = replay.Seek(index);
