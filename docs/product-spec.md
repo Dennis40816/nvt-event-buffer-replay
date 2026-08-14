@@ -49,8 +49,11 @@ tails. Desay 0x97 uses a transport assembler before payload decoding:
 physical transaction -> assembler -> logical frame -> payload decoder
 ```
 
-The Desay assembler consumes a one-byte probe at `0x99000`, then the
-`1 + 5*n` continuation at `0x99001`. Zero touches still require phase two.
+The Desay assembler first reads one byte at Event Buffer offset `0x00`
+(`0x99000` on NT51927) to obtain touch count `n`. Phase two starts again at
+offset `0x00` and reads exactly `1 + 5*n + 1` bytes: touch count, `n`
+five-byte finger records, and CRC8. Zero touches still require phase two so a
+Break or All Break packet is not lost.
 Missing, orphan, intervening, invalid-length, or invalid-CRC packets create
 diagnostics and do not update Host State. No decoder repairs captured bytes.
 
