@@ -12,10 +12,10 @@
 ## M2 — Replay Slice
 
 - [x] Load and progressive Decode Configuration
-- [ ] Reported Frame and Host State Paint
-- [ ] Recorded/Frame clocks and playback controls
-- [ ] Logical stepping, physical drill-down, range, and sparse checkpoints
-- [ ] Basic multi-track timeline
+- [x] Reported Frame and Host State Paint
+- [x] Recorded/Frame clocks and playback controls
+- [x] Logical stepping, physical drill-down, range, and sparse checkpoints
+- [x] Basic multi-track timeline
 
 ## M3 — Analysis Slice
 
