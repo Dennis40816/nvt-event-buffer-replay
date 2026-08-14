@@ -85,6 +85,7 @@ public sealed class CaptureAnalysisTests : IDisposable
         Assert.Equal("d641a1948d29207a90e832a42066bd13c2b4139600cd5b80ecb333e6295c27e6", goldenHash);
         Assert.Equal([137, 80, 78, 71, 13, 10, 26, 10], (await File.ReadAllBytesAsync(first.HeatmapPng))[..8]);
         Assert.Contains("event-00000000-source-0", await File.ReadAllTextAsync(first.EventsCsv));
+        Assert.Contains("3000000000", await File.ReadAllTextAsync(first.DiagnosticsCsv));
         Assert.Contains("heatmapTransform", await File.ReadAllTextAsync(first.ManifestJson));
     }
 
@@ -117,7 +118,7 @@ public sealed class CaptureAnalysisTests : IDisposable
 
     private static IReadOnlyList<ReplayDiagnostic> Diagnostics(ITouchReplaySession replay) =>
     [
-        new(DiagnosticSeverity.Alarm, "COMMON_ASIL_ALARM", "asserted", "source-0", new SourceLocation(10, 1)),
+        new(DiagnosticSeverity.Alarm, "COMMON_ASIL_ALARM", "asserted", "source-0", new SourceLocation(3_000_000_000, 1)),
         new(DiagnosticSeverity.Info, "COMMON_ASIL_CLEARED", "cleared", "source-1", new SourceLocation(20, 2)),
     ];
 

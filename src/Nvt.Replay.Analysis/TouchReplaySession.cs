@@ -79,6 +79,7 @@ public sealed record TouchReplaySnapshot<TFrame>(
 public interface ITouchReplaySession
 {
     int Count { get; }
+    int CheckpointCount => 0;
     TimeSpan FrameInterval { get; }
     IReadOnlyList<ReplayTimelineEntry> Timeline { get; }
     IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }
@@ -112,6 +113,7 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
     }
 
     public int Count => frames.Count;
+    public int CheckpointCount => checkpoints.Count;
     public TimeSpan FrameInterval { get; }
     public IReadOnlyList<ReplayTimelineEntry> Timeline => timeline;
     public IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }

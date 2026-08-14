@@ -58,6 +58,18 @@ public sealed class NdsCaptureSessionTests : IDisposable
         Assert.Equal(1, updates[^1].RecordsRead);
     }
 
+    [Fact]
+    public async Task LoadAsync_observes_cancellation_without_publishing_a_partial_session()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var path = WriteLog(string.Join(Environment.NewLine, Enumerable.Repeat(Record("Paint", "0x01", packet), 1000)));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => CaptureSession.LoadAsync(path, cancellationToken: cancellation.Token));
+    }
+
     public void Dispose()
     {
         Directory.Delete(temporaryDirectory, recursive: true);

@@ -31,3 +31,11 @@ jobs:
 
       - name: Test
         run: dotnet test Nvt.EventBufferReplay.sln --configuration Release --no-build
+
+      - name: Enforce handwritten line budget
+        shell: pwsh
+        run: ./scripts/check-line-budget.ps1
+
+      - name: Run performance smoke gate
+        shell: pwsh
+        run: ./scripts/performance-gate.ps1 -Mode Smoke

@@ -34,7 +34,7 @@
 
 ## M5 — Hardening
 
-- [ ] One-GB/one-million-record/eight-hour performance gate
+- [x] One-GB/one-million-record/eight-hour performance gate
 - [ ] Cancellation, recovery journal, and atomic output (sidecar atomic output complete)
 - [ ] Keyboard, command palette, scaling, theme, and accessibility checks
 - [ ] Windows self-contained portable package and release gates

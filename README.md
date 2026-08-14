@@ -76,6 +76,10 @@ Avalonia Paint and deterministic headless export now share one `ReplayScene`.
 operator-reviewed FFmpeg executable, or atomically falls back to a PNG
 sequence when no compatible encoder is available. See [replay video export](docs/video-export.md).
 
+Repeatable performance gates cover 1 GiB input, one million physical records,
+an eight-hour timeline, sparse seek checkpoints, and 60 FPS Paint rendering.
+See [performance and scale gates](docs/performance.md).
+
 ## Build
 
 Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.
