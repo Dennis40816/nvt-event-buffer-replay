@@ -69,6 +69,7 @@ public sealed class CaptureSession
             }
         }
 
+        sourceDiagnostics.AddRange(new NvtRegisterActivityMonitor().Observe(records));
         progress?.Report(new CaptureLoadProgress("Ready for configuration", records.Count));
         return new CaptureSession(fullPath, sourceHash, probe, records, sourceDiagnostics);
     }

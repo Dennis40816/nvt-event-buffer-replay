@@ -14,7 +14,7 @@ public sealed class CommonNdsInspectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Inspection_ignores_direct_memory_and_decodes_Paint_event()
+    public async Task Inspection_models_direct_memory_evidence_without_decoding_it_as_a_frame()
     {
         var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
         var path = WriteLog(
@@ -26,7 +26,9 @@ public sealed class CommonNdsInspectorTests : IDisposable
         var frame = Assert.Single(report.Frames);
         Assert.True(frame.AllBreak);
         Assert.True(frame.CrcValid);
-        Assert.Empty(report.Diagnostics);
+        var sample = Assert.Single(report.Diagnostics);
+        Assert.Equal("NVT_FRAME_COUNTER_SAMPLE", sample.Code);
+        Assert.Equal("01 00", sample.Details?["raw"]);
         Assert.Matches("^[0-9a-f]{64}$", report.SourceSha256);
     }
 

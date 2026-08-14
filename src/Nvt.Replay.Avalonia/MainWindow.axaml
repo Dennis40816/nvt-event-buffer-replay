@@ -93,14 +93,18 @@
               <TextBlock x:Name="DiagnosticCountText" Text="0" FontSize="10" Foreground="#A8B1B5" />
             </Border>
           </Grid>
-          <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6">
-            <Button Classes="ghost" Content="All" />
-            <Button Classes="ghost" Content="Warnings" IsEnabled="False" />
-            <Button Classes="ghost" Content="ASIL" IsEnabled="False" />
+          <StackPanel Grid.Row="2" Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <Button Classes="ghost" Content="All" Tag="All" Click="ReviewFilterButton_OnClick" />
+              <Button Classes="ghost" Content="Warn" Tag="Warnings" Click="ReviewFilterButton_OnClick" />
+              <Button Classes="ghost" Content="Alarm" Tag="Alarms" Click="ReviewFilterButton_OnClick" />
+              <Button Classes="ghost" Content="ASIL" Tag="Asil" Click="ReviewFilterButton_OnClick" />
+            </StackPanel>
+            <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause replay on Alarm / QA Fail" IsChecked="True" FontSize="10" Foreground="#8D989D" IsCheckedChanged="PauseOnAlarmCheckBox_OnIsCheckedChanged" />
           </StackPanel>
           <ListBox x:Name="DiagnosticListBox" Grid.Row="4" SelectionChanged="DiagnosticListBox_OnSelectionChanged">
             <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:DiagnosticRow">
+              <DataTemplate x:DataType="vm:ReviewGroupRow">
                 <Border BorderBrush="#242C31" BorderThickness="0,0,0,1" Padding="8,10">
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="*,Auto">
@@ -108,6 +112,11 @@
                       <TextBlock Grid.Column="1" Text="{Binding Severity}" FontSize="9" Foreground="#D8AD62" />
                     </Grid>
                     <TextBlock Text="{Binding Message}" FontSize="10" Foreground="#707B81" TextWrapping="Wrap" MaxHeight="44" />
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding Count}" FontSize="9" Foreground="#657078" />
+                      <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="9" FontWeight="SemiBold" Foreground="#9FB6BE" />
+                    </Grid>
+                    <TextBlock Text="{Binding Disposition}" FontSize="9" Foreground="#C8F36C" />
                   </StackPanel>
                 </Border>
               </DataTemplate>
@@ -208,6 +217,20 @@
             <StackPanel Spacing="4">
               <TextBlock x:Name="InspectorTitleText" Text="No record selected" FontSize="16" FontWeight="SemiBold" Foreground="#E0E5E3" />
               <TextBlock x:Name="InspectorSubtitleText" Text="Select a physical record or decoded event." FontSize="10" Foreground="#69757B" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel x:Name="ReviewActionsPanel" Spacing="7" IsVisible="False">
+              <TextBlock Classes="section" Text="REVIEW EVENT" />
+              <ComboBox x:Name="ReviewOccurrenceComboBox" PlaceholderText="Occurrence" SelectionChanged="ReviewOccurrenceComboBox_OnSelectionChanged" />
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Button Classes="ghost" Content="Acknowledge" Click="AcknowledgeReviewButton_OnClick" />
+                <Button Classes="ghost" Content="Resolve" Click="ResolveReviewButton_OnClick" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <Button Classes="ghost" Content="Expected" Tag="Expected" Click="DispositionReviewButton_OnClick" />
+                <Button Classes="ghost" Content="False positive" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
+              </StackPanel>
+              <TextBlock x:Name="ReviewStateText" FontFamily="Cascadia Mono" FontSize="9" Foreground="#8A969B" TextWrapping="Wrap" />
             </StackPanel>
 
             <Border BorderBrush="#2A3338" BorderThickness="0,1,0,1" Padding="0,12">

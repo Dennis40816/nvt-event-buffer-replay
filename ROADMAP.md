@@ -19,9 +19,9 @@
 
 ## M3 — Analysis Slice
 
-- [ ] Protocol diagnostics and ASIL lifecycle
-- [ ] Review Queue and occurrence grouping
-- [ ] Event/Raw/Transport/Evidence inspector
+- [x] Protocol diagnostics and ASIL lifecycle
+- [x] Review Queue and occurrence grouping
+- [x] Event/Raw/Transport/Evidence inspector
 - [ ] Marker and `.nvtreplay.json` round trip
 
 ## M4 — Export Slice

@@ -23,6 +23,10 @@ public partial class MainWindow : Window
     private Dictionary<string, DecodedFrameRow> decodedRowsBySourceId = [];
     private DecodedFrameRow[] decodedRows = [];
     private DiagnosticRow[] diagnosticRows = [];
+    private ReviewSession? reviewSession;
+    private ReviewGroupRow[] reviewRows = [];
+    private ReviewQueueFilter reviewFilter = ReviewQueueFilter.All;
+    private string? selectedReviewGroupId;
     private CancellationTokenSource? playbackCancellation;
     private int currentLogicalIndex = -1;
     private int? loopIn;
@@ -85,8 +89,7 @@ public partial class MainWindow : Window
             rawRowsById = rawRows.ToDictionary(row => row.Record.StableId, StringComparer.Ordinal);
             RawRecordsList.ItemsSource = rawRows;
             diagnosticRows = session.SourceDiagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
-            DiagnosticListBox.ItemsSource = diagnosticRows;
-            DiagnosticCountText.Text = diagnosticRows.Length.ToString(CultureInfo.InvariantCulture);
+            CreateReviewSession(session.SourceDiagnostics);
             CaptureNameText.Text = Path.GetFileName(session.SourcePath).ToUpperInvariant();
             SessionStatusText.Text = $"{session.Records.Count:N0} physical records indexed · {diagnosticRows.Length:N0} source diagnostics · semantic format required";
             SourceAdapterText.Text = session.Probe.DisplayName;
@@ -211,10 +214,9 @@ public partial class MainWindow : Window
                     .Select(diagnostic => new DiagnosticRow(diagnostic))
                     .ToArray(),
                 cancellationToken);
+            CreateReviewSession(diagnosticRows.Select(row => row.Diagnostic).ToArray());
 
             DecodedFramesList.ItemsSource = decodedRows;
-            DiagnosticListBox.ItemsSource = diagnosticRows;
-            DiagnosticCountText.Text = diagnosticRows.Length.ToString(CultureInfo.InvariantCulture);
             SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} decoded frames · {diagnosticRows.Length:N0} diagnostics";
             ConfigurationHintText.Text = $"{formatLabel} selected manually · raw source remains unchanged";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
@@ -304,19 +306,112 @@ public partial class MainWindow : Window
 
     private void DiagnosticListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (DiagnosticListBox.SelectedItem is not DiagnosticRow row)
+        if (DiagnosticListBox.SelectedItem is not ReviewGroupRow row)
         {
             return;
         }
+        selectedReviewGroupId = row.Group.Id;
+        ReviewActionsPanel.IsVisible = true;
+        ReviewOccurrenceComboBox.ItemsSource = row.Group.Occurrences
+            .Select((occurrence, index) => new ReviewOccurrenceRow(index + 1, occurrence))
+            .ToArray();
+        ReviewOccurrenceComboBox.SelectedIndex = 0;
+        UpdateReviewState(row.Group);
+    }
 
-        if (rawRowsById.TryGetValue(row.Diagnostic.SourceRecordId, out var rawRow))
+    private void ReviewOccurrenceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (ReviewOccurrenceComboBox.SelectedItem is ReviewOccurrenceRow row)
+            NavigateToOccurrence(row.Occurrence);
+    }
+
+    private void NavigateToOccurrence(ReviewOccurrence occurrence)
+    {
+        if (occurrence.LogicalIndex is { } logicalIndex && replaySession is { Count: > 0 })
+            SeekReplay(logicalIndex);
+        else if (rawRowsById.TryGetValue(occurrence.Diagnostic.SourceRecordId, out var rawRow))
         {
             ShowRecord(rawRow.Record, FindFrame(rawRow.Record.StableId));
             RawRecordsList.SelectedItem = rawRow;
             RawRecordsList.ScrollIntoView(rawRow);
         }
+        InspectorSubtitleText.Text = $"{occurrence.Diagnostic.Severity} · {occurrence.Diagnostic.Code} · {occurrence.Diagnostic.Message}";
+    }
 
-        InspectorSubtitleText.Text = $"{row.Diagnostic.Severity} · {row.Diagnostic.Code} · {row.Diagnostic.Message}";
+    private void ReviewFilterButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: { } tag } && Enum.TryParse<ReviewQueueFilter>(tag.ToString(), out var filter))
+        {
+            reviewFilter = filter;
+            RefreshReviewQueue();
+        }
+    }
+
+    private void PauseOnAlarmCheckBox_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (reviewSession is not null)
+        {
+            var enabled = PauseOnAlarmCheckBox.IsChecked == true;
+            reviewSession.Options = reviewSession.Options with { PauseOnAlarm = enabled, PauseOnQaFail = enabled };
+        }
+    }
+
+    private void AcknowledgeReviewButton_OnClick(object? sender, RoutedEventArgs e) =>
+        MutateReview(groupId => reviewSession!.Acknowledge(groupId));
+
+    private void DispositionReviewButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: { } tag } && Enum.TryParse<ReviewDisposition>(tag.ToString(), out var disposition))
+            MutateReview(groupId => reviewSession!.SetDisposition(groupId, disposition));
+    }
+
+    private void ResolveReviewButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            MutateReview(groupId => reviewSession!.Resolve(groupId));
+        }
+        catch (InvalidOperationException exception)
+        {
+            ReviewStateText.Text = $"Cannot resolve · {exception.Message}";
+        }
+    }
+
+    private void MutateReview(Func<string, ReviewEventGroup> action)
+    {
+        if (reviewSession is null || selectedReviewGroupId is not { } groupId) return;
+        var updated = action(groupId);
+        RefreshReviewQueue(groupId);
+        UpdateReviewState(updated);
+    }
+
+    private void UpdateReviewState(ReviewEventGroup group)
+    {
+        ReviewStateText.Text =
+            $"captured={group.CurrentCapturedAlarmState} · workflow={group.WorkflowState} · " +
+            $"lifecycle={group.AsilLifecycle?.ToString() ?? "—"} · disposition={group.Disposition}";
+    }
+
+    private void CreateReviewSession(IReadOnlyList<ReplayDiagnostic> diagnostics)
+    {
+        var logicalIndices = decodedRows
+            .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, row.LogicalIndex)))
+            .GroupBy(item => item.StableId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last().LogicalIndex, StringComparer.Ordinal);
+        reviewSession = new ReviewSession(
+            diagnostics,
+            logicalIndices,
+            new ReviewSessionOptions(PauseOnAlarmCheckBox.IsChecked == true, PauseOnAlarmCheckBox.IsChecked == true));
+        RefreshReviewQueue();
+    }
+
+    private void RefreshReviewQueue(string? selectGroupId = null)
+    {
+        reviewRows = reviewSession?.Filter(reviewFilter).Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
+        DiagnosticListBox.ItemsSource = reviewRows;
+        DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
+        var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
+        if (selected is not null) DiagnosticListBox.SelectedItem = selected;
     }
 
     private object? FindFrame(string sourceId) =>
@@ -396,12 +491,18 @@ public partial class MainWindow : Window
         decodedRowsBySourceId = [];
         decodedRows = [];
         diagnosticRows = [];
+        reviewSession = null;
+        reviewRows = [];
+        reviewFilter = ReviewQueueFilter.All;
+        selectedReviewGroupId = null;
         currentLogicalIndex = -1;
         loopIn = null;
         loopOut = null;
         RawRecordsList.ItemsSource = null;
         DecodedFramesList.ItemsSource = null;
         DiagnosticListBox.ItemsSource = null;
+        ReviewOccurrenceComboBox.ItemsSource = null;
+        ReviewActionsPanel.IsVisible = false;
         EventVersionComboBox.SelectedIndex = -1;
         EventVersionComboBox.IsEnabled = false;
         Desay97ProfileComboBox.SelectedIndex = -1;
@@ -570,6 +671,8 @@ public partial class MainWindow : Window
                 var next = maxReplaySpeed
                     ? Math.Min(end, currentLogicalIndex + 50)
                     : currentLogicalIndex + 1;
+                var pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, next);
+                if (pauseIndex is { } alarmIndex) next = alarmIndex;
                 var delay = maxReplaySpeed
                     ? TimeSpan.FromMilliseconds(16)
                     : DelayBetween(currentLogicalIndex, next);
@@ -583,11 +686,30 @@ public partial class MainWindow : Window
                     cancellationToken.ThrowIfCancellationRequested();
                 }
                 SeekReplay(next);
+                if (pauseIndex == next)
+                {
+                    SelectReviewAt(next);
+                    StopPlayback("Paused on Alarm / QA Fail · acknowledge or continue when ready");
+                    return;
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
+    }
+
+    private void SelectReviewAt(int logicalIndex)
+    {
+        if (reviewSession is null) return;
+        reviewFilter = ReviewQueueFilter.All;
+        RefreshReviewQueue();
+        var row = reviewRows.FirstOrDefault(item => item.Group.Occurrences.Any(occurrence =>
+            occurrence.LogicalIndex == logicalIndex &&
+            (occurrence.Diagnostic.Severity == DiagnosticSeverity.Alarm || occurrence.Category == ReviewEventCategory.QaResult)));
+        if (row is null) return;
+        DiagnosticListBox.SelectedItem = row;
+        DiagnosticListBox.ScrollIntoView(row);
     }
 
     private TimeSpan DelayBetween(int current, int next)
