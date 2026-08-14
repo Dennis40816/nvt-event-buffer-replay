@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Nvt.Replay.Analysis;
-using Nvt.Replay.Formats.Common;
+using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
@@ -22,6 +22,7 @@ public sealed class ReplayPaintSurface : Control
     private static readonly IBrush BreakBrush = new SolidColorBrush(Color.Parse("#E2A65B"));
     private static readonly IBrush PalmBrush = new SolidColorBrush(Color.Parse("#D477B8"));
     private static readonly IBrush AlarmBrush = new SolidColorBrush(Color.Parse("#DD665E"));
+    private static readonly IBrush InvalidBrush = new SolidColorBrush(Color.Parse("#E56C6C"));
     private IReadOnlyList<ReplayContact> reportedContacts = [];
     private IReadOnlyList<ReplayContact> hostContacts = [];
     private double extentX = 4095;
@@ -36,15 +37,15 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
-    public void SetExtent(IEnumerable<CommonEventBufferFrame> frames)
+    public void SetExtent(IEnumerable<ReplayContact> contacts)
     {
-        var reported = frames.SelectMany(frame => frame.Fingers).Where(finger => finger.IsReported).ToArray();
-        extentX = NiceExtent(reported.Select(finger => (double)finger.X).DefaultIfEmpty(1920).Max(), 1920);
-        extentY = NiceExtent(reported.Select(finger => (double)finger.Y).DefaultIfEmpty(1080).Max(), 1080);
+        var reported = contacts.ToArray();
+        extentX = NiceExtent(reported.Select(contact => (double)contact.X).DefaultIfEmpty(1920).Max(), 1920);
+        extentY = NiceExtent(reported.Select(contact => (double)contact.Y).DefaultIfEmpty(1080).Max(), 1080);
         InvalidateVisual();
     }
 
-    public void Show(CommonReplaySnapshot snapshot)
+    public void Show(ITouchReplaySnapshot snapshot)
     {
         reportedContacts = snapshot.ReportedContacts;
         hostContacts = snapshot.HostContacts;
@@ -107,6 +108,14 @@ public sealed class ReplayPaintSurface : Control
         var x = viewport.X + (contact.X / extentX * viewport.Width);
         var y = viewport.Y + (contact.Y / extentY * viewport.Height);
         var center = new Point(x, y);
+        if (contact.Invalid)
+        {
+            const double half = 10;
+            var pen = new Pen(InvalidBrush, 2);
+            context.DrawLine(pen, new Point(x - half, y - half), new Point(x + half, y + half));
+            context.DrawLine(pen, new Point(x + half, y - half), new Point(x - half, y + half));
+            return;
+        }
         var brush = contact.Type == TouchType.Palm
             ? PalmBrush
             : contact.Status == TouchStatus.Break
