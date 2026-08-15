@@ -10,6 +10,7 @@ public static class BuiltInSources
         new SaleaeDecodedI2cAdapter(),
         new KingstVisDecodedI2cAdapter(),
         new DslDecodedI2cAdapter(),
+        new AcuteDecodedI2cAdapter(),
         new ExcelDecodedI2cAdapter(),
         new CanonicalI2cTextAdapter(),
     ];

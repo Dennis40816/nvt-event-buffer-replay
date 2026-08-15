@@ -22,6 +22,7 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         yield return [new SaleaeDecodedI2cAdapter(), ".csv", (Func<string>)(() => DecodedI2cSimulator.ToSaleaeCsv([Transaction]))];
         yield return [new KingstVisDecodedI2cAdapter(), ".csv", (Func<string>)(() => DecodedI2cSimulator.ToKingstVisCsv([Transaction]))];
         yield return [new DslDecodedI2cAdapter(), ".csv", (Func<string>)(() => DecodedI2cSimulator.ToDslCsv([Transaction]))];
+        yield return [new AcuteDecodedI2cAdapter(), ".csv", (Func<string>)(() => DecodedI2cSimulator.ToAcuteCsv([Transaction]))];
         yield return [new CanonicalI2cTextAdapter(), ".txt", (Func<string>)(() => DecodedI2cSimulator.ToCanonicalText([Transaction]))];
     }
 
@@ -96,6 +97,62 @@ public sealed class DecodedI2cAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task KingstVis_official_byte_rows_are_grouped_by_packet_id()
+    {
+        var path = Write(".csv", DecodedI2cSimulator.ToKingstVisCsv([Transaction]));
+        var adapter = new KingstVisDecodedI2cAdapter();
+
+        var records = await Read(adapter, path);
+        var read = Assert.Single(records, record => record.Operation == BusOperation.Read);
+
+        Assert.Equal(2, records.Count);
+        Assert.Equal("official-v3.5-byte-row", read.SourceFields?["dialect"]);
+        Assert.Equal([true, true, true, false], read.I2c?.Acked);
+    }
+
+    [Fact]
+    public async Task Incorrect_transaction_per_row_golden_is_not_accepted_as_KingstVis()
+    {
+        var path = Write(".csv", "Time[s],Packet ID,Address,Read/Write,Data\n1,1,0x03,R,00 01\n");
+
+        var probe = await new KingstVisDecodedI2cAdapter().ProbeAsync(path);
+
+        Assert.Equal(ProbeConfidence.None, probe.Confidence);
+    }
+
+    [Fact]
+    public void Built_in_sources_include_every_supported_decoded_LA_path()
+    {
+        var ids = BuiltInSources.All.Select(adapter => adapter.Id).ToHashSet(StringComparer.Ordinal);
+
+        Assert.Contains("saleae-decoded-i2c", ids);
+        Assert.Contains("kingstvis-decoded-i2c", ids);
+        Assert.Contains("dsl-decoded-i2c", ids);
+        Assert.Contains("acute-decoded-i2c", ids);
+    }
+
+    [Fact]
+    public async Task Acute_semicolon_time_of_day_and_8bit_address_are_normalized_without_guessing()
+    {
+        var path = Write(".txt", string.Join('\n',
+            "Timestamp;Status;Address(8b);D0;D1;D2;D3;Duration;Information",
+            "12:00:00.000;ACK;Wr 02;FF;09;90;00;;page",
+            "12:00:00.010;ACK;Rd 03;01;02;03 NACK;;;read") + "\n");
+        var adapter = new AcuteDecodedI2cAdapter();
+
+        var probe = await adapter.ProbeAsync(path);
+        var records = await Read(adapter, path);
+        var read = Assert.Single(records, record => record.Operation == BusOperation.Read);
+
+        Assert.Equal(ProbeConfidence.High, probe.Confidence);
+        Assert.Equal(1, read.I2c?.SlaveAddress);
+        Assert.Equal(0x99000u, read.Address);
+        Assert.Equal(new byte[] { 0x01, 0x02, 0x03 }, read.Data);
+        Assert.Equal("true", read.SourceFields?["nack"]);
+        Assert.Equal("8b", read.SourceFields?["address_mode"]);
+    }
+
+    [Fact]
     public async Task KingstVis_offset_only_read_decodes_the_real_capture_shape_without_inventing_a_page()
     {
         var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
@@ -141,8 +198,9 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         var cases = new (ISourceAdapter Adapter, string Extension, string Text, string Code)[]
         {
             (new SaleaeDecodedI2cAdapter(), ".csv", "Time [s],Packet ID,Address,Data,Read/Write,ACK/NAK\nnot-a-time,1,0x01,0x00,Read,NAK\n", "SALEAE_MALFORMED_ROW"),
-            (new KingstVisDecodedI2cAdapter(), ".csv", "Time[s],Packet ID,Address,Read/Write,Data\n1,1,0x03,W,00\n", "KINGSTVIS_MALFORMED_ROW"),
+            (new KingstVisDecodedI2cAdapter(), ".csv", "Time [s],Packet ID,Address,Data,Read/Write,ACK\n1,1,0x03,00,Write,ACK\n", "KINGSTVIS_INVALID_PACKET"),
             (new DslDecodedI2cAdapter(), ".csv", "Id,Time[ns],1:I²C: Address/Data\n1,0,Start\n1,0,Address read: 01\n", "DSL_INCOMPLETE_TRANSACTION"),
+            (new AcuteDecodedI2cAdapter(), ".csv", "Timestamp,Status,Address(7b),D0\n0,ACK,Rd 01,not-a-byte\n", "ACUTE_MALFORMED_ROW"),
             (new CanonicalI2cTextAdapter(), ".txt", CanonicalI2cTextAdapter.Magic + "\n{broken}\n", "CANONICAL_MALFORMED_RECORD"),
         };
 

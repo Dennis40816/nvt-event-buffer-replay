@@ -29,12 +29,22 @@ public static class DecodedI2cSimulator
 
     public static string ToKingstVisCsv(IEnumerable<SyntheticI2cTransaction> transactions)
     {
-        var lines = new List<string> { "Time[s],Packet ID,Address,Read/Write,Data" };
+        var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
+        long packetId = 0;
         foreach (var transaction in transactions)
         {
             foreach (var command in transaction.WriteCommands)
-                lines.Add($"{Seconds(transaction.TimestampSeconds)},{transaction.Index},0x{transaction.SlaveAddress << 1:X2},W,{Bytes(command)}");
-            lines.Add($"{Seconds(transaction.TimestampSeconds)},{transaction.Index},0x{(transaction.SlaveAddress << 1) | 1:X2},R,{Bytes(transaction.ReadData)}");
+            {
+                foreach (var value in command)
+                    lines.Add($"{Seconds(transaction.TimestampSeconds)},{packetId},0x{transaction.SlaveAddress << 1:X2},0x{value:X2},Write,ACK");
+                packetId++;
+            }
+            for (var index = 0; index < transaction.ReadData.Count; index++)
+            {
+                var acknowledgement = index == transaction.ReadData.Count - 1 ? "NAK" : "ACK";
+                lines.Add($"{Seconds(transaction.TimestampSeconds)},{packetId},0x{(transaction.SlaveAddress << 1) | 1:X2},0x{transaction.ReadData[index]:X2},Read,{acknowledgement}");
+            }
+            packetId++;
         }
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
@@ -60,6 +70,27 @@ public static class DecodedI2cSimulator
                 Add(index == transaction.ReadData.Count - 1 ? "NACK" : "ACK");
             }
             Add("Stop");
+        }
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    public static string ToAcuteCsv(IEnumerable<SyntheticI2cTransaction> transactions)
+    {
+        var materialized = transactions.ToArray();
+        var dataColumns = Math.Max(1, materialized
+            .SelectMany(transaction => transaction.WriteCommands.Append(transaction.ReadData))
+            .Select(data => data.Count)
+            .DefaultIfEmpty(1)
+            .Max());
+        var header = new[] { "Timestamp", "Status", "Address(7b)" }
+            .Concat(Enumerable.Range(0, dataColumns).Select(index => $"D{index}"))
+            .Concat(["Duration", "Information"]);
+        var lines = new List<string> { string.Join(',', header) };
+        foreach (var transaction in materialized)
+        {
+            foreach (var command in transaction.WriteCommands)
+                lines.Add(AcuteRow(transaction.TimestampSeconds, "ACK", $"Wr {transaction.SlaveAddress:X2}", command, dataColumns, false));
+            lines.Add(AcuteRow(transaction.TimestampSeconds, "ACK", $"Rd {transaction.SlaveAddress:X2}", transaction.ReadData, dataColumns, true));
         }
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
@@ -118,6 +149,24 @@ public static class DecodedI2cSimulator
 
     private static string Row(double seconds, long packet, int address, byte value, string direction, string ack) =>
         $"{Seconds(seconds)},{packet},0x{address:X2},0x{value:X2},{direction},{ack}";
+
+    private static string AcuteRow(
+        double seconds,
+        string status,
+        string address,
+        IReadOnlyList<byte> data,
+        int dataColumns,
+        bool finalNack)
+    {
+        var fields = new List<string> { Seconds(seconds), status, address };
+        fields.AddRange(Enumerable.Range(0, dataColumns).Select(index =>
+            index < data.Count
+                ? $"{data[index]:X2}{(finalNack && index == data.Count - 1 ? " NACK" : " ACK")}"
+                : string.Empty));
+        fields.Add(string.Empty);
+        fields.Add(string.Empty);
+        return string.Join(',', fields);
+    }
 
     private static string Seconds(double value) => value.ToString("R", CultureInfo.InvariantCulture);
     private static string Bytes(IEnumerable<byte> values) => string.Join(' ', values.Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));

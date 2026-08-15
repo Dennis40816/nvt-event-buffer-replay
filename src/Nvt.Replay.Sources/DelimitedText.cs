@@ -5,6 +5,9 @@ namespace Nvt.Replay.Sources;
 internal static class DelimitedText
 {
     public static string[] ParseCsvLine(string line)
+        => ParseLine(line, ',');
+
+    public static string[] ParseLine(string line, char delimiter)
     {
         var fields = new List<string>();
         var field = new StringBuilder();
@@ -24,7 +27,7 @@ internal static class DelimitedText
                     quoted = !quoted;
                 }
             }
-            else if (character == ',' && !quoted)
+            else if (character == delimiter && !quoted)
             {
                 fields.Add(field.ToString().Trim());
                 field.Clear();
