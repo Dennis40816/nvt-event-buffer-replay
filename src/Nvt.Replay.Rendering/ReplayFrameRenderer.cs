@@ -38,7 +38,17 @@ public static class ReplayFrameRenderer
         canvas.FillRectangle(0, 0, width, top, Panel);
         canvas.FillRectangle(0, height - bottom, width, bottom, Panel);
         var margin = Math.Max(20, width / 32);
-        var viewport = new PixelRect(margin, top + 12, width - (margin * 2), height - top - bottom - 24);
+        var available = new PixelRect(margin, top + 12, width - (margin * 2), height - top - bottom - 24);
+        var fitScale = Math.Min(
+            available.Width / scene.Extent.MaximumX,
+            available.Height / scene.Extent.MaximumY);
+        var viewportWidth = Math.Max(1, (int)Math.Round(scene.Extent.MaximumX * fitScale));
+        var viewportHeight = Math.Max(1, (int)Math.Round(scene.Extent.MaximumY * fitScale));
+        var viewport = new PixelRect(
+            available.X + ((available.Width - viewportWidth) / 2),
+            available.Y + ((available.Height - viewportHeight) / 2),
+            viewportWidth,
+            viewportHeight);
         canvas.Rectangle(viewport, Grid, 1);
         for (var division = 1; division < 8; division++)
         {

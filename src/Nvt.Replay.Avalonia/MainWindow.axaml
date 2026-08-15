@@ -323,11 +323,11 @@
                   </ComboBox>
                   <TextBlock Grid.Row="0" Grid.Column="4" Classes="section" Text="TRAIL" VerticalAlignment="Center" />
                   <ComboBox x:Name="TrailLengthComboBox" Grid.Row="0" Grid.Column="6" SelectedIndex="2" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Trail length">
-                    <ComboBoxItem Content="8 frames" Tag="8" />
-                    <ComboBoxItem Content="16 frames" Tag="16" />
-                    <ComboBoxItem Content="32 frames" Tag="32" />
-                    <ComboBoxItem Content="64 frames" Tag="64" />
-                    <ComboBoxItem Content="120 frames" Tag="120" />
+                    <ComboBoxItem Content="8" Tag="8" />
+                    <ComboBoxItem Content="16" Tag="16" />
+                    <ComboBoxItem Content="32" Tag="32" />
+                    <ComboBoxItem Content="64" Tag="64" />
+                    <ComboBoxItem Content="120" Tag="120" />
                   </ComboBox>
                   <Grid Grid.Row="0" Grid.Column="8" Width="24" Height="24" VerticalAlignment="Center">
                     <Ellipse Width="20" Height="20" Stroke="#67D5E4" StrokeThickness="2.5" />
@@ -436,7 +436,7 @@
             <TextBlock x:Name="TransportText" Text="No transport selected" FontFamily="Cascadia Mono" FontSize="10" Foreground="#A6B0B4" TextWrapping="Wrap" />
 
             <TextBlock Classes="section" Text="DECODED FIELDS" />
-            <TextBlock x:Name="DecodedFieldsText" Text="Choose Event Buffer Version, then Decode." FontFamily="Cascadia Mono" FontSize="10" Foreground="#A6B0B4" TextWrapping="Wrap" />
+            <TextBlock x:Name="DecodedFieldsText" Text="Confirm Event Buffer Version to decode automatically." FontFamily="Cascadia Mono" FontSize="10" Foreground="#A6B0B4" TextWrapping="Wrap" />
 
             <TextBlock Classes="section" Text="RAW EVIDENCE" />
             <Border Background="#0E1214" BorderBrush="#293238" BorderThickness="1" Padding="12">
