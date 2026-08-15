@@ -45,12 +45,18 @@ public sealed class NvtRegisterCatalogTests
     }
 
     [Fact]
-    public void Shared_event_buffer_base_keeps_all_profile_candidates()
+    public void Colliding_event_buffer_base_requires_an_explicit_profile()
     {
-        var description = NvtRegisterCatalog.Describe(0x80860, BusOperation.Read, [0xA3]);
+        var unresolved = NvtRegisterCatalog.Describe(0x80860, BusOperation.Read, [0xA3]);
+        var resolved = NvtRegisterCatalog.Describe(0x80860, BusOperation.Read, [0xA3], "51929/51932");
 
-        Assert.Equal("51929/51932 | 51950/51951", description?.Profiles);
-        Assert.Equal("FW State", description?.Name);
-        Assert.Equal("Normal Run", description?.Meaning);
+        Assert.Equal("51929/51932 | 51950/51951", unresolved?.Profiles);
+        Assert.Equal("ambiguous", unresolved?.ProfileResolution);
+        Assert.Equal("Profile Required", unresolved?.Name);
+        Assert.Equal("raw_only", unresolved?.Meaning);
+        Assert.Equal("51929/51932", resolved?.Profiles);
+        Assert.Equal("resolved", resolved?.ProfileResolution);
+        Assert.Equal("FW State", resolved?.Name);
+        Assert.Equal("Normal Run", resolved?.Meaning);
     }
 }

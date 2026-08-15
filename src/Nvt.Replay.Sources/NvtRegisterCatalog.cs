@@ -11,6 +11,7 @@ public sealed record NvtRegisterProfile(
 
 public sealed record NvtRegisterDescription(
     string Profiles,
+    string ProfileResolution,
     string Region,
     string Name,
     uint Address,
@@ -26,6 +27,7 @@ public sealed record NvtRegisterDescription(
         var fields = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["register_profile"] = Profiles,
+            ["register_profile_resolution"] = ProfileResolution,
             ["register_region"] = Region,
             ["register_name"] = NvtRegisterCatalog.StableName(Name),
             ["register_display_name"] = Name,
@@ -60,9 +62,9 @@ public static class NvtRegisterCatalog
         new("51950/51951", 0x80800, 0xAAD8C, 0xA445C),
     ];
 
-    public static SourceRecord Annotate(SourceRecord record)
+    public static SourceRecord Annotate(SourceRecord record, string? icFamily = null)
     {
-        if (record.Address is not { } address || Describe(address, record.Operation, record.Data) is not { } description)
+        if (record.Address is not { } address || Describe(address, record.Operation, record.Data, icFamily) is not { } description)
             return record;
 
         var fields = new Dictionary<string, string>(record.SourceFields ?? new Dictionary<string, string>(), StringComparer.Ordinal);
@@ -70,7 +72,11 @@ public static class NvtRegisterCatalog
         return record with { SourceFields = fields };
     }
 
-    public static NvtRegisterDescription? Describe(uint address, BusOperation operation, IReadOnlyList<byte> payload)
+    public static NvtRegisterDescription? Describe(
+        uint address,
+        BusOperation operation,
+        IReadOnlyList<byte> payload,
+        string? icFamily = null)
     {
         var raw = Raw(payload);
         if (address == 0xFF0FE)
@@ -78,7 +84,7 @@ public static class NvtRegisterCatalog
             var confirmedReset = operation == BusOperation.Write && payload.Count > 0 && payload[0] == 0x69;
             var resetMeaning = confirmedReset ? "Software Reset" : "raw_only";
             return new NvtRegisterDescription(
-                "Common", "Control", "Reset Control", address, address, 0, raw, resetMeaning,
+                "Common", "common", "Control", "Reset Control", address, address, 0, raw, resetMeaning,
                 confirmedReset ? "Reset Control · Software Reset" : $"Reset Control · {raw}");
         }
 
@@ -86,18 +92,36 @@ public static class NvtRegisterCatalog
         {
             var offset = address - 0xFF000;
             return new NvtRegisterDescription(
-                "Common", "Identification", "Chip ID", address, 0xFF000, offset, raw, "raw_only",
+                "Common", "common", "Identification", "Chip ID", address, 0xFF000, offset, raw, "raw_only",
                 $"Chip ID +0x{offset:X2} · {raw}");
         }
 
-        var matches = MatchProfiles(address).ToArray();
+        var matches = MatchProfiles(address)
+            .Where(match => icFamily is null || match.Profile.IcFamily.Equals(icFamily, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
         if (matches.Length == 0) return null;
-        var first = matches[0];
         var profiles = string.Join(" | ", matches.Select(match => match.Profile.IcFamily).Distinct(StringComparer.Ordinal));
+        if (icFamily is null && matches.Select(match => match.Profile.IcFamily).Distinct(StringComparer.Ordinal).Skip(1).Any())
+        {
+            return new NvtRegisterDescription(
+                profiles,
+                "ambiguous",
+                "Unresolved",
+                "Profile Required",
+                address,
+                address,
+                0,
+                raw,
+                "raw_only",
+                $"Profile required · {profiles.Replace(" | ", " or ", StringComparison.Ordinal)}");
+        }
+
+        var first = matches[0];
         var (name, meaning, command) = DescribeRegion(first.Region, first.Offset, operation, payload);
         var readable = meaning == "raw_only" ? $"{name} · {raw}" : $"{name} · {meaning}";
         return new NvtRegisterDescription(
             profiles,
+            "resolved",
             first.Region,
             name,
             address,

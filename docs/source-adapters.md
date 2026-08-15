@@ -44,6 +44,9 @@ that page. Known labels currently include Event Buffer (`+0x00`), FW State
 profiles. Event Buffer `+0x50` uses a separate FW Command parser (`0x23 =
 Baseline Reset` confirmed), and `0xFF0FE ← 0x69` is labeled Software Reset.
 Unknown values remain raw. Labels are metadata only.
+The identical `0x80800` Event Buffer bases in the 51929/51932 and 51950/51951
+profiles are treated as a profile collision, not a shared address. Semantic
+register labels at that base require an explicit IC profile.
 
 ## Synthetic exports
 

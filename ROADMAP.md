@@ -43,6 +43,7 @@
 
 - [x] Shared register catalog for NDS and decoded-I2C sources; annotations never change source bytes
 - [x] Built-in IC address profiles for 51923, 51926, 51927, 51929/51932, and 51950/51951
+- [x] Profile-collision guard: `0x80800` remains unresolved until 51929/51932 or 51950/51951 is selected
 - [x] Readable Raw Explorer column with IC candidate, region, register, raw value, and confirmed meaning
 - [x] Separate FW Command parser for Event Buffer `+0x50`; unknown opcodes stay visible as raw values
 - [ ] Operator-selected/custom register profile import (versioned JSON with validation and provenance)
@@ -74,6 +75,10 @@
 | 51927 | `0x99000` | `0x8EC98` | `0x99200` |
 | 51929/51932 | `0x80800` | `0xA5200` | `0x9D130` |
 | 51950/51951 | `0x80800` | `0xAAD8C` | `0xA445C` |
+
+`0x80800` appearing in two rows is a numeric collision between two independent
+IC profiles, not a shared register map. Without an explicit profile, the
+readable log must retain both candidates and leave register meaning unresolved.
 
 ### Data still needed from FW/project owners
 
