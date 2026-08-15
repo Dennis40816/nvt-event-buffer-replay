@@ -6,7 +6,7 @@
         Title="NVT Event Buffer Replay"
         Width="1480"
         Height="920"
-        MinWidth="1120"
+        MinWidth="1040"
         MinHeight="700"
         Background="{DynamicResource WindowBrush}"
         FontFamily="avares://Avalonia.Fonts.Inter/Assets#Inter">
@@ -191,39 +191,41 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="56,54,*,154">
+  <Grid RowDefinitions="52,48,*,132">
     <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid Margin="18,0" ColumnDefinitions="Auto,24,*,Auto,8,Auto,8,Auto,8,Auto,8,Auto,8,Auto">
-        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="1">
-          <TextBlock Text="NVT EVENT BUFFER" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" />
-          <TextBlock Text="REPLAY WORKSTATION" FontSize="9" FontWeight="SemiBold" LetterSpacing="2.1" Foreground="{DynamicResource MutedTextBrush}" />
+      <Grid Margin="16,0" ColumnDefinitions="Auto,18,*,Auto,6,Auto,6,Auto,6,Auto,6,Auto,8,Auto">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+          <Border Width="6" Height="24" CornerRadius="3" Background="{DynamicResource AccentBrush}" />
+          <StackPanel Spacing="0">
+            <TextBlock Text="NVT EVENT BUFFER" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" />
+            <TextBlock Text="REPLAY" FontSize="9" FontWeight="SemiBold" LetterSpacing="1.6" Foreground="{DynamicResource MutedTextBrush}" />
+          </StackPanel>
         </StackPanel>
-        <Border Grid.Column="1" Width="1" Height="26" Background="#30383E" HorizontalAlignment="Center" />
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
           <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
-          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" MaxWidth="390" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
-        <Button x:Name="SaveReviewButton" Grid.Column="3" Classes="ghost" Content="Save review" IsEnabled="False" Click="SaveReviewButton_OnClick" />
-        <Button x:Name="LoadReviewButton" Grid.Column="5" Classes="ghost" Content="Open review" IsEnabled="False" Click="LoadReviewButton_OnClick" />
+        <Button x:Name="SaveReviewButton" Grid.Column="3" Classes="ghost" Content="Save" IsEnabled="False" Click="SaveReviewButton_OnClick" AutomationProperties.Name="Save review" />
+        <Button x:Name="LoadReviewButton" Grid.Column="5" Classes="ghost" Content="Review" IsEnabled="False" Click="LoadReviewButton_OnClick" AutomationProperties.Name="Open review" />
         <Button x:Name="ApplySidecarButton" Grid.Column="5" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
-        <Button x:Name="ExportAnalysisButton" Grid.Column="7" Classes="ghost" Content="Export analysis" IsEnabled="False" Click="ExportAnalysisButton_OnClick" />
-        <Button Grid.Column="9" Classes="ghost" Content="Commands  Ctrl+K" Click="CommandPaletteButton_OnClick" AutomationProperties.Name="Open command palette" />
-        <Button x:Name="ThemeButton" Grid.Column="11" Classes="ghost" Content="Theme: Dark" Click="ThemeButton_OnClick" AutomationProperties.Name="Change color theme" />
+        <Button x:Name="ExportAnalysisButton" Grid.Column="7" Classes="ghost" Content="Export" IsEnabled="False" Click="ExportAnalysisButton_OnClick" AutomationProperties.Name="Export analysis" />
+        <Button Grid.Column="9" Classes="ghost" Content="Commands" Click="CommandPaletteButton_OnClick" AutomationProperties.Name="Open command palette, Ctrl K" />
+        <Button x:Name="ThemeButton" Grid.Column="11" Classes="ghost" Content="Dark" Click="ThemeButton_OnClick" AutomationProperties.Name="Change color theme" />
         <Button x:Name="CancelButton" Grid.Column="13" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
         <Button x:Name="LoadButton" Grid.Column="13" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" AutomationProperties.Name="Load capture file" />
       </Grid>
     </Border>
 
     <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid Margin="18,0" ColumnDefinitions="Auto,12,260,28,Auto,12,112,8,126,8,Auto,*,180">
+      <Grid Margin="16,0" ColumnDefinitions="Auto,10,220,20,Auto,10,104,8,120,8,Auto,14,*,160">
         <TextBlock Grid.Column="0" Classes="section" Text="SOURCE" VerticalAlignment="Center" />
         <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-          <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="11" Foreground="#D3D9D7" />
+          <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
           <ComboBox x:Name="SourceAdapterComboBox" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
-          <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" FontSize="9" Foreground="#657078" />
+          <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
         </StackPanel>
-        <Border Grid.Column="3" Width="1" Height="28" Background="#2B3338" HorizontalAlignment="Center" />
-        <TextBlock Grid.Column="4" Classes="section" Text="EVENT BUFFER VERSION" VerticalAlignment="Center" />
+        <Border Grid.Column="3" Width="1" Height="24" Background="{DynamicResource BorderBrush}" HorizontalAlignment="Center" />
+        <TextBlock Grid.Column="4" Classes="section" Text="FORMAT" VerticalAlignment="Center" />
         <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
           <ComboBoxItem Content="0x82" />
           <ComboBoxItem Content="0x83" />
@@ -236,30 +238,37 @@
           <ComboBoxItem Content="Benz Palm" />
         </ComboBox>
         <Button x:Name="DecodeButton" Grid.Column="10" Classes="primary" Content="Re-decode" IsEnabled="False" IsVisible="False" Click="DecodeButton_OnClick" AutomationProperties.Name="Decode capture" />
-        <TextBlock x:Name="ConfigurationHintText" Grid.Column="11" Margin="14,0" Text="Raw Explorer opens before semantic configuration." FontSize="10" Foreground="#657078" VerticalAlignment="Center" />
-        <ProgressBar x:Name="LoadingProgress" Grid.Column="12" Height="3" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Center" />
+        <TextBlock x:Name="ConfigurationHintText" Grid.Column="12" Text="Raw Explorer opens before semantic configuration." FontSize="9" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        <ProgressBar x:Name="LoadingProgress" Grid.Column="13" Height="3" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Center" />
       </Grid>
     </Border>
 
-    <Grid Grid.Row="2" ColumnDefinitions="270,*,342">
+    <Grid x:Name="WorkspaceShellGrid" Grid.Row="2">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="238" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="312" />
+      </Grid.ColumnDefinitions>
       <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-        <Grid Margin="16,16,14,14" RowDefinitions="Auto,12,Auto,10,*">
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-            <TextBlock Classes="section" Text="REVIEW QUEUE" VerticalAlignment="Center" />
-            <Border Grid.Column="1" Background="#252D31" CornerRadius="9" Padding="7,2">
-              <TextBlock x:Name="DiagnosticCountText" Text="0" FontSize="10" Foreground="#A8B1B5" />
+        <Grid RowDefinitions="46,*">
+          <Grid Grid.Row="0" Margin="12,0,8,0" ColumnDefinitions="*,Auto,6,Auto">
+            <TextBlock x:Name="ReviewRailTitle" Classes="section" Text="REVIEW QUEUE" VerticalAlignment="Center" />
+            <Border x:Name="ReviewRailCountBadge" Grid.Column="1" Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="7,2" VerticalAlignment="Center">
+              <TextBlock x:Name="DiagnosticCountText" Text="0" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" />
             </Border>
+            <Button x:Name="ReviewRailToggleButton" Grid.Column="3" Classes="canvasIcon" Content="‹" Click="ReviewRailToggleButton_OnClick" AutomationProperties.Name="Collapse review queue" />
           </Grid>
-          <StackPanel Grid.Row="2" Spacing="8">
+          <Grid x:Name="ReviewRailContent" Grid.Row="1" Margin="12,4,12,12" RowDefinitions="Auto,10,*">
+          <StackPanel Grid.Row="0" Spacing="8">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <Button Classes="ghost" Content="All" Tag="All" Click="ReviewFilterButton_OnClick" />
               <Button Classes="ghost" Content="Warn" Tag="Warnings" Click="ReviewFilterButton_OnClick" />
               <Button Classes="ghost" Content="Alarm" Tag="Alarms" Click="ReviewFilterButton_OnClick" />
               <Button Classes="ghost" Content="ASIL" Tag="Asil" Click="ReviewFilterButton_OnClick" />
             </StackPanel>
-            <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause replay on Alarm / QA Fail" IsChecked="True" FontSize="10" Foreground="#8D989D" IsCheckedChanged="PauseOnAlarmCheckBox_OnIsCheckedChanged" />
+            <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause replay on Alarm / QA Fail" IsChecked="True" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" IsCheckedChanged="PauseOnAlarmCheckBox_OnIsCheckedChanged" />
           </StackPanel>
-          <ListBox x:Name="DiagnosticListBox" Grid.Row="4" SelectionChanged="DiagnosticListBox_OnSelectionChanged" AutomationProperties.Name="Review queue findings">
+          <ListBox x:Name="DiagnosticListBox" Grid.Row="2" SelectionChanged="DiagnosticListBox_OnSelectionChanged" AutomationProperties.Name="Review queue findings">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ReviewGroupRow">
                 <Border BorderBrush="#242C31" BorderThickness="0,0,0,1" Padding="8,10">
@@ -279,6 +288,7 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+          </Grid>
         </Grid>
       </Border>
 
@@ -427,12 +437,16 @@
       </Border>
 
       <Border Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
-        <ScrollViewer>
-          <StackPanel Margin="18,16" Spacing="14">
-            <TextBlock Classes="section" Text="INSPECTOR" />
+        <Grid RowDefinitions="46,*">
+          <Grid Grid.Row="0" Margin="8,0,12,0" ColumnDefinitions="Auto,6,*">
+            <Button x:Name="InspectorRailToggleButton" Classes="canvasIcon" Content="›" Click="InspectorRailToggleButton_OnClick" AutomationProperties.Name="Collapse inspector" />
+            <TextBlock x:Name="InspectorRailTitle" Grid.Column="2" Classes="section" Text="INSPECTOR" VerticalAlignment="Center" />
+          </Grid>
+        <ScrollViewer x:Name="InspectorRailContent" Grid.Row="1">
+          <StackPanel Margin="16,4,16,14" Spacing="14">
             <StackPanel Spacing="4">
-              <TextBlock x:Name="InspectorTitleText" Text="No record selected" FontSize="16" FontWeight="SemiBold" Foreground="#E0E5E3" />
-              <TextBlock x:Name="InspectorSubtitleText" Text="Select a physical record or decoded event." FontSize="10" Foreground="#69757B" TextWrapping="Wrap" />
+              <TextBlock x:Name="InspectorTitleText" Text="No record selected" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+              <TextBlock x:Name="InspectorSubtitleText" Text="Select a physical record or decoded event." FontSize="10" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
             </StackPanel>
 
             <StackPanel x:Name="ReviewActionsPanel" Spacing="7" IsVisible="False">
@@ -482,6 +496,7 @@
             <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="9" Foreground="#667279" TextWrapping="Wrap" />
           </StackPanel>
         </ScrollViewer>
+        </Grid>
       </Border>
     </Grid>
 

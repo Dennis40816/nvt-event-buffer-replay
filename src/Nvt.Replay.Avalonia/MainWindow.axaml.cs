@@ -55,6 +55,12 @@ public partial class MainWindow : Window
     private bool configuringSourceChoice;
     private bool operationInProgress;
     private int themeMode;
+    private bool reviewRailCollapsed;
+    private bool inspectorRailCollapsed;
+    private bool? reviewRailUserPreference;
+    private bool? inspectorRailUserPreference;
+    private const double ExpandedReviewRailWidth = 238;
+    private const double ExpandedInspectorRailWidth = 312;
     private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
     private static readonly HashSet<uint> DarkLiteralTextColors =
     [
@@ -69,8 +75,54 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Opened += (_, _) => ScheduleThemeContrast();
+        Opened += (_, _) =>
+        {
+            ScheduleThemeContrast();
+            ApplyResponsiveRails(Bounds.Width);
+        };
+        SizeChanged += MainWindow_OnSizeChanged;
         if (Application.Current is { } application) application.ActualThemeVariantChanged += Application_OnActualThemeVariantChanged;
+    }
+
+    private void MainWindow_OnSizeChanged(object? sender, SizeChangedEventArgs e) => ApplyResponsiveRails(e.NewSize.Width);
+
+    private void ApplyResponsiveRails(double width)
+    {
+        SetReviewRailCollapsed(reviewRailUserPreference ?? width < 1280);
+        SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1180);
+    }
+
+    private void ReviewRailToggleButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        reviewRailUserPreference = !reviewRailCollapsed;
+        SetReviewRailCollapsed(reviewRailUserPreference.Value);
+    }
+
+    private void InspectorRailToggleButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        inspectorRailUserPreference = !inspectorRailCollapsed;
+        SetInspectorRailCollapsed(inspectorRailUserPreference.Value);
+    }
+
+    private void SetReviewRailCollapsed(bool collapsed)
+    {
+        reviewRailCollapsed = collapsed;
+        WorkspaceShellGrid.ColumnDefinitions[0].Width = new GridLength(collapsed ? 42 : ExpandedReviewRailWidth);
+        ReviewRailTitle.IsVisible = !collapsed;
+        ReviewRailCountBadge.IsVisible = !collapsed;
+        ReviewRailContent.IsVisible = !collapsed;
+        ReviewRailToggleButton.Content = collapsed ? "›" : "‹";
+        ToolTip.SetTip(ReviewRailToggleButton, collapsed ? "Open review queue" : "Collapse review queue");
+    }
+
+    private void SetInspectorRailCollapsed(bool collapsed)
+    {
+        inspectorRailCollapsed = collapsed;
+        WorkspaceShellGrid.ColumnDefinitions[2].Width = new GridLength(collapsed ? 42 : ExpandedInspectorRailWidth);
+        InspectorRailTitle.IsVisible = !collapsed;
+        InspectorRailContent.IsVisible = !collapsed;
+        InspectorRailToggleButton.Content = collapsed ? "‹" : "›";
+        ToolTip.SetTip(InspectorRailToggleButton, collapsed ? "Open inspector" : "Collapse inspector");
     }
 
     private void Application_OnActualThemeVariantChanged(object? sender, EventArgs e) => ScheduleThemeContrast();
@@ -147,7 +199,7 @@ public partial class MainWindow : Window
         themeMode = (themeMode + 1) % 2;
         var variant = themeMode == 0 ? ThemeVariant.Dark : ThemeVariant.Light;
         if (Application.Current is { } application) application.RequestedThemeVariant = variant;
-        ThemeButton.Content = themeMode == 0 ? "Theme: Dark" : "Theme: Light";
+        ThemeButton.Content = themeMode == 0 ? "Dark" : "Light";
         SessionStatusText.Text = $"Color theme · {ThemeButton.Content?.ToString()?.Replace("Theme: ", string.Empty)}";
     }
 
