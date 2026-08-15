@@ -17,16 +17,106 @@
       <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
       <Setter Property="LetterSpacing" Value="1.35" />
     </Style>
+    <Style Selector="Button">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinWidth" Value="32" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
     <Style Selector="Button.primary">
       <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+      <Setter Property="BorderBrush" Value="#A4CD51" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Padding" Value="16,8" />
+      <Setter Property="Padding" Value="15,0" />
+    </Style>
+    <Style Selector="Button.primary:pointerover">
+      <Setter Property="Background" Value="#D5FF7B" />
+      <Setter Property="BorderBrush" Value="#E3FF9F" />
+    </Style>
+    <Style Selector="Button.primary:pressed">
+      <Setter Property="Background" Value="#A9D252" />
+      <Setter Property="BorderBrush" Value="#8EB444" />
+    </Style>
+    <Style Selector="Button.primary:disabled">
+      <Setter Property="Background" Value="#222A25" />
+      <Setter Property="Foreground" Value="#5D695F" />
+      <Setter Property="BorderBrush" Value="#303A33" />
+      <Setter Property="Opacity" Value="1" />
     </Style>
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
-      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover">
+      <Setter Property="Background" Value="#1A2024" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="#303A40" />
+    </Style>
+    <Style Selector="Button.ghost:pressed">
+      <Setter Property="Background" Value="#222B30" />
+      <Setter Property="BorderBrush" Value="#45525A" />
+    </Style>
+    <Style Selector="Button.ghost:disabled">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#465057" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.ghost:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#222A25" />
+      <Setter Property="BorderBrush" Value="#303A33" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinWidth" Value="72" />
+      <Setter Property="Padding" Value="10,0,8,0" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Background" Value="#0D1215" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="#354149" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="ComboBox:pointerover">
+      <Setter Property="Background" Value="#131A1E" />
+      <Setter Property="BorderBrush" Value="#56666F" />
+    </Style>
+    <Style Selector="ComboBox:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="ComboBox:disabled">
+      <Setter Property="Background" Value="#101416" />
+      <Setter Property="Foreground" Value="#59636A" />
+      <Setter Property="BorderBrush" Value="#252D32" />
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="ComboBoxItem">
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Margin" Value="3,1" />
+      <Setter Property="Padding" Value="9,3" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover">
+      <Setter Property="Background" Value="#20282D" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+      <Setter Property="Background" Value="#29351F" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="ListBoxItem">
       <Setter Property="Padding" Value="0" />
@@ -306,7 +396,7 @@
 
     <Border Grid.Row="3" Background="{DynamicResource PanelBrush}" BorderBrush="#253138" BorderThickness="0,2,0,0">
       <Grid Margin="18,8" RowDefinitions="32,*,22">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,6,Auto,6,Auto,18,Auto,6,120,12,Auto,6,Auto,6,Auto,12,Auto,6,Auto,*,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,6,Auto,6,Auto,18,Auto,6,146,12,Auto,6,Auto,6,Auto,12,Auto,6,Auto,*,Auto">
           <Button x:Name="PreviousFrameButton" Classes="ghost" Content="◀" IsEnabled="False" Click="PreviousFrameButton_OnClick" AutomationProperties.Name="Previous logical frame" />
           <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" Content="▶ PLAY" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play or pause replay" />
           <Button x:Name="NextFrameButton" Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" Click="NextFrameButton_OnClick" AutomationProperties.Name="Next logical frame" />
