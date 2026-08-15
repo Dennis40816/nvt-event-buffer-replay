@@ -50,7 +50,11 @@ the [Desay Event Buffer contract](docs/desay97-event-buffer.md).
 The Common replay slice reduces each logical frame into separate Reported
 Frame and Host State views. Paint supports deterministic forward/backward
 seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.1×–10×
-and MAX playback, idle-gap compression, and an In/Out loop. Invalid frames
+and MAX playback, idle-gap compression, and an In/Out loop. Per-contact colors
+stay consistent across the point, coordinate label, and trajectory. Trajectory
+retention can show a recent 2–120 frame window, retain each gesture until its
+Break, or preserve completed gestures for the session; Clear affects only the
+view and never mutates capture evidence. Invalid frames
 remain visible as evidence without mutating Host State; a capture that ends
 with active contacts raises a warning instead of inventing an All Break.
 

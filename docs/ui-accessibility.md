@@ -9,8 +9,10 @@ Press `Ctrl+K` to open the command palette. Global shortcuts are:
 - `I`/`O` set loop bounds; `M` marks the current frame or loop range;
 - `Escape` closes the command palette.
 
-Primary controls expose explicit UI Automation names. Review rows always print `Alarm`, `Error`, `Warning`, or `Info`; ASIL and QA states are textual and never rely on color alone. Status changes are a polite live region. Standard Avalonia focus order, keyboard activation, high-DPI scaling, and Windows text rendering remain enabled. The window is usable at its 1040×700 minimum; Review Queue collapses automatically below 1280 pixels and Inspector below 1180 pixels unless the operator explicitly chooses a rail state.
+Primary controls expose explicit UI Automation names. Review rows always print `Alarm`, `Error`, `Warning`, or `Info`; ASIL and QA states are textual and never rely on color alone. Status changes are a polite live region. Standard Avalonia focus order, keyboard activation, high-DPI scaling, and Windows text rendering remain enabled. The window is usable at its 1040×700 minimum, and startup caps its height to the active screen working area with a small safety margin so the transport never opens behind the taskbar. Review Queue collapses automatically below 1400 pixels and Inspector below 1240 pixels unless the operator explicitly chooses a rail state.
+
+Paint keeps every contact's point, coordinate label, and trajectory in one stable color. `Recent` exposes a 2–120 frame history length, `Until Break` clears a contact after its Break, and `Persistent` keeps completed gestures without joining a later reuse of the same ID. The canvas toolbar exposes independent X/Y reversal, panel resolution, zoom, Fit, and a view-only Clear action.
 
 For reproducible desktop QA, a capture may be opened with an explicit decoder choice: `Nvt.Replay.Avalonia capture.txt --event-version 0x83`. Desay 0x97 additionally requires `--palm-profile Standard` or `--palm-profile Benz-Palm`. These options never guess semantic configuration.
 
-Manual release UI checks cover dark and light palettes, command palette focus/dismissal, keyboard replay, decoder selection, and a full capture/decode/Paint round trip. No telemetry, update checker, upload, or network client exists in the application.
+Manual release UI checks cover dark and light palettes, command palette focus/dismissal, keyboard replay, all trajectory modes, decoder selection, and a full capture/decode/Paint round trip. No telemetry, update checker, upload, or network client exists in the application.
