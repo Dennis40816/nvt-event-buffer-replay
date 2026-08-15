@@ -433,7 +433,9 @@ public partial class MainWindow : Window
             SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} decoded frames · {diagnosticRows.Length:N0} diagnostics";
             ConfigurationHintText.Text = $"{formatLabel} confirmed · decoded automatically · raw source remains unchanged";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
-            TimelineStatusText.Text = "Logical replay ready · Space play/pause · ←/→ step · I/O loop";
+            TimelineStatusText.Text = decodedRows.Length > 0
+                ? "Logical replay ready · Space play/pause · ←/→ step · I/O loop"
+                : "No replayable event-buffer frames · inspect physical records and Review Queue";
             InitializeReplay();
             SaveReviewButton.IsEnabled = true;
             LoadReviewButton.IsEnabled = true;
@@ -441,10 +443,15 @@ public partial class MainWindow : Window
             AnalysisTab.IsEnabled = true;
             AnalysisSummaryText.Text = $"Ready · {decodedRows.Length:N0} frames · export the full replay or current In/Out range";
             AddMarkerButton.IsEnabled = decodedRows.Length > 0;
-            WorkspaceTabs.SelectedIndex = 2;
             if (decodedRows.Length > 0)
             {
+                WorkspaceTabs.SelectedIndex = 2;
                 SeekReplay(0);
+            }
+            else
+            {
+                WorkspaceTabs.SelectedIndex = 0;
+                PaintStatusText.Text = "No replayable event-buffer frames";
             }
             ScheduleThemeContrast();
         }
