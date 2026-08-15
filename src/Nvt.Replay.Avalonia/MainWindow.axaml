@@ -629,13 +629,33 @@
                       <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="canvasQuick" Width="32" MinWidth="32" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="13" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
                     </StackPanel>
 
-                  <Border x:Name="CanvasSettingsPanel" Classes="canvasSettingsPanel" IsVisible="False" HorizontalAlignment="Right">
+                  <Border x:Name="CanvasSettingsPanel" Classes="canvasSettingsPanel" Width="286" IsVisible="False" HorizontalAlignment="Right">
                     <StackPanel Spacing="8">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="CANVAS SETTINGS" FontSize="9" FontWeight="SemiBold" Foreground="#9BA8AD" LetterSpacing="0.4" VerticalAlignment="Center" />
                         <Button Grid.Column="1" Classes="canvasQuick" Height="26" Content="Clear trail" Click="ClearTrailsButton_OnClick" ToolTip.Tip="Clear visible trajectory history" AutomationProperties.Name="Clear visible trajectories" />
                       </Grid>
-                      <TextBlock Text="Scroll over the canvas to zoom around the pointer." MaxWidth="220" FontSize="9" Foreground="#9BA8AD" TextWrapping="Wrap" />
+                      <Grid ColumnDefinitions="Auto,8,118,8,*">
+                        <TextBlock Text="Legend" FontSize="9" Foreground="#9BA8AD" VerticalAlignment="Center" />
+                        <ComboBox x:Name="LegendPositionComboBox" Grid.Column="2" Classes="canvasControl" Width="118" SelectionChanged="LegendPositionComboBox_OnSelectionChanged" AutomationProperties.Name="Legend position">
+                          <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectOption">
+                              <TextBlock Text="{Binding Label}" FontSize="10" />
+                            </DataTemplate>
+                          </ComboBox.ItemTemplate>
+                          <ComboBox.SelectionBoxItemTemplate>
+                            <DataTemplate x:DataType="vm:SelectOption">
+                              <TextBlock Text="{Binding Label}" FontSize="10" VerticalAlignment="Center" />
+                            </DataTemplate>
+                          </ComboBox.SelectionBoxItemTemplate>
+                        </ComboBox>
+                        <ToggleButton x:Name="LegendVisibleToggleButton" Grid.Column="4" Classes="canvasQuick" Height="32" MinWidth="54" Content="Show" IsChecked="True" IsCheckedChanged="LegendVisibleToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Show legend" />
+                      </Grid>
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Click legend to collapse · L show/hide" FontSize="9" Foreground="#9BA8AD" VerticalAlignment="Center" />
+                        <ToggleButton x:Name="LegendCompactToggleButton" Grid.Column="1" Classes="canvasQuick" Height="28" MinWidth="66" Content="Compact" IsCheckedChanged="LegendCompactToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Compact legend" />
+                      </Grid>
+                      <TextBlock Text="Scroll over the canvas to zoom around the pointer." FontSize="9" Foreground="#9BA8AD" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </StackPanel>
@@ -844,7 +864,7 @@
           <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export analysis                                  Ctrl+E" Tag="analysis" Click="CommandPaletteAction_OnClick" />
           <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export replay video" Tag="video" Click="CommandPaletteAction_OnClick" />
           <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Toggle Dark / Light theme" Tag="theme" Click="CommandPaletteAction_OnClick" />
-          <TextBlock Text="Home / End seek bounds · drag Loop handles · I / O remain shortcuts" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
+          <TextBlock Text="Home / End seek bounds · L legend · drag Loop handles · I / O remain shortcuts" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
         </StackPanel>
       </Border>
     </Border>

@@ -49,6 +49,7 @@ public partial class MainWindow : Window
     private double replaySpeed = 1;
     private int trailLength = 10;
     private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
+    private ReplayLegendPosition legendPosition = ReplayLegendPosition.Auto;
     private ReplayTrailHistory? trailHistory;
     private int trailVisibilityStart;
     private int zoomHintRevision;
@@ -95,6 +96,16 @@ public partial class MainWindow : Window
             new("Persistent", "Keep all trails until they are cleared", nameof(ReplayTrailMode.Persistent)),
         };
         TrailModeComboBox.SelectedIndex = 1;
+        LegendPositionComboBox.ItemsSource = new SelectOption[]
+        {
+            new("Auto", "Choose the least occupied corner for the full capture", nameof(ReplayLegendPosition.Auto)),
+            new("Top left", "Pin the legend to the top-left corner", nameof(ReplayLegendPosition.TopLeft)),
+            new("Top right", "Pin the legend to the top-right corner", nameof(ReplayLegendPosition.TopRight)),
+            new("Bottom left", "Pin the legend to the bottom-left corner", nameof(ReplayLegendPosition.BottomLeft)),
+            new("Bottom right", "Pin the legend to the bottom-right corner", nameof(ReplayLegendPosition.BottomRight)),
+        };
+        LegendPositionComboBox.SelectedIndex = 0;
+        PaintSurface.LegendCollapsedChanged += PaintSurface_OnLegendCollapsedChanged;
         Opened += (_, _) =>
         {
             ApplyWorkingAreaHeightLimit();
@@ -1224,9 +1235,16 @@ public partial class MainWindow : Window
         GridStrengthToggleButton.IsChecked = false;
         ReverseXToggleButton.IsChecked = false;
         ReverseYToggleButton.IsChecked = false;
+        LegendPositionComboBox.SelectedIndex = 0;
+        LegendVisibleToggleButton.IsChecked = true;
+        LegendCompactToggleButton.IsChecked = false;
         reverseX = false;
         reverseY = false;
+        legendPosition = ReplayLegendPosition.Auto;
         PaintSurface.SetStrongGrid(false);
+        PaintSurface.SetLegendPosition(ReplayLegendPosition.TopLeft);
+        PaintSurface.SetLegendVisible(true);
+        PaintSurface.SetLegendCollapsed(false);
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
         InspectorTitleText.Text = "Frame Summary";
@@ -1278,6 +1296,7 @@ public partial class MainWindow : Window
         replayExtent = ReplayExtent.Measure(replaySession.AllReportedContacts);
         trailHistory = ReplayTrailHistory.Create(replaySession);
         trailVisibilityStart = 0;
+        RefreshLegendPlacement();
         PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
         PanelHeightTextBox.Text = replayExtent.MaximumY.ToString("0", CultureInfo.InvariantCulture);
         PaintSurface.Fit();
@@ -1554,6 +1573,7 @@ public partial class MainWindow : Window
 
         replayExtent = new ReplayExtent(width, height);
         PaintSurface.Fit();
+        RefreshLegendPlacement();
         UpdatePaintZoomText();
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
@@ -1563,6 +1583,7 @@ public partial class MainWindow : Window
     private void PaintFitButton_OnClick(object? sender, RoutedEventArgs e)
     {
         PaintSurface.Fit();
+        RefreshLegendPlacement();
     }
 
     private void UpdatePaintZoomText() =>
@@ -1624,10 +1645,45 @@ public partial class MainWindow : Window
             CanvasSettingsPanel.IsVisible = CanvasSettingsToggleButton.IsChecked == true;
     }
 
+    private void LegendPositionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
+            !Enum.TryParse<ReplayLegendPosition>(option.Value, out var selectedPosition))
+            return;
+
+        legendPosition = selectedPosition;
+        RefreshLegendPlacement();
+    }
+
+    private void LegendVisibleToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e) =>
+        PaintSurface.SetLegendVisible(LegendVisibleToggleButton.IsChecked == true);
+
+    private void LegendCompactToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e) =>
+        PaintSurface.SetLegendCollapsed(LegendCompactToggleButton.IsChecked == true);
+
+    private void PaintSurface_OnLegendCollapsedChanged(object? sender, EventArgs e)
+    {
+        if (LegendCompactToggleButton is not null)
+            LegendCompactToggleButton.IsChecked = PaintSurface.LegendCollapsed;
+    }
+
+    private void RefreshLegendPlacement()
+    {
+        var resolved = legendPosition;
+        if (resolved == ReplayLegendPosition.Auto)
+        {
+            resolved = replaySession is null
+                ? ReplayLegendPosition.TopLeft
+                : ReplayLegendPositioner.Choose(replaySession.AllReportedContacts, replayExtent, reverseX, reverseY);
+        }
+        PaintSurface.SetLegendPosition(resolved);
+    }
+
     private void ReverseAxisToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         reverseX = ReverseXToggleButton.IsChecked == true;
         reverseY = ReverseYToggleButton.IsChecked == true;
+        RefreshLegendPlacement();
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
     }
@@ -1792,6 +1848,11 @@ public partial class MainWindow : Window
         else if (e.Key == Key.Space)
         {
             PlayPauseButton_OnClick(this, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        else if (e.Key == Key.L && PaintTab.IsEnabled && e.Source is not TextBox)
+        {
+            LegendVisibleToggleButton.IsChecked = LegendVisibleToggleButton.IsChecked != true;
             e.Handled = true;
         }
         else if (e.Key == Key.Left)

@@ -18,6 +18,7 @@ public sealed class ReplayPaintSurface : Control
     private static readonly IBrush StrongAxisBrush = Brush("#60747D");
     private static readonly IBrush AxisLabelBrush = Brush("#829097");
     private static readonly IBrush LabelSurfaceBrush = Brush("#EE101619");
+    private static readonly IBrush HoverLabelSurfaceBrush = Brush("#73101619");
     private static readonly IBrush LabelTextBrush = Brush("#F3F7F5");
     private static readonly IBrush BreakBrush = Brush("#F1A85B");
     private static readonly IBrush PalmBrush = Brush("#D98AC6");
@@ -41,11 +42,19 @@ public sealed class ReplayPaintSurface : Control
     private double zoomFactor = 1;
     private Vector viewportOffset;
     private bool strongGrid;
+    private ReplayLegendPosition legendPosition = ReplayLegendPosition.TopLeft;
+    private bool legendVisible = true;
+    private bool legendCollapsed;
+    private bool legendHovered;
+    private Rect? legendBounds;
 
     public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.HostState;
     public double ZoomFactor => zoomFactor;
     public bool StrongGrid => strongGrid;
+    public bool LegendVisible => legendVisible;
+    public bool LegendCollapsed => legendCollapsed;
     public event EventHandler? ZoomChanged;
+    public event EventHandler? LegendCollapsedChanged;
 
     public void SetMode(ReplayRenderMode mode)
     {
@@ -62,6 +71,8 @@ public sealed class ReplayPaintSurface : Control
     public void Clear()
     {
         scene = null;
+        legendBounds = null;
+        legendHovered = false;
         InvalidateVisual();
     }
 
@@ -79,6 +90,32 @@ public sealed class ReplayPaintSurface : Control
     {
         strongGrid = value;
         InvalidateVisual();
+    }
+
+    public void SetLegendPosition(ReplayLegendPosition value)
+    {
+        legendPosition = value == ReplayLegendPosition.Auto ? ReplayLegendPosition.TopLeft : value;
+        InvalidateVisual();
+    }
+
+    public void SetLegendVisible(bool value)
+    {
+        if (legendVisible == value) return;
+        legendVisible = value;
+        if (!value)
+        {
+            legendBounds = null;
+            legendHovered = false;
+        }
+        InvalidateVisual();
+    }
+
+    public void SetLegendCollapsed(bool value)
+    {
+        if (legendCollapsed == value) return;
+        legendCollapsed = value;
+        InvalidateVisual();
+        LegendCollapsedChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void SetZoom(double value, Point? anchor = null, bool force = false)
@@ -115,6 +152,34 @@ public sealed class ReplayPaintSurface : Control
         e.Handled = true;
     }
 
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        var hovered = legendVisible && legendBounds?.Contains(e.GetPosition(this)) == true;
+        if (hovered == legendHovered) return;
+        legendHovered = hovered;
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (!legendHovered) return;
+        legendHovered = false;
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (!legendVisible || legendBounds?.Contains(e.GetPosition(this)) != true ||
+            !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        SetLegendCollapsed(!legendCollapsed);
+        e.Handled = true;
+    }
+
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -125,6 +190,7 @@ public sealed class ReplayPaintSurface : Control
 
         var available = BuildAvailableBounds(bounds);
         var viewport = BuildViewport(bounds, scene.Extent, zoomFactor, viewportOffset);
+        var legendViewport = BuildViewport(bounds, scene.Extent, 1, default);
 
         using var clip = context.PushClip(bounds);
         DrawGrid(context, viewport, strongGrid);
@@ -156,7 +222,7 @@ public sealed class ReplayPaintSurface : Control
         foreach (var contact in labels)
             DrawContactLabel(context, viewport, available, contact, scene, protectedPoints, occupiedLabels);
 
-        DrawLegend(context, viewport, scene);
+        DrawLegend(context, legendViewport, scene);
 
         if (scene.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
@@ -219,8 +285,14 @@ public sealed class ReplayPaintSurface : Control
         }
     }
 
-    private static void DrawLegend(DrawingContext context, Rect viewport, ReplayScene scene)
+    private void DrawLegend(DrawingContext context, Rect viewport, ReplayScene scene)
     {
+        if (!legendVisible)
+        {
+            legendBounds = null;
+            return;
+        }
+
         var entries = scene.ReportedContacts
             .Concat(scene.HostContacts)
             .Select(contact => (contact.Id, contact.Type))
@@ -230,17 +302,26 @@ public sealed class ReplayPaintSurface : Control
             .OrderBy(entry => entry.Id)
             .Take(10)
             .ToArray();
-        if (entries.Length == 0) return;
+        if (entries.Length == 0)
+        {
+            legendBounds = null;
+            return;
+        }
+
+        if (legendCollapsed)
+        {
+            DrawCollapsedLegend(context, viewport, entries.Length);
+            return;
+        }
 
         const double headerHeight = 22;
         const double itemHeight = 18;
         const double bottomPadding = 5;
-        var legendRect = new Rect(
-            viewport.Left + 12,
-            viewport.Top + 12,
-            116,
-            headerHeight + (entries.Length * itemHeight) + bottomPadding);
-        context.DrawRectangle(LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
+        var legendRect = PositionLegend(
+            viewport,
+            new Size(116, headerHeight + (entries.Length * itemHeight) + bottomPadding));
+        legendBounds = legendRect;
+        context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
 
         var heading = new FormattedText(
             "CONTACTS",
@@ -277,6 +358,33 @@ public sealed class ReplayPaintSurface : Control
                 entry.Type,
                 TypeLabel(entry.Type));
         }
+    }
+
+    private void DrawCollapsedLegend(DrawingContext context, Rect viewport, int count)
+    {
+        var legendRect = PositionLegend(viewport, new Size(52, 28));
+        legendBounds = legendRect;
+        context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 14, 14);
+        context.DrawEllipse(AxisLabelBrush, null, new Point(legendRect.X + 13, legendRect.Center.Y), 3.5, 3.5);
+        var text = new FormattedText(
+            count.ToString(CultureInfo.InvariantCulture),
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
+            10,
+            LabelTextBrush);
+        var textBounds = new Rect(legendRect.X + 23, legendRect.Y, legendRect.Width - 28, legendRect.Height);
+        context.DrawText(text, new Point(textBounds.X, CenteredTextY(textBounds, text)));
+    }
+
+    private Rect PositionLegend(Rect viewport, Size size)
+    {
+        const double inset = 12;
+        var rightAligned = legendPosition is ReplayLegendPosition.TopRight or ReplayLegendPosition.BottomRight;
+        var bottomAligned = legendPosition is ReplayLegendPosition.BottomLeft or ReplayLegendPosition.BottomRight;
+        var x = rightAligned ? viewport.Right - inset - size.Width : viewport.Left + inset;
+        var y = bottomAligned ? viewport.Bottom - inset - size.Height : viewport.Top + inset;
+        return new Rect(x, y, size.Width, size.Height);
     }
 
     private static string TypeLabel(TouchType type) => type switch

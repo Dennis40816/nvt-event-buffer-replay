@@ -60,6 +60,9 @@ Break, or preserve completed gestures for the session; Clear affects only the
 view and never mutates capture evidence. Labels use point-aware placement,
 two-line coordinates, leader lines, and Finger/Glove/Palm/Reserved glyphs;
 the canvas includes a matching ID/type legend and adjustable coordinate grid.
+The legend scores the complete capture once to choose the least occupied
+corner, stays fixed during playback, and supports manual corner pinning,
+direct compact/expanded toggling, and `L` show/hide.
 Invalid frames
 remain visible as evidence without mutating Host State; a capture that ends
 with active contacts raises a warning instead of inventing an All Break.
