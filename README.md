@@ -102,7 +102,12 @@ dotnet run --project src/Nvt.Replay.Cli -- analyze ./capture.txt --event-buffer-
 dotnet run --project src/Nvt.Replay.Cli -- export ./capture.txt --event-buffer-version 0x83 --output ./replay.mp4
 dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x97 --palm-profile Benz-Palm
 ```
+
+The desktop startup options are explicit operator choices for reproducible QA
+and screenshot runs. They do not infer Event Buffer Version or Benz Palm.
 
 Windows preview and stable packaging use a pinned version, committed dependency
 locks, a closed payload allowlist, SHA-256 manifests, and fresh-extraction
