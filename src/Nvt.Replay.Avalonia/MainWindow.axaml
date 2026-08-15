@@ -397,7 +397,7 @@
                   <controls:ReplayPaintSurface x:Name="PaintSurface" AutomationProperties.Name="Touch replay Paint surface" />
                 </Border>
                 <Border Margin="12" Padding="10,5" CornerRadius="4" Background="#E6171D21" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top" HorizontalAlignment="Left" IsHitTestVisible="False">
-                  <TextBlock x:Name="PaintStatusText" MaxWidth="300" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock x:Name="PaintStatusText" MaxWidth="300" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource CanvasTextBrush}" TextTrimming="CharacterEllipsis" />
                 </Border>
               </Grid>
             </Grid>
