@@ -17,6 +17,20 @@ scoped observations, and which tests were skipped when evidence was absent.
   CRC parameters, provenance, and CLI streaming. It does not promote 0x82 or
   0x85 tails beyond Provisional evidence.
 
+## Common 0x83 KingstVIS offset-only observation
+
+- Source role: private KingstVIS decoded-I2C CSV retained in the sibling Python
+  reference repository; payload is not copied here.
+- SHA-256:
+  `4bec1bba2f8a326817fef2baad9f6422fadaa2dbfabe57da0464a3c3a14863e6`
+- Physical shape: 2,080 pairs of `0x02 W 0x00` followed by `0x03 R 80 bytes`;
+  addresses are the 8-bit write/read forms of TP slave address `0x01`.
+- Timing: 17.325286 seconds from first to last read, averaging 119.998 Hz.
+- C# inspection result on 2026-08-15: 2,080 decoded Common `0x83` frames,
+  2,080/2,080 valid CRC8, with the page intentionally left unknown.
+- Scope: validates offset-only event-buffer recognition without inventing a
+  physical page address, KingstVIS streaming, and nominal 120 Hz replay.
+
 ## Frozen public regression surface
 
 The private payload is not copied into this repository. Its reviewed parity

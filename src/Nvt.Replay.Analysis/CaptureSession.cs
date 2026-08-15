@@ -84,7 +84,8 @@ public sealed class CaptureSession
         foreach (var record in Records)
         {
             var isNdsPaint = record.Operation == BusOperation.Paint && record.Address == 0x01;
-            var isDecodedI2cRead = record.Operation == BusOperation.Read && record.Address == 0x99000;
+            var isDecodedI2cRead = record.Operation == BusOperation.Read &&
+                (record.Address == 0x99000 || IsOffsetOnlyEventBufferRead(record));
             if (!isNdsPaint && !isDecodedI2cRead)
             {
                 continue;
@@ -142,6 +143,12 @@ public sealed class CaptureSession
 
         return new CommonInspectionReport(SourcePath, SourceSha256, version, frames, diagnostics);
     }
+
+    private static bool IsOffsetOnlyEventBufferRead(SourceRecord record) =>
+        record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
+        record.Data.Count == CommonEventBufferDecoder.FrameLength &&
+        record.SourceFields?.TryGetValue("register_offset", out var offset) == true &&
+        offset.Equals("0x00", StringComparison.OrdinalIgnoreCase);
 
     public Desay97InspectionReport DecodeDesay97(Desay97Profile profile, uint eventBufferBase = 0x99000)
     {

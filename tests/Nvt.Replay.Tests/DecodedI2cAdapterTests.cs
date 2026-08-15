@@ -1,5 +1,6 @@
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
+using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Tests;
@@ -92,6 +93,29 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         Assert.Equal("kingstvis-decoded-i2c", session.Probe.AdapterId);
         Assert.Equal(2, session.Records.Count);
         Assert.Empty(session.SourceDiagnostics);
+    }
+
+    [Fact]
+    public async Task KingstVis_offset_only_read_decodes_the_real_capture_shape_without_inventing_a_page()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var transaction = Transaction with
+        {
+            WriteCommands = [new byte[] { 0x00 }],
+            ReadData = packet,
+        };
+        var path = Write(".csv", DecodedI2cSimulator.ToKingstVisCsv([transaction]));
+
+        var session = await CaptureSession.LoadAsync(path);
+        var read = Assert.Single(session.Records, record => record.Operation == BusOperation.Read);
+        var report = session.DecodeCommon(CommonEventBufferVersion.V83);
+
+        Assert.Null(read.Address);
+        Assert.Equal("0x00", read.SourceFields?["register_offset"]);
+        Assert.Equal("event_buffer", read.SourceFields?["register_name"]);
+        Assert.Equal("false", read.SourceFields?["register_page_known"]);
+        Assert.True(Assert.Single(report.Frames).CrcValid);
+        Assert.DoesNotContain(report.Diagnostics, diagnostic => diagnostic.Code == "NO_EVENT_BUFFER_RECORDS");
     }
 
     [Theory]
