@@ -36,6 +36,14 @@
                     <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#2A2116" />
                     <SolidColorBrush x:Key="InfoBrush" Color="#5EC4D4" />
                     <SolidColorBrush x:Key="DangerBrush" Color="#E07472" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#111A1E" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#52656F" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#26351B" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="#91B83D" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#C8F36C" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#304321" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="#B9E653" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#D8FA86" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="WindowBrush" Color="#F2F5F2" />
@@ -67,6 +75,14 @@
                     <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#F4E8D1" />
                     <SolidColorBrush x:Key="InfoBrush" Color="#006B78" />
                     <SolidColorBrush x:Key="DangerBrush" Color="#A33C39" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#AAB6AE" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#E4EFD1" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="#779D32" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#385600" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#D8E8BA" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="#537D00" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#294000" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

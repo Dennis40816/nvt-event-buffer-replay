@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
@@ -10,8 +11,8 @@ namespace Nvt.Replay.Avalonia.Controls;
 
 public sealed class ReplayPaintSurface : Control
 {
-    private static readonly IBrush SurfaceBrush = Brush("#12191D");
-    private static readonly IBrush GridBrush = Brush("#1E2A30");
+    private static readonly IBrush SurfaceBrush = Brush("#162428");
+    private static readonly IBrush GridBrush = Brush("#26383D");
     private static readonly IBrush StrongGridBrush = Brush("#34464F");
     private static readonly IBrush AxisBrush = Brush("#324149");
     private static readonly IBrush StrongAxisBrush = Brush("#60747D");
@@ -38,11 +39,13 @@ public sealed class ReplayPaintSurface : Control
 
     private ReplayScene? scene;
     private double zoomFactor = 1;
+    private Vector viewportOffset;
     private bool strongGrid;
 
-    public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.Compare;
+    public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.HostState;
     public double ZoomFactor => zoomFactor;
     public bool StrongGrid => strongGrid;
+    public event EventHandler? ZoomChanged;
 
     public void SetMode(ReplayRenderMode mode)
     {
@@ -66,7 +69,11 @@ public sealed class ReplayPaintSurface : Control
 
     public void ZoomOut() => SetZoom(zoomFactor / 1.25);
 
-    public void Fit() => SetZoom(1);
+    public void Fit()
+    {
+        viewportOffset = default;
+        SetZoom(1, force: true);
+    }
 
     public void SetStrongGrid(bool value)
     {
@@ -74,10 +81,38 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
-    private void SetZoom(double value)
+    private void SetZoom(double value, Point? anchor = null, bool force = false)
     {
-        zoomFactor = Math.Clamp(value, 0.5, 8);
+        var nextZoom = Math.Clamp(value, 0.5, 8);
+        if (!force && Math.Abs(nextZoom - zoomFactor) < 0.001) return;
+
+        if (anchor is { } pointer && scene is not null && Bounds.Width > 0 && Bounds.Height > 0)
+        {
+            var oldViewport = BuildViewport(new Rect(Bounds.Size), scene.Extent, zoomFactor, viewportOffset);
+            var normalizedX = Math.Clamp((pointer.X - oldViewport.Left) / oldViewport.Width, 0, 1);
+            var normalizedY = Math.Clamp((pointer.Y - oldViewport.Top) / oldViewport.Height, 0, 1);
+            var scale = nextZoom / zoomFactor;
+            var newSize = new Size(oldViewport.Width * scale, oldViewport.Height * scale);
+            var newTopLeft = new Point(
+                pointer.X - (normalizedX * newSize.Width),
+                pointer.Y - (normalizedY * newSize.Height));
+            var available = BuildAvailableBounds(new Rect(Bounds.Size));
+            viewportOffset = new Vector(
+                newTopLeft.X + (newSize.Width / 2) - available.Center.X,
+                newTopLeft.Y + (newSize.Height / 2) - available.Center.Y);
+        }
+
+        zoomFactor = nextZoom;
         InvalidateVisual();
+        ZoomChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        if (scene is null || Math.Abs(e.Delta.Y) < 0.01) return;
+        SetZoom(zoomFactor * (e.Delta.Y > 0 ? 1.15 : 1 / 1.15), e.GetPosition(this));
+        e.Handled = true;
     }
 
     public override void Render(DrawingContext context)
@@ -88,24 +123,8 @@ public sealed class ReplayPaintSurface : Control
 
         if (scene is null) return;
 
-        const double horizontalMargin = 58;
-        const double topMargin = 34;
-        const double bottomMargin = 44;
-        var available = new Rect(
-            horizontalMargin,
-            topMargin,
-            Math.Max(1, bounds.Width - (horizontalMargin * 2)),
-            Math.Max(1, bounds.Height - topMargin - bottomMargin));
-        var fitScale = Math.Min(
-            available.Width / scene.Extent.MaximumX,
-            available.Height / scene.Extent.MaximumY);
-        var viewportWidth = scene.Extent.MaximumX * fitScale * zoomFactor;
-        var viewportHeight = scene.Extent.MaximumY * fitScale * zoomFactor;
-        var viewport = new Rect(
-            available.Center.X - (viewportWidth / 2),
-            available.Center.Y - (viewportHeight / 2),
-            viewportWidth,
-            viewportHeight);
+        var available = BuildAvailableBounds(bounds);
+        var viewport = BuildViewport(bounds, scene.Extent, zoomFactor, viewportOffset);
 
         using var clip = context.PushClip(bounds);
         DrawGrid(context, viewport, strongGrid);
@@ -141,6 +160,33 @@ public sealed class ReplayPaintSurface : Control
 
         if (scene.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
+    }
+
+    private static Rect BuildAvailableBounds(Rect bounds)
+    {
+        const double horizontalMargin = 58;
+        const double topMargin = 34;
+        const double bottomMargin = 44;
+        return new Rect(
+            horizontalMargin,
+            topMargin,
+            Math.Max(1, bounds.Width - (horizontalMargin * 2)),
+            Math.Max(1, bounds.Height - topMargin - bottomMargin));
+    }
+
+    private static Rect BuildViewport(Rect bounds, ReplayExtent extent, double zoom, Vector offset)
+    {
+        var available = BuildAvailableBounds(bounds);
+        var fitScale = Math.Min(
+            available.Width / extent.MaximumX,
+            available.Height / extent.MaximumY);
+        var viewportWidth = extent.MaximumX * fitScale * zoom;
+        var viewportHeight = extent.MaximumY * fitScale * zoom;
+        return new Rect(
+            available.Center.X + offset.X - (viewportWidth / 2),
+            available.Center.Y + offset.Y - (viewportHeight / 2),
+            viewportWidth,
+            viewportHeight);
     }
 
     private static void DrawGrid(DrawingContext context, Rect viewport, bool strong)
@@ -311,14 +357,14 @@ public sealed class ReplayPaintSurface : Control
             _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
         };
         var headerText = new FormattedText(
-            $"#{contact.Id}  {state}",
+            $"ID {contact.Id}  {state}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
             10,
             LabelTextBrush);
         var coordinateText = new FormattedText(
-            $"X {contact.X}  ·  Y {contact.Y}",
+            $"X {contact.X}  Y {contact.Y}  ·  {TypeLabel(contact.Type)}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),

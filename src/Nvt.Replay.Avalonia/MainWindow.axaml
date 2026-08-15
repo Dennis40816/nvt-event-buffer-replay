@@ -306,6 +306,39 @@
       <Setter Property="Foreground" Value="#F3F7F5" />
       <Setter Property="BorderBrush" Value="#4D5D66" />
     </Style>
+    <Style Selector="Border.paintSettingsBar">
+      <Setter Property="Background" Value="{DynamicResource HeaderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="ComboBox.semanticSelect">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Background" Value="{DynamicResource FieldBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="Padding" Value="11,0,8,0" />
+    </Style>
+    <Style Selector="ComboBox.semanticSelect:pointerover">
+      <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+    </Style>
+    <Style Selector="ComboBox.semanticSelect:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="ComboBox.canvasSemanticSelect">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="Background" Value="#E61A2328" />
+      <Setter Property="Foreground" Value="#D7DFDD" />
+      <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="Padding" Value="9,0,7,0" />
+    </Style>
+    <Style Selector="ComboBox.canvasSemanticSelect:pointerover">
+      <Setter Property="Background" Value="#26343B" />
+      <Setter Property="Foreground" Value="#F3F7F5" />
+      <Setter Property="BorderBrush" Value="#91B83D" />
+    </Style>
+    <Style Selector="ComboBox.canvasSemanticSelect:focus">
+      <Setter Property="BorderBrush" Value="#B9E653" />
+    </Style>
     <Style Selector="ListBoxItem">
       <Setter Property="Padding" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -499,9 +532,39 @@
           </TabItem>
 
           <TabItem x:Name="PaintTab" Header="PAINT" IsEnabled="False">
-            <Grid>
+            <Grid RowDefinitions="54,*">
+                <Border Grid.Row="0" Classes="paintSettingsBar">
+                  <Grid Margin="16,0" ColumnDefinitions="Auto,16,1,16,Auto,9,62,Auto,62,16,1,16,Auto,9,126,*" VerticalAlignment="Center">
+                    <TextBlock Text="Paint settings" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+                    <Border Grid.Column="2" Classes="separator" />
+                    <TextBlock Grid.Column="4" Text="Panel resolution" Classes="fieldLabel" />
+                    <TextBox x:Name="PanelWidthTextBox" Grid.Column="6" Classes="panelSize" Width="62" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
+                    <TextBlock Grid.Column="7" Text="×" Margin="7,0" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <TextBox x:Name="PanelHeightTextBox" Grid.Column="8" Classes="panelSize" Width="62" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
+                    <Border Grid.Column="10" Classes="separator" />
+                    <TextBlock Grid.Column="12" Text="Point view" Classes="fieldLabel" />
+                    <ComboBox x:Name="PaintModeComboBox" Grid.Column="14" Classes="semanticSelect" Width="126" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Choose host, report, or comparison points" AutomationProperties.Name="Point view">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
+                            <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="9" Opacity="0.72" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                      <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DataTemplate>
+                      </ComboBox.SelectionBoxItemTemplate>
+                    </ComboBox>
+                    <TextBlock Grid.Column="15" Text="Persistent replay configuration" Margin="18,0,0,0" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+
+                <Grid Grid.Row="1">
                 <Border Background="{DynamicResource CanvasBrush}">
-                  <controls:ReplayPaintSurface x:Name="PaintSurface" AutomationProperties.Name="Touch replay Paint surface" />
+                  <controls:ReplayPaintSurface x:Name="PaintSurface" ZoomChanged="PaintSurface_OnZoomChanged" AutomationProperties.Name="Touch replay Paint surface" />
                 </Border>
                 <Border Margin="14" Padding="0" Background="Transparent" VerticalAlignment="Bottom" HorizontalAlignment="Left" IsHitTestVisible="False">
                   <TextBlock x:Name="PaintStatusText" MaxWidth="420" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="10" Foreground="{DynamicResource CanvasMutedTextBrush}" TextTrimming="CharacterEllipsis" />
@@ -510,15 +573,21 @@
                 <StackPanel Margin="14" Spacing="7" VerticalAlignment="Top" HorizontalAlignment="Right">
                   <Border Classes="canvasOverlayToolbar">
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                      <ComboBox x:Name="PaintModeComboBox" Classes="canvasControl" Width="104" SelectedIndex="2" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Paint comparison mode" AutomationProperties.Name="Paint comparison mode">
-                        <ComboBoxItem Content="Host State" />
-                        <ComboBoxItem Content="Reported Frame" />
-                        <ComboBoxItem Content="Compare" />
-                      </ComboBox>
-                      <ComboBox x:Name="TrailModeComboBox" Classes="canvasControl" Width="112" SelectedIndex="1" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
-                        <ComboBoxItem Content="Recent" Tag="Recent" />
-                        <ComboBoxItem Content="Until Break" Tag="UntilBreak" />
-                        <ComboBoxItem Content="Persistent" Tag="Persistent" />
+                      <TextBlock Text="&#xE8AB;" Margin="4,0,2,0" FontFamily="Segoe Fluent Icons" FontSize="12" Foreground="#C8F36C" VerticalAlignment="Center" />
+                      <ComboBox x:Name="TrailModeComboBox" Classes="canvasSemanticSelect" Width="118" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate x:DataType="vm:SelectOption">
+                            <Grid Width="218" Margin="2,4" RowDefinitions="Auto,Auto">
+                              <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" />
+                              <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="9" Opacity="0.72" TextWrapping="Wrap" />
+                            </Grid>
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <ComboBox.SelectionBoxItemTemplate>
+                          <DataTemplate x:DataType="vm:SelectOption">
+                            <TextBlock Text="{Binding Label}" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" />
+                          </DataTemplate>
+                        </ComboBox.SelectionBoxItemTemplate>
                       </ComboBox>
                       <TextBlock x:Name="TrailLengthLabel" Text="Frames" FontSize="9" Foreground="#9BA8AD" IsVisible="False" VerticalAlignment="Center" />
                       <ComboBox x:Name="TrailLengthComboBox" Classes="canvasControl" Width="58" SelectedIndex="2" IsVisible="False" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
@@ -543,26 +612,25 @@
                         <TextBlock Text="CANVAS SETTINGS" FontSize="9" FontWeight="SemiBold" Foreground="#9BA8AD" LetterSpacing="0.4" VerticalAlignment="Center" />
                         <Button Grid.Column="1" Classes="canvasQuick" Height="26" Content="Clear trail" Click="ClearTrailsButton_OnClick" ToolTip.Tip="Clear visible trajectory history" AutomationProperties.Name="Clear visible trajectories" />
                       </Grid>
-                      <Grid ColumnDefinitions="Auto,6,58,Auto,58" VerticalAlignment="Center">
-                        <TextBlock Text="Panel coordinates" FontSize="10" Foreground="#D7DFDD" VerticalAlignment="Center" />
-                        <TextBox x:Name="PanelWidthTextBox" Grid.Column="2" Classes="panelSize canvasField" Width="58" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
-                        <TextBlock Grid.Column="3" Text="×" Margin="6,0" FontSize="12" Foreground="#9BA8AD" VerticalAlignment="Center" />
-                        <TextBox x:Name="PanelHeightTextBox" Grid.Column="4" Classes="panelSize canvasField" Width="58" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
-                      </Grid>
+                      <TextBlock Text="Scroll over the canvas to zoom around the pointer." MaxWidth="220" FontSize="9" Foreground="#9BA8AD" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </StackPanel>
 
                 <Border Margin="14" Classes="canvasOverlayToolbar" VerticalAlignment="Bottom" HorizontalAlignment="Right">
                   <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button Classes="canvasQuick" Width="30" Padding="0" Click="PaintZoomOutButton_OnClick" ToolTip.Tip="Zoom out" AutomationProperties.Name="Zoom out"><TextBlock Text="−" FontFamily="Cascadia Mono" FontSize="16" /></Button>
-                    <Border Width="48" Height="30" Background="#E61A2328" BorderBrush="#4D5D66" BorderThickness="1" CornerRadius="4">
-                      <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="10" Foreground="#D7DFDD" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <Button Classes="canvasQuick" Width="30" Padding="0" Click="PaintZoomInButton_OnClick" ToolTip.Tip="Zoom in" AutomationProperties.Name="Zoom in"><TextBlock Text="+" FontFamily="Cascadia Mono" FontSize="15" /></Button>
-                    <Button Classes="canvasQuick" MinWidth="38" Content="Fit" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
+                    <Button Classes="canvasQuick" MinWidth="48" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="□" FontFamily="Cascadia Mono" FontSize="11" Foreground="#9BA8AD" VerticalAlignment="Center" />
+                        <TextBlock Text="Fit" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </Button>
                   </StackPanel>
                 </Border>
+                <Border x:Name="PaintZoomHintBorder" Margin="14,52,14,14" Padding="9,5" IsVisible="False" Background="#E61A2328" BorderBrush="#91B83D" BorderThickness="1" CornerRadius="4" VerticalAlignment="Bottom" HorizontalAlignment="Right" IsHitTestVisible="False">
+                  <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="10" Foreground="#C8F36C" />
+                </Border>
+                </Grid>
             </Grid>
           </TabItem>
 

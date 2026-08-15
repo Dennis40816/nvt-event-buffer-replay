@@ -50,6 +50,7 @@ public partial class MainWindow : Window
     private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
     private ReplayTrailHistory? trailHistory;
     private int trailVisibilityStart;
+    private int zoomHintRevision;
     private bool reverseX;
     private bool reverseY;
     private bool maxReplaySpeed;
@@ -79,6 +80,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PaintModeComboBox.ItemsSource = new SelectOption[]
+        {
+            new("Host", "Display host-reported touch points", nameof(ReplayRenderMode.HostState)),
+            new("Report", "Display report-frame touch points", nameof(ReplayRenderMode.ReportedFrame)),
+            new("Compare", "Overlay Host and Report points", nameof(ReplayRenderMode.Compare)),
+        };
+        PaintModeComboBox.SelectedIndex = 0;
+        TrailModeComboBox.ItemsSource = new SelectOption[]
+        {
+            new("Recent", "Keep the latest selected number of points", nameof(ReplayTrailMode.Recent)),
+            new("Until break", "Clear a contact trail after release", nameof(ReplayTrailMode.UntilBreak)),
+            new("Persistent", "Keep all trails until they are cleared", nameof(ReplayTrailMode.Persistent)),
+        };
+        TrailModeComboBox.SelectedIndex = 1;
         Opened += (_, _) =>
         {
             ApplyWorkingAreaHeightLimit();
@@ -1199,6 +1214,8 @@ public partial class MainWindow : Window
         PaintStatusText.Text = "Decode a capture to replay";
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
+        PaintZoomHintBorder.IsVisible = false;
+        PaintModeComboBox.SelectedIndex = 0;
         TrailModeComboBox.SelectedIndex = 1;
         TrailLengthComboBox.SelectedIndex = 2;
         TrailLengthComboBox.IsVisible = false;
@@ -1508,12 +1525,9 @@ public partial class MainWindow : Window
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        var mode = (sender as ComboBox)?.SelectedIndex switch
-        {
-            0 => ReplayRenderMode.HostState,
-            1 => ReplayRenderMode.ReportedFrame,
-            _ => ReplayRenderMode.Compare,
-        };
+        if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
+            !Enum.TryParse<ReplayRenderMode>(option.Value, out var mode))
+            return;
         PaintSurface?.SetMode(mode);
     }
 
@@ -1544,31 +1558,34 @@ public partial class MainWindow : Window
         SessionStatusText.Text = $"Panel coordinate space · {width:0} × {height:0} · fit to canvas";
     }
 
-    private void PaintZoomOutButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        PaintSurface.ZoomOut();
-        UpdatePaintZoomText();
-    }
-
-    private void PaintZoomInButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        PaintSurface.ZoomIn();
-        UpdatePaintZoomText();
-    }
-
     private void PaintFitButton_OnClick(object? sender, RoutedEventArgs e)
     {
         PaintSurface.Fit();
-        UpdatePaintZoomText();
     }
 
     private void UpdatePaintZoomText() =>
         PaintZoomText.Text = PaintSurface.ZoomFactor.ToString("P0", CultureInfo.InvariantCulture);
 
+    private async void PaintSurface_OnZoomChanged(object? sender, EventArgs e)
+    {
+        UpdatePaintZoomText();
+        if (PaintSurface.ZoomFactor == 1)
+        {
+            PaintZoomHintBorder.IsVisible = false;
+            return;
+        }
+
+        var revision = ++zoomHintRevision;
+        PaintZoomHintBorder.IsVisible = true;
+        await Task.Delay(900);
+        if (revision == zoomHintRevision)
+            PaintZoomHintBorder.IsVisible = false;
+    }
+
     private void TrailModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if ((sender as ComboBox)?.SelectedItem is not ComboBoxItem item ||
-            !Enum.TryParse<ReplayTrailMode>(item.Tag?.ToString(), out var selectedMode))
+        if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
+            !Enum.TryParse<ReplayTrailMode>(option.Value, out var selectedMode))
             return;
 
         trailMode = selectedMode;
