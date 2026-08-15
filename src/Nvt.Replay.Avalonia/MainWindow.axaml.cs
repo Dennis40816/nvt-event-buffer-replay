@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -45,6 +44,7 @@ public partial class MainWindow : Window
     private int currentLogicalIndex = -1;
     private int? loopIn;
     private int? loopOut;
+    private bool loopEnabled;
     private double replaySpeed = 1;
     private int trailLength = 10;
     private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
@@ -54,6 +54,7 @@ public partial class MainWindow : Window
     private bool reverseY;
     private bool maxReplaySpeed;
     private bool synchronizingSelection;
+    private bool synchronizingLoopControls;
     private string? pendingSourcePath;
     private bool configuringSourceChoice;
     private bool operationInProgress;
@@ -448,7 +449,7 @@ public partial class MainWindow : Window
             ConfigurationHintText.Text = $"{formatLabel} confirmed · decoded automatically · raw source remains unchanged";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = decodedRows.Length > 0
-                ? "Logical replay ready · Space play/pause · ←/→ step · I/O loop"
+                ? "Logical replay ready · Space play/pause · ←/→ step · drag Loop handles"
                 : "No replayable event-buffer frames · inspect physical records and Review Queue";
             InitializeReplay();
             SaveReviewButton.IsEnabled = true;
@@ -1158,6 +1159,7 @@ public partial class MainWindow : Window
         currentLogicalIndex = -1;
         loopIn = null;
         loopOut = null;
+        loopEnabled = false;
         RawRecordsList.ItemsSource = null;
         DecodedFramesList.ItemsSource = null;
         DiagnosticListBox.ItemsSource = null;
@@ -1174,8 +1176,9 @@ public partial class MainWindow : Window
         PreviousFrameButton.IsEnabled = false;
         PlayPauseButton.IsEnabled = false;
         NextFrameButton.IsEnabled = false;
-        LoopInButton.IsEnabled = false;
-        LoopOutButton.IsEnabled = false;
+        LoopToggleButton.IsEnabled = false;
+        LoopToggleButton.IsChecked = false;
+        ClearLoopButton.IsEnabled = false;
         AddMarkerButton.IsEnabled = false;
         SaveReviewButton.IsEnabled = false;
         LoadReviewButton.IsEnabled = false;
@@ -1185,14 +1188,11 @@ public partial class MainWindow : Window
         AnalysisOutputText.Text = "No output written";
         LoadReviewButton.IsVisible = true;
         ApplySidecarButton.IsVisible = false;
-        ReplaySeekSlider.Maximum = 1;
-        ReplaySeekSlider.Value = 0;
-        PhysicalTimelineProgress.Maximum = 1;
-        PhysicalTimelineProgress.Value = 0;
-        LogicalTimelineProgress.Maximum = 1;
-        LogicalTimelineProgress.Value = 0;
-        EvidenceTimelineProgress.Maximum = 1;
-        EvidenceTimelineProgress.Value = 0;
+        ReplayTimelineSurface.IsEnabled = false;
+        ReplayTimelineSurface.SetMaximum(1);
+        ReplayTimelineSurface.SetPosition(0);
+        ReplayTimelineSurface.SetSupportingProgress(0, 0);
+        ReplayTimelineSurface.SetLoopRange(null, null, false);
         ReplayClockText.Text = "00:00.000";
         ReplayEndClockText.Text = "00:00.000";
         LoopRangeText.Text = "Loop —";
@@ -1203,10 +1203,12 @@ public partial class MainWindow : Window
         TrailLengthComboBox.SelectedIndex = 2;
         TrailLengthComboBox.IsVisible = false;
         TrailLengthLabel.IsVisible = false;
+        GridStrengthToggleButton.IsChecked = false;
         ReverseXToggleButton.IsChecked = false;
         ReverseYToggleButton.IsChecked = false;
         reverseX = false;
         reverseY = false;
+        PaintSurface.SetStrongGrid(false);
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
         InspectorTitleText.Text = "Frame Summary";
@@ -1252,12 +1254,9 @@ public partial class MainWindow : Window
         PreviousFrameButton.IsEnabled = replaySession.Count > 0;
         PlayPauseButton.IsEnabled = replaySession.Count > 0;
         NextFrameButton.IsEnabled = replaySession.Count > 0;
-        LoopInButton.IsEnabled = replaySession.Count > 0;
-        LoopOutButton.IsEnabled = replaySession.Count > 0;
-        ReplaySeekSlider.Maximum = maximum;
-        LogicalTimelineProgress.Maximum = maximum;
-        PhysicalTimelineProgress.Maximum = Math.Max(1, session.Records.Count - 1);
-        EvidenceTimelineProgress.Maximum = Math.Max(1, diagnosticRows.Length);
+        LoopToggleButton.IsEnabled = replaySession.Count > 1;
+        ReplayTimelineSurface.IsEnabled = replaySession.Count > 0;
+        ReplayTimelineSurface.SetMaximum(maximum);
         replayExtent = ReplayExtent.Measure(replaySession.AllReportedContacts);
         trailHistory = ReplayTrailHistory.Create(replaySession);
         trailVisibilityStart = 0;
@@ -1295,15 +1294,19 @@ public partial class MainWindow : Window
             (!snapshot.HostStateUpdated ? "  ·  EVIDENCE ONLY" : string.Empty);
         ReplayClockText.Text = FormatClock(SelectedTime(snapshot.Timeline));
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
-        LogicalTimelineProgress.Value = clampedIndex;
-        PhysicalTimelineProgress.Value = Math.Min(PhysicalTimelineProgress.Maximum, snapshot.PrimarySource.Index);
-        EvidenceTimelineProgress.Value = diagnosticRows.Count(row =>
+        ReplayTimelineSurface.SetPosition(clampedIndex);
+        var physicalMaximum = Math.Max(1, session?.Records.Count - 1 ?? 1);
+        var physicalValue = Math.Min(physicalMaximum, snapshot.PrimarySource.Index);
+        var evidenceMaximum = Math.Max(1, diagnosticRows.Length);
+        var evidenceValue = diagnosticRows.Count(row =>
             row.Diagnostic.Location.LineNumber <= snapshot.PrimarySource.Location.LineNumber);
+        ReplayTimelineSurface.SetSupportingProgress(
+            physicalValue / (double)physicalMaximum,
+            evidenceValue / (double)evidenceMaximum);
 
         synchronizingSelection = true;
         try
         {
-            ReplaySeekSlider.Value = clampedIndex;
             var decodedRow = decodedRows[clampedIndex];
             DecodedFramesList.SelectedItem = decodedRow;
             DecodedFramesList.ScrollIntoView(decodedRow);
@@ -1348,7 +1351,7 @@ public partial class MainWindow : Window
         }
         if (currentLogicalIndex >= replaySession.Count - 1)
         {
-            SeekReplay(loopIn ?? 0);
+            SeekReplay(loopEnabled ? loopIn ?? 0 : 0);
         }
         playbackCancellation = new CancellationTokenSource();
         PlayPauseButton.Content = "Ⅱ  Pause";
@@ -1367,10 +1370,10 @@ public partial class MainWindow : Window
             while (replaySession is { Count: > 0 })
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var end = loopOut ?? replaySession.Count - 1;
+                var end = loopEnabled ? loopOut ?? replaySession.Count - 1 : replaySession.Count - 1;
                 if (currentLogicalIndex >= end)
                 {
-                    if (loopIn is { } start && start <= end)
+                    if (loopEnabled && loopIn is { } start && start <= end)
                     {
                         SeekReplay(start);
                         continue;
@@ -1460,16 +1463,16 @@ public partial class MainWindow : Window
         if (TimelineStatusText is not null && replaySession is { Count: > 0 } &&
             (status is not null || cancellation is not null))
         {
-            TimelineStatusText.Text = status ?? "Paused · Space play/pause · ←/→ step · I/O loop";
+            TimelineStatusText.Text = status ?? "Paused · Space play/pause · ←/→ step · drag Loop handles to set range";
         }
     }
 
-    private void ReplaySeekSlider_OnValueChanged(object? sender, RangeBaseValueChangedEventArgs e)
+    private void ReplayTimelineSurface_OnSeekRequested(object? sender, ReplayTimelineSeekEventArgs e)
     {
         if (!synchronizingSelection && replaySession is not null)
         {
             StopPlayback();
-            SeekReplay((int)Math.Round(e.NewValue));
+            SeekReplay(e.LogicalIndex);
         }
     }
 
@@ -1598,6 +1601,13 @@ public partial class MainWindow : Window
             SeekReplay(currentLogicalIndex);
     }
 
+    private void GridStrengthToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        var strong = GridStrengthToggleButton.IsChecked == true;
+        GridStrengthToggleButton.Content = strong ? "Grid +" : "Grid";
+        PaintSurface.SetStrongGrid(strong);
+    }
+
     private void LoopInButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (currentLogicalIndex < 0)
@@ -1609,6 +1619,7 @@ public partial class MainWindow : Window
         {
             loopOut = null;
         }
+        EnableLoopFromShortcut();
         UpdateLoopText();
     }
 
@@ -1623,14 +1634,83 @@ public partial class MainWindow : Window
         {
             loopIn = null;
         }
+        EnableLoopFromShortcut();
         UpdateLoopText();
+    }
+
+    private void LoopToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (synchronizingLoopControls || ReplayTimelineSurface is null) return;
+        loopEnabled = LoopToggleButton.IsChecked == true;
+        if (loopEnabled && replaySession is { Count: > 1 })
+        {
+            if (loopIn is null || loopOut is null)
+            {
+                var intervalTicks = Math.Max(1, replaySession.FrameInterval.Ticks);
+                var oneSecondFrames = Math.Max(1, (int)(TimeSpan.TicksPerSecond / intervalTicks));
+                var start = Math.Clamp(currentLogicalIndex, 0, replaySession.Count - 2);
+                var end = Math.Min(replaySession.Count - 1, start + oneSecondFrames);
+                if (end <= start)
+                {
+                    end = replaySession.Count - 1;
+                    start = Math.Max(0, end - oneSecondFrames);
+                }
+                loopIn = start;
+                loopOut = end;
+            }
+        }
+        UpdateLoopText();
+    }
+
+    private void ClearLoopButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        loopIn = null;
+        loopOut = null;
+        loopEnabled = false;
+        synchronizingLoopControls = true;
+        try
+        {
+            LoopToggleButton.IsChecked = false;
+        }
+        finally
+        {
+            synchronizingLoopControls = false;
+        }
+        UpdateLoopText();
+        TimelineStatusText.Text = "Loop range cleared · replay position unchanged";
+    }
+
+    private void ReplayTimelineSurface_OnLoopRangeChanged(object? sender, ReplayTimelineLoopEventArgs e)
+    {
+        loopIn = e.StartLogicalIndex;
+        loopOut = e.EndLogicalIndex;
+        loopEnabled = true;
+        UpdateLoopText();
+    }
+
+    private void EnableLoopFromShortcut()
+    {
+        if (loopIn is null || loopOut is null) return;
+        loopEnabled = true;
+        synchronizingLoopControls = true;
+        try
+        {
+            LoopToggleButton.IsChecked = true;
+        }
+        finally
+        {
+            synchronizingLoopControls = false;
+        }
     }
 
     private void UpdateLoopText()
     {
-        LoopRangeText.Text = loopIn is null && loopOut is null
+        var hasRange = loopIn is not null && loopOut is not null;
+        LoopRangeText.Text = !hasRange
             ? "Loop —"
-            : $"Loop {(loopIn + 1)?.ToString(CultureInfo.InvariantCulture) ?? "—"}–{(loopOut + 1)?.ToString(CultureInfo.InvariantCulture) ?? "—"}";
+            : $"Loop {loopIn!.Value + 1:N0}–{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " · off")}";
+        ClearLoopButton.IsEnabled = hasRange;
+        ReplayTimelineSurface.SetLoopRange(loopIn, loopOut, loopEnabled);
     }
 
     private TimeSpan SelectedTime(ReplayTimelineEntry entry) =>

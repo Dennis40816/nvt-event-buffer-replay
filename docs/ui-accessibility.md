@@ -6,12 +6,14 @@ Press `Ctrl+K` to open the command palette. Global shortcuts are:
 
 - `Ctrl+O` load a capture; `Ctrl+S` save review; `Ctrl+E` export analysis;
 - `Space` play/pause; `Left`/`Right` step; `Home`/`End` seek bounds;
-- `I`/`O` set loop bounds; `M` marks the current frame or loop range;
+- `I`/`O` remain keyboard shortcuts for loop bounds; `M` marks the current frame or loop range;
 - `Escape` closes the command palette.
 
 Primary controls expose explicit UI Automation names. Review rows always print `Alarm`, `Error`, `Warning`, or `Info`; ASIL and QA states are textual and never rely on color alone. Status changes are a polite live region. Standard Avalonia focus order, keyboard activation, high-DPI scaling, and Windows text rendering remain enabled. The window is usable at its 1040×700 minimum, and startup caps its height to the active screen working area with a small safety margin so the transport never opens behind the taskbar. Review Queue collapses automatically below 1400 pixels and Inspector below 1240 pixels unless the operator explicitly chooses a rail state.
 
-Paint keeps every contact's point, coordinate label, and trajectory in one stable color. `Recent` exposes a 2–120 frame history length, `Until Break` clears a contact after its Break, and `Persistent` keeps completed gestures without joining a later reuse of the same ID. The canvas toolbar exposes independent X/Y reversal, panel resolution, zoom, Fit, and a view-only Clear action.
+Paint keeps every contact's point, coordinate label, and trajectory in one stable color. Labels choose among eight anchors, avoid every visible point and prior label when possible, use a leader line, and split ID/state from X/Y coordinates. Finger, Glove, Palm, and Reserved glyphs remain textual in the legend so type is not communicated by shape alone. `Recent` exposes a 2–120 frame history length, `Until Break` clears a contact after its Break, and `Persistent` keeps completed gestures without joining a later reuse of the same ID. Canvas overlays expose independent X/Y reversal, subtle/strong coordinate grid, zoom, Fit, and a view-only Clear action.
+
+The replay timeline uses a thin neutral track that strengthens on hover, a white playhead, lime logical/loop state, muted physical progress, and amber evidence. Loop bounds are direct draggable brackets with a shaded selected range; the `Loop` toggle creates a one-second default range and `Clear` removes it. No default platform slider thumb is exposed.
 
 For reproducible desktop QA, a capture may be opened with an explicit decoder choice: `Nvt.Replay.Avalonia capture.txt --event-version 0x83`. Desay 0x97 additionally requires `--palm-profile Standard` or `--palm-profile Benz-Palm`. These options never guess semantic configuration.
 

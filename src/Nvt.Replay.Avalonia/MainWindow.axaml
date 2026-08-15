@@ -193,6 +193,47 @@
       <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
+    <Style Selector="Button.canvasQuick">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinWidth" Value="30" />
+      <Setter Property="Padding" Value="9,0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="#E61A2328" />
+      <Setter Property="Foreground" Value="#D7DFDD" />
+      <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="FontSize" Value="10" />
+    </Style>
+    <Style Selector="Button.canvasQuick:pointerover">
+      <Setter Property="Background" Value="#26343B" />
+      <Setter Property="Foreground" Value="#C8F36C" />
+      <Setter Property="BorderBrush" Value="#91B83D" />
+    </Style>
+    <Style Selector="ToggleButton.canvasQuick">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinWidth" Value="44" />
+      <Setter Property="Padding" Value="9,0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="#E61A2328" />
+      <Setter Property="Foreground" Value="#D7DFDD" />
+      <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="ToggleButton.canvasQuick:pointerover">
+      <Setter Property="Background" Value="#26343B" />
+      <Setter Property="BorderBrush" Value="#91B83D" />
+    </Style>
+    <Style Selector="ToggleButton.canvasQuick:checked">
+      <Setter Property="Background" Value="#26351B" />
+      <Setter Property="Foreground" Value="#C8F36C" />
+      <Setter Property="BorderBrush" Value="#B9E653" />
+    </Style>
+    <Style Selector="ToggleButton.canvasQuick:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#26351B" />
+      <Setter Property="Foreground" Value="#C8F36C" />
+      <Setter Property="BorderBrush" Value="#B9E653" />
+    </Style>
     <Style Selector="ListBoxItem">
       <Setter Property="Padding" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -386,10 +427,9 @@
           </TabItem>
 
           <TabItem x:Name="PaintTab" Header="PAINT" IsEnabled="False">
-            <Grid RowDefinitions="62,*">
+            <Grid RowDefinitions="54,*">
               <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                  <StackPanel Margin="12,0" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                <StackPanel Margin="12,0" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                     <ComboBox x:Name="PaintModeComboBox" Width="106" SelectedIndex="2" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Paint comparison mode" AutomationProperties.Name="Paint comparison mode">
                       <ComboBoxItem Content="Host State" />
                       <ComboBoxItem Content="Reported Frame" />
@@ -410,31 +450,37 @@
                       <ComboBoxItem Content="60" Tag="60" />
                       <ComboBoxItem Content="120" Tag="120" />
                     </ComboBox>
-                    <Button x:Name="ClearTrailsButton" Classes="ghost" MinWidth="44" Padding="8,0" Content="Clear" Click="ClearTrailsButton_OnClick" ToolTip.Tip="Clear visible trajectory history" />
                     <Border Classes="separator" Margin="2,0" />
                     <TextBlock Classes="fieldLabel" Text="Panel" />
                     <TextBox x:Name="PanelWidthTextBox" Classes="panelSize" Width="58" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
                     <TextBlock Text="×" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                     <TextBox x:Name="PanelHeightTextBox" Classes="panelSize" Width="58" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
-                    <Border Classes="separator" Margin="2,0" />
-                    <ToggleButton x:Name="ReverseXToggleButton" Classes="axisToggle" MinWidth="54" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
-                    <ToggleButton x:Name="ReverseYToggleButton" Classes="axisToggle" MinWidth="54" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
-                    <Border Classes="separator" Margin="2,0" />
-                    <Button Classes="canvasIcon" Click="PaintZoomOutButton_OnClick" ToolTip.Tip="Zoom out" AutomationProperties.Name="Zoom out"><TextBlock Text="−" FontFamily="Cascadia Mono" FontSize="16" /></Button>
-                    <Border Width="48" Height="32" Background="{DynamicResource FieldBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4">
-                      <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <Button Classes="canvasIcon" Click="PaintZoomInButton_OnClick" ToolTip.Tip="Zoom in" AutomationProperties.Name="Zoom in"><TextBlock Text="+" FontFamily="Cascadia Mono" FontSize="15" /></Button>
-                    <Button Classes="ghost" MinWidth="40" Content="Fit" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
-                  </StackPanel>
-                </ScrollViewer>
+                </StackPanel>
               </Border>
               <Grid Grid.Row="1">
                 <Border Background="{DynamicResource CanvasBrush}">
                   <controls:ReplayPaintSurface x:Name="PaintSurface" AutomationProperties.Name="Touch replay Paint surface" />
                 </Border>
-                <Border Margin="14" Padding="0" Background="Transparent" VerticalAlignment="Top" HorizontalAlignment="Left" IsHitTestVisible="False">
+                <Border Margin="14" Padding="0" Background="Transparent" VerticalAlignment="Top" HorizontalAlignment="Center" IsHitTestVisible="False">
                   <TextBlock x:Name="PaintStatusText" MaxWidth="420" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="10" Foreground="{DynamicResource CanvasMutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                </Border>
+                <Border Margin="14" Padding="5" CornerRadius="5" Background="#B30E1518" BorderBrush="#384850" BorderThickness="1" VerticalAlignment="Top" HorizontalAlignment="Right">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
+                    <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
+                    <ToggleButton x:Name="ReverseYToggleButton" Classes="canvasQuick" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
+                    <Button x:Name="ClearTrailsButton" Classes="canvasQuick" Content="Clear trail" Click="ClearTrailsButton_OnClick" ToolTip.Tip="Clear visible trajectory history" AutomationProperties.Name="Clear visible trajectories" />
+                  </StackPanel>
+                </Border>
+                <Border Margin="14" Padding="5" CornerRadius="5" Background="#B30E1518" BorderBrush="#384850" BorderThickness="1" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Button Classes="canvasQuick" Width="30" Padding="0" Click="PaintZoomOutButton_OnClick" ToolTip.Tip="Zoom out" AutomationProperties.Name="Zoom out"><TextBlock Text="−" FontFamily="Cascadia Mono" FontSize="16" /></Button>
+                    <Border Width="48" Height="30" Background="#E61A2328" BorderBrush="#4D5D66" BorderThickness="1" CornerRadius="4">
+                      <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="10" Foreground="#D7DFDD" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <Button Classes="canvasQuick" Width="30" Padding="0" Click="PaintZoomInButton_OnClick" ToolTip.Tip="Zoom in" AutomationProperties.Name="Zoom in"><TextBlock Text="+" FontFamily="Cascadia Mono" FontSize="15" /></Button>
+                    <Button Classes="canvasQuick" MinWidth="38" Content="Fit" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
+                  </StackPanel>
                 </Border>
               </Grid>
             </Grid>
@@ -563,7 +609,7 @@
 
     <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
       <Grid Margin="16,8" RowDefinitions="36,56,18">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,146,12,Auto,6,72,*,Auto,4,Auto,4,Auto,12,Auto,14,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,146,12,Auto,6,72,12,Auto,4,Auto,4,Auto,*,Auto,14,Auto">
           <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous frame" AutomationProperties.Name="Previous logical frame" />
           <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" MinWidth="80" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play or pause replay" />
           <Button x:Name="NextFrameButton" Grid.Column="4" Classes="canvasIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" ToolTip.Tip="Next frame" AutomationProperties.Name="Next logical frame" />
@@ -584,20 +630,31 @@
             <ComboBoxItem Content="10×" Tag="10" />
             <ComboBoxItem Content="MAX" Tag="max" />
           </ComboBox>
-          <Button x:Name="LoopInButton" Grid.Column="16" Classes="ghost" Content="Set in" IsEnabled="False" Click="LoopInButton_OnClick" />
-          <Button x:Name="LoopOutButton" Grid.Column="18" Classes="ghost" Content="Set out" IsEnabled="False" Click="LoopOutButton_OnClick" />
+          <ToggleButton x:Name="LoopToggleButton" Grid.Column="16" Classes="axisToggle" Width="58" MinWidth="58" Content="Loop" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Enable loop range" />
+          <Button x:Name="ClearLoopButton" Grid.Column="18" Classes="ghost" MinWidth="48" Content="Clear" IsEnabled="False" Click="ClearLoopButton_OnClick" ToolTip.Tip="Clear loop range" AutomationProperties.Name="Clear loop range" />
           <Button x:Name="AddMarkerButton" Grid.Column="20" Classes="ghost" Content="Mark" IsEnabled="False" Click="AddMarkerButton_OnClick" />
           <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="22" Content="Compress idle" IsChecked="True" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
           <TextBlock x:Name="TimelineSummaryText" Grid.Column="24" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
         </Grid>
         <Grid Grid.Row="1" RowDefinitions="14,22,14" ColumnDefinitions="74,*">
           <TextBlock Text="Physical" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-          <ProgressBar x:Name="PhysicalTimelineProgress" Grid.Column="1" Height="2" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource StrongBorderBrush}" />
           <TextBlock Grid.Row="1" Text="Logical" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <ProgressBar x:Name="LogicalTimelineProgress" Grid.Row="1" Grid.Column="1" Height="3" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource AccentBrush}" />
           <TextBlock Grid.Row="2" Text="Evidence" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
-          <ProgressBar x:Name="EvidenceTimelineProgress" Grid.Row="2" Grid.Column="1" Height="2" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource WarningBrush}" />
-          <Slider x:Name="ReplaySeekSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1" Value="0" Opacity="0.9" ValueChanged="ReplaySeekSlider_OnValueChanged" AutomationProperties.Name="Replay position" />
+          <controls:ReplayTimelineSurface x:Name="ReplayTimelineSurface"
+                                          Grid.RowSpan="3"
+                                          Grid.Column="1"
+                                          IsEnabled="False"
+                                          TrackBrush="{DynamicResource BorderBrush}"
+                                          HoverTrackBrush="{DynamicResource SecondaryTextBrush}"
+                                          PhysicalBrush="{DynamicResource MutedTextBrush}"
+                                          LogicalBrush="{DynamicResource AccentBrush}"
+                                          EvidenceBrush="{DynamicResource WarningBrush}"
+                                          PlayheadBrush="{DynamicResource PrimaryTextBrush}"
+                                          LoopBrush="{DynamicResource AccentBrush}"
+                                          LoopSurfaceBrush="{DynamicResource AccentSurfaceBrush}"
+                                          SeekRequested="ReplayTimelineSurface_OnSeekRequested"
+                                          LoopRangeChanged="ReplayTimelineSurface_OnLoopRangeChanged"
+                                          AutomationProperties.Name="Replay and loop range timeline" />
         </Grid>
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,12,Auto">
           <TextBlock x:Name="ReplayClockText" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" />
@@ -626,7 +683,7 @@
           <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export analysis                                  Ctrl+E" Tag="analysis" Click="CommandPaletteAction_OnClick" />
           <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export replay video" Tag="video" Click="CommandPaletteAction_OnClick" />
           <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Toggle Dark / Light theme" Tag="theme" Click="CommandPaletteAction_OnClick" />
-          <TextBlock Text="Home / End seek capture bounds · I / O set loop range" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
+          <TextBlock Text="Home / End seek bounds · drag Loop handles · I / O remain shortcuts" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
         </StackPanel>
       </Border>
     </Border>

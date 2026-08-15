@@ -12,7 +12,9 @@ public sealed class ReplayPaintSurface : Control
 {
     private static readonly IBrush SurfaceBrush = Brush("#12191D");
     private static readonly IBrush GridBrush = Brush("#1E2A30");
+    private static readonly IBrush StrongGridBrush = Brush("#34464F");
     private static readonly IBrush AxisBrush = Brush("#324149");
+    private static readonly IBrush StrongAxisBrush = Brush("#60747D");
     private static readonly IBrush AxisLabelBrush = Brush("#829097");
     private static readonly IBrush LabelSurfaceBrush = Brush("#EE101619");
     private static readonly IBrush LabelTextBrush = Brush("#F3F7F5");
@@ -36,9 +38,11 @@ public sealed class ReplayPaintSurface : Control
 
     private ReplayScene? scene;
     private double zoomFactor = 1;
+    private bool strongGrid;
 
     public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.Compare;
     public double ZoomFactor => zoomFactor;
+    public bool StrongGrid => strongGrid;
 
     public void SetMode(ReplayRenderMode mode)
     {
@@ -64,6 +68,12 @@ public sealed class ReplayPaintSurface : Control
 
     public void Fit() => SetZoom(1);
 
+    public void SetStrongGrid(bool value)
+    {
+        strongGrid = value;
+        InvalidateVisual();
+    }
+
     private void SetZoom(double value)
     {
         zoomFactor = Math.Clamp(value, 0.5, 8);
@@ -78,9 +88,9 @@ public sealed class ReplayPaintSurface : Control
 
         if (scene is null) return;
 
-        const double horizontalMargin = 42;
+        const double horizontalMargin = 58;
         const double topMargin = 34;
-        const double bottomMargin = 38;
+        const double bottomMargin = 44;
         var available = new Rect(
             horizontalMargin,
             topMargin,
@@ -98,7 +108,7 @@ public sealed class ReplayPaintSurface : Control
             viewportHeight);
 
         using var clip = context.PushClip(bounds);
-        DrawGrid(context, viewport);
+        DrawGrid(context, viewport, strongGrid);
         DrawAxisLabels(context, viewport, scene);
 
         DrawTrails(context, viewport, scene);
@@ -114,26 +124,36 @@ public sealed class ReplayPaintSurface : Control
                 DrawContact(context, viewport, contact, scene, reported: false);
         }
 
-        var labels = Mode == ReplayRenderMode.HostState
+        var labels = (Mode == ReplayRenderMode.HostState
             ? scene.HostContacts
-            : scene.ReportedContacts.Concat(scene.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First());
+            : scene.ReportedContacts.Concat(scene.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First()))
+            .OrderBy(contact => contact.Id)
+            .ToArray();
+        var protectedPoints = labels
+            .Select(contact => Project(viewport, scene, contact.X, contact.Y))
+            .Select(center => new Rect(center.X - 23, center.Y - 23, 46, 46))
+            .ToArray();
         var occupiedLabels = new List<Rect>();
-        foreach (var contact in labels.OrderBy(contact => contact.Id))
-            DrawContactLabel(context, viewport, available, contact, scene, occupiedLabels);
+        foreach (var contact in labels)
+            DrawContactLabel(context, viewport, available, contact, scene, protectedPoints, occupiedLabels);
+
+        DrawLegend(context, viewport, scene);
 
         if (scene.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
     }
 
-    private static void DrawGrid(DrawingContext context, Rect viewport)
+    private static void DrawGrid(DrawingContext context, Rect viewport, bool strong)
     {
-        context.DrawRectangle(null, new Pen(AxisBrush, 1), viewport);
+        var gridPen = new Pen(strong ? StrongGridBrush : GridBrush, strong ? 1.35 : 1);
+        var axisPen = new Pen(strong ? StrongAxisBrush : AxisBrush, strong ? 1.5 : 1);
+        context.DrawRectangle(null, axisPen, viewport);
         for (var division = 1; division < 8; division++)
         {
             var x = viewport.X + (viewport.Width * division / 8);
             var y = viewport.Y + (viewport.Height * division / 8);
-            context.DrawLine(new Pen(GridBrush, 1), new Point(x, viewport.Y), new Point(x, viewport.Bottom));
-            context.DrawLine(new Pen(GridBrush, 1), new Point(viewport.X, y), new Point(viewport.Right, y));
+            context.DrawLine(gridPen, new Point(x, viewport.Y), new Point(x, viewport.Bottom));
+            context.DrawLine(gridPen, new Point(viewport.X, y), new Point(viewport.Right, y));
         }
     }
 
@@ -151,6 +171,69 @@ public sealed class ReplayPaintSurface : Control
                     Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y));
             }
         }
+    }
+
+    private static void DrawLegend(DrawingContext context, Rect viewport, ReplayScene scene)
+    {
+        var ids = scene.ReportedContacts
+            .Concat(scene.HostContacts)
+            .Select(contact => contact.Id)
+            .Concat(scene.ContactTrails.Select(trail => trail.Id))
+            .Distinct()
+            .Order()
+            .Take(10)
+            .ToArray();
+        if (ids.Length == 0) return;
+
+        const double itemWidth = 43;
+        const double itemHeight = 19;
+        var columns = Math.Min(5, ids.Length);
+        var rows = (int)Math.Ceiling(ids.Length / 5d);
+        var legendRect = new Rect(
+            viewport.Left + 12,
+            viewport.Top + 12,
+            Math.Max(224, (columns * itemWidth) + 16),
+            (rows * itemHeight) + 30);
+        context.DrawRectangle(LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
+
+        for (var index = 0; index < ids.Length; index++)
+        {
+            var column = index % 5;
+            var row = index / 5;
+            var origin = new Point(
+                legendRect.X + 10 + (column * itemWidth),
+                legendRect.Y + 5 + (row * itemHeight));
+            var color = ContactColor(ids[index]);
+            var brush = new SolidColorBrush(color);
+            context.DrawEllipse(brush, null, new Point(origin.X + 4, origin.Y + 7), 3.5, 3.5);
+            var text = new FormattedText(
+                $"#{ids[index]}",
+                CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
+                9,
+                LabelTextBrush);
+            context.DrawText(text, new Point(origin.X + 11, origin.Y));
+        }
+
+        var typeY = legendRect.Bottom - 17;
+        DrawLegendType(context, new Point(legendRect.X + 10, typeY), TouchType.Finger, "finger");
+        DrawLegendType(context, new Point(legendRect.X + 66, typeY), TouchType.Glove, "glove");
+        DrawLegendType(context, new Point(legendRect.X + 122, typeY), TouchType.Palm, "palm");
+        DrawLegendType(context, new Point(legendRect.X + 176, typeY), TouchType.Reserved, "other");
+    }
+
+    private static void DrawLegendType(DrawingContext context, Point origin, TouchType type, string label)
+    {
+        DrawTypeIcon(context, type, new Point(origin.X + 4, origin.Y + 6), AxisLabelBrush, 3.5);
+        var text = new FormattedText(
+            label,
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.Medium),
+            8,
+            AxisLabelBrush);
+        context.DrawText(text, new Point(origin.X + 11, origin.Y));
     }
 
     private static void DrawContact(
@@ -207,6 +290,7 @@ public sealed class ReplayPaintSurface : Control
         Rect labelBounds,
         ReplayContact contact,
         ReplayScene scene,
+        IReadOnlyList<Rect> protectedPoints,
         ICollection<Rect> occupiedLabels)
     {
         var center = Project(viewport, scene, contact.X, contact.Y);
@@ -217,41 +301,65 @@ public sealed class ReplayPaintSurface : Control
             TouchStatus.Break => "BREAK",
             _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
         };
-        var text = new FormattedText(
-            $"#{contact.Id}  {state}  X {contact.X}  Y {contact.Y}",
+        var headerText = new FormattedText(
+            $"#{contact.Id}  {state}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
             10,
             LabelTextBrush);
-        var width = text.Width + 12;
-        var height = text.Height + 6;
-        var candidates = new[]
+        var coordinateText = new FormattedText(
+            $"X {contact.X}  ·  Y {contact.Y}",
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
+            9,
+            AxisLabelBrush);
+        var width = Math.Max(headerText.Width + 17, coordinateText.Width) + 14;
+        var height = headerText.Height + coordinateText.Height + 8;
+        const double pointClearance = 27;
+        var candidateOrigins = new[]
         {
-            new Point(center.X + 19, center.Y - (height / 2)),
-            new Point(center.X - width - 19, center.Y - (height / 2)),
-            new Point(center.X - (width / 2), center.Y - height - 20),
-            new Point(center.X - (width / 2), center.Y + 20),
-            new Point(center.X + 15, center.Y - height - 17),
-            new Point(center.X - width - 15, center.Y + 17),
+            new Point(center.X + pointClearance, center.Y - (height / 2)),
+            new Point(center.X - width - pointClearance, center.Y - (height / 2)),
+            new Point(center.X - (width / 2), center.Y - height - pointClearance),
+            new Point(center.X - (width / 2), center.Y + pointClearance),
+            new Point(center.X + 19, center.Y - height - 19),
+            new Point(center.X - width - 19, center.Y - height - 19),
+            new Point(center.X + 19, center.Y + 19),
+            new Point(center.X - width - 19, center.Y + 19),
         };
-        var labelRect = candidates
-            .Select(origin => new Rect(
-                Math.Clamp(origin.X, labelBounds.Left + 4, labelBounds.Right - width - 4),
-                Math.Clamp(origin.Y, labelBounds.Top + 4, labelBounds.Bottom - height - 4),
-                width,
-                height))
-            .FirstOrDefault(candidate => occupiedLabels.All(existing => !Overlaps(existing, candidate)));
-        if (labelRect.Width == 0)
-            labelRect = new Rect(
-                Math.Clamp(center.X + 19, labelBounds.Left + 4, labelBounds.Right - width - 4),
-                Math.Clamp(center.Y - (height / 2), labelBounds.Top + 4, labelBounds.Bottom - height - 4),
-                width,
-                height);
+        var labelRect = candidateOrigins
+            .Select((origin, priority) =>
+            {
+                var candidate = new Rect(
+                    Math.Clamp(origin.X, labelBounds.Left + 4, labelBounds.Right - width - 4),
+                    Math.Clamp(origin.Y, labelBounds.Top + 4, labelBounds.Bottom - height - 4),
+                    width,
+                    height);
+                var score = priority;
+                score += protectedPoints.Sum(point => OverlapPenalty(point, candidate, 100_000));
+                score += occupiedLabels.Sum(existing => OverlapPenalty(existing, candidate, 10_000));
+                score += (int)(Math.Abs(candidate.X - origin.X) + Math.Abs(candidate.Y - origin.Y)) * 100;
+                return (candidate, score);
+            })
+            .OrderBy(result => result.score)
+            .First().candidate;
         occupiedLabels.Add(labelRect);
         var idBrush = new SolidColorBrush(ContactColor(contact.Id));
+        var leaderEnd = new Point(
+            Math.Clamp(center.X, labelRect.Left, labelRect.Right),
+            Math.Clamp(center.Y, labelRect.Top, labelRect.Bottom));
+        context.DrawLine(new Pen(idBrush, 1), center, leaderEnd);
         context.DrawRectangle(LabelSurfaceBrush, new Pen(idBrush, 1), labelRect);
-        context.DrawText(text, new Point(labelRect.X + 6, labelRect.Y + 3));
+        DrawTypeIcon(
+            context,
+            contact.Type,
+            new Point(labelRect.X + 11, labelRect.Y + 3 + (headerText.Height / 2)),
+            idBrush,
+            4);
+        context.DrawText(headerText, new Point(labelRect.X + 21, labelRect.Y + 3));
+        context.DrawText(coordinateText, new Point(labelRect.X + 7, labelRect.Y + 3 + headerText.Height));
     }
 
     private static Point Project(Rect viewport, ReplayScene scene, ushort x, ushort y) =>
@@ -264,17 +372,29 @@ public sealed class ReplayPaintSurface : Control
 
     private static void DrawAxisLabels(DrawingContext context, Rect viewport, ReplayScene scene)
     {
-        var leftX = scene.ReverseX ? scene.Extent.MaximumX : 0;
-        var rightX = scene.ReverseX ? 0 : scene.Extent.MaximumX;
-        var topY = scene.ReverseY ? scene.Extent.MaximumY : 0;
-        var bottomY = scene.ReverseY ? 0 : scene.Extent.MaximumY;
-        DrawAxisText(context, $"X {leftX:0}", new Point(viewport.Left, viewport.Bottom + 8));
-        DrawAxisText(context, $"X {rightX:0}", new Point(Math.Max(viewport.Left, viewport.Right - 54), viewport.Bottom + 8));
-        DrawAxisText(context, $"Y {topY:0}", new Point(viewport.Left + 5, viewport.Top + 5));
-        DrawAxisText(context, $"Y {bottomY:0}", new Point(viewport.Left + 5, Math.Max(viewport.Top, viewport.Bottom - 18)));
+        var tickPen = new Pen(AxisBrush, 1);
+        for (var tick = 0; tick <= 4; tick++)
+        {
+            var fraction = tick / 4d;
+            var x = viewport.Left + (viewport.Width * fraction);
+            var y = viewport.Top + (viewport.Height * fraction);
+            var xValue = scene.Extent.MaximumX * (scene.ReverseX ? 1 - fraction : fraction);
+            var yValue = scene.Extent.MaximumY * (scene.ReverseY ? 1 - fraction : fraction);
+            context.DrawLine(tickPen, new Point(x, viewport.Bottom), new Point(x, viewport.Bottom + 5));
+            context.DrawLine(tickPen, new Point(viewport.Left - 5, y), new Point(viewport.Left, y));
+            DrawAxisText(context, xValue.ToString("0", CultureInfo.InvariantCulture), new Point(x, viewport.Bottom + 8), centered: true);
+            DrawAxisText(context, yValue.ToString("0", CultureInfo.InvariantCulture), new Point(viewport.Left - 9, y), rightAligned: true);
+        }
+        DrawAxisText(context, "X", new Point(viewport.Right + 10, viewport.Bottom + 8));
+        DrawAxisText(context, "Y", new Point(viewport.Left - 9, viewport.Top - 19), rightAligned: true);
     }
 
-    private static void DrawAxisText(DrawingContext context, string value, Point origin)
+    private static void DrawAxisText(
+        DrawingContext context,
+        string value,
+        Point origin,
+        bool centered = false,
+        bool rightAligned = false)
     {
         var text = new FormattedText(
             value,
@@ -283,12 +403,51 @@ public sealed class ReplayPaintSurface : Control
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
             9,
             AxisLabelBrush);
-        context.DrawText(text, origin);
+        var x = centered ? origin.X - (text.Width / 2) : rightAligned ? origin.X - text.Width : origin.X;
+        var y = rightAligned ? origin.Y - (text.Height / 2) : origin.Y;
+        context.DrawText(text, new Point(x, y));
     }
 
     private static bool Overlaps(Rect first, Rect second) =>
         first.Left < second.Right && first.Right > second.Left &&
         first.Top < second.Bottom && first.Bottom > second.Top;
+
+    private static int OverlapPenalty(Rect first, Rect second, int basePenalty)
+    {
+        if (!Overlaps(first, second)) return 0;
+        var width = Math.Min(first.Right, second.Right) - Math.Max(first.Left, second.Left);
+        var height = Math.Min(first.Bottom, second.Bottom) - Math.Max(first.Top, second.Top);
+        return basePenalty + (int)Math.Ceiling(width * height);
+    }
+
+    private static void DrawTypeIcon(
+        DrawingContext context,
+        TouchType type,
+        Point center,
+        IBrush brush,
+        double radius)
+    {
+        var pen = new Pen(brush, 1.2);
+        switch (type)
+        {
+            case TouchType.Finger:
+                context.DrawEllipse(null, pen, center, radius, radius);
+                break;
+            case TouchType.Glove:
+                context.DrawLine(pen, new Point(center.X, center.Y - radius), new Point(center.X + radius, center.Y));
+                context.DrawLine(pen, new Point(center.X + radius, center.Y), new Point(center.X, center.Y + radius));
+                context.DrawLine(pen, new Point(center.X, center.Y + radius), new Point(center.X - radius, center.Y));
+                context.DrawLine(pen, new Point(center.X - radius, center.Y), new Point(center.X, center.Y - radius));
+                break;
+            case TouchType.Palm:
+                context.DrawRectangle(null, pen, new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2));
+                break;
+            default:
+                context.DrawLine(pen, center - new Vector(radius, radius), center + new Vector(radius, radius));
+                context.DrawLine(pen, center + new Vector(radius, -radius), center + new Vector(-radius, radius));
+                break;
+        }
+    }
 
     private static Color ContactColor(byte id) => ContactColors[(Math.Max(1, (int)id) - 1) % ContactColors.Length];
 
