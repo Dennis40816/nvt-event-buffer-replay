@@ -224,14 +224,14 @@
         </StackPanel>
         <Border Grid.Column="3" Width="1" Height="28" Background="#2B3338" HorizontalAlignment="Center" />
         <TextBlock Grid.Column="4" Classes="section" Text="EVENT BUFFER VERSION" VerticalAlignment="Center" />
-        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" AutomationProperties.Name="Event Buffer Version">
+        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
           <ComboBoxItem Content="0x82" />
           <ComboBoxItem Content="0x83" />
           <ComboBoxItem Content="0x84" />
           <ComboBoxItem Content="0x85" />
           <ComboBoxItem Content="0x97" />
         </ComboBox>
-        <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="8" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged">
+        <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="8" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed">
           <ComboBoxItem Content="Standard" />
           <ComboBoxItem Content="Benz Palm" />
         </ComboBox>

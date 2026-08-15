@@ -503,7 +503,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var isDesay97 = (sender as ComboBox)?.SelectedItem is ComboBoxItem item &&
                         item.Content?.ToString() == "0x97";
@@ -522,12 +522,24 @@ public partial class MainWindow : Window
             ConfigurationHintText.Text = isDesay97
                 ? "Confirm Standard or Benz Palm; decoding starts immediately after that selection."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
-            if (!isDesay97 && EventVersionComboBox.SelectedIndex >= 0)
-                await DecodeSelectedAsync();
         }
     }
 
-    private async void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (session is not null && Desay97ProfileComboBox.SelectedIndex >= 0)
+            ConfigurationHintText.Text = "Palm profile selected · close the menu to confirm and decode.";
+    }
+
+    private async void EventVersionComboBox_OnDropDownClosed(object? sender, EventArgs e)
+    {
+        var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
+                        versionItem.Content?.ToString() == "0x97";
+        if (session is not null && !isDesay97 && EventVersionComboBox.SelectedIndex >= 0)
+            await DecodeSelectedAsync();
+    }
+
+    private async void Desay97ProfileComboBox_OnDropDownClosed(object? sender, EventArgs e)
     {
         var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
                         versionItem.Content?.ToString() == "0x97";
