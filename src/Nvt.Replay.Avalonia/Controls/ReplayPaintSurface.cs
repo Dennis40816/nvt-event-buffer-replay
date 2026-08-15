@@ -232,12 +232,14 @@ public sealed class ReplayPaintSurface : Control
             .ToArray();
         if (entries.Length == 0) return;
 
-        const double itemHeight = 19;
+        const double headerHeight = 22;
+        const double itemHeight = 18;
+        const double bottomPadding = 5;
         var legendRect = new Rect(
             viewport.Left + 12,
             viewport.Top + 12,
-            112,
-            25 + (entries.Length * itemHeight));
+            116,
+            headerHeight + (entries.Length * itemHeight) + bottomPadding);
         context.DrawRectangle(LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
 
         var heading = new FormattedText(
@@ -247,17 +249,20 @@ public sealed class ReplayPaintSurface : Control
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
             8,
             AxisLabelBrush);
-        context.DrawText(heading, new Point(legendRect.X + 10, legendRect.Y + 6));
+        var headingBounds = new Rect(legendRect.X + 10, legendRect.Y, legendRect.Width - 20, headerHeight);
+        context.DrawText(heading, new Point(headingBounds.X, CenteredTextY(headingBounds, heading)));
 
         for (var index = 0; index < entries.Length; index++)
         {
             var entry = entries[index];
-            var origin = new Point(
+            var rowBounds = new Rect(
                 legendRect.X + 10,
-                legendRect.Y + 21 + (index * itemHeight));
+                legendRect.Y + headerHeight + (index * itemHeight),
+                legendRect.Width - 20,
+                itemHeight);
             var color = ContactColor(entry.Id);
             var brush = new SolidColorBrush(color);
-            context.DrawEllipse(brush, null, new Point(origin.X + 4, origin.Y + 7), 3.5, 3.5);
+            context.DrawEllipse(brush, null, new Point(rowBounds.X + 4, rowBounds.Center.Y), 3.5, 3.5);
             var text = new FormattedText(
                 $"#{entry.Id}",
                 CultureInfo.InvariantCulture,
@@ -265,8 +270,12 @@ public sealed class ReplayPaintSurface : Control
                 new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
                 9,
                 LabelTextBrush);
-            context.DrawText(text, new Point(origin.X + 11, origin.Y));
-            DrawLegendType(context, new Point(origin.X + 42, origin.Y + 1), entry.Type, TypeLabel(entry.Type));
+            context.DrawText(text, new Point(rowBounds.X + 11, CenteredTextY(rowBounds, text)));
+            DrawLegendType(
+                context,
+                new Rect(rowBounds.X + 42, rowBounds.Y, rowBounds.Width - 42, rowBounds.Height),
+                entry.Type,
+                TypeLabel(entry.Type));
         }
     }
 
@@ -278,18 +287,21 @@ public sealed class ReplayPaintSurface : Control
         _ => "other",
     };
 
-    private static void DrawLegendType(DrawingContext context, Point origin, TouchType type, string label)
+    private static void DrawLegendType(DrawingContext context, Rect bounds, TouchType type, string label)
     {
-        DrawTypeIcon(context, type, new Point(origin.X + 4, origin.Y + 6), AxisLabelBrush, 3.5);
+        DrawTypeIcon(context, type, new Point(bounds.X + 4, bounds.Center.Y), AxisLabelBrush, 3.5);
         var text = new FormattedText(
             label,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.Medium),
-            8,
+            new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
+            9,
             AxisLabelBrush);
-        context.DrawText(text, new Point(origin.X + 11, origin.Y));
+        context.DrawText(text, new Point(bounds.X + 11, CenteredTextY(bounds, text)));
     }
+
+    private static double CenteredTextY(Rect bounds, FormattedText text) =>
+        Math.Round(bounds.Y + ((bounds.Height - text.Height) / 2), MidpointRounding.AwayFromZero);
 
     private static void DrawContact(
         DrawingContext context,
