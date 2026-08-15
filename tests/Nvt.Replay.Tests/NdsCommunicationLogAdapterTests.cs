@@ -91,6 +91,30 @@ public sealed class NdsCommunicationLogAdapterTests : IDisposable
         Assert.Equal([0xA3, 0x55, 0x66], parsed.Data);
     }
 
+    [Fact]
+    public async Task Reader_adds_readable_register_and_fw_command_metadata_without_changing_bytes()
+    {
+        var path = WriteCapture(
+            """
+            2026-07-29 14:52:41:241 Read TP 0x99060 1 0xA3
+            2026-07-29 14:52:41:243 Write TP 0x99050 1 0x23
+            2026-07-29 14:52:41:245 Write TP 0xFF0FE 1 0x69
+            """);
+        var adapter = new NdsCommunicationLogAdapter();
+
+        var records = new List<SourceRecord>();
+        await foreach (var record in adapter.ReadAsync(new SourceOpenContext(path, "registers"))) records.Add(record);
+
+        Assert.Equal("FW State · Normal Run", records[0].SourceFields?["register_readable"]);
+        Assert.Equal("51927", records[0].SourceFields?["register_profile"]);
+        Assert.Equal("FW Command · Baseline Reset", records[1].SourceFields?["register_readable"]);
+        Assert.Equal("0x23", records[1].SourceFields?["fw_command_code"]);
+        Assert.Equal("Reset Control · Software Reset", records[2].SourceFields?["register_readable"]);
+        Assert.Equal([0xA3], records[0].Data);
+        Assert.Equal([0x23], records[1].Data);
+        Assert.Equal([0x69], records[2].Data);
+    }
+
     public void Dispose()
     {
         Directory.Delete(temporaryDirectory, recursive: true);

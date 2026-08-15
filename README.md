@@ -18,6 +18,8 @@ The first vertical slice includes:
 
 - streaming NDS, Saleae, KingstVIS, DSL, Acute, Excel, and canonical I2C adapters with
   stable source locations and transport provenance;
+- register-aware communication rows with shared IC profiles, confirmed FW
+  command/reset meanings, and raw-only fallback for unknown values;
 - an explicit format registry for Common `0x82`–`0x85` and Desay `0x97`;
 - source detection that never silently chooses Event Buffer Version or Benz Palm;
 - CLI discovery and probe commands with optional JSON output; and

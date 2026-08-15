@@ -183,7 +183,7 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
 
         public SourceRecord ToSourceRecord(long index, string sourceId)
         {
-            return new SourceRecord(
+            return NvtRegisterCatalog.Annotate(new SourceRecord(
                 index,
                 $"{sourceId}:L{LineNumber}",
                 Timestamp,
@@ -193,7 +193,7 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
                 DeclaredByteCount,
                 data.ToArray(),
                 rawText.ToString(),
-                new SourceLocation(ByteOffset, LineNumber));
+                new SourceLocation(ByteOffset, LineNumber)));
         }
     }
 }

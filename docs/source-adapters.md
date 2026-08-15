@@ -28,7 +28,7 @@ address ACK when exposed, per-byte ACK/NAK values, and decoder errors.
 | `acute-decoded-i2c` | Acute `.csv`/`.txt` row-per-transaction report with `Timestamp`, `Status`, `Address(7b/8b/10b)`, and ordered `D0...` columns. English headers, comma/tab/semicolon delimiters, numeric or time-of-day timestamps, direction/address validation, and ACK/NACK suffixes are supported. Ambiguous continuation rows fail closed pending a real export. |
 | `excel-decoded-i2c` | `.xlsx`/`.xlsm` worksheet columns `Transaction`, `Start_Time_s`, `Type`, `Byte_Count`, `Bytes_Hex`; rows are streamed from Open XML without Microsoft Excel. The current long-read contract requires leading register-address byte `0x03`, strips it, and maps the payload to `0x99000`. |
 | `canonical-i2c-txt` | Versioned JSON Lines beginning with `# NVT-I2C-TXT 1`; accepts the existing Python generator fields and richer transport fields. |
-| `nds-communication-log` | NDS Paint/Read/Write text records, including continuation lines. |
+| `nds-communication-log` | NDS Paint/Read/Write text records, including continuation lines. Known addresses are annotated through the shared register catalog and FW Command parser; payload bytes remain immutable. |
 
 Malformed rows and partial transactions create diagnostics and are discarded;
 missing canonical timestamps are retained with a warning. The parser never
@@ -40,7 +40,10 @@ repairs or mutates captured payload bytes.
 `FF 09 90 00` selects `0x99000`; a following offset command resolves reads on
 that page. Known labels currently include Event Buffer (`+0x00`), FW State
 (`+0x60`), frame counter (`+0x70`), DP Version (`+0x76`), and TP FW Version
-(`+0x78`). Labels are metadata only.
+(`+0x78`). NDS absolute addresses additionally resolve against the built-in IC
+profiles. Event Buffer `+0x50` uses a separate FW Command parser (`0x23 =
+Baseline Reset` confirmed), and `0xFF0FE ← 0x69` is labeled Software Reset.
+Unknown values remain raw. Labels are metadata only.
 
 ## Synthetic exports
 

@@ -18,6 +18,8 @@ public sealed record RawRecordRow(SourceRecord Record)
 
     public string Address => Record.Address is { } address ? $"0x{address:X}" : "—";
 
+    public string Register => Record.SourceFields?.GetValueOrDefault("register_readable") ?? "—";
+
     public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—"}";
 
     public string Preview => string.Join(' ', Record.Data.Take(16).Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));

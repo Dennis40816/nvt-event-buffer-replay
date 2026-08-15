@@ -514,27 +514,29 @@
         <TabControl x:Name="WorkspaceTabs" Margin="0">
           <TabItem Header="RAW EXPLORER">
             <Grid RowDefinitions="34,*">
-              <Grid Grid.Row="0" ColumnDefinitions="64,100,74,90,92,92,*" Margin="10,0">
+              <Grid Grid.Row="0" ColumnDefinitions="64,100,64,72,88,180,70,*" Margin="10,0">
                 <TextBlock Classes="section" Text="INDEX" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Classes="section" Text="PC TIME" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" Classes="section" Text="OP" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="3" Classes="section" Text="TARGET" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="4" Classes="section" Text="ADDRESS" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="5" Classes="section" Text="BYTES" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="6" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="5" Classes="section" Text="REGISTER / MEANING" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="6" Classes="section" Text="BYTES" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="7" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
               </Grid>
               <ListBox x:Name="RawRecordsList" Grid.Row="1" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:RawRecordRow">
                     <Border BorderBrush="#20272B" BorderThickness="0,0,0,1" Padding="10,8">
-                      <Grid ColumnDefinitions="64,100,74,90,92,92,*">
+                      <Grid ColumnDefinitions="64,100,64,72,88,180,70,*">
                         <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
                         <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
                         <TextBlock Grid.Column="2" Text="{Binding Operation}" FontSize="10" Foreground="#C8F36C" />
                         <TextBlock Grid.Column="3" Text="{Binding Target}" FontSize="10" Foreground="#9AA4A8" />
                         <TextBlock Grid.Column="4" Text="{Binding Address}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#C8CED0" />
-                        <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
-                        <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#68747A" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="5" Text="{Binding Register}" FontSize="10" Foreground="#9FB6BE" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
+                        <TextBlock Grid.Column="6" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#9AA4A8" />
+                        <TextBlock Grid.Column="7" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="10" Foreground="#68747A" TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </Border>
                   </DataTemplate>
