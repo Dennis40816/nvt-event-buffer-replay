@@ -357,7 +357,7 @@
           <TabItem x:Name="PaintTab" Header="PAINT" IsEnabled="False">
             <Grid RowDefinitions="58,*">
               <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="10,0" ColumnDefinitions="Auto,6,122,12,Auto,6,64,12,Auto,6,64,14,64,12,Auto,6,Auto,12,Auto,6,Auto,4,50,4,Auto,6,Auto,12,*">
+                <Grid Margin="10,0" ColumnDefinitions="Auto,6,122,12,Auto,6,64,12,Auto,6,64,14,64,12,Auto,6,Auto,12,Auto,6,Auto,4,50,4,Auto,6,Auto,*">
                   <TextBlock Classes="section" Text="MODE" VerticalAlignment="Center" />
                   <ComboBox x:Name="PaintModeComboBox" Grid.Column="2" SelectedIndex="2" SelectionChanged="PaintModeComboBox_OnSelectionChanged">
                     <ComboBoxItem Content="Host State" />
@@ -390,14 +390,16 @@
                   </Border>
                   <Button Grid.Column="24" Classes="canvasIcon" Content="+" Click="PaintZoomInButton_OnClick" ToolTip.Tip="Zoom in" AutomationProperties.Name="Zoom in" />
                   <Button Grid.Column="26" Classes="canvasIcon" Width="42" Content="FIT" FontSize="9" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
-                  <Border Grid.Column="28" Padding="10,5" CornerRadius="4" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <TextBlock x:Name="PaintStatusText" MaxWidth="220" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
-                  </Border>
                 </Grid>
               </Border>
-              <Border Grid.Row="1" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+              <Grid Grid.Row="1">
+                <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                   <controls:ReplayPaintSurface x:Name="PaintSurface" AutomationProperties.Name="Touch replay Paint surface" />
-              </Border>
+                </Border>
+                <Border Margin="12" Padding="10,5" CornerRadius="4" Background="#E6171D21" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Top" HorizontalAlignment="Left" IsHitTestVisible="False">
+                  <TextBlock x:Name="PaintStatusText" MaxWidth="300" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
+                </Border>
+              </Grid>
             </Grid>
           </TabItem>
 
