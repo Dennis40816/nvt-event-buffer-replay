@@ -303,6 +303,47 @@ public partial class MainWindow : Window
 
     private async void DecodeButton_OnClick(object? sender, RoutedEventArgs e) => await DecodeSelectedAsync();
 
+    internal async Task ApplyStartupDecodeAsync(string eventVersion, string? palmProfile)
+    {
+        var normalizedVersion = eventVersion.Trim().ToUpperInvariant();
+        if (!normalizedVersion.StartsWith("0X", StringComparison.Ordinal))
+            normalizedVersion = $"0X{normalizedVersion}";
+
+        var versionIndex = normalizedVersion switch
+        {
+            "0X82" => 0,
+            "0X83" => 1,
+            "0X84" => 2,
+            "0X85" => 3,
+            "0X97" => 4,
+            _ => -1,
+        };
+        if (versionIndex < 0)
+        {
+            ConfigurationHintText.Text = $"Unsupported startup Event Buffer Version: {eventVersion}";
+            return;
+        }
+
+        EventVersionComboBox.SelectedIndex = versionIndex;
+        if (versionIndex == 4)
+        {
+            var profileIndex = palmProfile?.Trim().ToUpperInvariant() switch
+            {
+                "STANDARD" => 0,
+                "BENZ" or "BENZ PALM" or "BENZ-PALM" => 1,
+                _ => -1,
+            };
+            if (profileIndex < 0)
+            {
+                ConfigurationHintText.Text = "Startup 0x97 decode requires --palm-profile Standard or Benz-Palm.";
+                return;
+            }
+            Desay97ProfileComboBox.SelectedIndex = profileIndex;
+        }
+
+        await DecodeSelectedAsync();
+    }
+
     private async Task DecodeSelectedAsync()
     {
         if (session is null || operationInProgress)
