@@ -417,9 +417,9 @@
               </Grid>
               <Border Grid.Row="2" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">
                 <StackPanel Spacing="12">
-                  <TextBlock x:Name="AnalysisSummaryText" Text="Decode a capture to generate analysis." FontSize="18" FontWeight="SemiBold" Foreground="#DDE3E1" TextWrapping="Wrap" />
-                  <TextBlock Text="Outputs use the same selected replay range and decoder configuration as Paint. Invalid frames remain evidence and never contribute invented hotspot coordinates." FontSize="11" Foreground="#77848A" TextWrapping="Wrap" />
-                  <TextBlock x:Name="AnalysisOutputText" Text="No output written" FontFamily="Cascadia Mono" FontSize="10" Foreground="#8E999E" TextWrapping="Wrap" />
+                  <TextBlock x:Name="AnalysisSummaryText" Text="Decode a capture to generate analysis." FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                  <TextBlock Text="Outputs use the same selected replay range and decoder configuration as Paint. Invalid frames remain evidence and never contribute invented hotspot coordinates." FontSize="11" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                  <TextBlock x:Name="AnalysisOutputText" Text="No output written" FontFamily="Cascadia Mono" FontSize="10" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
                 </StackPanel>
               </Border>
             </Grid>
@@ -480,7 +480,7 @@
 
             <TextBlock Classes="section" Text="RAW EVIDENCE" />
             <Border Background="#0E1214" BorderBrush="#293238" BorderThickness="1" Padding="12">
-              <TextBlock x:Name="RawBytesText" Text="—" FontFamily="Cascadia Mono" FontSize="10" Foreground="#8E999E" TextWrapping="Wrap" />
+              <TextBlock x:Name="RawBytesText" Text="—" FontFamily="Cascadia Mono" FontSize="10" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
             </Border>
 
             <TextBlock Classes="section" Text="SOURCE IDENTITY" />
