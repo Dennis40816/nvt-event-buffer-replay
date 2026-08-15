@@ -8,9 +8,12 @@ public sealed record TouchReplayOptions(
     TimeSpan IdleGapThreshold,
     TimeSpan CompressedIdleGap)
 {
+    public static TimeSpan NominalTpFrameInterval { get; } =
+        TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 120);
+
     public static TouchReplayOptions Default { get; } = new(
         256,
-        TimeSpan.FromMilliseconds(10),
+        NominalTpFrameInterval,
         TimeSpan.FromSeconds(1),
         TimeSpan.FromMilliseconds(100));
 }
@@ -107,7 +110,7 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
         ValidateOptions(this.options);
         projections = frames.Select(projector).ToArray();
         AllReportedContacts = projections.SelectMany(item => item.ReportedContacts).ToArray();
-        FrameInterval = InferFrameInterval(projections, this.options.DefaultFrameInterval, this.options.IdleGapThreshold);
+        FrameInterval = this.options.DefaultFrameInterval;
         timeline = BuildTimeline(projections, FrameInterval, this.options);
         Diagnostics = BuildCheckpointsAndDiagnostics();
     }
@@ -256,37 +259,6 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
             previousTimestamp = timestamp;
         }
         return entries;
-    }
-
-    private static TimeSpan InferFrameInterval(
-        IReadOnlyList<TouchReplayFrameProjection> frames,
-        TimeSpan fallback,
-        TimeSpan idleGapThreshold)
-    {
-        var deltas = new List<long>();
-        DateTimeOffset? previous = null;
-        foreach (var frame in frames)
-        {
-            if (frame.PrimarySource.Timestamp is not { } current)
-            {
-                continue;
-            }
-            if (previous is { } prior)
-            {
-                var delta = current - prior;
-                if (delta > TimeSpan.Zero && delta <= idleGapThreshold)
-                {
-                    deltas.Add(delta.Ticks);
-                }
-            }
-            previous = current;
-        }
-        if (deltas.Count == 0)
-        {
-            return fallback;
-        }
-        deltas.Sort();
-        return TimeSpan.FromTicks(deltas[deltas.Count / 2]);
     }
 
     private static void ValidateOptions(TouchReplayOptions options)

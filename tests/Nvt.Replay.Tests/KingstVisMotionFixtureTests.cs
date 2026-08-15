@@ -24,7 +24,7 @@ public sealed class KingstVisMotionFixtureTests
         Assert.Equal(38, capture.Records.Count);
         Assert.Equal(19, report.Frames.Count);
         Assert.All(report.Frames, frame => Assert.True(frame.CrcValid));
-        Assert.Equal(TimeSpan.FromMilliseconds(100), replay.FrameInterval);
+        Assert.Equal(TouchReplayOptions.NominalTpFrameInterval, replay.FrameInterval);
 
         var first = replay.Seek(0);
         Assert.Equal(TouchStatus.Enter, Assert.Single(first.ReportedContacts).Status);

@@ -311,9 +311,9 @@
           <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" Content="▶ PLAY" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play or pause replay" />
           <Button x:Name="NextFrameButton" Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" Click="NextFrameButton_OnClick" AutomationProperties.Name="Next logical frame" />
           <TextBlock Grid.Column="6" Classes="section" Text="CLOCK" VerticalAlignment="Center" />
-          <ComboBox x:Name="ClockModeComboBox" Grid.Column="8" SelectedIndex="0" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
+          <ComboBox x:Name="ClockModeComboBox" Grid.Column="8" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
             <ComboBoxItem Content="Recorded" />
-            <ComboBoxItem Content="Frame" />
+            <ComboBoxItem Content="TP Frame · 120 Hz" />
           </ComboBox>
           <TextBlock Grid.Column="10" Classes="section" Text="SPEED" VerticalAlignment="Center" />
           <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="12" Width="72" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
