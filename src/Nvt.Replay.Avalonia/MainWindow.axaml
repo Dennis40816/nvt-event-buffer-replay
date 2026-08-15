@@ -191,7 +191,7 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="52,48,*,132">
+  <Grid RowDefinitions="52,48,*,124">
     <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid Margin="16,0" ColumnDefinitions="Auto,18,*,Auto,6,Auto,6,Auto,6,Auto,6,Auto,8,Auto">
         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
@@ -489,19 +489,20 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="3" Background="{DynamicResource PanelBrush}" BorderBrush="#253138" BorderThickness="0,2,0,0">
-      <Grid Margin="18,8" RowDefinitions="32,*,22">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,6,Auto,6,Auto,18,Auto,6,146,12,Auto,6,Auto,6,Auto,12,Auto,6,Auto,*,Auto">
-          <Button x:Name="PreviousFrameButton" Classes="ghost" Content="◀" IsEnabled="False" Click="PreviousFrameButton_OnClick" AutomationProperties.Name="Previous logical frame" />
-          <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" Content="▶ PLAY" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play or pause replay" />
-          <Button x:Name="NextFrameButton" Grid.Column="4" Classes="ghost" Content="▶|" IsEnabled="False" Click="NextFrameButton_OnClick" AutomationProperties.Name="Next logical frame" />
-          <TextBlock Grid.Column="6" Classes="section" Text="CLOCK" VerticalAlignment="Center" />
-          <ComboBox x:Name="ClockModeComboBox" Grid.Column="8" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
+    <Border Grid.Row="3" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
+      <Grid Margin="16,6" RowDefinitions="34,50,18">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,146,12,Auto,6,72,*,Auto,4,Auto,4,Auto,12,Auto,14,Auto">
+          <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="‹" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous frame" AutomationProperties.Name="Previous logical frame" />
+          <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="primary" MinWidth="76" Content="▶ PLAY" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play or pause replay" />
+          <Button x:Name="NextFrameButton" Grid.Column="4" Classes="canvasIcon" Content="›" IsEnabled="False" Click="NextFrameButton_OnClick" ToolTip.Tip="Next frame" AutomationProperties.Name="Next logical frame" />
+          <Border Grid.Column="6" Width="1" Height="24" Background="{DynamicResource BorderBrush}" />
+          <TextBlock Grid.Column="8" Classes="section" Text="CLOCK" VerticalAlignment="Center" />
+          <ComboBox x:Name="ClockModeComboBox" Grid.Column="10" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
             <ComboBoxItem Content="Recorded" />
             <ComboBoxItem Content="TP Frame · 120 Hz" />
           </ComboBox>
-          <TextBlock Grid.Column="10" Classes="section" Text="SPEED" VerticalAlignment="Center" />
-          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="12" Width="72" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
+          <TextBlock Grid.Column="12" Classes="section" Text="SPEED" VerticalAlignment="Center" />
+          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="14" Width="72" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
             <ComboBoxItem Content="0.1×" Tag="0.1" />
             <ComboBoxItem Content="0.25×" Tag="0.25" />
             <ComboBoxItem Content="0.5×" Tag="0.5" />
@@ -511,26 +512,26 @@
             <ComboBoxItem Content="10×" Tag="10" />
             <ComboBoxItem Content="MAX" Tag="max" />
           </ComboBox>
-          <Button x:Name="LoopInButton" Grid.Column="14" Classes="ghost" Content="IN" IsEnabled="False" Click="LoopInButton_OnClick" />
-          <Button x:Name="LoopOutButton" Grid.Column="16" Classes="ghost" Content="OUT" IsEnabled="False" Click="LoopOutButton_OnClick" />
-          <Button x:Name="AddMarkerButton" Grid.Column="18" Classes="ghost" Content="MARK" IsEnabled="False" Click="AddMarkerButton_OnClick" />
-          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="19" Content="Compress idle" IsChecked="True" FontSize="10" Foreground="#7C878C" HorizontalAlignment="Right" VerticalAlignment="Center" />
-          <TextBlock x:Name="TimelineSummaryText" Grid.Column="20" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="10" Foreground="#737F85" VerticalAlignment="Center" Margin="14,0,0,0" />
+          <Button x:Name="LoopInButton" Grid.Column="16" Classes="ghost" Content="Set in" IsEnabled="False" Click="LoopInButton_OnClick" />
+          <Button x:Name="LoopOutButton" Grid.Column="18" Classes="ghost" Content="Set out" IsEnabled="False" Click="LoopOutButton_OnClick" />
+          <Button x:Name="AddMarkerButton" Grid.Column="20" Classes="ghost" Content="Mark" IsEnabled="False" Click="AddMarkerButton_OnClick" />
+          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="22" Content="Compress idle" IsChecked="True" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+          <TextBlock x:Name="TimelineSummaryText" Grid.Column="24" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
         </Grid>
-        <Grid Grid.Row="1" Margin="0,7" RowDefinitions="17,17,17" ColumnDefinitions="86,*">
-          <TextBlock Text="PHYSICAL" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
-          <ProgressBar x:Name="PhysicalTimelineProgress" Grid.Column="1" Height="3" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="#101417" Foreground="#35434A" />
-          <TextBlock Grid.Row="1" Text="LOGICAL" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
-          <ProgressBar x:Name="LogicalTimelineProgress" Grid.Row="1" Grid.Column="1" Height="3" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="#101417" Foreground="#C8F36C" />
-          <TextBlock Grid.Row="2" Text="EVIDENCE" FontSize="9" FontWeight="SemiBold" Foreground="#657078" VerticalAlignment="Center" />
-          <ProgressBar x:Name="EvidenceTimelineProgress" Grid.Row="2" Grid.Column="1" Height="3" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="#101417" Foreground="#D8AD62" />
-          <Slider x:Name="ReplaySeekSlider" Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Minimum="0" Maximum="1" Value="0" Opacity="0.86" ValueChanged="ReplaySeekSlider_OnValueChanged" AutomationProperties.Name="Replay position" />
+        <Grid Grid.Row="1" RowDefinitions="14,22,14" ColumnDefinitions="74,*">
+          <TextBlock Text="PHYSICAL" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+          <ProgressBar x:Name="PhysicalTimelineProgress" Grid.Column="1" Height="2" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource StrongBorderBrush}" />
+          <TextBlock Grid.Row="1" Text="LOGICAL" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+          <ProgressBar x:Name="LogicalTimelineProgress" Grid.Row="1" Grid.Column="1" Height="3" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock Grid.Row="2" Text="EVIDENCE" FontSize="8" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
+          <ProgressBar x:Name="EvidenceTimelineProgress" Grid.Row="2" Grid.Column="1" Height="2" VerticalAlignment="Center" Minimum="0" Maximum="1" Value="0" ShowProgressText="False" Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource WarningBrush}" />
+          <Slider x:Name="ReplaySeekSlider" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1" Value="0" Opacity="0.9" ValueChanged="ReplaySeekSlider_OnValueChanged" AutomationProperties.Name="Replay position" />
         </Grid>
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,12,Auto">
-          <TextBlock x:Name="ReplayClockText" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="#AAB3B6" VerticalAlignment="Bottom" />
-          <TextBlock x:Name="TimelineStatusText" Grid.Column="1" Text="Load a capture to index physical records" FontSize="9" Foreground="#748087" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
-          <TextBlock x:Name="LoopRangeText" Grid.Column="2" Text="Loop —" FontFamily="Cascadia Mono" FontSize="9" Foreground="#657078" VerticalAlignment="Bottom" />
-          <TextBlock x:Name="ReplayEndClockText" Grid.Column="4" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="#59646B" VerticalAlignment="Bottom" />
+          <TextBlock x:Name="ReplayClockText" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" />
+          <TextBlock x:Name="TimelineStatusText" Grid.Column="1" Text="Load a capture to index physical records" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+          <TextBlock x:Name="LoopRangeText" Grid.Column="2" Text="Loop —" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Bottom" />
+          <TextBlock x:Name="ReplayEndClockText" Grid.Column="4" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Bottom" />
         </Grid>
       </Grid>
     </Border>
