@@ -230,14 +230,21 @@
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Button.canvasQuick">
-      <Setter Property="Height" Value="30" />
-      <Setter Property="MinWidth" Value="30" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="MinWidth" Value="32" />
       <Setter Property="Padding" Value="9,0" />
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Background" Value="#E61A2328" />
       <Setter Property="Foreground" Value="#D7DFDD" />
       <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="BorderThickness" Value="1" />
       <Setter Property="FontSize" Value="10" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.canvasQuick /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.canvasQuick:pointerover">
       <Setter Property="Background" Value="#26343B" />
@@ -245,7 +252,7 @@
       <Setter Property="BorderBrush" Value="#91B83D" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick">
-      <Setter Property="Height" Value="30" />
+      <Setter Property="Height" Value="32" />
       <Setter Property="MinWidth" Value="44" />
       <Setter Property="Padding" Value="9,0" />
       <Setter Property="CornerRadius" Value="4" />
@@ -255,6 +262,12 @@
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ToggleButton.canvasQuick /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick:pointerover">
       <Setter Property="Background" Value="#26343B" />
@@ -270,18 +283,6 @@
       <Setter Property="Foreground" Value="#C8F36C" />
       <Setter Property="BorderBrush" Value="#B9E653" />
     </Style>
-    <Style Selector="Border.canvasOverlayToolbar">
-      <Setter Property="Background" Value="#B8121A1F" />
-      <Setter Property="BorderBrush" Value="#45565F" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="Padding" Value="5" />
-      <Setter Property="Opacity" Value="0.82" />
-    </Style>
-    <Style Selector="Border.canvasOverlayToolbar:pointerover">
-      <Setter Property="Background" Value="#E6121A1F" />
-      <Setter Property="Opacity" Value="1" />
-    </Style>
     <Style Selector="Border.canvasSettingsPanel">
       <Setter Property="Background" Value="#F0121A1F" />
       <Setter Property="BorderBrush" Value="#52656F" />
@@ -290,10 +291,11 @@
       <Setter Property="Padding" Value="12,10" />
     </Style>
     <Style Selector="ComboBox.canvasControl">
-      <Setter Property="Height" Value="30" />
+      <Setter Property="Height" Value="32" />
       <Setter Property="Background" Value="#E61A2328" />
       <Setter Property="Foreground" Value="#D7DFDD" />
       <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ComboBox.canvasControl:pointerover">
       <Setter Property="Background" Value="#26343B" />
@@ -325,11 +327,16 @@
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="ComboBox.canvasSemanticSelect">
-      <Setter Property="Height" Value="30" />
+      <Setter Property="Height" Value="32" />
       <Setter Property="Background" Value="#E61A2328" />
       <Setter Property="Foreground" Value="#D7DFDD" />
       <Setter Property="BorderBrush" Value="#4D5D66" />
       <Setter Property="Padding" Value="9,0,7,0" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBox.canvasSemanticSelect /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
     </Style>
     <Style Selector="ComboBox.canvasSemanticSelect:pointerover">
       <Setter Property="Background" Value="#26343B" />
@@ -346,7 +353,10 @@
     <Style Selector="TabItem">
       <Setter Property="FontSize" Value="11" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="Height" Value="38" />
+      <Setter Property="Padding" Value="14,0,14,4" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Border.separator">
       <Setter Property="Width" Value="1" />
@@ -571,9 +581,10 @@
                 </Border>
 
                 <StackPanel Margin="14" Spacing="7" VerticalAlignment="Top" HorizontalAlignment="Right">
-                  <Border Classes="canvasOverlayToolbar">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                      <TextBlock Text="&#xE8AB;" Margin="4,0,2,0" FontFamily="Segoe Fluent Icons" FontSize="12" Foreground="#C8F36C" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                      <Border Width="32" Height="32" CornerRadius="4" Background="#D91A2328">
+                        <TextBlock Text="&#xE8AB;" FontFamily="Segoe Fluent Icons" FontSize="12" Foreground="#C8F36C" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
                       <ComboBox x:Name="TrailModeComboBox" Classes="canvasSemanticSelect" Width="118" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
                         <ComboBox.ItemTemplate>
                           <DataTemplate x:DataType="vm:SelectOption">
@@ -598,13 +609,12 @@
                         <ComboBoxItem Content="60" Tag="60" />
                         <ComboBoxItem Content="120" Tag="120" />
                       </ComboBox>
-                      <Border Width="1" Height="20" Margin="3,0" Background="#45565F" VerticalAlignment="Center" />
                       <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
                       <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
                       <ToggleButton x:Name="ReverseYToggleButton" Classes="canvasQuick" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
+                      <Button Classes="canvasQuick" MinWidth="44" Content="Fit" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
                       <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="canvasQuick" Width="30" MinWidth="30" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="13" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
                     </StackPanel>
-                  </Border>
 
                   <Border x:Name="CanvasSettingsPanel" Classes="canvasSettingsPanel" IsVisible="False" HorizontalAlignment="Right">
                     <StackPanel Spacing="8">
@@ -617,17 +627,7 @@
                   </Border>
                 </StackPanel>
 
-                <Border Margin="14" Classes="canvasOverlayToolbar" VerticalAlignment="Bottom" HorizontalAlignment="Right">
-                  <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button Classes="canvasQuick" MinWidth="48" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel">
-                      <StackPanel Orientation="Horizontal" Spacing="5">
-                        <TextBlock Text="□" FontFamily="Cascadia Mono" FontSize="11" Foreground="#9BA8AD" VerticalAlignment="Center" />
-                        <TextBlock Text="Fit" VerticalAlignment="Center" />
-                      </StackPanel>
-                    </Button>
-                  </StackPanel>
-                </Border>
-                <Border x:Name="PaintZoomHintBorder" Margin="14,52,14,14" Padding="9,5" IsVisible="False" Background="#E61A2328" BorderBrush="#91B83D" BorderThickness="1" CornerRadius="4" VerticalAlignment="Bottom" HorizontalAlignment="Right" IsHitTestVisible="False">
+                <Border x:Name="PaintZoomHintBorder" Margin="14" Padding="9,5" IsVisible="False" Background="#E61A2328" BorderBrush="#91B83D" BorderThickness="1" CornerRadius="4" VerticalAlignment="Bottom" HorizontalAlignment="Right" IsHitTestVisible="False">
                   <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="10" Foreground="#C8F36C" />
                 </Border>
                 </Grid>
