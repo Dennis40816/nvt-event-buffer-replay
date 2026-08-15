@@ -286,8 +286,6 @@ public partial class MainWindow : Window
             SourceAdapterText.Text = session.Probe.DisplayName;
             SourceAdapterText.IsVisible = true;
             SourceAdapterComboBox.IsVisible = false;
-            LoadButton.Content = "Load another";
-            ToolTip.SetTip(LoadButton, "Replace the current capture (Ctrl+O)");
             pendingSourcePath = null;
             SourceConfidenceText.Text = $"{session.Probe.Confidence} confidence · {session.Probe.Reasons.FirstOrDefault()}";
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
@@ -1156,8 +1154,6 @@ public partial class MainWindow : Window
     private void ClearSession()
     {
         StopPlayback();
-        LoadButton.Content = "Load capture";
-        ToolTip.SetTip(LoadButton, "Load a capture (Ctrl+O)");
         session = null;
         replaySession = null;
         trailHistory = null;

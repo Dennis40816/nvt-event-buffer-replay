@@ -232,13 +232,14 @@
     <Style Selector="Button.canvasQuick">
       <Setter Property="Height" Value="32" />
       <Setter Property="MinWidth" Value="32" />
-      <Setter Property="Padding" Value="9,0" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Background" Value="#E61A2328" />
-      <Setter Property="Foreground" Value="#D7DFDD" />
-      <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Background" Value="#F0273237" />
+      <Setter Property="Foreground" Value="#E1E7E5" />
+      <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
@@ -247,18 +248,21 @@
       <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.canvasQuick:pointerover">
-      <Setter Property="Background" Value="#26343B" />
-      <Setter Property="Foreground" Value="#C8F36C" />
+      <Setter Property="Background" Value="#FF334249" />
+      <Setter Property="Foreground" Value="#F2F6F4" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.canvasQuick:focus">
       <Setter Property="BorderBrush" Value="#91B83D" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick">
       <Setter Property="Height" Value="32" />
       <Setter Property="MinWidth" Value="44" />
-      <Setter Property="Padding" Value="9,0" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Background" Value="#E61A2328" />
-      <Setter Property="Foreground" Value="#D7DFDD" />
-      <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Background" Value="#F0273237" />
+      <Setter Property="Foreground" Value="#E1E7E5" />
+      <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="FontSize" Value="10" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -270,18 +274,22 @@
       <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick:pointerover">
-      <Setter Property="Background" Value="#26343B" />
-      <Setter Property="BorderBrush" Value="#91B83D" />
+      <Setter Property="Background" Value="#FF334249" />
+      <Setter Property="Foreground" Value="#F2F6F4" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick:checked">
-      <Setter Property="Background" Value="#26351B" />
+      <Setter Property="Background" Value="#FF334625" />
       <Setter Property="Foreground" Value="#C8F36C" />
-      <Setter Property="BorderBrush" Value="#B9E653" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick:checked /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#26351B" />
+      <Setter Property="Background" Value="#FF334625" />
       <Setter Property="Foreground" Value="#C8F36C" />
-      <Setter Property="BorderBrush" Value="#B9E653" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ToggleButton.canvasQuick:focus">
+      <Setter Property="BorderBrush" Value="#91B83D" />
     </Style>
     <Style Selector="Border.canvasSettingsPanel">
       <Setter Property="Background" Value="#F0121A1F" />
@@ -292,15 +300,17 @@
     </Style>
     <Style Selector="ComboBox.canvasControl">
       <Setter Property="Height" Value="32" />
-      <Setter Property="Background" Value="#E61A2328" />
-      <Setter Property="Foreground" Value="#D7DFDD" />
-      <Setter Property="BorderBrush" Value="#4D5D66" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Background" Value="#F0273237" />
+      <Setter Property="Foreground" Value="#E1E7E5" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ComboBox.canvasControl:pointerover">
-      <Setter Property="Background" Value="#26343B" />
+      <Setter Property="Background" Value="#FF334249" />
       <Setter Property="Foreground" Value="#F3F7F5" />
-      <Setter Property="BorderBrush" Value="#6D7E87" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="TextBox.canvasField">
       <Setter Property="Height" Value="30" />
@@ -328,10 +338,12 @@
     </Style>
     <Style Selector="ComboBox.canvasSemanticSelect">
       <Setter Property="Height" Value="32" />
-      <Setter Property="Background" Value="#E61A2328" />
-      <Setter Property="Foreground" Value="#D7DFDD" />
-      <Setter Property="BorderBrush" Value="#4D5D66" />
-      <Setter Property="Padding" Value="9,0,7,0" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Background" Value="#F0273237" />
+      <Setter Property="Foreground" Value="#E1E7E5" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="31,0,7,0" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="ComboBox.canvasSemanticSelect /template/ ContentPresenter#PART_ContentPresenter">
@@ -339,9 +351,9 @@
       <Setter Property="HorizontalContentAlignment" Value="Left" />
     </Style>
     <Style Selector="ComboBox.canvasSemanticSelect:pointerover">
-      <Setter Property="Background" Value="#26343B" />
+      <Setter Property="Background" Value="#FF334249" />
       <Setter Property="Foreground" Value="#F3F7F5" />
-      <Setter Property="BorderBrush" Value="#91B83D" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="ComboBox.canvasSemanticSelect:focus">
       <Setter Property="BorderBrush" Value="#B9E653" />
@@ -425,7 +437,7 @@
         <Button x:Name="ExportAnalysisButton" Grid.Column="16" Classes="ghost" Content="Export" IsEnabled="False" Click="ExportAnalysisButton_OnClick" AutomationProperties.Name="Export analysis" />
         <Button x:Name="ThemeButton" Grid.Column="18" Classes="canvasIcon" Content="&#xE706;" Click="ThemeButton_OnClick" ToolTip.Tip="Change color theme · commands remain available with Ctrl+K" AutomationProperties.Name="Change color theme" />
         <Button x:Name="CancelButton" Grid.Column="20" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
-        <Button x:Name="LoadButton" Grid.Column="20" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" AutomationProperties.Name="Load capture file" />
+        <Button x:Name="LoadButton" Grid.Column="20" Classes="primary" Content="Load capture" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file" />
         <ProgressBar x:Name="LoadingProgress" Grid.Row="1" Grid.ColumnSpan="21" Height="3" IsIndeterminate="True" IsVisible="False" />
       </Grid>
     </Border>
@@ -581,11 +593,9 @@
                 </Border>
 
                 <StackPanel Margin="14" Spacing="7" VerticalAlignment="Top" HorizontalAlignment="Right">
-                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                      <Border Width="32" Height="32" CornerRadius="4" Background="#D91A2328">
-                        <TextBlock Text="&#xE8AB;" FontFamily="Segoe Fluent Icons" FontSize="12" Foreground="#C8F36C" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                      </Border>
-                      <ComboBox x:Name="TrailModeComboBox" Classes="canvasSemanticSelect" Width="118" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
+                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                      <Grid Width="146" Height="32">
+                      <ComboBox x:Name="TrailModeComboBox" Classes="canvasSemanticSelect" Width="146" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
                         <ComboBox.ItemTemplate>
                           <DataTemplate x:DataType="vm:SelectOption">
                             <Grid Width="218" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -600,6 +610,8 @@
                           </DataTemplate>
                         </ComboBox.SelectionBoxItemTemplate>
                       </ComboBox>
+                      <TextBlock Margin="11,0,0,0" Text="&#xE8AB;" FontFamily="Segoe Fluent Icons" FontSize="12" Foreground="#AFCF6B" HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False" />
+                      </Grid>
                       <TextBlock x:Name="TrailLengthLabel" Text="Frames" FontSize="9" Foreground="#9BA8AD" IsVisible="False" VerticalAlignment="Center" />
                       <ComboBox x:Name="TrailLengthComboBox" Classes="canvasControl" Width="58" SelectedIndex="2" IsVisible="False" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
                         <ComboBoxItem Content="2" Tag="2" />
@@ -609,11 +621,12 @@
                         <ComboBoxItem Content="60" Tag="60" />
                         <ComboBoxItem Content="120" Tag="120" />
                       </ComboBox>
+                      <Border Width="1" Height="18" Margin="5,0,2,0" Background="#3D4B51" VerticalAlignment="Center" />
                       <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
                       <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
                       <ToggleButton x:Name="ReverseYToggleButton" Classes="canvasQuick" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
                       <Button Classes="canvasQuick" MinWidth="44" Content="Fit" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
-                      <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="canvasQuick" Width="30" MinWidth="30" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="13" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
+                      <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="canvasQuick" Width="32" MinWidth="32" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="13" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
                     </StackPanel>
 
                   <Border x:Name="CanvasSettingsPanel" Classes="canvasSettingsPanel" IsVisible="False" HorizontalAlignment="Right">
