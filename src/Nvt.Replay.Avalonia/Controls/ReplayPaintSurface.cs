@@ -34,8 +34,10 @@ public sealed class ReplayPaintSurface : Control
     ];
 
     private ReplayScene? scene;
+    private double zoomFactor = 1;
 
     public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.Compare;
+    public double ZoomFactor => zoomFactor;
 
     public void SetMode(ReplayRenderMode mode)
     {
@@ -55,23 +57,48 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
+    public void ZoomIn() => SetZoom(zoomFactor * 1.25);
+
+    public void ZoomOut() => SetZoom(zoomFactor / 1.25);
+
+    public void Fit() => SetZoom(1);
+
+    private void SetZoom(double value)
+    {
+        zoomFactor = Math.Clamp(value, 0.5, 8);
+        InvalidateVisual();
+    }
+
     public override void Render(DrawingContext context)
     {
         base.Render(context);
         var bounds = new Rect(Bounds.Size);
         context.DrawRectangle(SurfaceBrush, null, bounds);
 
+        if (scene is null) return;
+
         const double horizontalMargin = 42;
         const double topMargin = 34;
         const double bottomMargin = 38;
-        var viewport = new Rect(
+        var available = new Rect(
             horizontalMargin,
             topMargin,
             Math.Max(1, bounds.Width - (horizontalMargin * 2)),
             Math.Max(1, bounds.Height - topMargin - bottomMargin));
+        var fitScale = Math.Min(
+            available.Width / scene.Extent.MaximumX,
+            available.Height / scene.Extent.MaximumY);
+        var viewportWidth = scene.Extent.MaximumX * fitScale * zoomFactor;
+        var viewportHeight = scene.Extent.MaximumY * fitScale * zoomFactor;
+        var viewport = new Rect(
+            available.Center.X - (viewportWidth / 2),
+            available.Center.Y - (viewportHeight / 2),
+            viewportWidth,
+            viewportHeight);
+
+        using var clip = context.PushClip(bounds);
         DrawGrid(context, viewport);
 
-        if (scene is null) return;
         DrawTrails(context, viewport, scene);
 
         if (Mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
@@ -89,7 +116,7 @@ public sealed class ReplayPaintSurface : Control
             ? scene.HostContacts
             : scene.ReportedContacts.Concat(scene.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First());
         foreach (var contact in labels.OrderBy(contact => contact.Id))
-            DrawContactLabel(context, viewport, contact, scene.Extent);
+            DrawContactLabel(context, viewport, available, contact, scene.Extent);
 
         if (scene.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
@@ -174,6 +201,7 @@ public sealed class ReplayPaintSurface : Control
     private static void DrawContactLabel(
         DrawingContext context,
         Rect viewport,
+        Rect labelBounds,
         ReplayContact contact,
         ReplayExtent extent)
     {
@@ -194,8 +222,8 @@ public sealed class ReplayPaintSurface : Control
             LabelTextBrush);
         var width = text.Width + 12;
         var height = text.Height + 6;
-        var x = Math.Clamp(center.X + 19, viewport.Left + 4, viewport.Right - width - 4);
-        var y = Math.Clamp(center.Y - (height / 2), viewport.Top + 4, viewport.Bottom - height - 4);
+        var x = Math.Clamp(center.X + 19, labelBounds.Left + 4, labelBounds.Right - width - 4);
+        var y = Math.Clamp(center.Y - (height / 2), labelBounds.Top + 4, labelBounds.Bottom - height - 4);
         var labelRect = new Rect(x, y, width, height);
         var idBrush = new SolidColorBrush(ContactColor(contact.Id));
         context.DrawRectangle(LabelSurfaceBrush, new Pen(idBrush, 1), labelRect);

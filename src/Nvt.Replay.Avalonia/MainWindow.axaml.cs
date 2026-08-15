@@ -997,6 +997,8 @@ public partial class MainWindow : Window
         ReplayEndClockText.Text = "00:00.000";
         LoopRangeText.Text = "Loop —";
         PaintStatusText.Text = "Decode a capture to replay";
+        PaintSurface.Fit();
+        PaintZoomText.Text = "100%";
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
         SourceAdapterText.Text = "Probing…";
@@ -1038,6 +1040,10 @@ public partial class MainWindow : Window
         PhysicalTimelineProgress.Maximum = Math.Max(1, session.Records.Count - 1);
         EvidenceTimelineProgress.Maximum = Math.Max(1, diagnosticRows.Length);
         replayExtent = ReplayExtent.Measure(replaySession.AllReportedContacts);
+        PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
+        PanelHeightTextBox.Text = replayExtent.MaximumY.ToString("0", CultureInfo.InvariantCulture);
+        PaintSurface.Fit();
+        UpdatePaintZoomText();
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
     }
 
@@ -1278,6 +1284,54 @@ public partial class MainWindow : Window
         };
         PaintSurface?.SetMode(mode);
     }
+
+    private void PanelResolutionTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        ApplyPanelResolution();
+        e.Handled = true;
+    }
+
+    private void PanelResolutionTextBox_OnLostFocus(object? sender, RoutedEventArgs e) => ApplyPanelResolution();
+
+    private void ApplyPanelResolution()
+    {
+        if (!double.TryParse(PanelWidthTextBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var width) ||
+            !double.TryParse(PanelHeightTextBox.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var height) ||
+            width < 1 || height < 1 || width > 1_000_000 || height > 1_000_000)
+        {
+            ConfigurationHintText.Text = "Panel X and Y must be numbers from 1 to 1,000,000.";
+            return;
+        }
+
+        replayExtent = new ReplayExtent(width, height);
+        PaintSurface.Fit();
+        UpdatePaintZoomText();
+        if (replaySession is not null && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
+        SessionStatusText.Text = $"Panel coordinate space · {width:0} × {height:0} · fit to canvas";
+    }
+
+    private void PaintZoomOutButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        PaintSurface.ZoomOut();
+        UpdatePaintZoomText();
+    }
+
+    private void PaintZoomInButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        PaintSurface.ZoomIn();
+        UpdatePaintZoomText();
+    }
+
+    private void PaintFitButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        PaintSurface.Fit();
+        UpdatePaintZoomText();
+    }
+
+    private void UpdatePaintZoomText() =>
+        PaintZoomText.Text = PaintSurface.ZoomFactor.ToString("P0", CultureInfo.InvariantCulture);
 
     private void TrailLengthComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
