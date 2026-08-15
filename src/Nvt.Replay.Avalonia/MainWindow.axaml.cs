@@ -47,6 +47,9 @@ public partial class MainWindow : Window
     private int? loopOut;
     private double replaySpeed = 1;
     private int trailLength = 10;
+    private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
+    private ReplayTrailHistory? trailHistory;
+    private int trailVisibilityStart;
     private bool reverseX;
     private bool reverseY;
     private bool maxReplaySpeed;
@@ -59,8 +62,8 @@ public partial class MainWindow : Window
     private bool inspectorRailCollapsed;
     private bool? reviewRailUserPreference;
     private bool? inspectorRailUserPreference;
-    private const double ExpandedReviewRailWidth = 238;
-    private const double ExpandedInspectorRailWidth = 312;
+    private const double ExpandedReviewRailWidth = 260;
+    private const double ExpandedInspectorRailWidth = 320;
     private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
     private static readonly HashSet<uint> DarkLiteralTextColors =
     [
@@ -77,6 +80,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         Opened += (_, _) =>
         {
+            ApplyWorkingAreaHeightLimit();
             ScheduleThemeContrast();
             ApplyResponsiveRails(Bounds.Width);
         };
@@ -86,10 +90,20 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnSizeChanged(object? sender, SizeChangedEventArgs e) => ApplyResponsiveRails(e.NewSize.Width);
 
+    private void ApplyWorkingAreaHeightLimit()
+    {
+        var screen = Screens.ScreenFromWindow(this);
+        if (screen is null) return;
+        const double nonClientAllowance = 40;
+        var workingHeight = screen.WorkingArea.Height / screen.Scaling;
+        MaxHeight = Math.Max(MinHeight, workingHeight - nonClientAllowance);
+        if (Height > MaxHeight) Height = MaxHeight;
+    }
+
     private void ApplyResponsiveRails(double width)
     {
-        SetReviewRailCollapsed(reviewRailUserPreference ?? width < 1280);
-        SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1180);
+        SetReviewRailCollapsed(reviewRailUserPreference ?? width < 1400);
+        SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1240);
     }
 
     private void ReviewRailToggleButton_OnClick(object? sender, RoutedEventArgs e)
@@ -111,7 +125,7 @@ public partial class MainWindow : Window
         ReviewRailTitle.IsVisible = !collapsed;
         ReviewRailCountBadge.IsVisible = !collapsed;
         ReviewRailContent.IsVisible = !collapsed;
-        ReviewRailToggleButton.Content = collapsed ? "›" : "‹";
+        ReviewRailToggleButton.Content = collapsed ? "\uE76C" : "\uE76B";
         ToolTip.SetTip(ReviewRailToggleButton, collapsed ? "Open review queue" : "Collapse review queue");
     }
 
@@ -121,7 +135,7 @@ public partial class MainWindow : Window
         WorkspaceShellGrid.ColumnDefinitions[2].Width = new GridLength(collapsed ? 42 : ExpandedInspectorRailWidth);
         InspectorRailTitle.IsVisible = !collapsed;
         InspectorRailContent.IsVisible = !collapsed;
-        InspectorRailToggleButton.Content = collapsed ? "‹" : "›";
+        InspectorRailToggleButton.Content = collapsed ? "\uE76B" : "\uE76C";
         ToolTip.SetTip(InspectorRailToggleButton, collapsed ? "Open inspector" : "Collapse inspector");
     }
 
@@ -199,8 +213,8 @@ public partial class MainWindow : Window
         themeMode = (themeMode + 1) % 2;
         var variant = themeMode == 0 ? ThemeVariant.Dark : ThemeVariant.Light;
         if (Application.Current is { } application) application.RequestedThemeVariant = variant;
-        ThemeButton.Content = themeMode == 0 ? "Dark" : "Light";
-        SessionStatusText.Text = $"Color theme · {ThemeButton.Content?.ToString()?.Replace("Theme: ", string.Empty)}";
+        ToolTip.SetTip(ThemeButton, themeMode == 0 ? "Switch to light theme" : "Switch to dark theme");
+        SessionStatusText.Text = $"Color theme · {(themeMode == 0 ? "Dark" : "Light")}";
     }
 
     private async void LoadButton_OnClick(object? sender, RoutedEventArgs e)
@@ -576,7 +590,7 @@ public partial class MainWindow : Window
                     replayExtent,
                     reviewSession?.Diagnostics,
                     markers,
-                    ReplaySceneFactory.BuildTrails(replaySession, index, trailLength),
+                    trailHistory?.Build(index, trailMode, trailLength, trailVisibilityStart) ?? [],
                     reverseX,
                     reverseY),
                 options,
@@ -1008,15 +1022,65 @@ public partial class MainWindow : Window
 
     private void ShowRecord(SourceRecord record, object? frame)
     {
-        InspectorTitleText.Text = $"Physical #{record.Index}";
+        InspectorTitleText.Text = "Frame Summary";
         InspectorSubtitleText.Text = frame switch
         {
             CommonEventBufferFrame common =>
-                $"Common {VersionText(common.Version)} · {(common.HostStateEligible ? "Host-State eligible" : "Evidence only")}",
+                $"Physical #{record.Index} · Common {VersionText(common.Version)} · {(common.HostStateEligible ? "Host-state" : "Evidence only")}",
             Desay97Frame desay =>
-                $"Desay 0x97 / {ProfileText(desay.Profile)} · 2 physical transactions · {(desay.HostStateEligible ? "Host-State eligible" : "Evidence only")}",
-            _ => "Raw physical record · semantic decoding not available for this transaction",
+                $"Physical #{record.Index} · Desay 0x97 / {ProfileText(desay.Profile)} · {(desay.HostStateEligible ? "Host-state" : "Evidence only")}",
+            _ => $"Physical #{record.Index} · Raw source record",
         };
+        InspectorLogicalText.Text = currentLogicalIndex >= 0 && replaySession is not null
+            ? $"{currentLogicalIndex + 1} / {replaySession.Count}"
+            : "—";
+        InspectorPhysicalText.Text = record.Index.ToString(CultureInfo.InvariantCulture);
+        InspectorTouchesText.Text = frame switch
+        {
+            CommonEventBufferFrame common => common.NumTouches.ToString(CultureInfo.InvariantCulture),
+            Desay97Frame desay => desay.NumTouches.ToString(CultureInfo.InvariantCulture),
+            _ => "—",
+        };
+        InspectorCrcText.Text = frame switch
+        {
+            CommonEventBufferFrame common => common.CrcValid ? "OK" : "FAIL",
+            Desay97Frame desay => desay.CrcValid ? "OK" : "FAIL",
+            _ => "—",
+        };
+        InspectorAsilText.Text = frame switch
+        {
+            CommonEventBufferFrame common => $"0x{common.Asil.Raw:X2}",
+            Desay97Frame desay => desay.TpAsilError ? "TP alarm" : "—",
+            _ => "—",
+        };
+        InspectorAllBreakText.Text = frame switch
+        {
+            CommonEventBufferFrame common => common.AllBreak.ToString(),
+            Desay97Frame desay => desay.AllBreak.ToString(),
+            _ => "—",
+        };
+
+        var frameAlerts = reviewSession?.Diagnostics
+            .Where(item => item.Severity >= DiagnosticSeverity.Warning &&
+                           (item.SourceRecordId == record.StableId || item.Location.LineNumber == record.Location.LineNumber))
+            .Take(2)
+            .ToArray() ?? [];
+        var crcFailed = frame switch
+        {
+            CommonEventBufferFrame common => !common.CrcValid,
+            Desay97Frame desay => !desay.CrcValid,
+            _ => false,
+        };
+        var asilAlarm = frame switch
+        {
+            CommonEventBufferFrame common => common.TpAsilError || common.Asil.Alarm,
+            Desay97Frame desay => desay.TpAsilError,
+            _ => false,
+        };
+        InspectorAlertBorder.IsVisible = frameAlerts.Length > 0 || crcFailed || asilAlarm;
+        InspectorAlertText.Text = frameAlerts.Length > 0
+            ? string.Join(" · ", frameAlerts.Select(item => item.Code))
+            : crcFailed ? "CRC validation failed" : asilAlarm ? "ASIL alarm active" : string.Empty;
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
@@ -1076,6 +1140,8 @@ public partial class MainWindow : Window
         StopPlayback();
         session = null;
         replaySession = null;
+        trailHistory = null;
+        trailVisibilityStart = 0;
         rawRowsById = [];
         decodedRowsBySourceId = [];
         decodedRows = [];
@@ -1133,12 +1199,26 @@ public partial class MainWindow : Window
         PaintStatusText.Text = "Decode a capture to replay";
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
+        TrailModeComboBox.SelectedIndex = 1;
+        TrailLengthComboBox.SelectedIndex = 2;
+        TrailLengthComboBox.IsVisible = false;
+        TrailLengthLabel.IsVisible = false;
         ReverseXToggleButton.IsChecked = false;
         ReverseYToggleButton.IsChecked = false;
         reverseX = false;
         reverseY = false;
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
+        InspectorTitleText.Text = "Frame Summary";
+        InspectorSubtitleText.Text = "Select a physical record or decoded event.";
+        InspectorLogicalText.Text = "—";
+        InspectorPhysicalText.Text = "—";
+        InspectorTouchesText.Text = "—";
+        InspectorCrcText.Text = "—";
+        InspectorAsilText.Text = "—";
+        InspectorAllBreakText.Text = "—";
+        InspectorAlertBorder.IsVisible = false;
+        InspectorAlertText.Text = string.Empty;
         SourceAdapterText.Text = "Probing…";
         SourceConfidenceText.Text = "Source and Event Buffer format remain separate";
         SourceHashText.Text = "SHA-256 appears after loading";
@@ -1179,6 +1259,8 @@ public partial class MainWindow : Window
         PhysicalTimelineProgress.Maximum = Math.Max(1, session.Records.Count - 1);
         EvidenceTimelineProgress.Maximum = Math.Max(1, diagnosticRows.Length);
         replayExtent = ReplayExtent.Measure(replaySession.AllReportedContacts);
+        trailHistory = ReplayTrailHistory.Create(replaySession);
+        trailVisibilityStart = 0;
         PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
         PanelHeightTextBox.Text = replayExtent.MaximumY.ToString("0", CultureInfo.InvariantCulture);
         PaintSurface.Fit();
@@ -1202,7 +1284,7 @@ public partial class MainWindow : Window
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            ReplaySceneFactory.BuildTrails(replaySession, clampedIndex, trailLength),
+            trailHistory?.Build(clampedIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
             reverseX,
             reverseY));
         var activeIds = snapshot.HostContacts.Where(contact => contact.IsActive).Select(contact => $"#{contact.Id}").ToArray();
@@ -1269,7 +1351,7 @@ public partial class MainWindow : Window
             SeekReplay(loopIn ?? 0);
         }
         playbackCancellation = new CancellationTokenSource();
-        PlayPauseButton.Content = "Ⅱ PAUSE";
+        PlayPauseButton.Content = "Ⅱ  Pause";
         var nextIndex = Math.Min(currentLogicalIndex + 1, replaySession.Count - 1);
         TimelineStatusText.Text =
             $"Playing {(maxReplaySpeed ? "MAX" : $"{replaySpeed:0.##}×")} · " +
@@ -1373,7 +1455,7 @@ public partial class MainWindow : Window
         cancellation?.Dispose();
         if (PlayPauseButton is not null)
         {
-            PlayPauseButton.Content = "▶ PLAY";
+            PlayPauseButton.Content = "▶  Play";
         }
         if (TimelineStatusText is not null && replaySession is { Count: > 0 } &&
             (status is not null || cancellation is not null))
@@ -1474,6 +1556,21 @@ public partial class MainWindow : Window
     private void UpdatePaintZoomText() =>
         PaintZoomText.Text = PaintSurface.ZoomFactor.ToString("P0", CultureInfo.InvariantCulture);
 
+    private void TrailModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.SelectedItem is not ComboBoxItem item ||
+            !Enum.TryParse<ReplayTrailMode>(item.Tag?.ToString(), out var selectedMode))
+            return;
+
+        trailMode = selectedMode;
+        if (TrailLengthComboBox is not null)
+            TrailLengthComboBox.IsVisible = selectedMode == ReplayTrailMode.Recent;
+        if (TrailLengthLabel is not null)
+            TrailLengthLabel.IsVisible = false;
+        if (replaySession is not null && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
+    }
+
     private void TrailLengthComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if ((sender as ComboBox)?.SelectedItem is not ComboBoxItem item ||
@@ -1483,6 +1580,14 @@ public partial class MainWindow : Window
         trailLength = selectedLength;
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
+    }
+
+    private void ClearTrailsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        trailVisibilityStart = Math.Max(0, currentLogicalIndex + 1);
+        if (replaySession is not null && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
+        SessionStatusText.Text = "Visible trajectory history cleared · source data unchanged";
     }
 
     private void ReverseAxisToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)

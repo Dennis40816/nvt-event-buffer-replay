@@ -10,11 +10,11 @@ namespace Nvt.Replay.Avalonia.Controls;
 
 public sealed class ReplayPaintSurface : Control
 {
-    private static readonly IBrush SurfaceBrush = Brush("#090D0F");
-    private static readonly IBrush GridBrush = Brush("#182227");
-    private static readonly IBrush AxisBrush = Brush("#26343A");
-    private static readonly IBrush AxisLabelBrush = Brush("#68777E");
-    private static readonly IBrush LabelSurfaceBrush = Brush("#E612171A");
+    private static readonly IBrush SurfaceBrush = Brush("#12191D");
+    private static readonly IBrush GridBrush = Brush("#1E2A30");
+    private static readonly IBrush AxisBrush = Brush("#324149");
+    private static readonly IBrush AxisLabelBrush = Brush("#829097");
+    private static readonly IBrush LabelSurfaceBrush = Brush("#EE101619");
     private static readonly IBrush LabelTextBrush = Brush("#F3F7F5");
     private static readonly IBrush BreakBrush = Brush("#F1A85B");
     private static readonly IBrush PalmBrush = Brush("#D98AC6");
@@ -221,7 +221,7 @@ public sealed class ReplayPaintSurface : Control
             $"#{contact.Id}  {state}  X {contact.X}  Y {contact.Y}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Inter", FontStyle.Normal, FontWeight.SemiBold),
+            new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
             10,
             LabelTextBrush);
         var width = text.Width + 12;
