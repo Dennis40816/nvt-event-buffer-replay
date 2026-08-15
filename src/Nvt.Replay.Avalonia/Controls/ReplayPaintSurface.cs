@@ -494,26 +494,47 @@ public sealed class ReplayPaintSurface : Control
         IBrush brush,
         double radius)
     {
-        var pen = new Pen(brush, 1.2);
         switch (type)
         {
             case TouchType.Finger:
-                context.DrawEllipse(null, pen, center, radius, radius);
+                context.DrawEllipse(brush, null, center, radius, radius);
                 break;
             case TouchType.Glove:
-                context.DrawLine(pen, new Point(center.X, center.Y - radius), new Point(center.X + radius, center.Y));
-                context.DrawLine(pen, new Point(center.X + radius, center.Y), new Point(center.X, center.Y + radius));
-                context.DrawLine(pen, new Point(center.X, center.Y + radius), new Point(center.X - radius, center.Y));
-                context.DrawLine(pen, new Point(center.X - radius, center.Y), new Point(center.X, center.Y - radius));
+                DrawFilledPolygon(
+                    context,
+                    brush,
+                    new Point(center.X, center.Y - radius),
+                    new Point(center.X + radius, center.Y),
+                    new Point(center.X, center.Y + radius),
+                    new Point(center.X - radius, center.Y));
                 break;
             case TouchType.Palm:
-                context.DrawRectangle(null, pen, new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2));
+                context.DrawRectangle(brush, null, new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2));
                 break;
             default:
-                context.DrawLine(pen, center - new Vector(radius, radius), center + new Vector(radius, radius));
-                context.DrawLine(pen, center + new Vector(radius, -radius), center + new Vector(-radius, radius));
+                DrawFilledPolygon(
+                    context,
+                    brush,
+                    new Point(center.X, center.Y - radius),
+                    new Point(center.X + radius, center.Y + radius),
+                    new Point(center.X - radius, center.Y + radius));
                 break;
         }
+    }
+
+    private static void DrawFilledPolygon(DrawingContext context, IBrush brush, params Point[] points)
+    {
+        var geometry = new StreamGeometry();
+        using (var path = geometry.Open())
+        {
+            path.BeginFigure(points[0], isFilled: true);
+            foreach (var point in points.Skip(1))
+            {
+                path.LineTo(point);
+            }
+            path.EndFigure(isClosed: true);
+        }
+        context.DrawGeometry(brush, null, geometry);
     }
 
     private static Color ContactColor(byte id) => ContactColors[(Math.Max(1, (int)id) - 1) % ContactColors.Length];
