@@ -175,53 +175,62 @@ public sealed class ReplayPaintSurface : Control
 
     private static void DrawLegend(DrawingContext context, Rect viewport, ReplayScene scene)
     {
-        var ids = scene.ReportedContacts
+        var entries = scene.ReportedContacts
             .Concat(scene.HostContacts)
-            .Select(contact => contact.Id)
-            .Concat(scene.ContactTrails.Select(trail => trail.Id))
-            .Distinct()
-            .Order()
+            .Select(contact => (contact.Id, contact.Type))
+            .Concat(scene.ContactTrails.Select(trail => (trail.Id, trail.Type)))
+            .GroupBy(entry => entry.Id)
+            .Select(group => group.First())
+            .OrderBy(entry => entry.Id)
             .Take(10)
             .ToArray();
-        if (ids.Length == 0) return;
+        if (entries.Length == 0) return;
 
-        const double itemWidth = 43;
         const double itemHeight = 19;
-        var columns = Math.Min(5, ids.Length);
-        var rows = (int)Math.Ceiling(ids.Length / 5d);
         var legendRect = new Rect(
             viewport.Left + 12,
             viewport.Top + 12,
-            Math.Max(224, (columns * itemWidth) + 16),
-            (rows * itemHeight) + 30);
+            112,
+            25 + (entries.Length * itemHeight));
         context.DrawRectangle(LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
 
-        for (var index = 0; index < ids.Length; index++)
+        var heading = new FormattedText(
+            "CONTACTS",
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
+            8,
+            AxisLabelBrush);
+        context.DrawText(heading, new Point(legendRect.X + 10, legendRect.Y + 6));
+
+        for (var index = 0; index < entries.Length; index++)
         {
-            var column = index % 5;
-            var row = index / 5;
+            var entry = entries[index];
             var origin = new Point(
-                legendRect.X + 10 + (column * itemWidth),
-                legendRect.Y + 5 + (row * itemHeight));
-            var color = ContactColor(ids[index]);
+                legendRect.X + 10,
+                legendRect.Y + 21 + (index * itemHeight));
+            var color = ContactColor(entry.Id);
             var brush = new SolidColorBrush(color);
             context.DrawEllipse(brush, null, new Point(origin.X + 4, origin.Y + 7), 3.5, 3.5);
             var text = new FormattedText(
-                $"#{ids[index]}",
+                $"#{entry.Id}",
                 CultureInfo.InvariantCulture,
                 FlowDirection.LeftToRight,
                 new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
                 9,
                 LabelTextBrush);
             context.DrawText(text, new Point(origin.X + 11, origin.Y));
+            DrawLegendType(context, new Point(origin.X + 42, origin.Y + 1), entry.Type, TypeLabel(entry.Type));
         }
-
-        var typeY = legendRect.Bottom - 17;
-        DrawLegendType(context, new Point(legendRect.X + 10, typeY), TouchType.Finger, "finger");
-        DrawLegendType(context, new Point(legendRect.X + 66, typeY), TouchType.Glove, "glove");
-        DrawLegendType(context, new Point(legendRect.X + 122, typeY), TouchType.Palm, "palm");
-        DrawLegendType(context, new Point(legendRect.X + 176, typeY), TouchType.Reserved, "other");
     }
+
+    private static string TypeLabel(TouchType type) => type switch
+    {
+        TouchType.Finger => "finger",
+        TouchType.Glove => "glove",
+        TouchType.Palm => "palm",
+        _ => "other",
+    };
 
     private static void DrawLegendType(DrawingContext context, Point origin, TouchType type, string label)
     {

@@ -1354,7 +1354,7 @@ public partial class MainWindow : Window
             SeekReplay(loopEnabled ? loopIn ?? 0 : 0);
         }
         playbackCancellation = new CancellationTokenSource();
-        PlayPauseButton.Content = "Ⅱ  Pause";
+        SetPlaybackVisualState(playing: true);
         var nextIndex = Math.Min(currentLogicalIndex + 1, replaySession.Count - 1);
         TimelineStatusText.Text =
             $"Playing {(maxReplaySpeed ? "MAX" : $"{replaySpeed:0.##}×")} · " +
@@ -1458,13 +1458,19 @@ public partial class MainWindow : Window
         cancellation?.Dispose();
         if (PlayPauseButton is not null)
         {
-            PlayPauseButton.Content = "▶  Play";
+            SetPlaybackVisualState(playing: false);
         }
         if (TimelineStatusText is not null && replaySession is { Count: > 0 } &&
             (status is not null || cancellation is not null))
         {
             TimelineStatusText.Text = status ?? "Paused · Space play/pause · ←/→ step · drag Loop handles to set range";
         }
+    }
+
+    private void SetPlaybackVisualState(bool playing)
+    {
+        PlayPauseButton.Classes.Set("playing", playing);
+        PlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Play";
     }
 
     private void ReplayTimelineSurface_OnSeekRequested(object? sender, ReplayTimelineSeekEventArgs e)
@@ -1591,6 +1597,12 @@ public partial class MainWindow : Window
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
         SessionStatusText.Text = "Visible trajectory history cleared · source data unchanged";
+    }
+
+    private void CanvasSettingsToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (CanvasSettingsPanel is not null)
+            CanvasSettingsPanel.IsVisible = CanvasSettingsToggleButton.IsChecked == true;
     }
 
     private void ReverseAxisToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
