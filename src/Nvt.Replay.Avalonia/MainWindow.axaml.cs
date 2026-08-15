@@ -51,6 +51,7 @@ public partial class MainWindow : Window
     private bool synchronizingSelection;
     private string? pendingSourcePath;
     private bool configuringSourceChoice;
+    private bool operationInProgress;
     private int themeMode;
     private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
     private static readonly HashSet<uint> DarkLiteralTextColors =
@@ -206,9 +207,9 @@ public partial class MainWindow : Window
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
             DecodeButton.IsEnabled = true;
-            ConfigurationHintText.Text = "Select the operator-confirmed version; source detection does not infer it.";
+            ConfigurationHintText.Text = "Confirm the version to decode automatically; source detection never infers it.";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · 0 logical · {diagnosticRows.Length:N0} evidence";
-            TimelineStatusText.Text = "Raw capture indexed; semantic replay remains disabled until Decode";
+            TimelineStatusText.Text = "Raw capture indexed · confirm Event Buffer Version to open Paint";
             WorkspaceTabs.SelectedIndex = 0;
             if (rawRows.Length > 0)
             {
@@ -246,9 +247,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void DecodeButton_OnClick(object? sender, RoutedEventArgs e)
+    private async void DecodeButton_OnClick(object? sender, RoutedEventArgs e) => await DecodeSelectedAsync();
+
+    private async Task DecodeSelectedAsync()
     {
-        if (session is null)
+        if (session is null || operationInProgress)
         {
             return;
         }
@@ -256,7 +259,7 @@ public partial class MainWindow : Window
         if (EventVersionComboBox.SelectedItem is not ComboBoxItem selected ||
             selected.Content is not string versionText)
         {
-            ConfigurationHintText.Text = "Event Buffer Version is required and must be confirmed by the operator.";
+            ConfigurationHintText.Text = "Confirm Event Buffer Version; decoding starts immediately after selection.";
             return;
         }
 
@@ -333,7 +336,7 @@ public partial class MainWindow : Window
 
             DecodedFramesList.ItemsSource = decodedRows;
             SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} decoded frames · {diagnosticRows.Length:N0} diagnostics";
-            ConfigurationHintText.Text = $"{formatLabel} selected manually · raw source remains unchanged";
+            ConfigurationHintText.Text = $"{formatLabel} confirmed · decoded automatically · raw source remains unchanged";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = "Logical replay ready · Space play/pause · ←/→ step · I/O loop";
             InitializeReplay();
@@ -353,6 +356,11 @@ public partial class MainWindow : Window
         catch (OperationCanceledException)
         {
             SessionStatusText.Text = "Decode cancelled; previous complete result was preserved";
+        }
+        catch (Exception exception) when (exception is InvalidDataException or ArgumentException or InvalidOperationException)
+        {
+            SessionStatusText.Text = $"Decode failed · {exception.Message}";
+            ConfigurationHintText.Text = "Raw records remain available; verify version/profile and try again.";
         }
         finally
         {
@@ -491,7 +499,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var isDesay97 = (sender as ComboBox)?.SelectedItem is ComboBoxItem item &&
                         item.Content?.ToString() == "0x97";
@@ -508,9 +516,19 @@ public partial class MainWindow : Window
         if (session is not null)
         {
             ConfigurationHintText.Text = isDesay97
-                ? "Desay 0x97 requires Standard or Benz Palm; the application never auto-detects it."
-                : "Select the operator-confirmed version; source detection does not infer it.";
+                ? "Confirm Standard or Benz Palm; decoding starts immediately after that selection."
+                : "Version confirmed · decoding automatically; source detection did not infer it.";
+            if (!isDesay97 && EventVersionComboBox.SelectedIndex >= 0)
+                await DecodeSelectedAsync();
         }
+    }
+
+    private async void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
+                        versionItem.Content?.ToString() == "0x97";
+        if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
+            await DecodeSelectedAsync();
     }
 
     private void RawRecordsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1009,6 +1027,7 @@ public partial class MainWindow : Window
 
     private void SetBusy(bool busy, string status)
     {
+        operationInProgress = busy;
         LoadingProgress.IsVisible = busy;
         LoadButton.IsVisible = !busy;
         CancelButton.IsVisible = busy;
