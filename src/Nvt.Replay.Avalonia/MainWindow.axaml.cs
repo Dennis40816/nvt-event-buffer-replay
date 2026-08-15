@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -1488,6 +1489,7 @@ public partial class MainWindow : Window
     {
         PlayPauseButton.Classes.Set("playing", playing);
         PlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Play";
+        AutomationProperties.SetName(PlayPauseButton, playing ? "Pause replay" : "Play replay");
     }
 
     private void ReplayTimelineSurface_OnSeekRequested(object? sender, ReplayTimelineSeekEventArgs e)
