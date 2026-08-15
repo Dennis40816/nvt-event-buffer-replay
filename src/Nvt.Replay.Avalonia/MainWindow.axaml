@@ -148,6 +148,25 @@
       <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
       <Setter Property="Opacity" Value="1" />
     </Style>
+    <Style Selector="Button.shortcutRow">
+      <Setter Property="Height" Value="34" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.shortcutRow:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+    </Style>
+    <Style Selector="Border.keycap">
+      <Setter Property="MinWidth" Value="34" />
+      <Setter Property="Height" Value="22" />
+      <Setter Property="Padding" Value="7,0" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Background" Value="{DynamicResource CanvasBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
     <Style Selector="ComboBox">
       <Setter Property="Height" Value="32" />
       <Setter Property="MinWidth" Value="72" />
@@ -790,10 +809,10 @@
 
     <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
       <Grid Margin="16,8" RowDefinitions="36,56,18">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,146,12,Auto,6,72,12,Auto,4,Auto,4,Auto,*,Auto,14,Auto">
-          <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous frame" AutomationProperties.Name="Previous logical frame" />
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,146,12,Auto,6,72,12,Auto,4,Auto,4,Auto,*,Auto,8,Auto,14,Auto">
+          <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" AutomationProperties.Name="Previous logical frame" />
           <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="transportPlay" MinWidth="80" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play replay" />
-          <Button x:Name="NextFrameButton" Grid.Column="4" Classes="canvasIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" ToolTip.Tip="Next frame" AutomationProperties.Name="Next logical frame" />
+          <Button x:Name="NextFrameButton" Grid.Column="4" Classes="canvasIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" AutomationProperties.Name="Next logical frame" />
           <Border Grid.Column="6" Width="1" Height="24" Background="{DynamicResource BorderBrush}" />
           <TextBlock Grid.Column="8" Classes="fieldLabel" Text="Clock" />
           <ComboBox x:Name="ClockModeComboBox" Grid.Column="10" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
@@ -814,8 +833,9 @@
           <ToggleButton x:Name="LoopToggleButton" Grid.Column="16" Classes="axisToggle" Width="58" MinWidth="58" Content="Loop" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Enable loop range" />
           <Button x:Name="ClearLoopButton" Grid.Column="18" Classes="ghost" MinWidth="48" Content="Clear" IsEnabled="False" Click="ClearLoopButton_OnClick" ToolTip.Tip="Clear loop range" AutomationProperties.Name="Clear loop range" />
           <Button x:Name="AddMarkerButton" Grid.Column="20" Classes="ghost" Content="Mark" IsEnabled="False" Click="AddMarkerButton_OnClick" />
-          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="22" Content="Compress idle" IsChecked="True" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-          <TextBlock x:Name="TimelineSummaryText" Grid.Column="24" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+          <Button x:Name="ShortcutHelpButton" Grid.Column="22" Classes="ghost" MinWidth="48" Content="Keys" Click="CommandPaletteButton_OnClick" ToolTip.Tip="Keyboard shortcuts (Ctrl+K)" AutomationProperties.Name="Open keyboard shortcuts" />
+          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="24" Content="Compress idle" IsChecked="True" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+          <TextBlock x:Name="TimelineSummaryText" Grid.Column="26" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
         </Grid>
         <Grid Grid.Row="1" RowDefinitions="14,22,14" ColumnDefinitions="74,*">
           <TextBlock Text="Physical" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
@@ -847,25 +867,51 @@
     </Border>
 
     <Border x:Name="CommandPaletteOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="100" Background="#B0000000" KeyDown="CommandPaletteOverlay_OnKeyDown" AutomationProperties.Name="Command palette">
-      <Border Width="520" MaxHeight="620" Padding="22" CornerRadius="10" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <StackPanel Spacing="10">
+      <Border Width="720" MaxHeight="680" Padding="24" CornerRadius="8" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid RowDefinitions="Auto,16,*,14,Auto">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel>
-              <TextBlock Text="COMMAND PALETTE" Classes="section" />
-              <TextBlock Text="Replay actions and keyboard shortcuts" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+              <TextBlock Text="REPLAY CONTROLS" Classes="section" />
+              <TextBlock Text="Keyboard shortcuts" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+              <TextBlock Text="One key map for transport, frame review and reporting" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
             </StackPanel>
             <Button Grid.Column="1" Classes="ghost" Content="Esc" Click="CloseCommandPaletteButton_OnClick" AutomationProperties.Name="Close command palette" />
           </Grid>
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Load capture                                      Ctrl+O" Tag="load" Click="CommandPaletteAction_OnClick" />
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Decode selected format" Tag="decode" Click="CommandPaletteAction_OnClick" />
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Play / pause replay                              Space" Tag="play" Click="CommandPaletteAction_OnClick" />
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Previous / next frame                            ← / →" Tag="step" Click="CommandPaletteAction_OnClick" />
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Mark current frame                               M" Tag="mark" Click="CommandPaletteAction_OnClick" />
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export analysis                                  Ctrl+E" Tag="analysis" Click="CommandPaletteAction_OnClick" />
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Export replay video" Tag="video" Click="CommandPaletteAction_OnClick" />
-          <Button Classes="ghost" HorizontalContentAlignment="Left" Content="Toggle Dark / Light theme" Tag="theme" Click="CommandPaletteAction_OnClick" />
-          <TextBlock Text="Home / End seek bounds · L legend · drag Loop handles · I / O remain shortcuts" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
-        </StackPanel>
+          <ScrollViewer Grid.Row="2" MaxHeight="520" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="ShortcutModulesItemsControl">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ReplayShortcutModule">
+                  <Border Width="315" Margin="0,0,10,14" Padding="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                      <TextBlock Text="{Binding Description}" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" />
+                      <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ReplayShortcutDefinition">
+                            <Button Classes="shortcutRow" Tag="{Binding Action}" Click="ShortcutAction_OnClick">
+                              <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding Label}" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                <Border Grid.Column="1" Classes="keycap">
+                                  <TextBlock Text="{Binding Gesture}" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                              </Grid>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <TextBlock Grid.Row="4" Text="Ctrl+K opens this map · shortcuts yield while text fields and selectors are being edited" FontSize="10" Foreground="{DynamicResource MutedTextBrush}" />
+        </Grid>
       </Border>
     </Border>
   </Grid>

@@ -105,6 +105,8 @@ public partial class MainWindow : Window
             new("Bottom right", "Pin the legend to the bottom-right corner", nameof(ReplayLegendPosition.BottomRight)),
         };
         LegendPositionComboBox.SelectedIndex = 0;
+        ShortcutModulesItemsControl.ItemsSource = ReplayShortcutCatalog.Modules;
+        ApplyShortcutToolTips();
         PaintSurface.LegendCollapsedChanged += PaintSurface_OnLegendCollapsedChanged;
         Opened += (_, _) =>
         {
@@ -219,21 +221,21 @@ public partial class MainWindow : Window
         Focus();
     }
 
-    private void CommandPaletteAction_OnClick(object? sender, RoutedEventArgs e)
+    private void ShortcutAction_OnClick(object? sender, RoutedEventArgs e)
     {
-        var action = (sender as Button)?.Tag?.ToString();
+        if ((sender as Button)?.Tag is not ReplayShortcutAction action) return;
         CloseCommandPalette();
-        switch (action)
-        {
-            case "load": LoadButton_OnClick(sender, e); break;
-            case "decode" when DecodeButton.IsEnabled: DecodeButton_OnClick(sender, e); break;
-            case "play" when PlayPauseButton.IsEnabled: PlayPauseButton_OnClick(sender, e); break;
-            case "step" when NextFrameButton.IsEnabled: NextFrameButton_OnClick(sender, e); break;
-            case "mark" when AddMarkerButton.IsEnabled: AddMarkerButton_OnClick(sender, e); break;
-            case "analysis" when ExportAnalysisButton.IsEnabled: ExportAnalysisButton_OnClick(sender, e); break;
-            case "video" when AnalysisTab.IsEnabled: ExportReplayButton_OnClick(sender, e); break;
-            case "theme": ThemeButton_OnClick(sender, e); break;
-        }
+        ExecuteShortcut(action);
+    }
+
+    private void ApplyShortcutToolTips()
+    {
+        ToolTip.SetTip(PreviousFrameButton, ReplayShortcutCatalog.ToolTip(ReplayShortcutAction.PreviousFrame));
+        ToolTip.SetTip(PlayPauseButton, ReplayShortcutCatalog.ToolTip(ReplayShortcutAction.TogglePlayback));
+        ToolTip.SetTip(NextFrameButton, ReplayShortcutCatalog.ToolTip(ReplayShortcutAction.NextFrame));
+        ToolTip.SetTip(ReplaySpeedComboBox,
+            $"Replay speed · {ReplayShortcutCatalog.ToolTip(ReplayShortcutAction.Slower)} · {ReplayShortcutCatalog.ToolTip(ReplayShortcutAction.Faster)} · 1 resets");
+        ToolTip.SetTip(AddMarkerButton, ReplayShortcutCatalog.ToolTip(ReplayShortcutAction.AddMarker));
     }
 
     private void ThemeButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1830,68 +1832,108 @@ public partial class MainWindow : Window
             if (e.Key == Key.Escape) CloseCommandPalette();
             e.Handled = true;
         }
-        else if (e.Key == Key.O && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        else if (ReplayShortcutCatalog.Match(e.Key, e.KeyModifiers) is { } shortcut &&
+                 (!IsShortcutEditingContext(e.Source) || shortcut.AllowWhileEditing) &&
+                 ExecuteShortcut(shortcut.Action))
         {
-            LoadButton_OnClick(this, new RoutedEventArgs());
             e.Handled = true;
         }
-        else if (e.Key == Key.S && e.KeyModifiers.HasFlag(KeyModifiers.Control) && SaveReviewButton.IsEnabled)
+    }
+
+    private bool ExecuteShortcut(ReplayShortcutAction action)
+    {
+        switch (action)
         {
-            SaveReviewButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
+            case ReplayShortcutAction.LoadCapture:
+                LoadButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.SaveReview when SaveReviewButton.IsEnabled:
+                SaveReviewButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.ExportAnalysis when ExportAnalysisButton.IsEnabled:
+                ExportAnalysisButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.TogglePlayback when PlayPauseButton.IsEnabled:
+                PlayPauseButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.PreviousFrame when PreviousFrameButton.IsEnabled:
+                PreviousFrameButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.NextFrame when NextFrameButton.IsEnabled:
+                NextFrameButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.JumpBackTenFrames when replaySession is { Count: > 0 }:
+                JumpFrames(-10);
+                return true;
+            case ReplayShortcutAction.JumpForwardTenFrames when replaySession is { Count: > 0 }:
+                JumpFrames(10);
+                return true;
+            case ReplayShortcutAction.FirstFrame when replaySession is { Count: > 0 }:
+                StopPlayback();
+                SeekReplay(0);
+                return true;
+            case ReplayShortcutAction.LastFrame when replaySession is { Count: > 0 }:
+                StopPlayback();
+                SeekReplay(replaySession.Count - 1);
+                return true;
+            case ReplayShortcutAction.Slower:
+                SelectRelativeReplaySpeed(-1);
+                return true;
+            case ReplayShortcutAction.Faster:
+                SelectRelativeReplaySpeed(1);
+                return true;
+            case ReplayShortcutAction.NormalSpeed:
+                SelectNormalReplaySpeed();
+                return true;
+            case ReplayShortcutAction.SetLoopIn when currentLogicalIndex >= 0:
+                LoopInButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.SetLoopOut when currentLogicalIndex >= 0:
+                LoopOutButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.AddMarker when AddMarkerButton.IsEnabled:
+                AddMarkerButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.ToggleLegend when PaintTab.IsEnabled:
+                LegendVisibleToggleButton.IsChecked = LegendVisibleToggleButton.IsChecked != true;
+                return true;
+            default:
+                return false;
         }
-        else if (e.Key == Key.E && e.KeyModifiers.HasFlag(KeyModifiers.Control) && ExportAnalysisButton.IsEnabled)
-        {
-            ExportAnalysisButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Space)
-        {
-            PlayPauseButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
-        }
-        else if (e.Key == Key.L && PaintTab.IsEnabled && e.Source is not TextBox)
-        {
-            LegendVisibleToggleButton.IsChecked = LegendVisibleToggleButton.IsChecked != true;
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Left)
-        {
-            PreviousFrameButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Right)
-        {
-            NextFrameButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Home && replaySession is not null)
-        {
-            StopPlayback();
-            SeekReplay(0);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.End && replaySession is not null)
-        {
-            StopPlayback();
-            SeekReplay(replaySession.Count - 1);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.I)
-        {
-            LoopInButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
-        }
-        else if (e.Key == Key.O)
-        {
-            LoopOutButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
-        }
-        else if (e.Key == Key.M)
-        {
-            AddMarkerButton_OnClick(this, new RoutedEventArgs());
-            e.Handled = true;
-        }
+    }
+
+    private void JumpFrames(int delta)
+    {
+        StopPlayback();
+        SeekReplay(currentLogicalIndex + delta);
+    }
+
+    private void SelectRelativeReplaySpeed(int delta)
+    {
+        var items = ReplaySpeedComboBox.Items.OfType<ComboBoxItem>().ToArray();
+        if (items.Length == 0) return;
+        ReplaySpeedComboBox.SelectedIndex = Math.Clamp(ReplaySpeedComboBox.SelectedIndex + delta, 0, items.Length - 1);
+        TimelineStatusText.Text = $"Replay speed · {items[ReplaySpeedComboBox.SelectedIndex].Content}";
+    }
+
+    private void SelectNormalReplaySpeed()
+    {
+        var items = ReplaySpeedComboBox.Items.OfType<ComboBoxItem>().ToArray();
+        var normalIndex = Array.FindIndex(items, item => string.Equals(item.Tag?.ToString(), "1", StringComparison.Ordinal));
+        if (normalIndex < 0) return;
+        ReplaySpeedComboBox.SelectedIndex = normalIndex;
+        TimelineStatusText.Text = "Replay speed · 1×";
+    }
+
+    private static bool IsShortcutEditingContext(object? source)
+    {
+        if (source is not Visual visual) return false;
+        return visual is TextBox or ComboBox or ComboBoxItem or Slider or Button ||
+               visual.FindAncestorOfType<TextBox>() is not null ||
+               visual.FindAncestorOfType<ComboBox>() is not null ||
+               visual.FindAncestorOfType<ComboBoxItem>() is not null ||
+               visual.FindAncestorOfType<Slider>() is not null ||
+               visual.FindAncestorOfType<Button>() is not null;
     }
 
     protected override void OnClosed(EventArgs e)
