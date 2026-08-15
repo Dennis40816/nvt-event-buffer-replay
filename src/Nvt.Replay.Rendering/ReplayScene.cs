@@ -37,7 +37,9 @@ public sealed record ReplayScene(
     ReplayExtent Extent,
     IReadOnlyList<ReplayContactTrail> ContactTrails,
     IReadOnlyList<ReplayDiagnostic> Diagnostics,
-    IReadOnlyList<string> MarkerLabels);
+    IReadOnlyList<string> MarkerLabels,
+    bool ReverseX,
+    bool ReverseY);
 
 public sealed record ReplayTrailPoint(ushort X, ushort Y, TouchStatus Status, int LogicalIndex);
 
@@ -51,7 +53,9 @@ public static class ReplaySceneFactory
         ReplayExtent extent,
         IEnumerable<ReplayDiagnostic>? diagnostics = null,
         IEnumerable<ReplayMarker>? markers = null,
-        IReadOnlyList<ReplayContactTrail>? contactTrails = null)
+        IReadOnlyList<ReplayContactTrail>? contactTrails = null,
+        bool reverseX = false,
+        bool reverseY = false)
     {
         var sourceIds = snapshot.PhysicalRecords.Append(snapshot.PrimarySource)
             .Select(item => item.StableId)
@@ -67,7 +71,9 @@ public static class ReplaySceneFactory
             contactTrails ?? [],
             diagnostics?.Where(item => sourceIds.Contains(item.SourceRecordId)).ToArray() ?? [],
             markers?.Where(item => item.StartLogicalIndex <= snapshot.LogicalIndex && item.EndLogicalIndex >= snapshot.LogicalIndex)
-                .Select(item => item.Label).ToArray() ?? []);
+                .Select(item => item.Label).ToArray() ?? [],
+            reverseX,
+            reverseY);
     }
 
     public static IReadOnlyList<ReplayContactTrail> BuildTrails(
@@ -78,7 +84,7 @@ public static class ReplaySceneFactory
         ArgumentNullException.ThrowIfNull(replay);
         if (logicalIndex < 0 || logicalIndex >= replay.Count)
             throw new ArgumentOutOfRangeException(nameof(logicalIndex));
-        if (maximumPoints < 2)
+        if (maximumPoints is < 2 or > 10)
             throw new ArgumentOutOfRangeException(nameof(maximumPoints));
 
         var current = replay.Seek(logicalIndex);

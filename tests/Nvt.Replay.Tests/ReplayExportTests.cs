@@ -47,7 +47,7 @@ public sealed class ReplayExportTests : IDisposable
         var firstFrame = Directory.GetFiles(output + ".frames", "frame-*.png").Order().First();
         Assert.Equal([137, 80, 78, 71, 13, 10, 26, 10], (await File.ReadAllBytesAsync(firstFrame))[..8]);
         var hash = Hash(firstFrame);
-        Assert.Equal("60b60c15afc39ac88b122519ddd3e5928c31b92a2be22d07c1ad77e46159cdec", hash);
+        Assert.Equal("439f9bcbf97760c7f2cc0fc37bf3f0de1c3a84d2375a3b9ca93b89b5f0f338c1", hash);
         Assert.Empty(Directory.GetDirectories(directory, ".*.tmp"));
     }
 
@@ -65,6 +65,23 @@ public sealed class ReplayExportTests : IDisposable
             Options(output)));
 
         Assert.Equal("prior-video", await File.ReadAllTextAsync(output));
+    }
+
+    [Fact]
+    public void Axis_reversal_changes_rendering_without_changing_contact_coordinates()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var snapshot = replay.Seek(0);
+        var normal = ReplaySceneFactory.Create(snapshot, replay.Count, extent);
+        var reversed = ReplaySceneFactory.Create(snapshot, replay.Count, extent, reverseX: true, reverseY: true);
+
+        Assert.Equal(normal.ReportedContacts, reversed.ReportedContacts);
+        Assert.True(reversed.ReverseX);
+        Assert.True(reversed.ReverseY);
+        Assert.NotEqual(
+            SHA256.HashData(ReplayFrameRenderer.RenderRgb(normal, 320, 180)),
+            SHA256.HashData(ReplayFrameRenderer.RenderRgb(reversed, 320, 180)));
     }
 
     [Fact]

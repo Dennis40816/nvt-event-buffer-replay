@@ -59,16 +59,16 @@ public static class ReplayFrameRenderer
         }
 
         foreach (var trail in scene.ContactTrails)
-            DrawTrail(canvas, viewport, scene.Extent, trail);
+            DrawTrail(canvas, viewport, scene, trail);
         if (mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
-            foreach (var contact in scene.ReportedContacts) DrawContact(canvas, viewport, scene.Extent, contact, reported: true);
+            foreach (var contact in scene.ReportedContacts) DrawContact(canvas, viewport, scene, contact, reported: true);
         if (mode is ReplayRenderMode.HostState or ReplayRenderMode.Compare)
-            foreach (var contact in scene.HostContacts) DrawContact(canvas, viewport, scene.Extent, contact, reported: false);
+            foreach (var contact in scene.HostContacts) DrawContact(canvas, viewport, scene, contact, reported: false);
         var labels = mode == ReplayRenderMode.HostState
             ? scene.HostContacts
             : scene.ReportedContacts.Concat(scene.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First());
         foreach (var contact in labels.OrderBy(contact => contact.Id))
-            DrawContactLabel(canvas, viewport, scene.Extent, contact, Math.Max(1, height / 540));
+            DrawContactLabel(canvas, viewport, scene, contact, Math.Max(1, height / 540));
         if (scene.GlobalPalm) canvas.Rectangle(viewport, Alarm, 4);
 
         var scale = Math.Max(1, height / 360);
@@ -81,10 +81,10 @@ public static class ReplayFrameRenderer
         return canvas.Pixels;
     }
 
-    private static void DrawContact(RasterCanvas canvas, PixelRect viewport, ReplayExtent extent, ReplayContact contact, bool reported)
+    private static void DrawContact(RasterCanvas canvas, PixelRect viewport, ReplayScene scene, ReplayContact contact, bool reported)
     {
-        var x = viewport.X + (int)Math.Round(contact.X / extent.MaximumX * viewport.Width);
-        var y = viewport.Y + (int)Math.Round(contact.Y / extent.MaximumY * viewport.Height);
+        var x = MapX(viewport, scene, contact.X);
+        var y = MapY(viewport, scene, contact.Y);
         var color = contact.Invalid ? Alarm : contact.Type == TouchType.Palm ? Palm : contact.Status == TouchStatus.Break ? Break : ContactColor(contact.Id);
         var radius = reported ? 10 : 6;
         if (contact.Invalid)
@@ -114,7 +114,7 @@ public static class ReplayFrameRenderer
         }
     }
 
-    private static void DrawTrail(RasterCanvas canvas, PixelRect viewport, ReplayExtent extent, ReplayContactTrail trail)
+    private static void DrawTrail(RasterCanvas canvas, PixelRect viewport, ReplayScene scene, ReplayContactTrail trail)
     {
         var color = ContactColor(trail.Id);
         for (var index = 1; index < trail.Points.Count; index++)
@@ -122,10 +122,10 @@ public static class ReplayFrameRenderer
             var prior = trail.Points[index - 1];
             var current = trail.Points[index];
             canvas.Line(
-                viewport.X + (int)Math.Round(prior.X / extent.MaximumX * viewport.Width),
-                viewport.Y + (int)Math.Round(prior.Y / extent.MaximumY * viewport.Height),
-                viewport.X + (int)Math.Round(current.X / extent.MaximumX * viewport.Width),
-                viewport.Y + (int)Math.Round(current.Y / extent.MaximumY * viewport.Height),
+                MapX(viewport, scene, prior.X),
+                MapY(viewport, scene, prior.Y),
+                MapX(viewport, scene, current.X),
+                MapY(viewport, scene, current.Y),
                 color,
                 2);
         }
@@ -134,12 +134,12 @@ public static class ReplayFrameRenderer
     private static void DrawContactLabel(
         RasterCanvas canvas,
         PixelRect viewport,
-        ReplayExtent extent,
+        ReplayScene scene,
         ReplayContact contact,
         int scale)
     {
-        var x = viewport.X + (int)Math.Round(contact.X / extent.MaximumX * viewport.Width);
-        var y = viewport.Y + (int)Math.Round(contact.Y / extent.MaximumY * viewport.Height);
+        var x = MapX(viewport, scene, contact.X);
+        var y = MapY(viewport, scene, contact.Y);
         var state = contact.Status switch
         {
             TouchStatus.Enter => "ENTER",
@@ -147,7 +147,7 @@ public static class ReplayFrameRenderer
             TouchStatus.Break => "BREAK",
             _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
         };
-        var label = $"#{contact.Id} {state}";
+        var label = $"#{contact.Id} {state} X{contact.X} Y{contact.Y}";
         var width = ((label.Length * 4) + 2) * scale;
         var height = 7 * scale;
         var left = Math.Clamp(x + (14 * scale), viewport.X + 2, viewport.Right - width - 2);
@@ -158,6 +158,18 @@ public static class ReplayFrameRenderer
     }
 
     private static Rgb ContactColor(byte id) => ContactColors[(Math.Max(1, (int)id) - 1) % ContactColors.Length];
+
+    private static int MapX(PixelRect viewport, ReplayScene scene, ushort x)
+    {
+        var ratio = x / scene.Extent.MaximumX;
+        return viewport.X + (int)Math.Round((scene.ReverseX ? 1 - ratio : ratio) * viewport.Width);
+    }
+
+    private static int MapY(PixelRect viewport, ReplayScene scene, ushort y)
+    {
+        var ratio = y / scene.Extent.MaximumY;
+        return viewport.Y + (int)Math.Round((scene.ReverseY ? 1 - ratio : ratio) * viewport.Height);
+    }
 
     private static Rgb Fade(Rgb color) => new((byte)(color.Red / 2), (byte)(color.Green / 2), (byte)(color.Blue / 2));
 

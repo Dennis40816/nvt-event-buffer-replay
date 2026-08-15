@@ -46,7 +46,9 @@ public partial class MainWindow : Window
     private int? loopIn;
     private int? loopOut;
     private double replaySpeed = 1;
-    private int trailLength = 32;
+    private int trailLength = 10;
+    private bool reverseX;
+    private bool reverseY;
     private bool maxReplaySpeed;
     private bool synchronizingSelection;
     private string? pendingSourcePath;
@@ -474,7 +476,9 @@ public partial class MainWindow : Window
                     replayExtent,
                     reviewSession?.Diagnostics,
                     markers,
-                    ReplaySceneFactory.BuildTrails(replaySession, index, trailLength)),
+                    ReplaySceneFactory.BuildTrails(replaySession, index, trailLength),
+                    reverseX,
+                    reverseY),
                 options,
                 cancellationToken);
             AnalysisOutputText.Text =
@@ -1017,6 +1021,10 @@ public partial class MainWindow : Window
         PaintStatusText.Text = "Decode a capture to replay";
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
+        ReverseXToggleButton.IsChecked = false;
+        ReverseYToggleButton.IsChecked = false;
+        reverseX = false;
+        reverseY = false;
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
         SourceAdapterText.Text = "Probing…";
@@ -1082,7 +1090,9 @@ public partial class MainWindow : Window
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            ReplaySceneFactory.BuildTrails(replaySession, clampedIndex, trailLength)));
+            ReplaySceneFactory.BuildTrails(replaySession, clampedIndex, trailLength),
+            reverseX,
+            reverseY));
         var activeIds = snapshot.HostContacts.Where(contact => contact.IsActive).Select(contact => $"#{contact.Id}").ToArray();
         PaintStatusText.Text =
             $"FRAME {clampedIndex + 1:00}/{replaySession.Count:00}  ·  ACTIVE {(activeIds.Length == 0 ? "—" : string.Join(' ', activeIds))}" +
@@ -1359,6 +1369,14 @@ public partial class MainWindow : Window
             return;
 
         trailLength = selectedLength;
+        if (replaySession is not null && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
+    }
+
+    private void ReverseAxisToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        reverseX = ReverseXToggleButton.IsChecked == true;
+        reverseY = ReverseYToggleButton.IsChecked == true;
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
     }

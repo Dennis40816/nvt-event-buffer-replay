@@ -13,6 +13,7 @@ public sealed class ReplayPaintSurface : Control
     private static readonly IBrush SurfaceBrush = Brush("#090D0F");
     private static readonly IBrush GridBrush = Brush("#182227");
     private static readonly IBrush AxisBrush = Brush("#26343A");
+    private static readonly IBrush AxisLabelBrush = Brush("#68777E");
     private static readonly IBrush LabelSurfaceBrush = Brush("#E612171A");
     private static readonly IBrush LabelTextBrush = Brush("#F3F7F5");
     private static readonly IBrush BreakBrush = Brush("#F1A85B");
@@ -98,25 +99,27 @@ public sealed class ReplayPaintSurface : Control
 
         using var clip = context.PushClip(bounds);
         DrawGrid(context, viewport);
+        DrawAxisLabels(context, viewport, scene);
 
         DrawTrails(context, viewport, scene);
 
         if (Mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
         {
             foreach (var contact in scene.ReportedContacts)
-                DrawContact(context, viewport, contact, scene.Extent, reported: true);
+                DrawContact(context, viewport, contact, scene, reported: true);
         }
         if (Mode is ReplayRenderMode.HostState or ReplayRenderMode.Compare)
         {
             foreach (var contact in scene.HostContacts)
-                DrawContact(context, viewport, contact, scene.Extent, reported: false);
+                DrawContact(context, viewport, contact, scene, reported: false);
         }
 
         var labels = Mode == ReplayRenderMode.HostState
             ? scene.HostContacts
             : scene.ReportedContacts.Concat(scene.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First());
+        var occupiedLabels = new List<Rect>();
         foreach (var contact in labels.OrderBy(contact => contact.Id))
-            DrawContactLabel(context, viewport, available, contact, scene.Extent);
+            DrawContactLabel(context, viewport, available, contact, scene, occupiedLabels);
 
         if (scene.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
@@ -144,8 +147,8 @@ public sealed class ReplayPaintSurface : Control
             {
                 context.DrawLine(
                     new Pen(brush, 2.5),
-                    Project(viewport, scene.Extent, trail.Points[index - 1].X, trail.Points[index - 1].Y),
-                    Project(viewport, scene.Extent, trail.Points[index].X, trail.Points[index].Y));
+                    Project(viewport, scene, trail.Points[index - 1].X, trail.Points[index - 1].Y),
+                    Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y));
             }
         }
     }
@@ -154,10 +157,10 @@ public sealed class ReplayPaintSurface : Control
         DrawingContext context,
         Rect viewport,
         ReplayContact contact,
-        ReplayExtent extent,
+        ReplayScene scene,
         bool reported)
     {
-        var center = Project(viewport, extent, contact.X, contact.Y);
+        var center = Project(viewport, scene, contact.X, contact.Y);
         var color = ContactColor(contact.Id);
         var idBrush = new SolidColorBrush(color);
         if (contact.Invalid)
@@ -203,9 +206,10 @@ public sealed class ReplayPaintSurface : Control
         Rect viewport,
         Rect labelBounds,
         ReplayContact contact,
-        ReplayExtent extent)
+        ReplayScene scene,
+        ICollection<Rect> occupiedLabels)
     {
-        var center = Project(viewport, extent, contact.X, contact.Y);
+        var center = Project(viewport, scene, contact.X, contact.Y);
         var state = contact.Status switch
         {
             TouchStatus.Enter => "ENTER",
@@ -214,7 +218,7 @@ public sealed class ReplayPaintSurface : Control
             _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
         };
         var text = new FormattedText(
-            $"#{contact.Id}  {state}",
+            $"#{contact.Id}  {state}  X {contact.X}  Y {contact.Y}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Inter", FontStyle.Normal, FontWeight.SemiBold),
@@ -222,18 +226,69 @@ public sealed class ReplayPaintSurface : Control
             LabelTextBrush);
         var width = text.Width + 12;
         var height = text.Height + 6;
-        var x = Math.Clamp(center.X + 19, labelBounds.Left + 4, labelBounds.Right - width - 4);
-        var y = Math.Clamp(center.Y - (height / 2), labelBounds.Top + 4, labelBounds.Bottom - height - 4);
-        var labelRect = new Rect(x, y, width, height);
+        var candidates = new[]
+        {
+            new Point(center.X + 19, center.Y - (height / 2)),
+            new Point(center.X - width - 19, center.Y - (height / 2)),
+            new Point(center.X - (width / 2), center.Y - height - 20),
+            new Point(center.X - (width / 2), center.Y + 20),
+            new Point(center.X + 15, center.Y - height - 17),
+            new Point(center.X - width - 15, center.Y + 17),
+        };
+        var labelRect = candidates
+            .Select(origin => new Rect(
+                Math.Clamp(origin.X, labelBounds.Left + 4, labelBounds.Right - width - 4),
+                Math.Clamp(origin.Y, labelBounds.Top + 4, labelBounds.Bottom - height - 4),
+                width,
+                height))
+            .FirstOrDefault(candidate => occupiedLabels.All(existing => !Overlaps(existing, candidate)));
+        if (labelRect.Width == 0)
+            labelRect = new Rect(
+                Math.Clamp(center.X + 19, labelBounds.Left + 4, labelBounds.Right - width - 4),
+                Math.Clamp(center.Y - (height / 2), labelBounds.Top + 4, labelBounds.Bottom - height - 4),
+                width,
+                height);
+        occupiedLabels.Add(labelRect);
         var idBrush = new SolidColorBrush(ContactColor(contact.Id));
         context.DrawRectangle(LabelSurfaceBrush, new Pen(idBrush, 1), labelRect);
-        context.DrawText(text, new Point(x + 6, y + 3));
+        context.DrawText(text, new Point(labelRect.X + 6, labelRect.Y + 3));
     }
 
-    private static Point Project(Rect viewport, ReplayExtent extent, ushort x, ushort y) =>
+    private static Point Project(Rect viewport, ReplayScene scene, ushort x, ushort y) =>
+        Project(viewport, scene.Extent, x, y, scene.ReverseX, scene.ReverseY);
+
+    private static Point Project(Rect viewport, ReplayExtent extent, ushort x, ushort y, bool reverseX, bool reverseY) =>
         new(
-            viewport.X + (x / extent.MaximumX * viewport.Width),
-            viewport.Y + (y / extent.MaximumY * viewport.Height));
+            viewport.X + ((reverseX ? 1 - (x / extent.MaximumX) : x / extent.MaximumX) * viewport.Width),
+            viewport.Y + ((reverseY ? 1 - (y / extent.MaximumY) : y / extent.MaximumY) * viewport.Height));
+
+    private static void DrawAxisLabels(DrawingContext context, Rect viewport, ReplayScene scene)
+    {
+        var leftX = scene.ReverseX ? scene.Extent.MaximumX : 0;
+        var rightX = scene.ReverseX ? 0 : scene.Extent.MaximumX;
+        var topY = scene.ReverseY ? scene.Extent.MaximumY : 0;
+        var bottomY = scene.ReverseY ? 0 : scene.Extent.MaximumY;
+        DrawAxisText(context, $"X {leftX:0}", new Point(viewport.Left, viewport.Bottom + 8));
+        DrawAxisText(context, $"X {rightX:0}", new Point(Math.Max(viewport.Left, viewport.Right - 54), viewport.Bottom + 8));
+        DrawAxisText(context, $"Y {topY:0}", new Point(viewport.Left + 5, viewport.Top + 5));
+        DrawAxisText(context, $"Y {bottomY:0}", new Point(viewport.Left + 5, Math.Max(viewport.Top, viewport.Bottom - 18)));
+    }
+
+    private static void DrawAxisText(DrawingContext context, string value, Point origin)
+    {
+        var text = new FormattedText(
+            value,
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
+            9,
+            AxisLabelBrush);
+        context.DrawText(text, origin);
+    }
+
+    private static bool Overlaps(Rect first, Rect second) =>
+        first.Left < second.Right && first.Right > second.Left &&
+        first.Top < second.Bottom && first.Bottom > second.Top;
 
     private static Color ContactColor(byte id) => ContactColors[(Math.Max(1, (int)id) - 1) % ContactColors.Length];
 
