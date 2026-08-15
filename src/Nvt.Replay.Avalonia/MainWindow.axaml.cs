@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     private int? loopIn;
     private int? loopOut;
     private double replaySpeed = 1;
+    private int trailLength = 32;
     private bool maxReplaySpeed;
     private bool synchronizingSelection;
     private string? pendingSourcePath;
@@ -465,7 +466,7 @@ public partial class MainWindow : Window
                     replayExtent,
                     reviewSession?.Diagnostics,
                     markers,
-                    ReplaySceneFactory.BuildTrails(replaySession, index)),
+                    ReplaySceneFactory.BuildTrails(replaySession, index, trailLength)),
                 options,
                 cancellationToken);
             AnalysisOutputText.Text =
@@ -1056,7 +1057,7 @@ public partial class MainWindow : Window
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            ReplaySceneFactory.BuildTrails(replaySession, clampedIndex)));
+            ReplaySceneFactory.BuildTrails(replaySession, clampedIndex, trailLength)));
         var activeIds = snapshot.HostContacts.Where(contact => contact.IsActive).Select(contact => $"#{contact.Id}").ToArray();
         PaintStatusText.Text =
             $"FRAME {clampedIndex + 1:00}/{replaySession.Count:00}  ·  ACTIVE {(activeIds.Length == 0 ? "—" : string.Join(' ', activeIds))}" +
@@ -1276,6 +1277,17 @@ public partial class MainWindow : Window
             _ => ReplayRenderMode.Compare,
         };
         PaintSurface?.SetMode(mode);
+    }
+
+    private void TrailLengthComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.SelectedItem is not ComboBoxItem item ||
+            !int.TryParse(item.Tag?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var selectedLength))
+            return;
+
+        trailLength = selectedLength;
+        if (replaySession is not null && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
     }
 
     private void LoopInButton_OnClick(object? sender, RoutedEventArgs e)

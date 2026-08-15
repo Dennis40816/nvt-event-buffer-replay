@@ -285,22 +285,30 @@
           <TabItem x:Name="PaintTab" Header="PAINT" IsEnabled="False">
             <Grid RowDefinitions="48,*">
               <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="12,0" ColumnDefinitions="Auto,10,142,22,Auto,10,Auto,*,Auto">
+                <Grid Margin="12,0" ColumnDefinitions="Auto,10,142,18,Auto,8,82,22,Auto,10,Auto,*,Auto">
                   <TextBlock Classes="section" Text="VIEW" VerticalAlignment="Center" />
                   <ComboBox x:Name="PaintModeComboBox" Grid.Column="2" SelectedIndex="2" SelectionChanged="PaintModeComboBox_OnSelectionChanged">
                     <ComboBoxItem Content="Host State" />
                     <ComboBoxItem Content="Reported Frame" />
                     <ComboBoxItem Content="Compare" />
                   </ComboBox>
-                  <Grid Grid.Column="4" Width="24" Height="24" VerticalAlignment="Center">
+                  <TextBlock Grid.Column="4" Classes="section" Text="TRAIL" VerticalAlignment="Center" />
+                  <ComboBox x:Name="TrailLengthComboBox" Grid.Column="6" SelectedIndex="2" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Trail length">
+                    <ComboBoxItem Content="8 frames" Tag="8" />
+                    <ComboBoxItem Content="16 frames" Tag="16" />
+                    <ComboBoxItem Content="32 frames" Tag="32" />
+                    <ComboBoxItem Content="64 frames" Tag="64" />
+                    <ComboBoxItem Content="120 frames" Tag="120" />
+                  </ComboBox>
+                  <Grid Grid.Column="8" Width="24" Height="24" VerticalAlignment="Center">
                     <Ellipse Width="20" Height="20" Stroke="#67D5E4" StrokeThickness="2.5" />
                     <Ellipse Width="9" Height="9" Fill="#67D5E4" Stroke="#090D0F" StrokeThickness="2" />
                   </Grid>
-                  <StackPanel Grid.Column="6" VerticalAlignment="Center" Spacing="1">
+                  <StackPanel Grid.Column="10" VerticalAlignment="Center" Spacing="1">
                     <TextBlock Text="ID COLOR · ring reported · core host" FontSize="9" FontWeight="SemiBold" Foreground="#AAB5B9" />
-                    <TextBlock Text="line = recent path · × = break" FontSize="9" Foreground="#637077" />
+                    <TextBlock Text="same-color line = path · × = break" FontSize="9" Foreground="#637077" />
                   </StackPanel>
-                  <Border Grid.Column="8" Padding="10,5" CornerRadius="4" Background="#172126" BorderBrush="#2A3A41" BorderThickness="1" VerticalAlignment="Center">
+                  <Border Grid.Column="12" Padding="10,5" CornerRadius="4" Background="#172126" BorderBrush="#2A3A41" BorderThickness="1" VerticalAlignment="Center">
                     <TextBlock x:Name="PaintStatusText" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="10" Foreground="#B8C2C5" />
                   </Border>
                 </Grid>

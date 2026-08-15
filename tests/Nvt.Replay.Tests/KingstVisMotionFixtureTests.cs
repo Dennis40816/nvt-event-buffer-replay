@@ -41,6 +41,7 @@ public sealed class KingstVisMotionFixtureTests
         Assert.Equal([1, 2, 3], trails.Select(trail => (int)trail.Id));
         Assert.Equal(TouchStatus.Break, trails.Single(trail => trail.Id == 1).Points[^1].Status);
         Assert.All(trails, trail => Assert.True(trail.Points.Count >= 2));
+        Assert.All(ReplaySceneFactory.BuildTrails(replay, 13, 4), trail => Assert.InRange(trail.Points.Count, 2, 4));
 
         var allBreak = replay.Seek(18);
         Assert.True(allBreak.Frame.AllBreak);

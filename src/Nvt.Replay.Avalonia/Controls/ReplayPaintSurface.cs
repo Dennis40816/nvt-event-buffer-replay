@@ -112,12 +112,11 @@ public sealed class ReplayPaintSurface : Control
         foreach (var trail in scene.ContactTrails)
         {
             var color = ContactColor(trail.Id);
+            var brush = new SolidColorBrush(color);
             for (var index = 1; index < trail.Points.Count; index++)
             {
-                var opacity = (byte)Math.Clamp(34 + (index * 22), 34, 132);
-                var brush = new SolidColorBrush(Color.FromArgb(opacity, color.R, color.G, color.B));
                 context.DrawLine(
-                    new Pen(brush, 2),
+                    new Pen(brush, 2.5),
                     Project(viewport, scene.Extent, trail.Points[index - 1].X, trail.Points[index - 1].Y),
                     Project(viewport, scene.Extent, trail.Points[index].X, trail.Points[index].Y));
             }

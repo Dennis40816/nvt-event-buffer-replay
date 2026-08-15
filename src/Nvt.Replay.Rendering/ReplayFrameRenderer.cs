@@ -106,7 +106,7 @@ public static class ReplayFrameRenderer
 
     private static void DrawTrail(RasterCanvas canvas, PixelRect viewport, ReplayExtent extent, ReplayContactTrail trail)
     {
-        var color = Fade(ContactColor(trail.Id));
+        var color = ContactColor(trail.Id);
         for (var index = 1; index < trail.Points.Count; index++)
         {
             var prior = trail.Points[index - 1];
