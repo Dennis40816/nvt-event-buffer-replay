@@ -355,60 +355,49 @@
           </TabItem>
 
           <TabItem x:Name="PaintTab" Header="PAINT" IsEnabled="False">
-            <Grid RowDefinitions="82,*">
+            <Grid RowDefinitions="58,*">
               <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="12,7" RowDefinitions="30,6,30" ColumnDefinitions="Auto,10,142,18,Auto,8,82,22,Auto,10,Auto,*,Auto">
-                  <TextBlock Grid.Row="0" Classes="section" Text="VIEW" VerticalAlignment="Center" />
-                  <ComboBox x:Name="PaintModeComboBox" Grid.Row="0" Grid.Column="2" SelectedIndex="2" SelectionChanged="PaintModeComboBox_OnSelectionChanged">
+                <Grid Margin="10,0" ColumnDefinitions="Auto,6,122,12,Auto,6,64,12,Auto,6,64,14,64,12,Auto,6,Auto,12,Auto,6,Auto,4,50,4,Auto,6,Auto,12,*">
+                  <TextBlock Classes="section" Text="MODE" VerticalAlignment="Center" />
+                  <ComboBox x:Name="PaintModeComboBox" Grid.Column="2" SelectedIndex="2" SelectionChanged="PaintModeComboBox_OnSelectionChanged">
                     <ComboBoxItem Content="Host State" />
                     <ComboBoxItem Content="Reported Frame" />
                     <ComboBoxItem Content="Compare" />
                   </ComboBox>
-                  <TextBlock Grid.Row="0" Grid.Column="4" Classes="section" Text="TRAIL" VerticalAlignment="Center" />
-                  <ComboBox x:Name="TrailLengthComboBox" Grid.Row="0" Grid.Column="6" SelectedIndex="4" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Trail point count">
+                  <TextBlock Grid.Column="4" Classes="section" Text="TRAIL" VerticalAlignment="Center" />
+                  <ComboBox x:Name="TrailLengthComboBox" Grid.Column="6" SelectedIndex="4" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Trail point count">
                     <ComboBoxItem Content="2" Tag="2" />
                     <ComboBoxItem Content="4" Tag="4" />
                     <ComboBoxItem Content="6" Tag="6" />
                     <ComboBoxItem Content="8" Tag="8" />
                     <ComboBoxItem Content="10" Tag="10" />
                   </ComboBox>
-                  <Grid Grid.Row="0" Grid.Column="8" Width="24" Height="24" VerticalAlignment="Center">
+                  <TextBlock Grid.Column="8" Classes="section" Text="PANEL" VerticalAlignment="Center" />
+                  <TextBox x:Name="PanelWidthTextBox" Grid.Column="10" Classes="panelSize" Width="64" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
+                  <TextBlock Grid.Column="11" Text="×" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  <TextBox x:Name="PanelHeightTextBox" Grid.Column="12" Classes="panelSize" Width="64" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
+                  <Grid Grid.Column="14" Width="24" Height="24" VerticalAlignment="Center" ToolTip.Tip="ID color: ring is reported, core is host state, line is trail, cross is break.">
                     <Ellipse Width="20" Height="20" Stroke="#67D5E4" StrokeThickness="2.5" />
                     <Ellipse Width="9" Height="9" Fill="#67D5E4" Stroke="#090D0F" StrokeThickness="2" />
                   </Grid>
-                  <StackPanel Grid.Row="0" Grid.Column="10" VerticalAlignment="Center" Spacing="1">
-                    <TextBlock Text="ID COLOR · ring reported · core host" FontSize="9" FontWeight="SemiBold" Foreground="#AAB5B9" />
-                    <TextBlock Text="same-color line = path · × = break" FontSize="9" Foreground="#637077" />
-                  </StackPanel>
-                  <Border Grid.Row="0" Grid.Column="12" Padding="10,5" CornerRadius="4" Background="#172126" BorderBrush="#2A3A41" BorderThickness="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="PaintStatusText" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="10" Foreground="#B8C2C5" />
+                  <Border Grid.Column="15" Width="1" Height="24" Background="{DynamicResource BorderBrush}" HorizontalAlignment="Center" />
+                  <ToggleButton x:Name="ReverseXToggleButton" Grid.Column="16" Classes="axisToggle" MinWidth="64" Content="FLIP X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
+                  <ToggleButton x:Name="ReverseYToggleButton" Grid.Column="18" Classes="axisToggle" MinWidth="64" Content="FLIP Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
+                  <Border Grid.Column="19" Width="1" Height="24" Background="{DynamicResource BorderBrush}" HorizontalAlignment="Center" />
+                  <Button Grid.Column="20" Classes="canvasIcon" Content="−" Click="PaintZoomOutButton_OnClick" ToolTip.Tip="Zoom out" AutomationProperties.Name="Zoom out" />
+                  <Border Grid.Column="22" Width="50" Height="32" Background="{DynamicResource FieldBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4">
+                    <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                   </Border>
-                  <StackPanel Grid.Row="2" Grid.ColumnSpan="13" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBlock Classes="section" Text="PANEL" VerticalAlignment="Center" />
-                    <TextBox x:Name="PanelWidthTextBox" Classes="panelSize" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" AutomationProperties.Name="Panel width" />
-                    <TextBlock Text="×" FontSize="13" Foreground="#77848A" VerticalAlignment="Center" />
-                    <TextBox x:Name="PanelHeightTextBox" Classes="panelSize" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" AutomationProperties.Name="Panel height" />
-                    <TextBlock Text="px · Enter to apply · coordinates are never rescaled in decoded data" FontSize="9" Foreground="#657078" VerticalAlignment="Center" />
-                  </StackPanel>
+                  <Button Grid.Column="24" Classes="canvasIcon" Content="+" Click="PaintZoomInButton_OnClick" ToolTip.Tip="Zoom in" AutomationProperties.Name="Zoom in" />
+                  <Button Grid.Column="26" Classes="canvasIcon" Width="42" Content="FIT" FontSize="9" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
+                  <Border Grid.Column="28" Padding="10,5" CornerRadius="4" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <TextBlock x:Name="PaintStatusText" MaxWidth="220" Text="Decode a Common capture to replay" FontFamily="Cascadia Mono" FontSize="9" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
+                  </Border>
                 </Grid>
               </Border>
-              <Grid Grid.Row="1">
-                <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+              <Border Grid.Row="1" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                   <controls:ReplayPaintSurface x:Name="PaintSurface" AutomationProperties.Name="Touch replay Paint surface" />
-                </Border>
-                <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Padding="4" Background="#E611181C" BorderBrush="#3A474E" BorderThickness="1" CornerRadius="3">
-                  <StackPanel Orientation="Horizontal" Spacing="3">
-                    <ToggleButton x:Name="ReverseXToggleButton" Classes="axisToggle" Content="REVERSE X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
-                    <ToggleButton x:Name="ReverseYToggleButton" Classes="axisToggle" Content="REVERSE Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
-                    <Button Classes="canvasIcon" Content="−" Click="PaintZoomOutButton_OnClick" ToolTip.Tip="Zoom out" AutomationProperties.Name="Zoom out" />
-                    <Border Width="48" Height="30" Background="#0C1215" BorderBrush="#2C383E" BorderThickness="1">
-                      <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="10" Foreground="#B8C2C5" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <Button Classes="canvasIcon" Content="+" Click="PaintZoomInButton_OnClick" ToolTip.Tip="Zoom in" AutomationProperties.Name="Zoom in" />
-                    <Button Classes="canvasIcon" Content="□" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
-                  </StackPanel>
-                </Border>
-              </Grid>
+              </Border>
             </Grid>
           </TabItem>
 
