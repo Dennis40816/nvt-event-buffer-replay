@@ -16,7 +16,7 @@ is documented in [the product specification](docs/product-spec.md) and
 
 The first vertical slice includes:
 
-- streaming NDS, Saleae, KingstVIS, DSL, Excel, and canonical I2C adapters with
+- streaming NDS, Saleae, KingstVIS, DSL, Acute, Excel, and canonical I2C adapters with
   stable source locations and transport provenance;
 - an explicit format registry for Common `0x82`–`0x85` and Desay `0x97`;
 - source detection that never silently chooses Event Buffer Version or Benz Palm;
@@ -34,7 +34,9 @@ Decoded-I2C adapters normalize LA exports into the same physical record model.
 Page/write tracking resolves reads such as `FF 09 90 00` to `0x99000`, while
 the Raw Explorer retains slave, commands, ACK/NAK data, source-specific fields,
 and diagnostics. A C# simulator produces equivalent Saleae, KingstVIS, DSL,
-Excel, and canonical TXT fixtures. See [source adapters](docs/source-adapters.md).
+Acute, Excel, and canonical TXT fixtures. Acute currently follows the
+conservative English row-per-transaction report contract; continuation rows
+remain evidence-gated. See [source adapters](docs/source-adapters.md).
 
 Common `0x82`–`0x85` decoding is now available through the NDS inspection
 slice. Shared finger semantics are implemented once; version-specific tails,
@@ -50,11 +52,15 @@ the [Desay Event Buffer contract](docs/desay97-event-buffer.md).
 The Common replay slice reduces each logical frame into separate Reported
 Frame and Host State views. Paint supports deterministic forward/backward
 seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.1×–10×
-and MAX playback, idle-gap compression, and an In/Out loop. Per-contact colors
+and MAX playback, idle-gap compression, and a draggable two-handle loop range.
+Per-contact colors
 stay consistent across the point, coordinate label, and trajectory. Trajectory
 retention can show a recent 2–120 frame window, retain each gesture until its
 Break, or preserve completed gestures for the session; Clear affects only the
-view and never mutates capture evidence. Invalid frames
+view and never mutates capture evidence. Labels use point-aware placement,
+two-line coordinates, leader lines, and Finger/Glove/Palm/Reserved glyphs;
+the canvas includes a matching ID/type legend and adjustable coordinate grid.
+Invalid frames
 remain visible as evidence without mutating Host State; a capture that ends
 with active contacts raises a warning instead of inventing an All Break.
 

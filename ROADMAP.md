@@ -3,7 +3,7 @@
 ## M1 — C# Parity Core
 
 - [x] Stable domain records, diagnostics, provenance, and format descriptors
-- [x] Source probing and NDS/Saleae/KingstVIS/DSL/Excel/Canonical adapters
+- [x] Source probing and NDS/Saleae/KingstVIS/DSL/Acute/Excel/Canonical adapters
 - [x] Common 0x82-0x85 decoding and semantic parity
 - [x] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
 - [x] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
@@ -41,7 +41,7 @@
 
 ## Post-MVP evidence gates
 
-- Acute real export
+- Acute real-export validation and continuation-row evidence
 - raw waveform exports
 - real Linux/Android kernel log capture
 - scoped QA records suitable for rule conversion

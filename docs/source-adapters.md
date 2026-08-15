@@ -23,8 +23,9 @@ address ACK when exposed, per-byte ACK/NAK values, and decoder errors.
 | Adapter ID | Input contract |
 | --- | --- |
 | `saleae-decoded-i2c` | CSV header `Time [s],Packet ID,Address,Data,Read/Write,ACK/NAK`; byte-per-row transactions terminate at NAK. |
-| `kingstvis-decoded-i2c` | CSV header `Time[s],Packet ID,Address,Read/Write,Data`; transaction-per-row, with the 8-bit address R/W bit validated. |
+| `kingstvis-decoded-i2c` | Official v3.5 CSV header `Time [s],Packet ID,Address,Data,Read/Write,ACK`; byte-per-row records are grouped by Packet ID and the 8-bit address R/W bit is validated. |
 | `dsl-decoded-i2c` | CSV header `Id,Time[ns],1:I²C: Address/Data`; Start, repeated Start, ACK/NAK, and Stop are assembled as one transaction. |
+| `acute-decoded-i2c` | Acute `.csv`/`.txt` row-per-transaction report with `Timestamp`, `Status`, `Address(7b/8b/10b)`, and ordered `D0...` columns. English headers, comma/tab/semicolon delimiters, numeric or time-of-day timestamps, direction/address validation, and ACK/NACK suffixes are supported. Ambiguous continuation rows fail closed pending a real export. |
 | `excel-decoded-i2c` | `.xlsx`/`.xlsm` worksheet columns `Transaction`, `Start_Time_s`, `Type`, `Byte_Count`, `Bytes_Hex`; rows are streamed from Open XML without Microsoft Excel. The current long-read contract requires leading register-address byte `0x03`, strips it, and maps the payload to `0x99000`. |
 | `canonical-i2c-txt` | Versioned JSON Lines beginning with `# NVT-I2C-TXT 1`; accepts the existing Python generator fields and richer transport fields. |
 | `nds-communication-log` | NDS Paint/Read/Write text records, including continuation lines. |
@@ -43,14 +44,25 @@ that page. Known labels currently include Event Buffer (`+0x00`), FW State
 
 ## Synthetic exports
 
-`DecodedI2cSimulator` emits equivalent Saleae, KingstVIS, DSL, canonical TXT,
-and Excel decoder exports from one `SyntheticI2cTransaction`. Tests feed every
+`DecodedI2cSimulator` emits equivalent Saleae, KingstVIS, DSL, Acute,
+canonical TXT, and Excel decoder exports from one `SyntheticI2cTransaction`. Tests feed every
 generated export back through its adapter and compare the normalized read,
 address, slave, payload, timestamp, and provenance.
+
+The KingstVIS contract follows the export example in the official v3.5 user
+guide. That guide documents time, packet sequence, analyzed data, and shows the
+exact byte-per-row I2C columns above. The previously supplied
+transaction-per-row file was confirmed to be an incorrect golden and is
+deliberately rejected rather than treated as another KingstVIS dialect. The
+official guide does not promise cross-version schema stability, so any future
+variant requires a real export and a separate evidence-backed adapter update.
 
 ## Reserved raw-waveform boundary
 
 Raw SDA/SCL waveform decoding is intentionally not part of this milestone.
+The Python reference already has validated KingstVIS and DSL waveform readers;
+their C# ports remain evidence-gated rather than being reported as decoded-LA
+support.
 Future waveform adapters implement `ISourceAdapter` and produce the same
 `SourceRecord`/`I2cTransport` boundary; they do not bypass source probing or
 feed Event Buffer decoders directly. This preserves a single downstream path:
