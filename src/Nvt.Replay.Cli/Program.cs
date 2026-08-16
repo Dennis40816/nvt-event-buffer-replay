@@ -50,6 +50,8 @@ internal static class ReplayCli
                     return await InspectAsync(operands[1..], output, error, json);
                 case "analyze":
                     return await AnalyzeAsync(operands[1..], output, error, json);
+                case "readable":
+                    return await ExportReadableLogAsync(operands[1..], output, error, json);
                 case "export":
                     return await ExportReplayAsync(operands[1..], output, error, json);
                 case "benchmark":
@@ -123,7 +125,7 @@ internal static class ReplayCli
             !TryReadOption(operands, "--event-buffer-version", out var versionText) ||
             !TryReadOption(operands, "--output", out var outputPath))
         {
-            await error.WriteLineAsync("Usage: nvt-replay export <file> --event-buffer-version <version> --output <file.mp4> [--range <first:last>] [--size <width>x<height>] [--fps <1-120>] [--speed <value>] [--clock <recorded|frame>] [--ffmpeg <path>] [--review <sidecar>] [--source-adapter <id>] [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay export <file> --event-buffer-version <version> --output <file.mp4> [--range <first:last>] [--size <width>x<height>] [--fps <1-120>] [--speed <value>] [--clock <recorded|frame>] [--ffmpeg <path>] [--review <sidecar>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
         var path = operands[0];
@@ -133,7 +135,13 @@ internal static class ReplayCli
             return InputError;
         }
         var adapterId = TryReadOption(operands, "--source-adapter", out var sourceText) ? sourceText : null;
-        var capture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
+        if (!TryReadRegisterProfile(operands, out var registerProfile, out var registerProfileError))
+        {
+            await error.WriteLineAsync(registerProfileError);
+            return UsageError;
+        }
+        var capture = (await CaptureSession.LoadAsync(path, adapterId: adapterId)).WithRegisterProfile(registerProfile);
+        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0x99000;
         ITouchReplaySession replay;
         IReadOnlyList<ReplayDiagnostic> diagnostics;
         ReplayDecodeConfiguration configuration;
@@ -147,7 +155,7 @@ internal static class ReplayCli
             var decoded = capture.DecodeDesay97(profile);
             replay = new Desay97ReplaySession(decoded.Frames);
             diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
-            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId);
+            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId, eventBufferBase, registerProfile);
         }
         else
         {
@@ -159,7 +167,7 @@ internal static class ReplayCli
             var decoded = capture.DecodeCommon(version);
             replay = new CommonReplaySession(decoded.Frames);
             diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
-            configuration = new ReplayDecodeConfiguration(VersionText(version), null, capture.Probe.AdapterId);
+            configuration = new ReplayDecodeConfiguration(VersionText(version), null, capture.Probe.AdapterId, eventBufferBase, registerProfile);
         }
         if (replay.Count == 0)
         {
@@ -257,7 +265,7 @@ internal static class ReplayCli
             !TryReadOption(operands, "--event-buffer-version", out var versionText) ||
             !TryReadOption(operands, "--output", out var outputDirectory))
         {
-            await error.WriteLineAsync("Usage: nvt-replay analyze <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> --output <directory> [--range <first:last>] [--heatmap-size <width>x<height>] [--source-adapter <id>] [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay analyze <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> --output <directory> [--range <first:last>] [--heatmap-size <width>x<height>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
         var path = operands[0];
@@ -275,7 +283,13 @@ internal static class ReplayCli
             return UsageError;
         }
 
-        var capture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
+        if (!TryReadRegisterProfile(operands, out var registerProfile, out var registerProfileError))
+        {
+            await error.WriteLineAsync(registerProfileError);
+            return UsageError;
+        }
+        var capture = (await CaptureSession.LoadAsync(path, adapterId: adapterId)).WithRegisterProfile(registerProfile);
+        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0x99000;
         ITouchReplaySession replay;
         IReadOnlyList<ReplayDiagnostic> diagnostics;
         ReplayDecodeConfiguration configuration;
@@ -290,7 +304,7 @@ internal static class ReplayCli
             var decoded = capture.DecodeDesay97(profile);
             replay = new Desay97ReplaySession(decoded.Frames);
             diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
-            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId);
+            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId, eventBufferBase, registerProfile);
             evidenceStatus = EvidenceStatus.Provisional;
         }
         else
@@ -304,7 +318,7 @@ internal static class ReplayCli
             replay = new CommonReplaySession(decoded.Frames);
             diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
             var canonicalVersion = VersionText(version);
-            configuration = new ReplayDecodeConfiguration(canonicalVersion, null, capture.Probe.AdapterId);
+            configuration = new ReplayDecodeConfiguration(canonicalVersion, null, capture.Probe.AdapterId, eventBufferBase, registerProfile);
             evidenceStatus = canonicalVersion is "0x83" or "0x84" ? EvidenceStatus.Verified : EvidenceStatus.Provisional;
         }
         if (replay.Count == 0)
@@ -338,7 +352,7 @@ internal static class ReplayCli
             range,
             heatmapPixelWidth: heatmapWidth,
             heatmapPixelHeight: heatmapHeight);
-        var result = await new AnalysisOutputWriter().WriteAsync(outputDirectory, report);
+        var result = await new AnalysisOutputWriter().WriteAsync(outputDirectory, report, sourceRecords: capture.Records);
         if (json)
         {
             await output.WriteLineAsync(JsonSerializer.Serialize(new
@@ -358,7 +372,7 @@ internal static class ReplayCli
             await output.WriteLineAsync($"Findings {report.Diagnostics.Count:N0} · {report.DiagnosticAggregates.Count:N0} groups");
             await output.WriteLineAsync($"ASIL     {report.Asil.Assertions} assert · {report.Asil.Clears} clear · {report.Asil.UnresolvedAlarmGroups} unresolved");
             await output.WriteLineAsync($"Hotspot  {report.Hotspot.SampleCount:N0} samples · {report.Manifest.HeatmapPixelWidth}x{report.Manifest.HeatmapPixelHeight} PNG");
-            await output.WriteLineAsync("Outputs  analysis-report.json, events.json/csv, diagnostics.json/csv, manifest.json, heatmap.png");
+            await output.WriteLineAsync("Outputs  analysis-report.json, events.json/csv, diagnostics.json/csv, communication-readable.csv/jsonl, manifest.json, heatmap.png");
         }
         return 0;
     }
@@ -388,7 +402,7 @@ internal static class ReplayCli
     {
         if (operands.Length < 3 || !TryReadOption(operands, "--event-buffer-version", out var versionText))
         {
-            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> [--source-adapter <id>] [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
 
@@ -399,6 +413,12 @@ internal static class ReplayCli
             await error.WriteLineAsync($"Input file does not exist: {path}");
             return InputError;
         }
+        if (!TryReadRegisterProfile(operands, out var registerProfile, out var registerProfileError))
+        {
+            await error.WriteLineAsync(registerProfileError);
+            return UsageError;
+        }
+        var capture = (await CaptureSession.LoadAsync(path, adapterId: sourceAdapterId)).WithRegisterProfile(registerProfile);
 
         if (versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase) ||
             versionText.Equals("97", StringComparison.OrdinalIgnoreCase))
@@ -410,7 +430,7 @@ internal static class ReplayCli
                 return UsageError;
             }
 
-            var desayReport = await new Desay97NdsInspector().InspectAsync(path, profile, sourceAdapterId: sourceAdapterId);
+            var desayReport = capture.DecodeDesay97(profile);
             if (json)
             {
                 await output.WriteLineAsync(JsonSerializer.Serialize(desayReport, JsonOptions));
@@ -430,7 +450,7 @@ internal static class ReplayCli
             return UsageError;
         }
 
-        var report = await new CommonNdsInspector().InspectAsync(path, version, sourceAdapterId);
+        var report = capture.DecodeCommon(version);
         if (json)
         {
             await output.WriteLineAsync(JsonSerializer.Serialize(report, JsonOptions));
@@ -515,6 +535,67 @@ internal static class ReplayCli
         Desay97Profile.BenzPalm => "Benz Palm",
         _ => throw new ArgumentOutOfRangeException(nameof(profile)),
     };
+
+    private static bool TryReadRegisterProfile(string[] operands, out string? profile, out string error)
+    {
+        profile = null;
+        error = string.Empty;
+        if (!TryReadOption(operands, "--register-profile", out var text)) return true;
+        var resolved = NvtRegisterCatalog.FindProfile(text);
+        if (resolved is not null)
+        {
+            profile = resolved.IcFamily;
+            return true;
+        }
+
+        error = $"--register-profile must be one of: {string.Join(", ", NvtRegisterCatalog.Profiles.Select(item => item.IcFamily))}.";
+        return false;
+    }
+
+    private static async Task<int> ExportReadableLogAsync(
+        string[] operands,
+        TextWriter output,
+        TextWriter error,
+        bool json)
+    {
+        if (operands.Length < 3 || !TryReadOption(operands, "--output", out var outputDirectory))
+        {
+            await error.WriteLineAsync("Usage: nvt-replay readable <file> --output <directory> [--source-adapter <id>] [--register-profile <family>] [--json]");
+            return UsageError;
+        }
+        var path = operands[0];
+        if (!File.Exists(path))
+        {
+            await error.WriteLineAsync($"Input file does not exist: {path}");
+            return InputError;
+        }
+        if (!TryReadRegisterProfile(operands, out var registerProfile, out var registerProfileError))
+        {
+            await error.WriteLineAsync(registerProfileError);
+            return UsageError;
+        }
+
+        var adapterId = TryReadOption(operands, "--source-adapter", out var selectedSource) ? selectedSource : null;
+        var capture = (await CaptureSession.LoadAsync(path, adapterId: adapterId)).WithRegisterProfile(registerProfile);
+        var result = await new ReadableCommunicationLogWriter().WriteAsync(outputDirectory, capture.Records);
+        if (json)
+        {
+            await output.WriteLineAsync(JsonSerializer.Serialize(new
+            {
+                Source = capture.SourcePath,
+                capture.SourceSha256,
+                RegisterProfile = registerProfile,
+                Result = result,
+            }, JsonOptions));
+        }
+        else
+        {
+            await output.WriteLineAsync($"Readable {result.RecordCount:N0} records · {result.AnnotatedRegisterCount:N0} register annotations · {result.AmbiguousRegisterCount:N0} ambiguous");
+            await output.WriteLineAsync($"CSV      {result.CsvPath}");
+            await output.WriteLineAsync($"JSONL    {result.JsonlPath}");
+        }
+        return 0;
+    }
 
     private static async Task<int> ProbeAsync(string path, TextWriter output, TextWriter error, bool json)
     {
@@ -643,24 +724,30 @@ internal static class ReplayCli
               nvt-replay probe <file> [--json]
                                            Suggest a source adapter without selecting a format
               nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85>
-                                 [--source-adapter <id>] [--json]
+                                 [--source-adapter <id>] [--register-profile <family>] [--json]
                                            Decode Common records from any supported source
               nvt-replay inspect <file> --event-buffer-version 0x97
                                  --desay97-profile <standard|benz-palm>
-                                 [--source-adapter <id>] [--json]
+                                 [--source-adapter <id>] [--register-profile <family>] [--json]
                                            Assemble and decode Desay reads
               nvt-replay analyze <file> --event-buffer-version <version>
                                  --output <directory> [--range <first:last>]
                                  [--heatmap-size <width>x<height>]
                                  [--source-adapter <id>]
+                                 [--register-profile <family>]
                                  [--desay97-profile <standard|benz-palm>] [--json]
-                                           Export deterministic analysis JSON/CSV/PNG
+                                           Export deterministic analysis and readable communication logs
+              nvt-replay readable <file> --output <directory>
+                                  [--source-adapter <id>]
+                                  [--register-profile <family>] [--json]
+                                           Export a paired readable CSV/JSONL without decoding events
               nvt-replay export <file> --event-buffer-version <version>
                                 --output <file.mp4> [--range <first:last>]
                                 [--size <width>x<height>] [--fps <1-120>]
                                 [--speed <value>] [--clock <recorded|frame>]
                                 [--ffmpeg <path>] [--review <sidecar>]
                                 [--source-adapter <id>]
+                                [--register-profile <family>]
                                 [--desay97-profile <standard|benz-palm>] [--json]
                                            Export MP4 or atomic PNG fallback
               nvt-replay benchmark <file> --event-buffer-version <0x82|0x83|0x84|0x85>
@@ -669,7 +756,7 @@ internal static class ReplayCli
                                            Measure load, decode/index, seek, render, and peak memory
 
             Source detection is ranked and may require --source-adapter when ambiguous.
-            Event Buffer Version and Benz Palm remain explicit operator choices.
+            Event Buffer Version, Benz Palm, and collision-prone IC register profiles remain explicit operator choices.
             """);
     }
 }
