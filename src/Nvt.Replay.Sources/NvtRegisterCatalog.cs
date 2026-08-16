@@ -92,13 +92,10 @@ public static class NvtRegisterCatalog
             throw new ArgumentException($"Unknown NVT register profile '{icFamily}'.", nameof(icFamily));
 
         var fields = new Dictionary<string, string>(record.SourceFields ?? new Dictionary<string, string>(), StringComparer.Ordinal);
+        var hadCatalogAnnotation = fields.ContainsKey("register_profile_resolution");
         foreach (var key in SemanticFieldKeys) fields.Remove(key);
-        if (fields.TryGetValue("register_name", out var oldName) &&
-            !fields.ContainsKey("register_page_known") &&
-            oldName is "profile_required" or "fw_command" or "fw_state" or "frame_counter" or "dp_version" or "tp_fw_version")
-        {
+        if (hadCatalogAnnotation && !fields.ContainsKey("register_page_known"))
             fields.Remove("register_name");
-        }
 
         return Annotate(record with { SourceFields = fields }, string.IsNullOrWhiteSpace(icFamily) ? null : icFamily);
     }

@@ -77,4 +77,21 @@ public sealed class NvtRegisterCatalogTests
         Assert.Same(original.Data, resolved.Data);
         Assert.Equal(original.RawText, resolved.RawText);
     }
+
+    [Fact]
+    public void Reannotation_clears_semantics_that_do_not_belong_to_the_selected_profile()
+    {
+        var original = new SourceRecord(
+            8, "source-8", null, BusOperation.Read, "TP", 0x99000, 1, [0x11], "raw",
+            new SourceLocation(21, 3));
+        var catalogResolved = NvtRegisterCatalog.Annotate(original);
+
+        var wrongProfile = NvtRegisterCatalog.Reannotate(catalogResolved, "51929/51932");
+
+        Assert.Equal("event_buffer", catalogResolved.SourceFields?["register_name"]);
+        Assert.False(wrongProfile.SourceFields?.ContainsKey("register_profile"));
+        Assert.False(wrongProfile.SourceFields?.ContainsKey("register_region"));
+        Assert.False(wrongProfile.SourceFields?.ContainsKey("register_name"));
+        Assert.Same(original.Data, wrongProfile.Data);
+    }
 }

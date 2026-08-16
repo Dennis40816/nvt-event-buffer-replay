@@ -151,7 +151,7 @@ public sealed class CaptureSession
             diagnostics.Add(new ReplayDiagnostic(
                 DiagnosticSeverity.Warning,
                 "NO_EVENT_BUFFER_RECORDS",
-                "No Common event-buffer records were decoded (expected NDS Paint TP 0x01 or I2C read at 0x99000).",
+                "No Common event-buffer records were decoded (expected NDS Paint TP 0x01, a profile-matched Event Buffer read, or an offset-only I2C read at 0x00).",
                 SourceSha256,
                 new SourceLocation(0, 0)));
         }
@@ -162,11 +162,10 @@ public sealed class CaptureSession
     private static bool IsEventBufferRead(SourceRecord record) =>
         record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
         record.Data.Count == CommonEventBufferDecoder.FrameLength &&
-        (record.Address == 0x99000 ||
-         (record.SourceFields?.TryGetValue("register_offset", out var offset) == true &&
-          offset.Equals("0x00", StringComparison.OrdinalIgnoreCase) &&
-          (record.SourceFields.GetValueOrDefault("register_page_known") == "false" ||
-           record.SourceFields.GetValueOrDefault("register_region") == "Event Buffer")));
+        record.SourceFields?.TryGetValue("register_offset", out var offset) == true &&
+        offset.Equals("0x00", StringComparison.OrdinalIgnoreCase) &&
+        (record.SourceFields.GetValueOrDefault("register_page_known") == "false" ||
+         record.SourceFields.GetValueOrDefault("register_region") == "Event Buffer");
 
     public Desay97InspectionReport DecodeDesay97(Desay97Profile profile, uint? eventBufferBase = null)
     {

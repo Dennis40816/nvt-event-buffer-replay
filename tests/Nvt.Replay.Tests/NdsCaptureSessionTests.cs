@@ -85,6 +85,21 @@ public sealed class NdsCaptureSessionTests : IDisposable
         Assert.Equal("Event Buffer", resolved.Records[0].SourceFields?["register_region"]);
     }
 
+    [Fact]
+    public async Task Selected_profile_rejects_an_event_buffer_address_owned_by_another_profile()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var path = WriteLog(Record("Read", "0x99000", packet));
+
+        var catalogResolved = await CaptureSession.LoadAsync(path);
+        var wrongProfile = catalogResolved.WithRegisterProfile("51929/51932");
+
+        Assert.Single(catalogResolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.Empty(wrongProfile.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.False(wrongProfile.Records[0].SourceFields?.ContainsKey("register_region"));
+        Assert.False(wrongProfile.Records[0].SourceFields?.ContainsKey("register_name"));
+    }
+
     public void Dispose()
     {
         Directory.Delete(temporaryDirectory, recursive: true);

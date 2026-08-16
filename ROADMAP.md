@@ -80,6 +80,10 @@
 `0x80800` appearing in two rows is a numeric collision between two independent
 IC profiles, not a shared register map. Without an explicit profile, the
 readable log must retain both candidates and leave register meaning unresolved.
+After an operator selects a profile, absolute Event/Common/History addresses
+must match that profile; an address owned only by another profile remains raw.
+Offset-only decoded-I2C reads with an unknown page are the sole exception and
+may retain their transport-level Event Buffer offset meaning.
 
 ### Data still needed from FW/project owners
 
