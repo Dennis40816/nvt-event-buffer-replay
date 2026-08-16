@@ -11,7 +11,7 @@
                     <SolidColorBrush x:Key="HeaderBrush" Color="#0E1317" />
                     <SolidColorBrush x:Key="PanelBrush" Color="#12181C" />
                     <SolidColorBrush x:Key="WorkspaceBrush" Color="#0B1013" />
-                    <SolidColorBrush x:Key="CanvasBrush" Color="#12191D" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#10171A" />
                     <SolidColorBrush x:Key="CanvasTextBrush" Color="#D7DFDD" />
                     <SolidColorBrush x:Key="CanvasMutedTextBrush" Color="#9BA8AD" />
                     <SolidColorBrush x:Key="RaisedSurfaceBrush" Color="#182126" />
@@ -50,7 +50,7 @@
                     <SolidColorBrush x:Key="HeaderBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="PanelBrush" Color="#F6F8F6" />
                     <SolidColorBrush x:Key="WorkspaceBrush" Color="#FBFCFA" />
-                    <SolidColorBrush x:Key="CanvasBrush" Color="#F1F5F3" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#E9EFEC" />
                     <SolidColorBrush x:Key="CanvasTextBrush" Color="#21332B" />
                     <SolidColorBrush x:Key="CanvasMutedTextBrush" Color="#667970" />
                     <SolidColorBrush x:Key="RaisedSurfaceBrush" Color="#EDF1ED" />

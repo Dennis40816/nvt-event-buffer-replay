@@ -212,8 +212,8 @@ public sealed class ReplayTimelineSurface : Control
             $"Frame {frame + 1:N0}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
-            9,
+            new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
+            11,
             PlayheadBrush);
         var width = text.Width + 12;
         var labelX = Math.Clamp(x - (width / 2), TrackInset, Math.Max(TrackInset, Bounds.Width - TrackInset - width));

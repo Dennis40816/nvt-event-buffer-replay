@@ -539,7 +539,6 @@ public partial class MainWindow : Window
             else
             {
                 WorkspaceTabs.SelectedIndex = 0;
-                PaintStatusText.Text = "No replayable event-buffer frames";
             }
             ScheduleThemeContrast();
         }
@@ -1438,7 +1437,6 @@ public partial class MainWindow : Window
         ReplayClockText.Text = "00:00.000";
         ReplayEndClockText.Text = "00:00.000";
         LoopRangeText.Text = "Loop —";
-        PaintStatusText.Text = "Decode a capture to replay";
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
         PaintZoomHintBorder.IsVisible = false;
@@ -1452,14 +1450,14 @@ public partial class MainWindow : Window
         ReverseYToggleButton.IsChecked = false;
         LegendPositionComboBox.SelectedIndex = 0;
         LegendVisibleToggleButton.IsChecked = true;
-        LegendCompactToggleButton.IsChecked = false;
+        LegendCompactToggleButton.IsChecked = true;
         reverseX = false;
         reverseY = false;
         legendPosition = ReplayLegendPosition.Auto;
         PaintSurface.SetStrongGrid(false);
         PaintSurface.SetLegendPosition(ReplayLegendPosition.TopLeft);
         PaintSurface.SetLegendVisible(true);
-        PaintSurface.SetLegendCollapsed(false);
+        PaintSurface.SetLegendCollapsed(true);
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
         InspectorTitleText.Text = "Frame Summary";
@@ -1540,12 +1538,6 @@ public partial class MainWindow : Window
             trailHistory?.Build(clampedIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
             reverseX,
             reverseY));
-        var activeIds = snapshot.HostContacts.Where(contact => contact.IsActive).Select(contact => $"#{contact.Id}").ToArray();
-        PaintStatusText.Text =
-            $"FRAME {clampedIndex + 1:00}/{replaySession.Count:00}  ·  ACTIVE {(activeIds.Length == 0 ? "—" : string.Join(' ', activeIds))}" +
-            (snapshot.ReportedContacts.Any(contact => contact.Status == TouchStatus.Break) ? "  ·  BREAK" : string.Empty) +
-            (snapshot.GlobalPalm ? "  ·  GLOBAL PALM" : string.Empty) +
-            (!snapshot.HostStateUpdated ? "  ·  EVIDENCE ONLY" : string.Empty);
         ReplayClockText.Text = FormatClock(SelectedTime(snapshot.Timeline));
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
         ReplayTimelineSurface.SetPosition(clampedIndex);
