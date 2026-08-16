@@ -93,14 +93,17 @@ public sealed class ReplayTimelineSurface : Control
         DrawTrack(context, logicalY, maximum == 0 ? 0 : value / (double)maximum, LogicalBrush, trackBrush, trackThickness);
         DrawTrack(context, evidenceY, evidenceFraction, EvidenceBrush, trackBrush, trackThickness);
 
-        if (loopEnabled && loopStart is { } start && loopEnd is { } end)
+        if (loopStart is { } start && loopEnd is { } end)
         {
             var startX = PositionFor(start);
             var endX = PositionFor(end);
             if (endX < startX) (startX, endX) = (endX, startX);
-            var selection = new Rect(startX, logicalY - 8, Math.Max(1, endX - startX), 16);
-            context.DrawRectangle(LoopSurfaceBrush, null, selection, 2, 2);
-            var loopPen = new Pen(LoopBrush, 2);
+            if (loopEnabled)
+            {
+                var selection = new Rect(startX, logicalY - 8, Math.Max(1, endX - startX), 16);
+                context.DrawRectangle(LoopSurfaceBrush, null, selection, 2, 2);
+            }
+            var loopPen = new Pen(loopEnabled ? LoopBrush : HoverTrackBrush, loopEnabled ? 2.5 : 1.5);
             context.DrawLine(loopPen, new Point(startX, logicalY - 10), new Point(startX, logicalY + 10));
             context.DrawLine(loopPen, new Point(startX, logicalY - 10), new Point(startX + 6, logicalY - 10));
             context.DrawLine(loopPen, new Point(startX, logicalY + 10), new Point(startX + 6, logicalY + 10));

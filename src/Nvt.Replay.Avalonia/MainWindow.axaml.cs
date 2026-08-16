@@ -1950,17 +1950,12 @@ public partial class MainWindow : Window
         {
             if (loopIn is null || loopOut is null)
             {
-                var intervalTicks = Math.Max(1, replaySession.FrameInterval.Ticks);
-                var oneSecondFrames = Math.Max(1, (int)(TimeSpan.TicksPerSecond / intervalTicks));
-                var start = Math.Clamp(currentLogicalIndex, 0, replaySession.Count - 2);
-                var end = Math.Min(replaySession.Count - 1, start + oneSecondFrames);
-                if (end <= start)
-                {
-                    end = replaySession.Count - 1;
-                    start = Math.Max(0, end - oneSecondFrames);
-                }
-                loopIn = start;
-                loopOut = end;
+                var range = ReplayLoopRangePlanner.CreateDefault(
+                    currentLogicalIndex,
+                    replaySession.Count,
+                    replaySession.FrameInterval);
+                loopIn = range.StartLogicalIndex;
+                loopOut = range.EndLogicalIndex;
             }
         }
         UpdateLoopText();
