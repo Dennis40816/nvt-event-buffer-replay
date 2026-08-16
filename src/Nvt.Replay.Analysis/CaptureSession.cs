@@ -11,18 +11,23 @@ public sealed record CaptureLoadProgress(string Phase, int RecordsRead);
 
 public sealed class CaptureSession
 {
+    private readonly IReadOnlyList<ReplayDiagnostic> adapterDiagnostics;
+
     private CaptureSession(
         string sourcePath,
         string sourceSha256,
         SourceProbeResult probe,
         IReadOnlyList<SourceRecord> records,
-        IReadOnlyList<ReplayDiagnostic> sourceDiagnostics)
+        IReadOnlyList<ReplayDiagnostic> adapterDiagnostics,
+        string? registerProfile = null)
     {
         SourcePath = sourcePath;
         SourceSha256 = sourceSha256;
         Probe = probe;
         Records = records;
-        SourceDiagnostics = sourceDiagnostics;
+        this.adapterDiagnostics = adapterDiagnostics;
+        RegisterProfile = registerProfile;
+        SourceDiagnostics = adapterDiagnostics.Concat(new NvtRegisterActivityMonitor().Observe(records)).ToArray();
     }
 
     public string SourcePath { get; }
@@ -34,6 +39,8 @@ public sealed class CaptureSession
     public IReadOnlyList<SourceRecord> Records { get; }
 
     public IReadOnlyList<ReplayDiagnostic> SourceDiagnostics { get; }
+
+    public string? RegisterProfile { get; }
 
     public static async Task<CaptureSession> LoadAsync(
         string path,
@@ -69,9 +76,18 @@ public sealed class CaptureSession
             }
         }
 
-        sourceDiagnostics.AddRange(new NvtRegisterActivityMonitor().Observe(records));
         progress?.Report(new CaptureLoadProgress("Ready for configuration", records.Count));
         return new CaptureSession(fullPath, sourceHash, probe, records, sourceDiagnostics);
+    }
+
+    public CaptureSession WithRegisterProfile(string? icFamily)
+    {
+        var profile = NvtRegisterCatalog.FindProfile(icFamily);
+        if (!string.IsNullOrWhiteSpace(icFamily) && profile is null)
+            throw new ArgumentException($"Unknown NVT register profile '{icFamily}'.", nameof(icFamily));
+        var canonical = profile?.IcFamily;
+        var records = Records.Select(record => NvtRegisterCatalog.Reannotate(record, canonical)).ToArray();
+        return new CaptureSession(SourcePath, SourceSha256, Probe, records, adapterDiagnostics, canonical);
     }
 
     public CommonInspectionReport DecodeCommon(CommonEventBufferVersion version)
@@ -84,8 +100,7 @@ public sealed class CaptureSession
         foreach (var record in Records)
         {
             var isNdsPaint = record.Operation == BusOperation.Paint && record.Address == 0x01;
-            var isDecodedI2cRead = record.Operation == BusOperation.Read &&
-                (record.Address == 0x99000 || IsOffsetOnlyEventBufferRead(record));
+            var isDecodedI2cRead = record.Operation == BusOperation.Read && IsEventBufferRead(record);
             if (!isNdsPaint && !isDecodedI2cRead)
             {
                 continue;
@@ -144,15 +159,21 @@ public sealed class CaptureSession
         return new CommonInspectionReport(SourcePath, SourceSha256, version, frames, diagnostics);
     }
 
-    private static bool IsOffsetOnlyEventBufferRead(SourceRecord record) =>
+    private static bool IsEventBufferRead(SourceRecord record) =>
         record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
         record.Data.Count == CommonEventBufferDecoder.FrameLength &&
-        record.SourceFields?.TryGetValue("register_offset", out var offset) == true &&
-        offset.Equals("0x00", StringComparison.OrdinalIgnoreCase);
+        (record.Address == 0x99000 ||
+         (record.SourceFields?.TryGetValue("register_offset", out var offset) == true &&
+          offset.Equals("0x00", StringComparison.OrdinalIgnoreCase) &&
+          (record.SourceFields.GetValueOrDefault("register_page_known") == "false" ||
+           record.SourceFields.GetValueOrDefault("register_region") == "Event Buffer")));
 
-    public Desay97InspectionReport DecodeDesay97(Desay97Profile profile, uint eventBufferBase = 0x99000)
+    public Desay97InspectionReport DecodeDesay97(Desay97Profile profile, uint? eventBufferBase = null)
     {
-        var assembly = new Desay97Assembler(eventBufferBase).Assemble(Records);
+        var resolvedEventBufferBase = eventBufferBase ??
+            NvtRegisterCatalog.FindProfile(RegisterProfile)?.EventBufferBase ??
+            0x99000;
+        var assembly = new Desay97Assembler(resolvedEventBufferBase).Assemble(Records);
         var decoder = new Desay97Decoder();
         var frames = new List<Desay97Frame>();
         var diagnostics = new List<ReplayDiagnostic>(SourceDiagnostics);
@@ -171,7 +192,7 @@ public sealed class CaptureSession
             SourcePath,
             SourceSha256,
             profile,
-            eventBufferBase,
+            resolvedEventBufferBase,
             frames,
             diagnostics);
     }

@@ -39,6 +39,18 @@ public sealed class NvtRegisterActivityMonitorTests
         Assert.Contains(diagnostics, item => item.Code == "NVT_TP_FW_VERSION_SAMPLE" && item.Details?["raw"] == "03 04");
     }
 
+    [Fact]
+    public void Selected_profile_makes_activity_monitor_independent_of_51927_absolute_addresses()
+    {
+        var source = Nvt.Replay.Sources.NvtRegisterCatalog.Reannotate(Record(1, 0x80860, 0xA3), "51929/51932");
+
+        var diagnostic = Assert.Single(new NvtRegisterActivityMonitor().Observe([source]));
+
+        Assert.Equal("NVT_FW_STATE_SAMPLE", diagnostic.Code);
+        Assert.Equal("51929/51932", diagnostic.Details?["register_profile"]);
+        Assert.Equal("normal_run", diagnostic.Details?["meaning"]);
+    }
+
     private static SourceRecord Record(long index, uint address, params byte[] data) =>
         new(index, $"source-{index}", null, BusOperation.Read, "TP", address, data.Length, data, "raw", new SourceLocation(index, (int)index));
 }

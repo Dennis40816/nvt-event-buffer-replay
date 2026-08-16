@@ -52,6 +52,20 @@ public static class NvtRegisterCatalog
 {
     private const uint EventBufferLength = 128;
     private const uint HistoryLength = 128;
+    private static readonly string[] SemanticFieldKeys =
+    [
+        "register_profile",
+        "register_profile_resolution",
+        "register_region",
+        "register_display_name",
+        "register_base",
+        "register_value",
+        "register_meaning",
+        "register_readable",
+        "fw_command_code",
+        "fw_command_name",
+        "fw_command_confirmed",
+    ];
 
     public static IReadOnlyList<NvtRegisterProfile> Profiles { get; } =
     [
@@ -71,6 +85,28 @@ public static class NvtRegisterCatalog
         foreach (var field in description.ToSourceFields()) fields[field.Key] = field.Value;
         return record with { SourceFields = fields };
     }
+
+    public static SourceRecord Reannotate(SourceRecord record, string? icFamily)
+    {
+        if (!string.IsNullOrWhiteSpace(icFamily) && FindProfile(icFamily) is null)
+            throw new ArgumentException($"Unknown NVT register profile '{icFamily}'.", nameof(icFamily));
+
+        var fields = new Dictionary<string, string>(record.SourceFields ?? new Dictionary<string, string>(), StringComparer.Ordinal);
+        foreach (var key in SemanticFieldKeys) fields.Remove(key);
+        if (fields.TryGetValue("register_name", out var oldName) &&
+            !fields.ContainsKey("register_page_known") &&
+            oldName is "profile_required" or "fw_command" or "fw_state" or "frame_counter" or "dp_version" or "tp_fw_version")
+        {
+            fields.Remove("register_name");
+        }
+
+        return Annotate(record with { SourceFields = fields }, string.IsNullOrWhiteSpace(icFamily) ? null : icFamily);
+    }
+
+    public static NvtRegisterProfile? FindProfile(string? icFamily) =>
+        string.IsNullOrWhiteSpace(icFamily)
+            ? null
+            : Profiles.FirstOrDefault(profile => profile.IcFamily.Equals(icFamily, StringComparison.OrdinalIgnoreCase));
 
     public static NvtRegisterDescription? Describe(
         uint address,

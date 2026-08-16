@@ -70,6 +70,21 @@ public sealed class NdsCaptureSessionTests : IDisposable
             () => CaptureSession.LoadAsync(path, cancellationToken: cancellation.Token));
     }
 
+    [Fact]
+    public async Task Colliding_event_buffer_address_decodes_only_after_operator_selects_register_profile()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var path = WriteLog(Record("Read", "0x80800", packet));
+
+        var unresolved = await CaptureSession.LoadAsync(path);
+        var resolved = unresolved.WithRegisterProfile("51929/51932");
+
+        Assert.Empty(unresolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.Single(resolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.Equal("51929/51932", resolved.RegisterProfile);
+        Assert.Equal("Event Buffer", resolved.Records[0].SourceFields?["register_region"]);
+    }
+
     public void Dispose()
     {
         Directory.Delete(temporaryDirectory, recursive: true);

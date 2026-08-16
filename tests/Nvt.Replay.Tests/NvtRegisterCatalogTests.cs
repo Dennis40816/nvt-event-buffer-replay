@@ -59,4 +59,22 @@ public sealed class NvtRegisterCatalogTests
         Assert.Equal("FW State", resolved?.Name);
         Assert.Equal("Normal Run", resolved?.Meaning);
     }
+
+    [Fact]
+    public void Reannotation_replaces_ambiguous_semantics_without_changing_transport_or_bytes()
+    {
+        var original = new SourceRecord(
+            7, "source-7", null, BusOperation.Read, "TP", 0x80860, 1, [0xA3], "raw",
+            new SourceLocation(20, 3));
+        var ambiguous = NvtRegisterCatalog.Annotate(original);
+
+        var resolved = NvtRegisterCatalog.Reannotate(ambiguous, "51950/51951");
+
+        Assert.Equal("ambiguous", ambiguous.SourceFields?["register_profile_resolution"]);
+        Assert.Equal("51950/51951", resolved.SourceFields?["register_profile"]);
+        Assert.Equal("resolved", resolved.SourceFields?["register_profile_resolution"]);
+        Assert.Equal("FW State · Normal Run", resolved.SourceFields?["register_readable"]);
+        Assert.Same(original.Data, resolved.Data);
+        Assert.Equal(original.RawText, resolved.RawText);
+    }
 }
