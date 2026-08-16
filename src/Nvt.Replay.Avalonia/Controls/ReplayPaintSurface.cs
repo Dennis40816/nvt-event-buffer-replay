@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Rendering;
@@ -11,32 +12,64 @@ namespace Nvt.Replay.Avalonia.Controls;
 
 public sealed class ReplayPaintSurface : Control
 {
-    private static readonly IBrush SurfaceBrush = Brush("#162428");
-    private static readonly IBrush GridBrush = Brush("#26383D");
-    private static readonly IBrush StrongGridBrush = Brush("#34464F");
-    private static readonly IBrush AxisBrush = Brush("#324149");
-    private static readonly IBrush StrongAxisBrush = Brush("#60747D");
-    private static readonly IBrush AxisLabelBrush = Brush("#829097");
-    private static readonly IBrush LabelSurfaceBrush = Brush("#EE101619");
-    private static readonly IBrush HoverLabelSurfaceBrush = Brush("#73101619");
-    private static readonly IBrush LabelTextBrush = Brush("#F3F7F5");
-    private static readonly IBrush BreakBrush = Brush("#F1A85B");
-    private static readonly IBrush PalmBrush = Brush("#D98AC6");
-    private static readonly IBrush AlarmBrush = Brush("#E86A64");
-    private static readonly IBrush InvalidBrush = Brush("#F06B6B");
-    private static readonly Color[] ContactColors =
-    [
-        Color.Parse("#67D5E4"),
-        Color.Parse("#C8F36C"),
-        Color.Parse("#FFBE6B"),
-        Color.Parse("#BBA2FF"),
-        Color.Parse("#FF7F91"),
-        Color.Parse("#78A9FF"),
-        Color.Parse("#66D39A"),
-        Color.Parse("#E48CE0"),
-        Color.Parse("#F2DD70"),
-        Color.Parse("#76D7B7"),
-    ];
+    private static readonly PaintPalette DarkPalette = new(
+        Surface: Brush("#162428"),
+        Grid: Brush("#26383D"),
+        StrongGrid: Brush("#34464F"),
+        Axis: Brush("#324149"),
+        StrongAxis: Brush("#60747D"),
+        AxisLabel: Brush("#829097"),
+        LabelSurface: Brush("#EE101619"),
+        HoverLabelSurface: Brush("#F5101619"),
+        LabelText: Brush("#F3F7F5"),
+        Break: Brush("#F1A85B"),
+        Palm: Brush("#D98AC6"),
+        Alarm: Brush("#E86A64"),
+        Invalid: Brush("#F06B6B"),
+        ContactColors:
+        [
+            Color.Parse("#67D5E4"), Color.Parse("#C8F36C"), Color.Parse("#FFBE6B"),
+            Color.Parse("#BBA2FF"), Color.Parse("#FF7F91"), Color.Parse("#78A9FF"),
+            Color.Parse("#66D39A"), Color.Parse("#E48CE0"), Color.Parse("#F2DD70"),
+            Color.Parse("#76D7B7"),
+        ]);
+
+    private static readonly PaintPalette LightPalette = new(
+        Surface: Brush("#F1F5F3"),
+        Grid: Brush("#DCE5E1"),
+        StrongGrid: Brush("#C8D5D0"),
+        Axis: Brush("#B5C6BF"),
+        StrongAxis: Brush("#819890"),
+        AxisLabel: Brush("#586D64"),
+        LabelSurface: Brush("#F7FFFFFF"),
+        HoverLabelSurface: Brush("#FFFFFFFF"),
+        LabelText: Brush("#182821"),
+        Break: Brush("#A65D10"),
+        Palm: Brush("#8F467D"),
+        Alarm: Brush("#B63D3A"),
+        Invalid: Brush("#C13D3D"),
+        ContactColors:
+        [
+            Color.Parse("#007C91"), Color.Parse("#5D8100"), Color.Parse("#B56500"),
+            Color.Parse("#6848C7"), Color.Parse("#C53A59"), Color.Parse("#3567C8"),
+            Color.Parse("#27855A"), Color.Parse("#A14299"), Color.Parse("#8E7600"),
+            Color.Parse("#177D68"),
+        ]);
+
+    private PaintPalette Palette => ActualThemeVariant == ThemeVariant.Light ? LightPalette : DarkPalette;
+    private IBrush SurfaceBrush => Palette.Surface;
+    private IBrush GridBrush => Palette.Grid;
+    private IBrush StrongGridBrush => Palette.StrongGrid;
+    private IBrush AxisBrush => Palette.Axis;
+    private IBrush StrongAxisBrush => Palette.StrongAxis;
+    private IBrush AxisLabelBrush => Palette.AxisLabel;
+    private IBrush LabelSurfaceBrush => Palette.LabelSurface;
+    private IBrush HoverLabelSurfaceBrush => Palette.HoverLabelSurface;
+    private IBrush LabelTextBrush => Palette.LabelText;
+    private IBrush BreakBrush => Palette.Break;
+    private IBrush PalmBrush => Palette.Palm;
+    private IBrush AlarmBrush => Palette.Alarm;
+    private IBrush InvalidBrush => Palette.Invalid;
 
     private ReplayScene? scene;
     private double zoomFactor = 1;
@@ -255,7 +288,7 @@ public sealed class ReplayPaintSurface : Control
             viewportHeight);
     }
 
-    private static void DrawGrid(DrawingContext context, Rect viewport, bool strong)
+    private void DrawGrid(DrawingContext context, Rect viewport, bool strong)
     {
         var gridPen = new Pen(strong ? StrongGridBrush : GridBrush, strong ? 1.35 : 1);
         var axisPen = new Pen(strong ? StrongAxisBrush : AxisBrush, strong ? 1.5 : 1);
@@ -269,7 +302,7 @@ public sealed class ReplayPaintSurface : Control
         }
     }
 
-    private static void DrawTrails(DrawingContext context, Rect viewport, ReplayScene scene)
+    private void DrawTrails(DrawingContext context, Rect viewport, ReplayScene scene)
     {
         foreach (var trail in scene.ContactTrails)
         {
@@ -395,7 +428,7 @@ public sealed class ReplayPaintSurface : Control
         _ => "other",
     };
 
-    private static void DrawLegendType(DrawingContext context, Rect bounds, TouchType type, string label)
+    private void DrawLegendType(DrawingContext context, Rect bounds, TouchType type, string label)
     {
         DrawTypeIcon(context, type, new Point(bounds.X + 4, bounds.Center.Y), AxisLabelBrush, 3.5);
         var text = new FormattedText(
@@ -411,7 +444,7 @@ public sealed class ReplayPaintSurface : Control
     private static double CenteredTextY(Rect bounds, FormattedText text) =>
         Math.Round(bounds.Y + ((bounds.Height - text.Height) / 2), MidpointRounding.AwayFromZero);
 
-    private static void DrawContact(
+    private void DrawContact(
         DrawingContext context,
         Rect viewport,
         ReplayContact contact,
@@ -459,7 +492,7 @@ public sealed class ReplayPaintSurface : Control
         }
     }
 
-    private static void DrawContactLabel(
+    private void DrawContactLabel(
         DrawingContext context,
         Rect viewport,
         Rect labelBounds,
@@ -545,7 +578,7 @@ public sealed class ReplayPaintSurface : Control
             viewport.X + ((reverseX ? 1 - (x / extent.MaximumX) : x / extent.MaximumX) * viewport.Width),
             viewport.Y + ((reverseY ? 1 - (y / extent.MaximumY) : y / extent.MaximumY) * viewport.Height));
 
-    private static void DrawAxisLabels(DrawingContext context, Rect viewport, ReplayScene scene)
+    private void DrawAxisLabels(DrawingContext context, Rect viewport, ReplayScene scene)
     {
         var tickPen = new Pen(AxisBrush, 1);
         for (var tick = 0; tick <= 4; tick++)
@@ -564,7 +597,7 @@ public sealed class ReplayPaintSurface : Control
         DrawAxisText(context, "Y", new Point(viewport.Left - 9, viewport.Top - 19), rightAligned: true);
     }
 
-    private static void DrawAxisText(
+    private void DrawAxisText(
         DrawingContext context,
         string value,
         Point origin,
@@ -645,7 +678,23 @@ public sealed class ReplayPaintSurface : Control
         context.DrawGeometry(brush, null, geometry);
     }
 
-    private static Color ContactColor(byte id) => ContactColors[(Math.Max(1, (int)id) - 1) % ContactColors.Length];
+    private Color ContactColor(byte id) => Palette.ContactColors[(Math.Max(1, (int)id) - 1) % Palette.ContactColors.Count];
 
     private static IBrush Brush(string value) => new SolidColorBrush(Color.Parse(value));
+
+    private sealed record PaintPalette(
+        IBrush Surface,
+        IBrush Grid,
+        IBrush StrongGrid,
+        IBrush Axis,
+        IBrush StrongAxis,
+        IBrush AxisLabel,
+        IBrush LabelSurface,
+        IBrush HoverLabelSurface,
+        IBrush LabelText,
+        IBrush Break,
+        IBrush Palm,
+        IBrush Alarm,
+        IBrush Invalid,
+        IReadOnlyList<Color> ContactColors);
 }

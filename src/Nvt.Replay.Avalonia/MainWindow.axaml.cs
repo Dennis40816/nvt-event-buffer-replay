@@ -189,7 +189,11 @@ public partial class MainWindow : Window
         ToolTip.SetTip(InspectorRailToggleButton, collapsed ? "Open inspector" : "Collapse inspector");
     }
 
-    private void Application_OnActualThemeVariantChanged(object? sender, EventArgs e) => ScheduleThemeContrast();
+    private void Application_OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        ScheduleThemeContrast();
+        PaintSurface.InvalidateVisual();
+    }
 
     private void ScheduleThemeContrast() => Dispatcher.UIThread.Post(ApplyThemeContrast, DispatcherPriority.Loaded);
 
