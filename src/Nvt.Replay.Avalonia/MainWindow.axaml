@@ -77,6 +77,18 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
+    <Style Selector="Button.toolbarAction">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="Padding" Value="11,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    </Style>
+    <Style Selector="Button.toolbarAction:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+    </Style>
     <Style Selector="Button.canvasIcon">
       <Setter Property="Width" Value="32" />
       <Setter Property="Height" Value="32" />
@@ -107,6 +119,16 @@
       <Setter Property="FontSize" Value="11" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox.registerSearch">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource FieldBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.primary:disabled /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource DisabledSurfaceBrush}" />
@@ -513,8 +535,31 @@
       <Border Grid.Column="1" Background="{DynamicResource WorkspaceBrush}">
         <TabControl x:Name="WorkspaceTabs" Margin="0">
           <TabItem Header="RAW EXPLORER">
-            <Grid RowDefinitions="34,*">
-              <Grid Grid.Row="0" ColumnDefinitions="64,100,64,72,88,180,70,*" Margin="10,0">
+            <Grid RowDefinitions="48,24,34,*">
+              <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+                <Grid Margin="10,0" ColumnDefinitions="Auto,8,150,14,Auto,8,154,14,*,14,Auto" VerticalAlignment="Center">
+                  <TextBlock Text="IC profile" Classes="fieldLabel" />
+                  <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="2" Width="150" Height="30" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
+                  <TextBlock Grid.Column="4" Text="Show" Classes="fieldLabel" />
+                  <ComboBox x:Name="RegisterFilterComboBox" Grid.Column="6" Width="154" Height="30" SelectionChanged="RegisterFilterComboBox_OnSelectionChanged" AutomationProperties.Name="Register activity filter" />
+                  <TextBox x:Name="RegisterSearchTextBox" Grid.Column="8" Classes="registerSearch" MinWidth="140" MaxWidth="260" HorizontalAlignment="Stretch" PlaceholderText="Search address, register, payload…" TextChanged="RegisterSearchTextBox_OnTextChanged" AutomationProperties.Name="Search physical records" />
+                  <Button x:Name="ExportReadableLogButton" Grid.Column="10" Classes="toolbarAction" Content="Export readable" IsEnabled="False" Click="ExportReadableLogButton_OnClick" AutomationProperties.Name="Export readable communication log" />
+                </Grid>
+              </Border>
+              <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="10,0" VerticalAlignment="Center">
+                <controls:RegisterActivitySurface x:Name="RegisterActivitySurface" Height="22" IsEnabled="False"
+                                                  TrackBrush="{DynamicResource BorderBrush}"
+                                                  ReadBrush="{DynamicResource InfoBrush}"
+                                                  WriteBrush="{DynamicResource WarningBrush}"
+                                                  CommandBrush="{DynamicResource AccentBrush}"
+                                                  ResetBrush="{DynamicResource DangerBrush}"
+                                                  AmbiguousBrush="{DynamicResource MutedTextBrush}"
+                                                  SelectionBrush="{DynamicResource PrimaryTextBrush}"
+                                                  ToolTip.Tip="Read cyan · write amber · command lime · reset red · click a tick to inspect"
+                                                  AutomationProperties.Name="Register activity timeline" />
+                <TextBlock x:Name="RegisterResultText" Grid.Column="1" Margin="12,0,0,0" Text="0 records · 0 register events" FontSize="9" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+              </Grid>
+              <Grid Grid.Row="2" ColumnDefinitions="64,100,64,72,88,180,70,*" Margin="10,0">
                 <TextBlock Classes="section" Text="INDEX" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Classes="section" Text="PC TIME" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" Classes="section" Text="OP" VerticalAlignment="Center" />
@@ -524,7 +569,7 @@
                 <TextBlock Grid.Column="6" Classes="section" Text="BYTES" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="7" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
               </Grid>
-              <ListBox x:Name="RawRecordsList" Grid.Row="1" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
+              <ListBox x:Name="RawRecordsList" Grid.Row="3" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:RawRecordRow">
                     <Border BorderBrush="#20272B" BorderThickness="0,0,0,1" Padding="10,8">

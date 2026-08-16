@@ -17,6 +17,7 @@ using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Rendering;
+using Nvt.Replay.Sources;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
 
@@ -27,6 +28,8 @@ public partial class MainWindow : Window
     private CancellationTokenSource? operationCancellation;
     private CaptureSession? session;
     private ITouchReplaySession? replaySession;
+    private RawRecordRow[] allRawRows = [];
+    private RegisterActivityEntry[] registerActivities = [];
     private Dictionary<string, RawRecordRow> rawRowsById = [];
     private Dictionary<string, DecodedFrameRow> decodedRowsBySourceId = [];
     private DecodedFrameRow[] decodedRows = [];
@@ -60,6 +63,7 @@ public partial class MainWindow : Window
     private bool synchronizingLoopControls;
     private string? pendingSourcePath;
     private bool configuringSourceChoice;
+    private bool configuringRegisterProfile;
     private bool operationInProgress;
     private int themeMode;
     private bool reviewRailCollapsed;
@@ -105,9 +109,25 @@ public partial class MainWindow : Window
             new("Bottom right", "Pin the legend to the bottom-right corner", nameof(ReplayLegendPosition.BottomRight)),
         };
         LegendPositionComboBox.SelectedIndex = 0;
+        RegisterProfileComboBox.ItemsSource = new[] { new RegisterProfileChoice("Unconfirmed", null) }
+            .Concat(NvtRegisterCatalog.Profiles.Select(profile => new RegisterProfileChoice(profile.IcFamily, profile.IcFamily)))
+            .ToArray();
+        RegisterFilterComboBox.ItemsSource = new RawRegisterFilterChoice[]
+        {
+            new("All records", RawRegisterFilter.All),
+            new("Register only", RawRegisterFilter.Registers),
+            new("Changed reads", RawRegisterFilter.ChangedReads),
+            new("Writes / commands", RawRegisterFilter.WritesAndCommands),
+            new("Ambiguous", RawRegisterFilter.Ambiguous),
+        };
+        configuringRegisterProfile = true;
+        RegisterProfileComboBox.SelectedIndex = 0;
+        configuringRegisterProfile = false;
+        RegisterFilterComboBox.SelectedIndex = 0;
         ShortcutModulesItemsControl.ItemsSource = ReplayShortcutCatalog.Modules;
         ApplyShortcutToolTips();
         PaintSurface.LegendCollapsedChanged += PaintSurface_OnLegendCollapsedChanged;
+        RegisterActivitySurface.ActivitySelected += RegisterActivitySurface_OnActivitySelected;
         Opened += (_, _) =>
         {
             ApplyWorkingAreaHeightLimit();
@@ -287,12 +307,10 @@ public partial class MainWindow : Window
             session = await Task.Run(
                 () => CaptureSession.LoadAsync(path, progress, cancellationToken, adapterId),
                 cancellationToken);
-            var rawRows = await Task.Run(
-                () => session.Records.Select(record => new RawRecordRow(record)).ToArray(),
+            var projectedActivities = await Task.Run(
+                () => RegisterActivityProjector.Project(session.Records).ToArray(),
                 cancellationToken);
-
-            rawRowsById = rawRows.ToDictionary(row => row.Record.StableId, StringComparer.Ordinal);
-            RawRecordsList.ItemsSource = rawRows;
+            ApplyRawExplorerProjection(projectedActivities);
             diagnosticRows = session.SourceDiagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
             CreateReviewSession(session.SourceDiagnostics);
             CaptureNameText.Text = Path.GetFileName(session.SourcePath).ToUpperInvariant();
@@ -305,11 +323,16 @@ public partial class MainWindow : Window
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
             DecodeButton.IsEnabled = true;
+            RegisterProfileComboBox.IsEnabled = true;
+            ExportReadableLogButton.IsEnabled = true;
+            configuringRegisterProfile = true;
+            RegisterProfileComboBox.SelectedIndex = 0;
+            configuringRegisterProfile = false;
             ConfigurationHintText.Text = "Confirm the version to decode automatically; source detection never infers it.";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · 0 logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = "Raw capture indexed · confirm Event Buffer Version to open Paint";
             WorkspaceTabs.SelectedIndex = 0;
-            if (rawRows.Length > 0)
+            if (allRawRows.Length > 0)
             {
                 RawRecordsList.SelectedIndex = 0;
             }
@@ -347,8 +370,23 @@ public partial class MainWindow : Window
 
     private async void DecodeButton_OnClick(object? sender, RoutedEventArgs e) => await DecodeSelectedAsync();
 
-    internal async Task ApplyStartupDecodeAsync(string eventVersion, string? palmProfile)
+    internal async Task ApplyStartupDecodeAsync(string eventVersion, string? palmProfile, string? registerProfile = null)
     {
+        if (!string.IsNullOrWhiteSpace(registerProfile))
+        {
+            var profileChoice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
+                .FirstOrDefault(item => item.IcFamily?.Equals(registerProfile, StringComparison.OrdinalIgnoreCase) == true);
+            if (profileChoice is null)
+            {
+                ConfigurationHintText.Text = $"Unsupported startup IC register profile: {registerProfile}";
+                return;
+            }
+            configuringRegisterProfile = true;
+            RegisterProfileComboBox.SelectedItem = profileChoice;
+            configuringRegisterProfile = false;
+            await ApplyRegisterProfileAsync(profileChoice);
+        }
+
         var normalizedVersion = eventVersion.Trim().ToUpperInvariant();
         if (!normalizedVersion.StartsWith("0X", StringComparison.Ordinal))
             normalizedVersion = $"0X{normalizedVersion}";
@@ -456,7 +494,9 @@ public partial class MainWindow : Window
             var nextConfiguration = new ReplayDecodeConfiguration(
                 versionText,
                 isDesay97 ? ProfileText(desayProfile!.Value) : null,
-                session.Probe.AdapterId);
+                session.Probe.AdapterId,
+                NvtRegisterCatalog.FindProfile(session.RegisterProfile)?.EventBufferBase ?? 0x99000,
+                session.RegisterProfile);
             if (decodeConfiguration is not null && decodeConfiguration != nextConfiguration)
                 markers.Clear();
             decodeConfiguration = nextConfiguration;
@@ -553,12 +593,12 @@ public partial class MainWindow : Window
                 reviewSession,
                 range,
                 cancellationToken: cancellationToken), cancellationToken);
-            var result = await new AnalysisOutputWriter().WriteAsync(directory, report, cancellationToken);
+            var result = await new AnalysisOutputWriter().WriteAsync(directory, report, cancellationToken, session.Records);
             AnalysisSummaryText.Text =
                 $"{report.Events.Count:N0} frames · {report.DiagnosticAggregates.Count:N0} finding groups · " +
                 $"{report.Asil.Assertions} ASIL assert / {report.Asil.Clears} clear · {report.Hotspot.SampleCount:N0} hotspot samples";
             AnalysisOutputText.Text =
-                $"{result.Directory}\nanalysis-report.json · events.json/csv · diagnostics.json/csv · manifest.json · heatmap.png\n" +
+                $"{result.Directory}\nanalysis-report.json · events.json/csv · diagnostics.json/csv · communication-readable.csv/jsonl · manifest.json · heatmap.png\n" +
                 $"clock={report.Manifest.Clock.Domain} · range={range.StartLogicalIndex + 1}:{range.EndLogicalIndex + 1} · SHA-256={report.Manifest.SourceSha256}";
             WorkspaceTabs.SelectedItem = AnalysisTab;
             SessionStatusText.Text = $"Analysis exported atomically · {report.Events.Count:N0} frames";
@@ -691,10 +731,157 @@ public partial class MainWindow : Window
             await DecodeSelectedAsync();
     }
 
+    private async void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (configuringRegisterProfile || session is null ||
+            RegisterProfileComboBox.SelectedItem is not RegisterProfileChoice choice)
+            return;
+
+        await ApplyRegisterProfileAsync(choice);
+    }
+
+    private async Task ApplyRegisterProfileAsync(RegisterProfileChoice choice)
+    {
+        if (session is null) return;
+        var selectedId = (RawRecordsList.SelectedItem as RawRecordRow)?.Record.StableId;
+        var loadedSession = session;
+        SetBusy(true, choice.IcFamily is null ? "Removing IC register profile" : $"Applying IC profile {choice.IcFamily}");
+        try
+        {
+            session = await Task.Run(() => loadedSession.WithRegisterProfile(choice.IcFamily));
+            var projected = await Task.Run(() => RegisterActivityProjector.Project(session.Records).ToArray());
+            ApplyRawExplorerProjection(projected, selectedId);
+            diagnosticRows = session.SourceDiagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
+            CreateReviewSession(session.SourceDiagnostics);
+            var ambiguous = registerActivities.Count(item => item.IsAmbiguous);
+            ConfigurationHintText.Text = choice.IcFamily is null
+                ? $"IC profile unconfirmed · {ambiguous:N0} collision-prone register events remain raw-only"
+                : $"IC profile {choice.IcFamily} confirmed · register semantics and Event Buffer base reapplied";
+            SessionStatusText.Text = choice.IcFamily is null
+                ? "Register profile removed; original capture remains unchanged"
+                : $"Register profile {choice.IcFamily} applied without changing source bytes";
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidDataException)
+        {
+            SessionStatusText.Text = $"Register profile failed · {exception.Message}";
+        }
+        finally
+        {
+            SetBusy(false, SessionStatusText.Text ?? "Ready");
+        }
+
+        var canDecode = EventVersionComboBox.SelectedIndex >= 0 &&
+            (EventVersionComboBox.SelectedIndex != 4 || Desay97ProfileComboBox.SelectedIndex >= 0);
+        if (canDecode) await DecodeSelectedAsync();
+    }
+
+    private void RegisterFilterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) => RefreshRawExplorer();
+
+    private void RegisterSearchTextBox_OnTextChanged(object? sender, TextChangedEventArgs e) => RefreshRawExplorer();
+
+    private void ApplyRawExplorerProjection(RegisterActivityEntry[] projected, string? preferredStableId = null)
+    {
+        registerActivities = projected;
+        var activityById = projected.ToDictionary(item => item.Record.StableId, StringComparer.Ordinal);
+        allRawRows = session?.Records
+            .Select(record => new RawRecordRow(record, activityById.GetValueOrDefault(record.StableId)))
+            .ToArray() ?? [];
+        rawRowsById = allRawRows.ToDictionary(row => row.Record.StableId, StringComparer.Ordinal);
+        RefreshRawExplorer(preferredStableId);
+    }
+
+    private void RefreshRawExplorer(string? preferredStableId = null)
+    {
+        if (RawRecordsList is null || RegisterActivitySurface is null) return;
+        preferredStableId ??= (RawRecordsList.SelectedItem as RawRecordRow)?.Record.StableId;
+        var filter = (RegisterFilterComboBox.SelectedItem as RawRegisterFilterChoice)?.Filter ?? RawRegisterFilter.All;
+        var query = RegisterSearchTextBox.Text ?? string.Empty;
+        var visible = allRawRows.Where(row => row.Matches(query) && filter switch
+        {
+            RawRegisterFilter.All => true,
+            RawRegisterFilter.Registers => row.Activity is not null,
+            RawRegisterFilter.ChangedReads => row.Activity?.ChangedFromPreviousSample == true,
+            RawRegisterFilter.WritesAndCommands => row.Activity?.Kind is RegisterActivityKind.Write or RegisterActivityKind.Command or RegisterActivityKind.Reset,
+            RawRegisterFilter.Ambiguous => row.Activity?.IsAmbiguous == true,
+            _ => true,
+        }).ToArray();
+        RawRecordsList.ItemsSource = visible;
+        var visibleIds = visible.Select(row => row.Record.StableId).ToHashSet(StringComparer.Ordinal);
+        var visibleActivities = registerActivities.Where(item => visibleIds.Contains(item.Record.StableId)).ToArray();
+        var minimum = allRawRows.Length == 0 ? 0 : allRawRows.Min(row => row.Record.Index);
+        var maximum = allRawRows.Length == 0 ? 1 : allRawRows.Max(row => row.Record.Index);
+        RegisterActivitySurface.SetActivities(visibleActivities, minimum, maximum);
+        RegisterActivitySurface.IsEnabled = visibleActivities.Length > 0;
+        RegisterResultText.Text = $"{visible.Length:N0} records · {visibleActivities.Length:N0} register events" +
+            (visibleActivities.Any(item => item.IsAmbiguous) ? $" · {visibleActivities.Count(item => item.IsAmbiguous):N0} ambiguous" : string.Empty);
+        if (preferredStableId is not null && visible.FirstOrDefault(row => row.Record.StableId == preferredStableId) is { } preferred)
+            RawRecordsList.SelectedItem = preferred;
+        else if (visible.Length > 0)
+            RawRecordsList.SelectedItem = visible[0];
+        else
+        {
+            RawRecordsList.SelectedItem = null;
+            RegisterActivitySurface.SetSelected(null);
+            InspectorTitleText.Text = "No matching record";
+            InspectorSubtitleText.Text = "Adjust the Raw Explorer search or register filter.";
+            InspectorLogicalText.Text = "—";
+            InspectorPhysicalText.Text = "—";
+            InspectorTouchesText.Text = "—";
+            InspectorCrcText.Text = "—";
+            InspectorAsilText.Text = "—";
+            InspectorAllBreakText.Text = "—";
+            DecodedFieldsText.Text = "No physical source record matches the current Raw Explorer query.";
+        }
+    }
+
+    private void RegisterActivitySurface_OnActivitySelected(object? sender, RegisterActivitySelectedEventArgs e)
+    {
+        if (!rawRowsById.TryGetValue(e.Record.StableId, out var row)) return;
+        RawRecordsList.SelectedItem = row;
+        RawRecordsList.ScrollIntoView(row);
+    }
+
+    private async void ExportReadableLogButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (session is null) return;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Export readable communication log",
+            AllowMultiple = false,
+        });
+        var directory = folders.SingleOrDefault()?.TryGetLocalPath();
+        if (directory is null) return;
+
+        operationCancellation?.Cancel();
+        operationCancellation?.Dispose();
+        operationCancellation = new CancellationTokenSource();
+        var cancellationToken = operationCancellation.Token;
+        SetBusy(true, "Exporting readable communication log");
+        try
+        {
+            var result = await new ReadableCommunicationLogWriter().WriteAsync(directory, session.Records, cancellationToken);
+            SessionStatusText.Text =
+                $"Readable log exported · {result.RecordCount:N0} records · {result.AnnotatedRegisterCount:N0} annotated · {result.AmbiguousRegisterCount:N0} ambiguous";
+        }
+        catch (OperationCanceledException)
+        {
+            SessionStatusText.Text = "Readable log export cancelled; prior complete output was preserved";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            SessionStatusText.Text = $"Readable log export failed · {exception.Message}";
+        }
+        finally
+        {
+            SetBusy(false, SessionStatusText.Text ?? "Ready");
+        }
+    }
+
     private void RawRecordsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (RawRecordsList.SelectedItem is RawRecordRow row)
         {
+            RegisterActivitySurface.SetSelected(row.Record.StableId);
             ShowRecord(row.Record, FindFrame(row.Record.StableId));
             if (!synchronizingSelection && replaySession is not null)
             {
@@ -866,7 +1053,10 @@ public partial class MainWindow : Window
 
     private void RefreshReviewQueue(string? selectGroupId = null)
     {
-        reviewRows = reviewSession?.Filter(reviewFilter).Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
+        reviewRows = reviewSession?.Filter(reviewFilter)
+            .Where(group => group.Severity >= DiagnosticSeverity.Warning || group.IsAsil ||
+                            group.Category is ReviewEventCategory.QaResult or ReviewEventCategory.Annotation)
+            .Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
         DiagnosticListBox.ItemsSource = reviewRows;
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
         var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
@@ -1052,13 +1242,16 @@ public partial class MainWindow : Window
 
     private void ShowRecord(SourceRecord record, object? frame)
     {
-        InspectorTitleText.Text = "Frame Summary";
+        var registerReadable = record.SourceFields?.GetValueOrDefault("register_readable");
+        InspectorTitleText.Text = frame is null && registerReadable is not null ? "Register Activity" : "Frame Summary";
         InspectorSubtitleText.Text = frame switch
         {
             CommonEventBufferFrame common =>
                 $"Physical #{record.Index} · Common {VersionText(common.Version)} · {(common.HostStateEligible ? "Host-state" : "Evidence only")}",
             Desay97Frame desay =>
                 $"Physical #{record.Index} · Desay 0x97 / {ProfileText(desay.Profile)} · {(desay.HostStateEligible ? "Host-state" : "Evidence only")}",
+            _ when registerReadable is not null =>
+                $"Physical #{record.Index} · {registerReadable} · {record.SourceFields?.GetValueOrDefault("register_profile") ?? "profile unknown"}",
             _ => $"Physical #{record.Index} · Raw source record",
         };
         InspectorLogicalText.Text = currentLogicalIndex >= 0 && replaySession is not null
@@ -1120,6 +1313,9 @@ public partial class MainWindow : Window
         {
             CommonEventBufferFrame common => FormatDecodedFields(common),
             Desay97Frame desay => FormatDecodedFields(desay),
+            _ when registerReadable is not null =>
+                $"{registerReadable}\nraw={record.SourceFields?.GetValueOrDefault("register_value") ?? FormatBytes(record.Data)}\n" +
+                $"profile-resolution={record.SourceFields?.GetValueOrDefault("register_profile_resolution") ?? "unknown"}",
             _ => "No decoded event is linked to this physical record.",
         };
     }
@@ -1172,6 +1368,8 @@ public partial class MainWindow : Window
         replaySession = null;
         trailHistory = null;
         trailVisibilityStart = 0;
+        allRawRows = [];
+        registerActivities = [];
         rawRowsById = [];
         decodedRowsBySourceId = [];
         decodedRows = [];
@@ -1190,6 +1388,17 @@ public partial class MainWindow : Window
         loopOut = null;
         loopEnabled = false;
         RawRecordsList.ItemsSource = null;
+        RegisterSearchTextBox.Text = string.Empty;
+        RegisterFilterComboBox.SelectedIndex = 0;
+        configuringRegisterProfile = true;
+        RegisterProfileComboBox.SelectedIndex = 0;
+        configuringRegisterProfile = false;
+        RegisterProfileComboBox.IsEnabled = false;
+        ExportReadableLogButton.IsEnabled = false;
+        RegisterActivitySurface.IsEnabled = false;
+        RegisterActivitySurface.SetActivities([], 0, 1);
+        RegisterActivitySurface.SetSelected(null);
+        RegisterResultText.Text = "0 records · 0 register events";
         DecodedFramesList.ItemsSource = null;
         DiagnosticListBox.ItemsSource = null;
         ReviewOccurrenceComboBox.ItemsSource = null;
@@ -1274,6 +1483,8 @@ public partial class MainWindow : Window
         DecodeButton.IsEnabled = !busy && session is not null;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
+        RegisterProfileComboBox.IsEnabled = !busy && session is not null;
+        ExportReadableLogButton.IsEnabled = !busy && session is not null;
         SaveReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         LoadReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         ExportAnalysisButton.IsEnabled = !busy && replaySession is { Count: > 0 };

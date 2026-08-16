@@ -46,9 +46,10 @@
 - [x] Profile-collision guard: `0x80800` remains unresolved until 51929/51932 or 51950/51951 is selected
 - [x] Readable Raw Explorer column with IC candidate, region, register, raw value, and confirmed meaning
 - [x] Separate FW Command parser for Event Buffer `+0x50`; unknown opcodes stay visible as raw values
-- [ ] Operator-selected/custom register profile import (versioned JSON with validation and provenance)
-- [ ] Export a paired `communication-readable.csv/jsonl` beside the immutable original log
-- [ ] Register timeline and filters for reads, writes, changes, commands, and reset activity
+- [x] Operator-selected built-in register profile persisted in sidecars/manifests and reapplied before decode
+- [x] Export a paired `communication-readable.csv/jsonl` beside the immutable original log
+- [x] Register activity strip, search, and filters for reads, writes, changes, commands, reset, and ambiguous mappings
+- [ ] Custom register profile import (versioned JSON with validation and provenance)
 
 ### Confirmed register knowledge
 

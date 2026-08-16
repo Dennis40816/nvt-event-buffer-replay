@@ -119,9 +119,11 @@ dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x97 --palm-profile Benz-Palm
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83 --register-profile 51927
+dotnet run --project src/Nvt.Replay.Cli -- readable ./capture.txt --output ./analysis --register-profile 51927
 ```
 
-The desktop startup options are explicit operator choices for reproducible QA
+The desktop startup options and IC register profiles are explicit operator choices for reproducible QA
 and screenshot runs. They do not infer Event Buffer Version or Benz Palm.
 
 Windows preview and stable packaging use a pinned version, committed dependency

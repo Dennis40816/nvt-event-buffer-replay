@@ -6,7 +6,26 @@ using Nvt.Replay.Formats.Desay97;
 
 namespace Nvt.Replay.Avalonia.ViewModels;
 
-public sealed record RawRecordRow(SourceRecord Record)
+public enum RawRegisterFilter
+{
+    All,
+    Registers,
+    ChangedReads,
+    WritesAndCommands,
+    Ambiguous,
+}
+
+public sealed record RawRegisterFilterChoice(string Label, RawRegisterFilter Filter)
+{
+    public override string ToString() => Label;
+}
+
+public sealed record RegisterProfileChoice(string Label, string? IcFamily)
+{
+    public override string ToString() => Label;
+}
+
+public sealed record RawRecordRow(SourceRecord Record, RegisterActivityEntry? Activity = null)
 {
     public long Index => Record.Index;
 
@@ -23,6 +42,13 @@ public sealed record RawRecordRow(SourceRecord Record)
     public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—"}";
 
     public string Preview => string.Join(' ', Record.Data.Take(16).Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
+
+    public bool Matches(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return true;
+        return new[] { Index.ToString(CultureInfo.InvariantCulture), Timestamp, Operation, Target, Address, Register, Preview, Record.StableId }
+            .Any(value => value.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
 }
 
 public sealed record DecodedFrameRow(
