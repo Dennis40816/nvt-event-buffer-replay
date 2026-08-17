@@ -18,9 +18,33 @@ public sealed class ReplayExportTests : IDisposable
         var recorded = Options(Path.Combine(directory, "recorded.mp4"), frameRate: 30, speed: 1, ReplayExportClock.Recorded);
         var frame = recorded with { Clock = ReplayExportClock.Frame };
 
-        Assert.Equal([3, 1], ReplayFramePlan.Build(replay, recorded).Select(item => item.RepeatCount));
-        Assert.Equal([1, 1], ReplayFramePlan.Build(replay, frame).Select(item => item.RepeatCount));
+        Assert.Equal([2, 1], ReplayFramePlan.Build(replay, recorded).Select(item => item.RepeatCount));
+        Assert.Equal([1], ReplayFramePlan.Build(replay, frame).Select(item => item.RepeatCount));
         Assert.Equal([0, 1], ReplayFramePlan.Build(replay, recorded).Select(item => item.LogicalIndex));
+        Assert.Equal([0], ReplayFramePlan.Build(replay, frame).Select(item => item.LogicalIndex));
+    }
+
+    [Fact]
+    public void Frame_plan_downsamples_120_hz_without_stretching_30_fps_video()
+    {
+        var replay = UniformReplay(120, TimeSpan.FromSeconds(1d / 120));
+        var options = new ReplayExportOptions(
+            Path.Combine(directory, "120hz.mp4"),
+            new AnalysisRange(0, replay.Count - 1),
+            320,
+            180,
+            30,
+            1,
+            ReplayExportClock.Frame);
+
+        var plan = ReplayFramePlan.Build(replay, options);
+
+        Assert.Equal(30, plan.Sum(item => item.RepeatCount));
+        Assert.Equal(0, plan[0].LogicalIndex);
+        Assert.Equal(119, plan[^1].LogicalIndex);
+        Assert.All(plan, item => Assert.Equal(1, item.RepeatCount));
+        Assert.Equal(0, ReplayFramePlan.LogicalIndexAt(plan, 0));
+        Assert.Equal(119, ReplayFramePlan.LogicalIndexAt(plan, 29));
     }
 
     [Fact]
@@ -40,7 +64,7 @@ public sealed class ReplayExportTests : IDisposable
         Assert.Equal(ReplayExportKind.PngSequence, result.Kind);
         Assert.False(File.Exists(output));
         Assert.True(Directory.Exists(output + ".frames"));
-        Assert.Equal(2, Directory.GetFiles(output + ".frames", "frame-*.png").Length);
+        Assert.Single(Directory.GetFiles(output + ".frames", "frame-*.png"));
         Assert.True(File.Exists(result.ManifestPath));
         Assert.Contains("No reviewed FFmpeg", result.Warning);
         Assert.Contains("pngSequence", await File.ReadAllTextAsync(result.ManifestPath));
@@ -127,6 +151,23 @@ public sealed class ReplayExportTests : IDisposable
             Snapshot(0, source0, TimeSpan.Zero, new ReplayContact(1, TouchType.Finger, TouchStatus.Enter, 600, 300, source0.StableId)),
             Snapshot(1, source1, secondTime, new ReplayContact(1, TouchType.Finger, TouchStatus.Move, 900, 500, source1.StableId)),
         ], TimeSpan.FromMilliseconds(10));
+    }
+
+    private static FakeReplay UniformReplay(int frameCount, TimeSpan interval)
+    {
+        var snapshots = Enumerable.Range(0, frameCount)
+            .Select(index =>
+            {
+                var source = Source(index, $"source-{index}", interval * index);
+                return Snapshot(
+                    index,
+                    source,
+                    interval * index,
+                    new ReplayContact(1, TouchType.Finger, index == 0 ? TouchStatus.Enter : TouchStatus.Move,
+                        (ushort)(600 + index), 300, source.StableId));
+            })
+            .ToArray();
+        return new FakeReplay(snapshots, interval);
     }
 
     private static SourceRecord Source(int index, string id, TimeSpan time) =>

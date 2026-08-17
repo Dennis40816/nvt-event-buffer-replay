@@ -46,6 +46,10 @@ public partial class MainWindow : Window
     private ReplayExtent replayExtent = new(2304, 1280);
     private CancellationTokenSource? playbackCancellation;
     private CancellationTokenSource? outputPreviewCancellation;
+    private CancellationTokenSource? outputVideoPlaybackCancellation;
+    private IReadOnlyList<ReplayFramePlanEntry> outputVideoPlan = [];
+    private int outputVideoFrameCount;
+    private int outputVideoFrameIndex;
     private int currentLogicalIndex = -1;
     private int? loopIn;
     private int? loopOut;
@@ -73,6 +77,9 @@ public partial class MainWindow : Window
     private bool? inspectorRailUserPreference;
     private const double ExpandedReviewRailWidth = 260;
     private const double ExpandedInspectorRailWidth = 320;
+    private const int OutputVideoWidth = 1280;
+    private const int OutputVideoHeight = 720;
+    private const int OutputVideoFrameRate = 30;
     private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
     private static readonly HashSet<uint> DarkLiteralTextColors =
     [
@@ -627,32 +634,11 @@ public partial class MainWindow : Window
         SetBusy(true, "Rendering replay export");
         try
         {
-            var range = loopIn is { } start && loopOut is { } end
-                ? new AnalysisRange(Math.Min(start, end), Math.Max(start, end))
-                : new AnalysisRange(0, replaySession.Count - 1);
-            var options = new ReplayExportOptions(
-                path,
-                range,
-                1280,
-                720,
-                30,
-                maxReplaySpeed ? 10 : replaySpeed,
-                ClockModeComboBox.SelectedIndex == 1 ? ReplayExportClock.Frame : ReplayExportClock.Recorded,
-                PaintSurface.Mode,
-                SourceFileName: Path.GetFileName(session.SourcePath),
-                SourceSha256: session.SourceSha256,
-                DecodeConfiguration: decodeConfiguration);
+            var range = SelectedOutputRange();
+            var options = CreateReplayExportOptions(path, range);
             var result = await new ReplayRangeExporter().ExportAsync(
                 replaySession,
-                index => ReplaySceneFactory.Create(
-                    replaySession.Seek(index),
-                    replaySession.Count,
-                    replayExtent,
-                    reviewSession?.Diagnostics,
-                    markers,
-                    trailHistory?.Build(index, trailMode, trailLength, trailVisibilityStart) ?? [],
-                    reverseX,
-                    reverseY),
+                CreateReplayScene,
                 options,
                 cancellationToken);
             AnalysisOutputText.Text =
@@ -707,8 +693,11 @@ public partial class MainWindow : Window
 
     private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is TabControl tabs && AnalysisTab is not null && tabs.SelectedItem == AnalysisTab)
+        if (sender is not TabControl tabs || AnalysisTab is null) return;
+        if (tabs.SelectedItem == AnalysisTab)
             await RefreshOutputPreviewAsync();
+        else
+            StopOutputVideoPreviewPlayback();
     }
 
     private AnalysisRange SelectedOutputRange()
@@ -718,6 +707,38 @@ public partial class MainWindow : Window
         return loopIn is { } start && loopOut is { } end
             ? new AnalysisRange(Math.Min(start, end), Math.Max(start, end))
             : new AnalysisRange(0, replaySession.Count - 1);
+    }
+
+    private ReplayExportOptions CreateReplayExportOptions(string path, AnalysisRange range)
+    {
+        if (session is null || decodeConfiguration is null)
+            throw new InvalidOperationException("A decoded capture is required for MP4 output.");
+        return new ReplayExportOptions(
+            path,
+            range,
+            OutputVideoWidth,
+            OutputVideoHeight,
+            OutputVideoFrameRate,
+            maxReplaySpeed ? 10 : replaySpeed,
+            ClockModeComboBox.SelectedIndex == 1 ? ReplayExportClock.Frame : ReplayExportClock.Recorded,
+            PaintSurface.Mode,
+            SourceFileName: Path.GetFileName(session.SourcePath),
+            SourceSha256: session.SourceSha256,
+            DecodeConfiguration: decodeConfiguration);
+    }
+
+    private ReplayScene CreateReplayScene(int logicalIndex)
+    {
+        if (replaySession is null) throw new InvalidOperationException("A decoded replay is required.");
+        return ReplaySceneFactory.Create(
+            replaySession.Seek(logicalIndex),
+            replaySession.Count,
+            replayExtent,
+            reviewSession?.Diagnostics,
+            markers,
+            trailHistory?.Build(logicalIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
+            reverseX,
+            reverseY);
     }
 
     private CaptureAnalysisReport BuildOutputReport(AnalysisRange range, CancellationToken cancellationToken)
@@ -744,6 +765,7 @@ public partial class MainWindow : Window
         if (session is null || replaySession is null || decodeConfiguration is null || reviewSession is null || replaySession.Count == 0)
             return;
 
+        StopOutputVideoPreviewPlayback();
         outputPreviewCancellation?.Cancel();
         outputPreviewCancellation?.Dispose();
         outputPreviewCancellation = new CancellationTokenSource();
@@ -765,6 +787,7 @@ public partial class MainWindow : Window
             AnalysisSummaryText.Text = "Output preview unavailable";
             OutputHotspotText.Text = exception.Message;
             AnalysisHeatmapPreview.Show(null);
+            ClearOutputVideoPreview();
         }
     }
 
@@ -774,7 +797,6 @@ public partial class MainWindow : Window
         var range = report.Manifest.Range;
         var clockIsFrame = ClockModeComboBox.SelectedIndex == 1;
         var clockName = clockIsFrame ? "TP Frame 120 Hz" : "Recorded";
-        var duration = clockIsFrame ? report.Manifest.Clock.FrameDuration : report.Manifest.Clock.CapturedDuration;
         var peak = report.Hotspot.Counts.Count == 0 ? 0 : report.Hotspot.Counts.Max();
         var profile = string.IsNullOrWhiteSpace(decodeConfiguration.Desay97Profile)
             ? string.Empty
@@ -783,7 +805,6 @@ public partial class MainWindow : Window
 
         AnalysisSummaryText.Text = $"Previewing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
         OutputRangeText.Text = $"{report.Events.Count:N0} frames\n{range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
-        OutputClockText.Text = $"{clockName}\n{FormatClock(duration)}";
         OutputFindingsText.Text = $"{report.DiagnosticAggregates.Count:N0} groups\n{report.Asil.UnresolvedAlarmGroups:N0} alarms";
         OutputHotspotText.Text = $"{report.Hotspot.SampleCount:N0} samples, peak {peak:N0}";
         OutputConfigurationText.Text =
@@ -794,6 +815,108 @@ public partial class MainWindow : Window
             $"replay   {clockName} at {speed}";
         OutputSourceText.Text = $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{session.SourceSha256}";
         AnalysisHeatmapPreview.Show(report.Hotspot);
+        PrepareOutputVideoPreview(range, clockName, speed);
+    }
+
+    private void PrepareOutputVideoPreview(AnalysisRange range, string clockName, string speed)
+    {
+        if (replaySession is null) return;
+        var options = CreateReplayExportOptions("preview.mp4", range);
+        outputVideoPlan = ReplayFramePlan.Build(replaySession, options);
+        outputVideoFrameCount = ReplayFramePlan.OutputFrameCount(outputVideoPlan);
+        outputVideoFrameIndex = 0;
+        var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)OutputVideoFrameRate);
+        OutputClockText.Text = $"{FormatClock(duration)}\n{outputVideoFrameCount:N0} frames at {OutputVideoFrameRate} FPS";
+        OutputVideoBadgeText.Text = $"{OutputVideoWidth} × {OutputVideoHeight}  /  {OutputVideoFrameRate} FPS  /  {speed}";
+        OutputVideoTimeline.SetFrameCount(outputVideoFrameCount, OutputVideoFrameRate);
+        OutputPreviewPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
+        ShowOutputVideoFrame(0);
+        OutputConfigurationText.Text += $"\nvideo    {clockName} / {OutputVideoFrameRate} FPS / {speed}";
+    }
+
+    private void ShowOutputVideoFrame(int outputFrameIndex)
+    {
+        if (replaySession is null || outputVideoFrameCount == 0 || outputVideoPlan.Count == 0) return;
+        outputVideoFrameIndex = Math.Clamp(outputFrameIndex, 0, outputVideoFrameCount - 1);
+        var logicalIndex = ReplayFramePlan.LogicalIndexAt(outputVideoPlan, outputVideoFrameIndex);
+        OutputVideoPreview.Show(CreateReplayScene(logicalIndex), PaintSurface.Mode);
+        OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
+        var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)OutputVideoFrameRate);
+        var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)OutputVideoFrameRate);
+        OutputPreviewClockText.Text = $"{FormatClock(currentTime)} / {FormatClock(duration)}";
+        OutputPreviewFrameText.Text = $"output {outputVideoFrameIndex + 1:N0}/{outputVideoFrameCount:N0}  source {logicalIndex + 1:N0}/{replaySession.Count:N0}";
+    }
+
+    private void OutputVideoTimeline_OnSeekRequested(object? sender, OutputVideoSeekEventArgs e)
+    {
+        StopOutputVideoPreviewPlayback();
+        ShowOutputVideoFrame(e.OutputFrameIndex);
+    }
+
+    private async void OutputPreviewPlayPauseButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (outputVideoFrameCount == 0) return;
+        if (outputVideoPlaybackCancellation is not null)
+        {
+            StopOutputVideoPreviewPlayback();
+            return;
+        }
+        if (outputVideoFrameIndex >= outputVideoFrameCount - 1)
+            ShowOutputVideoFrame(0);
+
+        var cancellation = new CancellationTokenSource();
+        outputVideoPlaybackCancellation = cancellation;
+        SetOutputVideoPlaybackVisualState(true);
+        try
+        {
+            while (outputVideoFrameIndex < outputVideoFrameCount - 1)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1d / OutputVideoFrameRate), cancellation.Token);
+                ShowOutputVideoFrame(outputVideoFrameIndex + 1);
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(outputVideoPlaybackCancellation, cancellation))
+            {
+                outputVideoPlaybackCancellation = null;
+                cancellation.Dispose();
+                SetOutputVideoPlaybackVisualState(false);
+            }
+        }
+    }
+
+    private void StopOutputVideoPreviewPlayback()
+    {
+        var cancellation = outputVideoPlaybackCancellation;
+        outputVideoPlaybackCancellation = null;
+        cancellation?.Cancel();
+        cancellation?.Dispose();
+        if (OutputPreviewPlayPauseButton is not null)
+            SetOutputVideoPlaybackVisualState(false);
+    }
+
+    private void SetOutputVideoPlaybackVisualState(bool playing)
+    {
+        OutputPreviewPlayPauseButton.Classes.Set("playing", playing);
+        OutputPreviewPlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Preview";
+        AutomationProperties.SetName(OutputPreviewPlayPauseButton, playing ? "Pause MP4 preview" : "Play MP4 preview");
+    }
+
+    private void ClearOutputVideoPreview()
+    {
+        StopOutputVideoPreviewPlayback();
+        outputVideoPlan = [];
+        outputVideoFrameCount = 0;
+        outputVideoFrameIndex = 0;
+        OutputVideoPreview.Clear();
+        OutputVideoTimeline.SetFrameCount(0, OutputVideoFrameRate);
+        OutputPreviewPlayPauseButton.IsEnabled = false;
+        OutputPreviewClockText.Text = "00:00.000 / 00:00.000";
+        OutputPreviewFrameText.Text = "output 0/0";
     }
 
     private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1518,11 +1641,12 @@ public partial class MainWindow : Window
         outputPreviewCancellation?.Cancel();
         outputPreviewCancellation?.Dispose();
         outputPreviewCancellation = null;
+        ClearOutputVideoPreview();
         AnalysisHeatmapPreview.Show(null);
         AnalysisSummaryText.Text = "Decode a capture to prepare output preview.";
-        OutputRangeText.Text = "—";
-        OutputClockText.Text = "—";
-        OutputFindingsText.Text = "—";
+        OutputRangeText.Text = "-";
+        OutputClockText.Text = "-";
+        OutputFindingsText.Text = "-";
         OutputHotspotText.Text = "Waiting for preview";
         OutputConfigurationText.Text = "Decoder configuration will appear here.";
         OutputSourceText.Text = "Source identity will appear here.";
@@ -1592,6 +1716,7 @@ public partial class MainWindow : Window
         ExportAnalysisButton.IsEnabled = !busy && replaySession is { Count: > 0 };
         ExportReplayOutputButton.IsEnabled = !busy && replaySession is { Count: > 0 };
         ExportOutputPackageButton.IsEnabled = !busy && replaySession is { Count: > 0 };
+        OutputPreviewPlayPauseButton.IsEnabled = !busy && outputVideoFrameCount > 0;
         SessionStatusText.Text = status;
     }
 
@@ -1863,6 +1988,7 @@ public partial class MainWindow : Window
             !Enum.TryParse<ReplayRenderMode>(option.Value, out var mode))
             return;
         PaintSurface?.SetMode(mode);
+        RefreshOutputPreviewIfVisible();
     }
 
     private void PanelResolutionTextBox_OnKeyDown(object? sender, KeyEventArgs e)
