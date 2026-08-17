@@ -1151,7 +1151,9 @@ public partial class MainWindow : Window
     private void ReviewGroupBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (sender is not Control { DataContext: ReviewGroupRow row } control || !row.CanUnmark) return;
-        if (!e.GetCurrentPoint(control).Properties.IsRightButtonPressed) return;
+        var point = e.GetCurrentPoint(control);
+        if (!point.Properties.IsRightButtonPressed &&
+            point.Properties.PointerUpdateKind != PointerUpdateKind.RightButtonPressed) return;
         DiagnosticListBox.SelectedItem = row;
         var item = new MenuItem { Header = "Unmark", Tag = row.MarkerId };
         item.Click += UnmarkMenuItem_OnClick;
