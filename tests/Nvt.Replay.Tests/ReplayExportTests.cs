@@ -99,6 +99,44 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public void Reusable_render_buffer_is_pixel_identical_to_allocating_renderer()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var scene = ReplaySceneFactory.Create(replay.Seek(0), replay.Count, extent);
+        var settings = new ReplayRenderSettings(
+            ReplayRenderMode.Compare,
+            ReplayRenderTheme.Light,
+            StrongGrid: true,
+            LegendVisible: true,
+            LegendCollapsed: false,
+            ReplayLegendPosition.TopLeft);
+        var expected = ReplayFrameRenderer.RenderRgb(scene, 320, 180, settings);
+        var actual = new byte[320 * 180 * 3];
+
+        ReplayFrameRenderer.RenderRgb(scene, 320, 180, settings, actual);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Reusable_render_buffer_rejects_incorrect_size()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var scene = ReplaySceneFactory.Create(replay.Seek(0), replay.Count, extent);
+
+        var exception = Assert.Throws<ArgumentException>(() => ReplayFrameRenderer.RenderRgb(
+            scene,
+            320,
+            180,
+            new ReplayRenderSettings(ReplayRenderMode.Compare),
+            new byte[(320 * 180 * 3) - 1]));
+
+        Assert.Equal("destination", exception.ParamName);
+    }
+
+    [Fact]
     public async Task Export_manifest_records_the_visual_settings_used_by_preview_and_mp4()
     {
         var replay = Replay(TimeSpan.FromMilliseconds(10));

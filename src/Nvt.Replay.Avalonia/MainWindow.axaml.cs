@@ -81,8 +81,6 @@ public partial class MainWindow : Window
     private const int OutputVideoWidth = 1280;
     private const int OutputVideoHeight = 720;
     private const int OutputVideoFrameRate = 30;
-    private const int OutputPreviewWidth = 960;
-    private const int OutputPreviewHeight = 540;
     public MainWindow()
     {
         InitializeComponent();
@@ -849,8 +847,8 @@ public partial class MainWindow : Window
         OutputVideoPreview.Show(
             CreateReplayScene(logicalIndex),
             CurrentReplayRenderSettings(),
-            OutputPreviewWidth,
-            OutputPreviewHeight);
+            OutputVideoWidth,
+            OutputVideoHeight);
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
         var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)OutputVideoFrameRate);
         var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)OutputVideoFrameRate);

@@ -18,13 +18,45 @@ public static class ReplayFrameRenderer
         int height,
         ReplayRenderSettings settings)
     {
+        ValidateArguments(scene, width, height, settings);
+        var pixels = new byte[checked(width * height * 3)];
+        RenderRgbCore(scene, width, height, settings, pixels);
+        return pixels;
+    }
+
+    public static void RenderRgb(
+        ReplayScene scene,
+        int width,
+        int height,
+        ReplayRenderSettings settings,
+        byte[] destination)
+    {
+        ValidateArguments(scene, width, height, settings);
+        ArgumentNullException.ThrowIfNull(destination);
+        var requiredLength = checked(width * height * 3);
+        if (destination.Length != requiredLength)
+            throw new ArgumentException($"Destination must contain exactly {requiredLength:N0} bytes.", nameof(destination));
+
+        RenderRgbCore(scene, width, height, settings, destination);
+    }
+
+    private static void ValidateArguments(ReplayScene scene, int width, int height, ReplayRenderSettings settings)
+    {
         ArgumentNullException.ThrowIfNull(scene);
         ArgumentNullException.ThrowIfNull(settings);
         if (width < 320 || height < 180)
             throw new ArgumentOutOfRangeException(nameof(width), "Replay frames must be at least 320x180.");
+    }
 
+    private static void RenderRgbCore(
+        ReplayScene scene,
+        int width,
+        int height,
+        ReplayRenderSettings settings,
+        byte[] pixels)
+    {
         var palette = ReplayVisualStyle.For(settings.Theme);
-        var canvas = new RasterCanvas(width, height, palette.Stage);
+        var canvas = new RasterCanvas(width, height, pixels, palette.Stage);
         var chromeScale = Math.Min(width / 1280d, height / 720d);
         var top = Math.Max(26, (int)Math.Round(48 * chromeScale));
         var bottom = Math.Max(24, (int)Math.Round(42 * chromeScale));
@@ -37,7 +69,6 @@ public static class ReplayFrameRenderer
         DrawAxisLabels(canvas, viewport, scene, palette, TextScale(height));
         DrawScene(canvas, viewport, contentBounds, scene, settings.Mode, palette, chromeScale);
         DrawLegend(canvas, viewport, scene, settings, palette);
-        return canvas.Pixels;
     }
 
     private static PixelRect BuildViewport(ReplayExtent extent, PixelRect bounds, double chromeScale)
@@ -514,11 +545,11 @@ public static class ReplayFrameRenderer
             ['Z'] = "111001010100111",
         };
 
-        public RasterCanvas(int width, int height, ReplayColor background)
+        public RasterCanvas(int width, int height, byte[] pixels, ReplayColor background)
         {
             Width = width;
             Height = height;
-            Pixels = new byte[width * height * 3];
+            Pixels = pixels;
             FillRectangle(0, 0, width, height, background);
         }
 

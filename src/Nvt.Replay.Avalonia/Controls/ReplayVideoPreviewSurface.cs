@@ -13,37 +13,50 @@ public sealed class ReplayVideoPreviewSurface : Control
 {
     private WriteableBitmap? bitmap;
     private PixelSize bitmapSize;
+    private byte[]? rgbBuffer;
+    private byte[]? rgbaBuffer;
 
     public void Show(ReplayScene scene, ReplayRenderSettings settings, int width, int height)
     {
-        var rgb = ReplayFrameRenderer.RenderRgb(scene, width, height, settings);
-        var rgba = new byte[width * height * 4];
-        for (int source = 0, destination = 0; source < rgb.Length; source += 3, destination += 4)
+        EnsureBitmap(width, height);
+        ReplayFrameRenderer.RenderRgb(scene, width, height, settings, rgbBuffer!);
+        for (int source = 0, destination = 0; source < rgbBuffer!.Length; source += 3, destination += 4)
         {
-            rgba[destination] = rgb[source];
-            rgba[destination + 1] = rgb[source + 1];
-            rgba[destination + 2] = rgb[source + 2];
-            rgba[destination + 3] = byte.MaxValue;
+            rgbaBuffer![destination] = rgbBuffer[source];
+            rgbaBuffer[destination + 1] = rgbBuffer[source + 1];
+            rgbaBuffer[destination + 2] = rgbBuffer[source + 2];
+            rgbaBuffer[destination + 3] = byte.MaxValue;
         }
-        var handle = GCHandle.Alloc(rgba, GCHandleType.Pinned);
-        try
+
+        using (var frameBuffer = bitmap!.Lock())
         {
-            var next = new WriteableBitmap(
-                PixelFormat.Rgba8888,
-                AlphaFormat.Unpremul,
-                handle.AddrOfPinnedObject(),
-                new PixelSize(width, height),
-                new Vector(96, 96),
-                width * 4);
-            bitmap?.Dispose();
-            bitmap = next;
-            bitmapSize = new PixelSize(width, height);
-        }
-        finally
-        {
-            handle.Free();
+            var sourceStride = width * 4;
+            for (var row = 0; row < height; row++)
+            {
+                Marshal.Copy(
+                    rgbaBuffer!,
+                    row * sourceStride,
+                    IntPtr.Add(frameBuffer.Address, row * frameBuffer.RowBytes),
+                    sourceStride);
+            }
         }
         InvalidateVisual();
+    }
+
+    private void EnsureBitmap(int width, int height)
+    {
+        var nextSize = new PixelSize(width, height);
+        if (bitmap is not null && bitmapSize == nextSize) return;
+
+        bitmap?.Dispose();
+        bitmap = new WriteableBitmap(
+            nextSize,
+            new Vector(96, 96),
+            PixelFormat.Rgba8888,
+            AlphaFormat.Unpremul);
+        bitmapSize = nextSize;
+        rgbBuffer = new byte[checked(width * height * 3)];
+        rgbaBuffer = new byte[checked(width * height * 4)];
     }
 
     public void Clear()
@@ -51,6 +64,8 @@ public sealed class ReplayVideoPreviewSurface : Control
         bitmap?.Dispose();
         bitmap = null;
         bitmapSize = default;
+        rgbBuffer = null;
+        rgbaBuffer = null;
         InvalidateVisual();
     }
 
