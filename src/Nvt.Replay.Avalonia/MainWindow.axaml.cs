@@ -66,6 +66,7 @@ public partial class MainWindow : Window
     private bool maxReplaySpeed;
     private bool synchronizingSelection;
     private bool synchronizingLoopControls;
+    private bool configuringEventVersion;
     private string? pendingSourcePath;
     private bool configuringSourceChoice;
     private bool configuringRegisterProfile;
@@ -385,7 +386,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        EventVersionComboBox.SelectedIndex = versionIndex;
+        configuringEventVersion = true;
+        try
+        {
+            EventVersionComboBox.SelectedIndex = versionIndex;
+        }
+        finally
+        {
+            configuringEventVersion = false;
+        }
         if (versionIndex == 4)
         {
             if (string.IsNullOrWhiteSpace(registerProfile))
@@ -665,7 +674,8 @@ public partial class MainWindow : Window
                     : "IC profile confirmed · select Standard or Benz Palm to decode 0x97."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
-        if (session is not null && !isDesay97 && comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false })
+        if (!configuringEventVersion && session is not null && !isDesay97 &&
+            comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false })
             await DecodeSelectedAsync();
     }
 

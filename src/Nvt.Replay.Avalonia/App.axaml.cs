@@ -9,15 +9,15 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
-#if DEBUG
-        this.AttachDeveloperTools();
-#endif
     }
 
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+#if DEBUG
+            this.AttachDeveloperTools();
+#endif
             var window = new MainWindow();
             desktop.MainWindow = window;
             var initialCapture = desktop.Args?.FirstOrDefault(File.Exists);
