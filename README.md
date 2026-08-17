@@ -16,8 +16,10 @@ is documented in [the product specification](docs/product-spec.md) and
 
 The first vertical slice includes:
 
-- streaming NDS, Saleae, KingstVIS, DSL, Excel, and canonical I2C adapters with
+- streaming NDS, Saleae, KingstVIS, DSL, Acute, Excel, and canonical I2C adapters with
   stable source locations and transport provenance;
+- register-aware communication rows with profile-scoped IC maps, confirmed FW
+  command/reset meanings, and raw-only fallback for unknown values;
 - an explicit format registry for Common `0x82`–`0x85` and Desay `0x97`;
 - source detection that never silently chooses Event Buffer Version or Benz Palm;
 - CLI discovery and probe commands with optional JSON output; and
@@ -34,7 +36,9 @@ Decoded-I2C adapters normalize LA exports into the same physical record model.
 Page/write tracking resolves reads such as `FF 09 90 00` to `0x99000`, while
 the Raw Explorer retains slave, commands, ACK/NAK data, source-specific fields,
 and diagnostics. A C# simulator produces equivalent Saleae, KingstVIS, DSL,
-Excel, and canonical TXT fixtures. See [source adapters](docs/source-adapters.md).
+Acute, Excel, and canonical TXT fixtures. Acute currently follows the
+conservative English row-per-transaction report contract; continuation rows
+remain evidence-gated. See [source adapters](docs/source-adapters.md).
 
 Common `0x82`–`0x85` decoding is now available through the NDS inspection
 slice. Shared finger semantics are implemented once; version-specific tails,
@@ -50,7 +54,18 @@ the [Desay Event Buffer contract](docs/desay97-event-buffer.md).
 The Common replay slice reduces each logical frame into separate Reported
 Frame and Host State views. Paint supports deterministic forward/backward
 seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.1×–10×
-and MAX playback, idle-gap compression, and an In/Out loop. Invalid frames
+and MAX playback, idle-gap compression, and a draggable two-handle loop range.
+Per-contact colors
+stay consistent across the point, coordinate label, and trajectory. Trajectory
+retention can show a recent 2–120 frame window, retain each gesture until its
+Break, or preserve completed gestures for the session; Clear affects only the
+view and never mutates capture evidence. Labels use point-aware placement,
+two-line coordinates, leader lines, and Finger/Glove/Palm/Reserved glyphs;
+the canvas includes a matching ID/type legend and adjustable coordinate grid.
+The legend scores the complete capture once to choose the least occupied
+corner, stays fixed during playback, and supports manual corner pinning,
+direct compact/expanded toggling, and `L` show/hide.
+Invalid frames
 remain visible as evidence without mutating Host State; a capture that ends
 with active contacts raises a warning instead of inventing an All Break.
 
@@ -102,7 +117,14 @@ dotnet run --project src/Nvt.Replay.Cli -- analyze ./capture.txt --event-buffer-
 dotnet run --project src/Nvt.Replay.Cli -- export ./capture.txt --event-buffer-version 0x83 --output ./replay.mp4
 dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x97 --palm-profile Benz-Palm
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83 --register-profile 51927
+dotnet run --project src/Nvt.Replay.Cli -- readable ./capture.txt --output ./analysis --register-profile 51927
 ```
+
+The desktop startup options and IC register profiles are explicit operator choices for reproducible QA
+and screenshot runs. They do not infer Event Buffer Version or Benz Palm.
 
 Windows preview and stable packaging use a pinned version, committed dependency
 locks, a closed payload allowlist, SHA-256 manifests, and fresh-extraction

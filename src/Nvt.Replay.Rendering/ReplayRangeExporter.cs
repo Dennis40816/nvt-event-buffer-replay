@@ -66,7 +66,7 @@ public static class ReplayFramePlan
     {
         ArgumentNullException.ThrowIfNull(replay);
         Validate(replay, options);
-        var result = new List<ReplayFramePlanEntry>();
+        var scaledDurations = new List<double>();
         for (var index = options.Range.StartLogicalIndex; index <= options.Range.EndLogicalIndex; index++)
         {
             var duration = options.Clock == ReplayExportClock.Frame
@@ -75,12 +75,56 @@ public static class ReplayFramePlan
                     ? replay.Timeline[index + 1].RecordedTime - replay.Timeline[index].RecordedTime
                     : replay.FrameInterval;
             if (duration <= TimeSpan.Zero) duration = replay.FrameInterval;
-            var repeat = Math.Max(1, (int)Math.Round(
-                duration.TotalSeconds / options.Speed * options.FrameRate,
-                MidpointRounding.AwayFromZero));
-            result.Add(new ReplayFramePlanEntry(index, repeat));
+            scaledDurations.Add(duration.TotalSeconds / options.Speed);
+        }
+
+        var outputFrameCount = Math.Max(1, (int)Math.Round(
+            scaledDurations.Sum() * options.FrameRate,
+            MidpointRounding.AwayFromZero));
+        var result = new List<ReplayFramePlanEntry>();
+        var sourceOffset = 0;
+        var sourceEndTime = scaledDurations[0];
+        for (var outputIndex = 0; outputIndex < outputFrameCount; outputIndex++)
+        {
+            var sampleTime = outputIndex / (double)options.FrameRate;
+            while (sourceOffset < scaledDurations.Count - 1 && sampleTime >= sourceEndTime)
+            {
+                sourceOffset++;
+                sourceEndTime += scaledDurations[sourceOffset];
+            }
+
+            // Preserve both boundaries when the output has enough frames. This does not
+            // invent coordinates; it chooses the last captured frame for the last sample.
+            if (outputFrameCount > 1 && outputIndex == outputFrameCount - 1)
+                sourceOffset = scaledDurations.Count - 1;
+
+            var logicalIndex = options.Range.StartLogicalIndex + sourceOffset;
+            if (result.Count > 0 && result[^1].LogicalIndex == logicalIndex)
+                result[^1] = result[^1] with { RepeatCount = result[^1].RepeatCount + 1 };
+            else
+                result.Add(new ReplayFramePlanEntry(logicalIndex, 1));
         }
         return result;
+    }
+
+    public static int OutputFrameCount(IReadOnlyList<ReplayFramePlanEntry> plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return plan.Sum(item => item.RepeatCount);
+    }
+
+    public static int LogicalIndexAt(IReadOnlyList<ReplayFramePlanEntry> plan, int outputFrameIndex)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (outputFrameIndex < 0 || outputFrameIndex >= OutputFrameCount(plan))
+            throw new ArgumentOutOfRangeException(nameof(outputFrameIndex));
+        var remaining = outputFrameIndex;
+        foreach (var entry in plan)
+        {
+            if (remaining < entry.RepeatCount) return entry.LogicalIndex;
+            remaining -= entry.RepeatCount;
+        }
+        throw new InvalidOperationException("Replay frame plan contains no sample for the requested output frame.");
     }
 
     private static void Validate(ITouchReplaySession replay, ReplayExportOptions options)
@@ -256,7 +300,7 @@ public sealed class ReplayRangeExporter
         string encoder,
         string? warning)
     {
-        var count = plan.Sum(item => item.RepeatCount);
+        var count = ReplayFramePlan.OutputFrameCount(plan);
         return new ReplayVideoManifest(
             1, options.SourceFileName, options.SourceSha256, options.DecodeConfiguration, options.Range,
             options.Clock, options.Mode, options.Width, options.Height, options.FrameRate, options.Speed,
@@ -271,7 +315,7 @@ public sealed class ReplayRangeExporter
         int frameRate,
         string? warning)
     {
-        var count = plan.Sum(item => item.RepeatCount);
+        var count = ReplayFramePlan.OutputFrameCount(plan);
         return new ReplayExportResult(kind, outputPath, manifestPath, count, TimeSpan.FromSeconds((double)count / frameRate), warning);
     }
 

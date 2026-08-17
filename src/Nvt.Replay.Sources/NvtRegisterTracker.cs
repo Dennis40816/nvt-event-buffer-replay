@@ -30,25 +30,29 @@ public sealed class NvtRegisterTracker
             commands.AddRange(pending);
         }
         commands.AddRange(transport.WriteCommands);
-        var address = ResolveAddress(transport.SlaveAddress, commands);
+        var address = ResolveAddress(transport.SlaveAddress, commands, out var offset);
         var fields = new Dictionary<string, string>(record.SourceFields ?? new Dictionary<string, string>(), StringComparer.Ordinal);
         if (address is { } register)
         {
             fields["register_address"] = $"0x{register:X}";
-            fields["register_offset"] = $"0x{register & 0xFF:X2}";
-            fields["register_name"] = RegisterName((byte)(register & 0xFF));
         }
-        return record with
+        if (offset is { } registerOffset)
+        {
+            fields["register_offset"] = $"0x{registerOffset:X2}";
+            fields["register_name"] = NvtRegisterCatalog.EventBufferOffsetName(registerOffset);
+            fields["register_page_known"] = (address is not null).ToString().ToLowerInvariant();
+        }
+        return NvtRegisterCatalog.Annotate(record with
         {
             Address = address ?? record.Address,
             I2c = transport with { WriteCommands = commands },
             SourceFields = fields,
-        };
+        });
     }
 
-    private uint? ResolveAddress(int slave, IReadOnlyList<IReadOnlyList<byte>> commands)
+    private uint? ResolveAddress(int slave, IReadOnlyList<IReadOnlyList<byte>> commands, out byte? offset)
     {
-        byte? offset = null;
+        offset = null;
         foreach (var command in commands)
         {
             if (command.Count >= 4 && command[0] == 0xFF)
@@ -57,7 +61,7 @@ public sealed class NvtRegisterTracker
                 pageBySlave[slave] = page;
                 offset = command[3];
             }
-            else if (command.Count > 0 && pageBySlave.ContainsKey(slave))
+            else if (command.Count > 0)
             {
                 offset = command[0];
             }
@@ -67,15 +71,6 @@ public sealed class NvtRegisterTracker
             : null;
     }
 
-    private static string RegisterName(byte offset) => offset switch
-    {
-        0x00 => "event_buffer",
-        0x60 => "fw_state",
-        0x70 => "frame_counter",
-        0x76 => "dp_version",
-        0x78 => "tp_fw_version",
-        _ => "unknown",
-    };
 }
 
 internal static class DictionaryExtensions

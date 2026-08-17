@@ -70,6 +70,36 @@ public sealed class NdsCaptureSessionTests : IDisposable
             () => CaptureSession.LoadAsync(path, cancellationToken: cancellation.Token));
     }
 
+    [Fact]
+    public async Task Colliding_event_buffer_address_decodes_only_after_operator_selects_register_profile()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var path = WriteLog(Record("Read", "0x80800", packet));
+
+        var unresolved = await CaptureSession.LoadAsync(path);
+        var resolved = unresolved.WithRegisterProfile("51929/51932");
+
+        Assert.Empty(unresolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.Single(resolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.Equal("51929/51932", resolved.RegisterProfile);
+        Assert.Equal("Event Buffer", resolved.Records[0].SourceFields?["register_region"]);
+    }
+
+    [Fact]
+    public async Task Selected_profile_rejects_an_event_buffer_address_owned_by_another_profile()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var path = WriteLog(Record("Read", "0x99000", packet));
+
+        var catalogResolved = await CaptureSession.LoadAsync(path);
+        var wrongProfile = catalogResolved.WithRegisterProfile("51929/51932");
+
+        Assert.Single(catalogResolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.Empty(wrongProfile.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+        Assert.False(wrongProfile.Records[0].SourceFields?.ContainsKey("register_region"));
+        Assert.False(wrongProfile.Records[0].SourceFields?.ContainsKey("register_name"));
+    }
+
     public void Dispose()
     {
         Directory.Delete(temporaryDirectory, recursive: true);

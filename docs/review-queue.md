@@ -51,3 +51,8 @@ evidence:
 - `0x99076`: DP Version, raw bytes.
 - `0x99078`: TP FW Version, raw bytes.
 
+Routine `Info` device-state samples remain part of diagnostics and analysis
+evidence, but are shown in Raw Explorer's register activity strip and Inspector
+instead of the actionable Review rail. The Review rail keeps warnings, alarms,
+ASIL lifecycle groups, QA results, and operator annotations in focus.
+

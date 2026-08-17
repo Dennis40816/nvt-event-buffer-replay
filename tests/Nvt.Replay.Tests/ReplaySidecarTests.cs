@@ -18,7 +18,7 @@ public sealed class ReplaySidecarTests : IDisposable
         await File.WriteAllTextAsync(evidencePath, "PID1615 synthetic kernel evidence");
         var evidenceHash = Hash(await File.ReadAllBytesAsync(evidencePath));
         var sidecarPath = Path.Combine(directory, "capture.nvtreplay.json");
-        var configuration = Configuration();
+        var configuration = Configuration() with { RegisterProfile = "51927" };
         var document = Document(configuration,
         [
             new ReplayMarker(
@@ -45,6 +45,7 @@ public sealed class ReplaySidecarTests : IDisposable
         Assert.False(loaded.RequiresExplicitConfirmation);
         Assert.Empty(loaded.Warnings);
         Assert.Equal(ReviewDisposition.Expected, Assert.Single(loaded.Document.ReviewStates).Disposition);
+        Assert.Equal("51927", loaded.Document.DecodeConfiguration.RegisterProfile);
     }
 
     [Fact]

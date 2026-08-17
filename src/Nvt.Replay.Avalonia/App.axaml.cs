@@ -18,12 +18,29 @@ public partial class App : Application
             var window = new MainWindow();
             desktop.MainWindow = window;
             var initialCapture = desktop.Args?.FirstOrDefault(File.Exists);
+            var initialVersion = GetOption(desktop.Args, "--event-version");
+            var initialPalmProfile = GetOption(desktop.Args, "--palm-profile");
+            var initialRegisterProfile = GetOption(desktop.Args, "--register-profile");
             if (initialCapture is not null)
             {
-                window.Opened += async (_, _) => await window.OpenCaptureAsync(initialCapture);
+                window.Opened += async (_, _) =>
+                {
+                    await window.OpenCaptureAsync(initialCapture);
+                    if (initialVersion is not null)
+                        await window.ApplyStartupDecodeAsync(initialVersion, initialPalmProfile, initialRegisterProfile);
+                };
             }
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static string? GetOption(IReadOnlyList<string>? args, string name)
+    {
+        if (args is null) return null;
+        for (var index = 0; index < args.Count - 1; index++)
+            if (args[index].Equals(name, StringComparison.OrdinalIgnoreCase))
+                return args[index + 1];
+        return null;
     }
 }

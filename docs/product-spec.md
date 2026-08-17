@@ -80,6 +80,12 @@ with active contacts creates a warning rather than an invented All Break.
 Seeking uses sparse Host State checkpoints; backward stepping is supported,
 continuous reverse playback is not required for MVP.
 
+Paint identifies up to ten concurrent contacts with stable per-ID colors shared
+by the point, coordinate label, and trajectory. Operators may retain a recent
+frame window, the current gesture until Break, or completed gestures for the
+session. A reused touch ID begins a new gesture segment. Clearing trajectories
+is a display boundary only and does not rewrite replay state or source bytes.
+
 ## Workspace
 
 The primary composition is a restrained engineering workstation:

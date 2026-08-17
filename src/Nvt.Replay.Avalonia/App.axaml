@@ -7,32 +7,82 @@
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="WindowBrush" Color="#0F1215" />
-                    <SolidColorBrush x:Key="HeaderBrush" Color="#15191D" />
-                    <SolidColorBrush x:Key="PanelBrush" Color="#121619" />
-                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#0C0F11" />
-                    <SolidColorBrush x:Key="CanvasBrush" Color="#0A0D0F" />
-                    <SolidColorBrush x:Key="BorderBrush" Color="#293137" />
-                    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#E0E5E3" />
-                    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#AEB7BB" />
-                    <SolidColorBrush x:Key="MutedTextBrush" Color="#707C82" />
-                    <SolidColorBrush x:Key="AccentBrush" Color="#C8F36C" />
+                    <SolidColorBrush x:Key="WindowBrush" Color="#090D10" />
+                    <SolidColorBrush x:Key="HeaderBrush" Color="#0E1317" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#12181C" />
+                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#0B1013" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#10171A" />
+                    <SolidColorBrush x:Key="CanvasTextBrush" Color="#D7DFDD" />
+                    <SolidColorBrush x:Key="CanvasMutedTextBrush" Color="#9BA8AD" />
+                    <SolidColorBrush x:Key="RaisedSurfaceBrush" Color="#182126" />
+                    <SolidColorBrush x:Key="HoverSurfaceBrush" Color="#202A30" />
+                    <SolidColorBrush x:Key="PressedSurfaceBrush" Color="#28343B" />
+                    <SolidColorBrush x:Key="FieldBrush" Color="#0D1418" />
+                    <SolidColorBrush x:Key="BorderBrush" Color="#263139" />
+                    <SolidColorBrush x:Key="StrongBorderBrush" Color="#3B4952" />
+                    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#EDF1EF" />
+                    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#BBC5C8" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#819097" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#B9E653" />
                     <SolidColorBrush x:Key="AccentTextBrush" Color="#111710" />
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="#C8F36C" />
+                    <SolidColorBrush x:Key="AccentPressedBrush" Color="#9EC63F" />
+                    <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#26351B" />
+                    <SolidColorBrush x:Key="AccentBorderBrush" Color="#91B83D" />
+                    <SolidColorBrush x:Key="DisabledSurfaceBrush" Color="#1C2220" />
+                    <SolidColorBrush x:Key="DisabledTextBrush" Color="#58635C" />
+                    <SolidColorBrush x:Key="DisabledBorderBrush" Color="#29322C" />
                     <SolidColorBrush x:Key="WarningBrush" Color="#D8AD62" />
+                    <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#2A2116" />
+                    <SolidColorBrush x:Key="InfoBrush" Color="#5EC4D4" />
+                    <SolidColorBrush x:Key="DangerBrush" Color="#E07472" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#111A1E" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#52656F" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#26351B" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="#91B83D" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#C8F36C" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#304321" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="#B9E653" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#D8FA86" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="WindowBrush" Color="#F3F5F2" />
+                    <SolidColorBrush x:Key="WindowBrush" Color="#F2F5F2" />
                     <SolidColorBrush x:Key="HeaderBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="PanelBrush" Color="#E8ECE8" />
-                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#F8FAF7" />
-                    <SolidColorBrush x:Key="CanvasBrush" Color="#111518" />
-                    <SolidColorBrush x:Key="BorderBrush" Color="#BEC7C1" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#F6F8F6" />
+                    <SolidColorBrush x:Key="WorkspaceBrush" Color="#FBFCFA" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#E9EFEC" />
+                    <SolidColorBrush x:Key="CanvasTextBrush" Color="#21332B" />
+                    <SolidColorBrush x:Key="CanvasMutedTextBrush" Color="#667970" />
+                    <SolidColorBrush x:Key="RaisedSurfaceBrush" Color="#EDF1ED" />
+                    <SolidColorBrush x:Key="HoverSurfaceBrush" Color="#E4EAE5" />
+                    <SolidColorBrush x:Key="PressedSurfaceBrush" Color="#D9E1DA" />
+                    <SolidColorBrush x:Key="FieldBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="BorderBrush" Color="#CED6D0" />
+                    <SolidColorBrush x:Key="StrongBorderBrush" Color="#AAB6AE" />
                     <SolidColorBrush x:Key="PrimaryTextBrush" Color="#17201B" />
-                    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#3F4C45" />
-                    <SolidColorBrush x:Key="MutedTextBrush" Color="#637168" />
+                    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#405047" />
+                    <SolidColorBrush x:Key="MutedTextBrush" Color="#65736B" />
                     <SolidColorBrush x:Key="AccentBrush" Color="#537D00" />
                     <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="#466B00" />
+                    <SolidColorBrush x:Key="AccentPressedBrush" Color="#385600" />
+                    <SolidColorBrush x:Key="AccentSurfaceBrush" Color="#E4EFD1" />
+                    <SolidColorBrush x:Key="AccentBorderBrush" Color="#779D32" />
+                    <SolidColorBrush x:Key="DisabledSurfaceBrush" Color="#E9ECE9" />
+                    <SolidColorBrush x:Key="DisabledTextBrush" Color="#8D9790" />
+                    <SolidColorBrush x:Key="DisabledBorderBrush" Color="#CDD3CE" />
                     <SolidColorBrush x:Key="WarningBrush" Color="#8A5900" />
+                    <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#F4E8D1" />
+                    <SolidColorBrush x:Key="InfoBrush" Color="#006B78" />
+                    <SolidColorBrush x:Key="DangerBrush" Color="#A33C39" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#AAB6AE" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#E4EFD1" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="#779D32" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#385600" />
+                    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#D8E8BA" />
+                    <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="#537D00" />
+                    <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#294000" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

@@ -15,7 +15,9 @@ public sealed record AnalysisOutputResult(
     string DiagnosticsJson,
     string DiagnosticsCsv,
     string ManifestJson,
-    string HeatmapPng);
+    string HeatmapPng,
+    string? CommunicationCsv,
+    string? CommunicationJsonl);
 
 public sealed class AnalysisOutputWriter
 {
@@ -30,7 +32,8 @@ public sealed class AnalysisOutputWriter
     public async Task<AnalysisOutputResult> WriteAsync(
         string directory,
         CaptureAnalysisReport report,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<SourceRecord>? sourceRecords = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(report);
@@ -45,18 +48,26 @@ public sealed class AnalysisOutputWriter
             Path.Combine(fullDirectory, "diagnostics.json"),
             Path.Combine(fullDirectory, "diagnostics.csv"),
             Path.Combine(fullDirectory, "manifest.json"),
-            Path.Combine(fullDirectory, "heatmap.png"));
+            Path.Combine(fullDirectory, "heatmap.png"),
+            sourceRecords is null ? null : Path.Combine(fullDirectory, "communication-readable.csv"),
+            sourceRecords is null ? null : Path.Combine(fullDirectory, "communication-readable.jsonl"));
 
         var journalPath = Path.Combine(fullDirectory, JournalFileName);
         var previousManifestHash = File.Exists(result.ManifestJson)
             ? Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(result.ManifestJson, cancellationToken)))
             : null;
+        var targetFiles = new List<string>
+        {
+            "analysis-report.json", "events.json", "events.csv", "diagnostics.json", "diagnostics.csv", "heatmap.png", "manifest.json",
+        };
+        if (sourceRecords is not null)
+            targetFiles.InsertRange(targetFiles.Count - 1, ["communication-readable.csv", "communication-readable.jsonl"]);
         await WriteJsonAsync(journalPath, new AnalysisRecoveryJournal(
             "1.0",
             DateTimeOffset.UtcNow,
             report.Manifest.SourceSha256,
             previousManifestHash,
-            ["analysis-report.json", "events.json", "events.csv", "diagnostics.json", "diagnostics.csv", "heatmap.png", "manifest.json"]), cancellationToken);
+            targetFiles), cancellationToken);
 
         await WriteJsonAsync(result.ReportJson, report, cancellationToken);
         await WriteJsonAsync(result.EventsJson, report.Events, cancellationToken);
@@ -72,6 +83,8 @@ public sealed class AnalysisOutputWriter
                 report.Manifest.HeatmapPixelHeight,
                 token),
             cancellationToken);
+        if (sourceRecords is not null)
+            await new ReadableCommunicationLogWriter().WriteAsync(fullDirectory, sourceRecords, cancellationToken);
         await WriteJsonAsync(result.ManifestJson, report.Manifest, cancellationToken);
         File.Delete(journalPath);
         return result;

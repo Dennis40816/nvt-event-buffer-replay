@@ -6,8 +6,8 @@ Replay review work is stored beside an immutable capture as a versioned
 Schema version 1 records:
 
 - the capture SHA-256 and file name;
-- the selected source adapter, Event Buffer Version, Desay profile, and Event
-  Buffer base address;
+- the selected source adapter, Event Buffer Version, Desay profile, Event
+  Buffer base address, and explicit IC register profile;
 - point or range markers with optional QA case IDs;
 - raw Kernel/FW/other evidence references with optional SHA-256;
 - Review Queue acknowledgement, lifecycle, disposition, and resolution state;
