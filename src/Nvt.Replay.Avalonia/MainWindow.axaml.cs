@@ -1311,6 +1311,10 @@ public partial class MainWindow : Window
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
         TransportText.Text = FormatTransport(record);
+        var rawLayout = RawFrameLayoutBuilder.Build(record, frame);
+        RawLayoutTitleText.Text = rawLayout.Title;
+        RawLayoutSummaryText.Text = rawLayout.Summary;
+        RawByteSectionsItemsControl.ItemsSource = rawLayout.Sections;
         RawBytesText.Text = FormatBytes(record.Data);
         DecodedFieldsText.Text = frame switch
         {

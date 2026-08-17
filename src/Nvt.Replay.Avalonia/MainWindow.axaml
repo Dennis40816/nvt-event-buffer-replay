@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Nvt.Replay.Avalonia.ViewModels"
         xmlns:controls="using:Nvt.Replay.Avalonia.Controls"
+        xmlns:rendering="using:Nvt.Replay.Rendering"
         x:Class="Nvt.Replay.Avalonia.MainWindow"
         Title="NVT Event Buffer Replay"
         Width="1480"
@@ -867,9 +868,29 @@
               <TabItem Header="Raw">
                 <ScrollViewer>
                   <StackPanel Margin="16,12,16,16" Spacing="14">
-                    <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
-                      <TextBlock x:Name="RawBytesText" Text="—" FontFamily="Cascadia Mono" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
-                    </Border>
+                    <StackPanel Spacing="3">
+                      <TextBlock x:Name="RawLayoutTitleText" Text="Raw transaction" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock x:Name="RawLayoutSummaryText" Text="Select a decoded frame to inspect its byte layout." FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ItemsControl x:Name="RawByteSectionsItemsControl">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="rendering:RawByteSection">
+                          <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,7,0,8">
+                            <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,4,Auto,3,Auto">
+                              <TextBlock Text="{Binding Offset}" FontFamily="Cascadia Mono" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
+                              <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Bytes}" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Detail}" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Expander Header="Flat bytes" FontSize="12" FontWeight="SemiBold">
+                      <Border Margin="0,8,0,0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
+                        <TextBlock x:Name="RawBytesText" Text="—" FontFamily="Cascadia Mono" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                      </Border>
+                    </Expander>
                     <TextBlock Classes="section" Text="Source identity" />
                     <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="11" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                   </StackPanel>
