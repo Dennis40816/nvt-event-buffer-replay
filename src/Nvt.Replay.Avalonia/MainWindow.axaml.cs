@@ -1148,6 +1148,18 @@ public partial class MainWindow : Window
         UpdateReviewState(row.Group);
     }
 
+    private void ReviewGroupBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: ReviewGroupRow row } control || !row.CanUnmark) return;
+        if (!e.GetCurrentPoint(control).Properties.IsRightButtonPressed) return;
+        DiagnosticListBox.SelectedItem = row;
+        var item = new MenuItem { Header = "Unmark", Tag = row.MarkerId };
+        item.Click += UnmarkMenuItem_OnClick;
+        var menu = new ContextMenu { ItemsSource = new[] { item } };
+        menu.Open(control);
+        e.Handled = true;
+    }
+
     private void ReviewOccurrenceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (ReviewOccurrenceComboBox.SelectedItem is ReviewOccurrenceRow row)
@@ -1281,7 +1293,7 @@ public partial class MainWindow : Window
         if (end < start) (start, end) = (end, start);
         var marker = new ReplayMarker(
             $"marker-{Guid.NewGuid():N}",
-            $"Marker {markers.Count + 1}",
+            NextMarkerLabel(),
             start,
             end,
             DateTimeOffset.UtcNow);
@@ -1291,6 +1303,41 @@ public partial class MainWindow : Window
         SessionStatusText.Text = marker.IsRange
             ? $"Added range marker · frames {start + 1}–{end + 1}"
             : $"Added marker · frame {start + 1}";
+    }
+
+    private string NextMarkerLabel()
+    {
+        var number = 1;
+        while (markers.Any(marker => marker.Label.Equals($"Marker {number}", StringComparison.OrdinalIgnoreCase)))
+            number++;
+        return $"Marker {number}";
+    }
+
+    private void UnmarkButton_OnClick(object? sender, RoutedEventArgs e) => RemoveMarker(selectedMarkerId);
+
+    private void UnmarkMenuItem_OnClick(object? sender, RoutedEventArgs e) =>
+        RemoveMarker((sender as MenuItem)?.Tag?.ToString() ?? selectedMarkerId);
+
+    private void RemoveMarker(string? markerId)
+    {
+        if (markerId is null) return;
+        var index = markers.FindIndex(marker => marker.Id == markerId);
+        if (index < 0) return;
+        var removed = markers[index];
+        markers.RemoveAt(index);
+        selectedMarkerId = null;
+        selectedReviewGroupId = null;
+        CreateReviewSession(baseDiagnostics);
+        DiagnosticListBox.SelectedItem = null;
+        ReviewActionsPanel.IsVisible = false;
+        AnnotationMetadataPanel.IsVisible = false;
+        MarkerQaCaseTextBox.Text = string.Empty;
+        if (replaySession is { Count: > 0 } && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
+        RefreshOutputPreviewIfVisible();
+        SessionStatusText.Text = removed.IsRange
+            ? $"Removed range marker · frames {removed.StartLogicalIndex + 1}-{removed.EndLogicalIndex + 1}"
+            : $"Removed marker · frame {removed.StartLogicalIndex + 1}";
     }
 
     private void ApplyMarkerQaButton_OnClick(object? sender, RoutedEventArgs e)

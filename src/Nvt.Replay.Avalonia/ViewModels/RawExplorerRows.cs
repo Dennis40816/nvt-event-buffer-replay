@@ -95,6 +95,8 @@ public sealed record ReviewGroupRow(ReviewEventGroup Group)
     public string Count => Group.Occurrences.Count == 1 ? "1 occurrence" : $"{Group.Occurrences.Count} occurrences";
     public string State => Group.AsilLifecycle?.ToString().ToUpperInvariant() ?? Group.WorkflowState.ToString().ToUpperInvariant();
     public string Disposition => Group.Disposition == ReviewDisposition.None ? string.Empty : Group.Disposition.ToString().ToUpperInvariant();
+    public string? MarkerId => Group.Occurrences.FirstOrDefault()?.Diagnostic.Details?.GetValueOrDefault("marker_id");
+    public bool CanUnmark => Group.Category == ReviewEventCategory.Annotation && MarkerId is not null;
 }
 
 public sealed record ReviewOccurrenceRow(int Number, ReviewOccurrence Occurrence)
