@@ -146,14 +146,19 @@ vocabulary but is not sufficient evidence for Linux/Android kernel grammar.
 ## Export
 
 MVP exports selected-range MP4, heatmap PNG, parsed and diagnostic JSON/CSV,
-replay sidecar, and a source/config/hash manifest. UI and export share a
-`ReplayScene`; MP4 is not a screen recording. C# renders frames and pipes them
-to a reviewed FFmpeg build. If no encoder is available, PNG sequence remains
-available.
+replay sidecar, and a source/config/hash manifest. Output presents one selected
+content type at a time: MP4 video by default, heatmap, or data package. UI and
+export share a `ReplayScene`; MP4 is not a screen recording. C# renders frames
+and pipes them to a reviewed FFmpeg build. If no encoder is available, PNG
+sequence remains available.
 
-The desktop preview is a presentation of the exact default MP4 frame plan and
-1280×720 raster, not a separately laid-out approximation. Its range/time
-scrubber operates in output-frame time.
+The desktop preview presents the exact configured MP4 frame plan and raster,
+not a separately laid-out approximation. Its range/time scrubber operates in
+output-frame time. A settings flyout beside Preview controls output clock,
+customized speed, frame rate, and preset or validated custom resolution; the
+same values drive preview and final export. The heatmap preview uses density
+circles whose area represents sample count while the deterministic heatmap PNG
+remains suitable for automation and golden comparison.
 
 HTML/PDF reports, evidence ZIP packaging, and redaction UI are post-MVP.
 
