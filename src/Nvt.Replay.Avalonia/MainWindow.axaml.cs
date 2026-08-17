@@ -45,6 +45,7 @@ public partial class MainWindow : Window
     private ReplaySidecarOpenResult? pendingSidecar;
     private ReplayExtent replayExtent = new(2304, 1280);
     private CancellationTokenSource? playbackCancellation;
+    private CancellationTokenSource? outputPreviewCancellation;
     private int currentLogicalIndex = -1;
     private int? loopIn;
     private int? loopOut;
@@ -580,22 +581,8 @@ public partial class MainWindow : Window
         SetBusy(true, "Analyzing selected replay range");
         try
         {
-            var range = loopIn is { } start && loopOut is { } end
-                ? new AnalysisRange(Math.Min(start, end), Math.Max(start, end))
-                : new AnalysisRange(0, replaySession.Count - 1);
-            var evidence = decodeConfiguration.EventBufferVersion is "0x83" or "0x84"
-                ? EvidenceStatus.Verified
-                : EvidenceStatus.Provisional;
-            var report = await Task.Run(() => new CaptureAnalyzer().Analyze(
-                session.SourcePath,
-                session.SourceSha256,
-                decodeConfiguration,
-                evidence,
-                replaySession,
-                reviewSession.Diagnostics,
-                reviewSession,
-                range,
-                cancellationToken: cancellationToken), cancellationToken);
+            var range = SelectedOutputRange();
+            var report = await Task.Run(() => BuildOutputReport(range, cancellationToken), cancellationToken);
             var result = await new AnalysisOutputWriter().WriteAsync(directory, report, cancellationToken, session.Records);
             AnalysisSummaryText.Text =
                 $"{report.Events.Count:N0} frames · {report.DiagnosticAggregates.Count:N0} finding groups · " +
@@ -710,6 +697,103 @@ public partial class MainWindow : Window
                 ? "Confirm Standard or Benz Palm; decoding starts immediately after that selection."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
+    }
+
+    private void OpenOutputPreviewButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (AnalysisTab.IsEnabled)
+            WorkspaceTabs.SelectedItem = AnalysisTab;
+    }
+
+    private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (WorkspaceTabs.SelectedItem == AnalysisTab)
+            await RefreshOutputPreviewAsync();
+    }
+
+    private AnalysisRange SelectedOutputRange()
+    {
+        if (replaySession is null || replaySession.Count == 0)
+            return new AnalysisRange(0, 0);
+        return loopIn is { } start && loopOut is { } end
+            ? new AnalysisRange(Math.Min(start, end), Math.Max(start, end))
+            : new AnalysisRange(0, replaySession.Count - 1);
+    }
+
+    private CaptureAnalysisReport BuildOutputReport(AnalysisRange range, CancellationToken cancellationToken)
+    {
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewSession is null)
+            throw new InvalidOperationException("A decoded replay is required for output preview.");
+        var evidence = decodeConfiguration.EventBufferVersion is "0x83" or "0x84"
+            ? EvidenceStatus.Verified
+            : EvidenceStatus.Provisional;
+        return new CaptureAnalyzer().Analyze(
+            session.SourcePath,
+            session.SourceSha256,
+            decodeConfiguration,
+            evidence,
+            replaySession,
+            reviewSession.Diagnostics,
+            reviewSession,
+            range,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task RefreshOutputPreviewAsync()
+    {
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewSession is null || replaySession.Count == 0)
+            return;
+
+        outputPreviewCancellation?.Cancel();
+        outputPreviewCancellation?.Dispose();
+        outputPreviewCancellation = new CancellationTokenSource();
+        var cancellationToken = outputPreviewCancellation.Token;
+        var range = SelectedOutputRange();
+        AnalysisSummaryText.Text = $"Preparing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}...";
+        OutputHotspotText.Text = "Analyzing coordinates";
+        try
+        {
+            var report = await Task.Run(() => BuildOutputReport(range, cancellationToken), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            ApplyOutputPreview(report);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
+        {
+            AnalysisSummaryText.Text = "Output preview unavailable";
+            OutputHotspotText.Text = exception.Message;
+            AnalysisHeatmapPreview.Show(null);
+        }
+    }
+
+    private void ApplyOutputPreview(CaptureAnalysisReport report)
+    {
+        if (session is null || decodeConfiguration is null) return;
+        var range = report.Manifest.Range;
+        var clockIsFrame = ClockModeComboBox.SelectedIndex == 1;
+        var clockName = clockIsFrame ? "TP Frame 120 Hz" : "Recorded";
+        var duration = clockIsFrame ? report.Manifest.Clock.FrameDuration : report.Manifest.Clock.CapturedDuration;
+        var peak = report.Hotspot.Counts.Count == 0 ? 0 : report.Hotspot.Counts.Max();
+        var profile = string.IsNullOrWhiteSpace(decodeConfiguration.Desay97Profile)
+            ? string.Empty
+            : $" / {decodeConfiguration.Desay97Profile}";
+        var speed = maxReplaySpeed ? "MAX" : $"{replaySpeed:0.##}×";
+
+        AnalysisSummaryText.Text = $"Previewing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
+        OutputRangeText.Text = $"{report.Events.Count:N0} frames\n{range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
+        OutputClockText.Text = $"{clockName}\n{FormatClock(duration)}";
+        OutputFindingsText.Text = $"{report.DiagnosticAggregates.Count:N0} groups\n{report.Asil.UnresolvedAlarmGroups:N0} alarms";
+        OutputHotspotText.Text = $"{report.Hotspot.SampleCount:N0} samples, peak {peak:N0}";
+        OutputConfigurationText.Text =
+            $"decoder  {decodeConfiguration.EventBufferVersion}{profile}\n" +
+            $"source   {session.Probe.DisplayName}\n" +
+            $"evidence {report.Manifest.FormatEvidenceStatus}\n" +
+            $"paint    {PaintSurface.Mode}\n" +
+            $"replay   {clockName} at {speed}";
+        OutputSourceText.Text = $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{session.SourceSha256}";
+        AnalysisHeatmapPreview.Show(report.Hotspot);
     }
 
     private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1428,9 +1512,21 @@ public partial class MainWindow : Window
         SaveReviewButton.IsEnabled = false;
         LoadReviewButton.IsEnabled = false;
         ExportAnalysisButton.IsEnabled = false;
+        ExportReplayOutputButton.IsEnabled = false;
+        ExportOutputPackageButton.IsEnabled = false;
         AnalysisTab.IsEnabled = false;
-        AnalysisSummaryText.Text = "Decode a capture to generate analysis.";
-        AnalysisOutputText.Text = "No output written";
+        outputPreviewCancellation?.Cancel();
+        outputPreviewCancellation?.Dispose();
+        outputPreviewCancellation = null;
+        AnalysisHeatmapPreview.Show(null);
+        AnalysisSummaryText.Text = "Decode a capture to prepare output preview.";
+        OutputRangeText.Text = "—";
+        OutputClockText.Text = "—";
+        OutputFindingsText.Text = "—";
+        OutputHotspotText.Text = "Waiting for preview";
+        OutputConfigurationText.Text = "Decoder configuration will appear here.";
+        OutputSourceText.Text = "Source identity will appear here.";
+        AnalysisOutputText.Text = "Nothing exported in this session.";
         LoadReviewButton.IsVisible = true;
         ApplySidecarButton.IsVisible = false;
         ReplayTimelineSurface.IsEnabled = false;
@@ -1494,6 +1590,8 @@ public partial class MainWindow : Window
         SaveReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         LoadReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         ExportAnalysisButton.IsEnabled = !busy && replaySession is { Count: > 0 };
+        ExportReplayOutputButton.IsEnabled = !busy && replaySession is { Count: > 0 };
+        ExportOutputPackageButton.IsEnabled = !busy && replaySession is { Count: > 0 };
         SessionStatusText.Text = status;
     }
 
@@ -1746,6 +1844,7 @@ public partial class MainWindow : Window
         {
             replaySpeed = speed;
         }
+        RefreshOutputPreviewIfVisible();
     }
 
     private void ClockModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1755,6 +1854,7 @@ public partial class MainWindow : Window
             ReplayClockText.Text = FormatClock(SelectedTime(replaySession.Timeline[currentLogicalIndex]));
             ReplayEndClockText.Text = FormatClock(SelectedEndTime());
         }
+        RefreshOutputPreviewIfVisible();
     }
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -2006,6 +2106,13 @@ public partial class MainWindow : Window
             : $"Loop {loopIn!.Value + 1:N0}–{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " · off")}";
         ClearLoopButton.IsEnabled = hasRange;
         ReplayTimelineSurface.SetLoopRange(loopIn, loopOut, loopEnabled);
+        RefreshOutputPreviewIfVisible();
+    }
+
+    private void RefreshOutputPreviewIfVisible()
+    {
+        if (WorkspaceTabs?.SelectedItem == AnalysisTab)
+            _ = RefreshOutputPreviewAsync();
     }
 
     private TimeSpan SelectedTime(ReplayTimelineEntry entry) =>
@@ -2057,7 +2164,7 @@ public partial class MainWindow : Window
                 SaveReviewButton_OnClick(this, new RoutedEventArgs());
                 return true;
             case ReplayShortcutAction.ExportAnalysis when ExportAnalysisButton.IsEnabled:
-                ExportAnalysisButton_OnClick(this, new RoutedEventArgs());
+                OpenOutputPreviewButton_OnClick(this, new RoutedEventArgs());
                 return true;
             case ReplayShortcutAction.TogglePlayback when PlayPauseButton.IsEnabled:
                 PlayPauseButton_OnClick(this, new RoutedEventArgs());
@@ -2145,6 +2252,8 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         StopPlayback();
+        outputPreviewCancellation?.Cancel();
+        outputPreviewCancellation?.Dispose();
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
         if (Application.Current is { } application) application.ActualThemeVariantChanged -= Application_OnActualThemeVariantChanged;

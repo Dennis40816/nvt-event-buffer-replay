@@ -502,7 +502,7 @@
         <Button x:Name="SaveReviewButton" Grid.Column="12" Classes="headerIcon" Content="&#xE74E;" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review" />
         <Button x:Name="LoadReviewButton" Grid.Column="14" Classes="headerIcon" Content="&#xE8E5;" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review" />
         <Button x:Name="ApplySidecarButton" Grid.Column="14" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
-        <Button x:Name="ExportAnalysisButton" Grid.Column="16" Classes="headerIcon" Content="&#xE72D;" IsEnabled="False" Click="ExportAnalysisButton_OnClick" ToolTip.Tip="Export analysis" AutomationProperties.Name="Export analysis" />
+        <Button x:Name="ExportAnalysisButton" Grid.Column="16" Classes="headerIcon" Content="&#xE72D;" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview" />
         <Button x:Name="ThemeButton" Grid.Column="18" Classes="canvasIcon" Content="&#xE706;" Click="ThemeButton_OnClick" ToolTip.Tip="Change color theme · commands remain available with Ctrl+K" AutomationProperties.Name="Change color theme" />
         <Button x:Name="CancelButton" Grid.Column="20" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
         <Button x:Name="LoadButton" Grid.Column="20" Classes="primary" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
@@ -565,7 +565,7 @@
       </Border>
 
       <Border Grid.Column="1" Background="{DynamicResource WorkspaceBrush}">
-        <TabControl x:Name="WorkspaceTabs" Margin="0">
+        <TabControl x:Name="WorkspaceTabs" Margin="0" SelectionChanged="WorkspaceTabs_OnSelectionChanged">
           <TabItem Header="RAW EXPLORER">
             <Grid RowDefinitions="48,24,34,*">
               <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
@@ -761,25 +761,84 @@
             </Grid>
           </TabItem>
 
-          <TabItem x:Name="AnalysisTab" Header="ANALYSIS" IsEnabled="False">
-            <Grid Margin="16" RowDefinitions="Auto,18,*">
+          <TabItem x:Name="AnalysisTab" Header="OUTPUT" IsEnabled="False">
+            <Grid Margin="16" RowDefinitions="Auto,14,*">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="4">
-                  <TextBlock Text="REPRODUCIBLE ANALYSIS" Classes="section" />
-                  <TextBlock Text="Transmission anomalies · ASIL lifecycle · Reported Frame hotspots" FontSize="13" FontWeight="Medium" Foreground="#C6CECF" />
+                  <TextBlock Text="OUTPUT PREVIEW" Classes="section" />
+                  <TextBlock Text="Review range, decoder and generated artifacts before writing files" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                  <Button Classes="ghost" Content="Export replay" Click="ExportReplayButton_OnClick" />
-                  <Button Classes="primary" Content="Export JSON / CSV / PNG" Click="ExportAnalysisButton_OnClick" />
+                  <Button x:Name="ExportReplayOutputButton" Classes="ghost" Content="Export replay MP4" Click="ExportReplayButton_OnClick" />
+                  <Button x:Name="ExportOutputPackageButton" Classes="primary" Content="Export data package" Click="ExportAnalysisButton_OnClick" />
                 </StackPanel>
               </Grid>
-              <Border Grid.Row="2" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22">
-                <StackPanel Spacing="12">
-                  <TextBlock x:Name="AnalysisSummaryText" Text="Decode a capture to generate analysis." FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                  <TextBlock Text="Outputs use the same selected replay range and decoder configuration as Paint. Invalid frames remain evidence and never contribute invented hotspot coordinates." FontSize="12" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
-                  <TextBlock x:Name="AnalysisOutputText" Text="No output written" FontFamily="Cascadia Mono" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
-                </StackPanel>
-              </Border>
+              <Grid Grid.Row="2" ColumnDefinitions="5*,14,3*">
+                <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
+                  <Grid RowDefinitions="Auto,12,*,12,Auto">
+                    <StackPanel Spacing="4">
+                      <TextBlock x:Name="AnalysisSummaryText" Text="Open Output to prepare a preview." FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock Text="Invalid frames remain evidence and never contribute invented hotspot coordinates." FontSize="12" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Border Grid.Row="2" Background="{DynamicResource WorkspaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="10">
+                      <Grid RowDefinitions="Auto,8,*">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Text="HOTSPOT PREVIEW" Classes="section" VerticalAlignment="Center" />
+                          <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                        </Grid>
+                        <controls:AnalysisHeatmapSurface x:Name="AnalysisHeatmapPreview"
+                                                         Grid.Row="2"
+                                                         MinHeight="220"
+                                                         AccentBrush="{DynamicResource AccentBrush}"
+                                                         GridBrush="{DynamicResource StrongBorderBrush}"
+                                                         TextBrush="{DynamicResource CanvasMutedTextBrush}"
+                                                         AutomationProperties.Name="Output hotspot preview" />
+                      </Grid>
+                    </Border>
+                    <Grid Grid.Row="4" ColumnDefinitions="*,12,*,12,*">
+                      <StackPanel>
+                        <TextBlock Classes="fieldLabel" Text="RANGE" />
+                        <TextBlock x:Name="OutputRangeText" Text="—" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2">
+                        <TextBlock Classes="fieldLabel" Text="CLOCK" />
+                        <TextBlock x:Name="OutputClockText" Text="—" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="4">
+                        <TextBlock Classes="fieldLabel" Text="FINDINGS" />
+                        <TextBlock x:Name="OutputFindingsText" Text="—" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Grid>
+                  </Grid>
+                </Border>
+
+                <Grid Grid.Column="2" RowDefinitions="Auto,10,Auto,10,*">
+                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
+                    <StackPanel Spacing="8">
+                      <TextBlock Text="EXPORT CONFIGURATION" Classes="section" />
+                      <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                      <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Margin="0,3,0,0" Padding="0,9,0,0">
+                        <TextBlock x:Name="OutputSourceText" Text="Source identity will appear here." FontFamily="Cascadia Mono" FontSize="10.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      </Border>
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
+                    <StackPanel Spacing="7">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="DATA PACKAGE" Classes="section" />
+                        <TextBlock Grid.Column="1" Text="9 files" FontFamily="Cascadia Mono" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                      </Grid>
+                      <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv / .jsonl&#x0a;manifest.json / heatmap.png" FontFamily="Cascadia Mono" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Row="4" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
+                    <StackPanel Spacing="7">
+                      <TextBlock Text="LAST OUTPUT" Classes="section" />
+                      <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="10.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </Grid>
+              </Grid>
             </Grid>
           </TabItem>
         </TabControl>
