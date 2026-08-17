@@ -36,6 +36,7 @@
                     <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#2A2116" />
                     <SolidColorBrush x:Key="InfoBrush" Color="#5EC4D4" />
                     <SolidColorBrush x:Key="DangerBrush" Color="#E07472" />
+                    <SolidColorBrush x:Key="OverlayBrush" Color="#B3090D10" />
                     <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#111A1E" />
                     <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#52656F" />
                     <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#26351B" />
@@ -50,7 +51,7 @@
                     <SolidColorBrush x:Key="HeaderBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="PanelBrush" Color="#F6F8F6" />
                     <SolidColorBrush x:Key="WorkspaceBrush" Color="#FBFCFA" />
-                    <SolidColorBrush x:Key="CanvasBrush" Color="#E9EFEC" />
+                    <SolidColorBrush x:Key="CanvasBrush" Color="#EDF2EF" />
                     <SolidColorBrush x:Key="CanvasTextBrush" Color="#21332B" />
                     <SolidColorBrush x:Key="CanvasMutedTextBrush" Color="#667970" />
                     <SolidColorBrush x:Key="RaisedSurfaceBrush" Color="#EDF1ED" />
@@ -75,6 +76,7 @@
                     <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#F4E8D1" />
                     <SolidColorBrush x:Key="InfoBrush" Color="#006B78" />
                     <SolidColorBrush x:Key="DangerBrush" Color="#A33C39" />
+                    <SolidColorBrush x:Key="OverlayBrush" Color="#9917201B" />
                     <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#AAB6AE" />
                     <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#E4EFD1" />

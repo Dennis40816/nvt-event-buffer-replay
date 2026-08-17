@@ -56,7 +56,7 @@ public static class ReplayVisualStyle
         "#78A9FF", "#66D39A", "#E48CE0", "#F2DD70", "#76D7B7");
 
     public static ReplayVisualPalette Light { get; } = Palette(
-        "#E9EFEC", "#F7FAF8", "#DCE5E1", "#C8D5D0", "#B5C6BF", "#819890", "#586D64",
+        "#EDF2EF", "#FBFDFC", "#DCE5E1", "#C8D5D0", "#B5C6BF", "#819890", "#586D64",
         "#FFFFFF", "#FFFFFF", "#182821", "#A65D10", "#8F467D", "#B63D3A", "#C13D3D",
         "#007C91", "#5D8100", "#B56500", "#6848C7", "#C53A59",
         "#3567C8", "#27855A", "#A14299", "#8E7600", "#177D68");

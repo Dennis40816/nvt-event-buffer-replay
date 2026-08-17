@@ -94,7 +94,7 @@ public sealed class ReplayExportTests : IDisposable
         var lightFrame = ReplayFrameRenderer.RenderRgb(scene, 320, 180, light);
 
         Assert.Equal([16, 23, 26], darkFrame[..3]);
-        Assert.Equal([233, 239, 236], lightFrame[..3]);
+        Assert.Equal([237, 242, 239], lightFrame[..3]);
         Assert.NotEqual(SHA256.HashData(darkFrame), SHA256.HashData(lightFrame));
     }
 

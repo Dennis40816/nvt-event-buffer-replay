@@ -29,17 +29,17 @@ public sealed record RawRecordRow(SourceRecord Record, RegisterActivityEntry? Ac
 {
     public long Index => Record.Index;
 
-    public string Timestamp => Record.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "—";
+    public string Timestamp => Record.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "-";
 
     public string Operation => Record.Operation.ToString().ToUpperInvariant();
 
     public string Target => Record.Target;
 
-    public string Address => Record.Address is { } address ? $"0x{address:X}" : "—";
+    public string Address => Record.Address is { } address ? $"0x{address:X}" : "-";
 
-    public string Register => Record.SourceFields?.GetValueOrDefault("register_readable") ?? "—";
+    public string Register => Record.SourceFields?.GetValueOrDefault("register_readable") ?? "-";
 
-    public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—"}";
+    public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
 
     public string Preview => string.Join(' ', Record.Data.Take(16).Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
 
@@ -63,7 +63,7 @@ public sealed record DecodedFrameRow(
 {
     public int Index => LogicalIndex + 1;
 
-    public string Timestamp => Source.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "—";
+    public string Timestamp => Source.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "-";
 
     public string Crc => CrcValid ? "OK" : "FAIL";
 

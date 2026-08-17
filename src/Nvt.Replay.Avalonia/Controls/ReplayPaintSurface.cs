@@ -464,12 +464,12 @@ public sealed class ReplayPaintSurface : Control
             return;
         }
 
-        const double headerHeight = 26;
-        const double itemHeight = 22;
+        const double headerHeight = 28;
+        const double itemHeight = 24;
         const double bottomPadding = 7;
         var legendRect = PositionLegend(
             viewport,
-            new Size(140, headerHeight + (entries.Length * itemHeight) + bottomPadding));
+            new Size(150, headerHeight + (entries.Length * itemHeight) + bottomPadding));
         legendBounds = legendRect;
         context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
 
@@ -478,7 +478,7 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            11,
+            12.5,
             AxisLabelBrush);
         var headingBounds = new Rect(legendRect.X + 10, legendRect.Y, legendRect.Width - 20, headerHeight);
         context.DrawText(heading, new Point(headingBounds.X, CenteredTextY(headingBounds, heading)));
@@ -499,7 +499,7 @@ public sealed class ReplayPaintSurface : Control
                 CultureInfo.InvariantCulture,
                 FlowDirection.LeftToRight,
                 new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
-                12,
+                13,
                 LabelTextBrush);
             context.DrawText(text, new Point(rowBounds.X + 11, CenteredTextY(rowBounds, text)));
             DrawLegendType(
@@ -521,9 +521,9 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            12,
+            13,
             LabelTextBrush);
-        var legendRect = PositionLegend(viewport, new Size(text.Width + 37, 30));
+        var legendRect = PositionLegend(viewport, new Size(text.Width + 39, 32));
         legendBounds = legendRect;
         context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 15, 15);
         context.DrawEllipse(AxisLabelBrush, null, new Point(legendRect.X + 13, legendRect.Center.Y), 3.5, 3.5);
@@ -542,7 +542,7 @@ public sealed class ReplayPaintSurface : Control
         AddContactCount(parts, gloves, "glove");
         AddContactCount(parts, palms, "palm");
         AddContactCount(parts, other, "other", pluralize: false);
-        return parts.Count == 0 ? "0 contacts" : string.Join(" · ", parts);
+        return parts.Count == 0 ? "0 contacts" : string.Join("  |  ", parts);
     }
 
     private static void AddContactCount(
@@ -581,7 +581,7 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
-            11,
+            12.5,
             AxisLabelBrush);
         context.DrawText(text, new Point(bounds.X + 11, CenteredTextY(bounds, text)));
     }
@@ -659,14 +659,14 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            13,
+            14,
             LabelTextBrush);
         var coordinateText = new FormattedText(
-            $"X {contact.X}  Y {contact.Y}  ·  {TypeLabel(contact.Type)}",
+            $"X {contact.X}   Y {contact.Y}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
-            12,
+            13,
             AxisLabelBrush);
         var width = Math.Max(headerText.Width + 17, coordinateText.Width) + 14;
         var height = headerText.Height + coordinateText.Height + 8;
@@ -754,7 +754,7 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
-            12,
+            13,
             AxisLabelBrush);
         var x = centered ? origin.X - (text.Width / 2) : rightAligned ? origin.X - text.Width : origin.X;
         var y = rightAligned ? origin.Y - (text.Height / 2) : origin.Y;

@@ -8,7 +8,6 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -84,17 +83,6 @@ public partial class MainWindow : Window
     private const int OutputVideoFrameRate = 30;
     private const int OutputPreviewWidth = 960;
     private const int OutputPreviewHeight = 540;
-    private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
-    private static readonly HashSet<uint> DarkLiteralTextColors =
-    [
-        0xFF59646B, 0xFF657078, 0xFF667279, 0xFF68747A, 0xFF69757B, 0xFF707B81,
-        0xFF707C82, 0xFF737F85, 0xFF77848A, 0xFF78848A, 0xFF7C878C, 0xFF7D888E,
-        0xFF7E898F, 0xFF869197, 0xFF8A969B, 0xFF8D989D, 0xFF8E999E, 0xFF9AA4A8,
-        0xFF9FB6BE, 0xFFA6B0B4, 0xFFA8B1B5, 0xFFAAB3B6, 0xFFAEB7BB, 0xFFB8C1C4,
-        0xFFC2CACD, 0xFFC4CCCE, 0xFFC8CED0, 0xFFC9D0D2, 0xFFD2D8D6, 0xFFD3D9D7,
-        0xFFD8AD62, 0xFFDDE3E1, 0xFFE0E5E3, 0xFFF0F4F2, 0xFFC8F36C, 0xFF58C7D9,
-    ];
-
     public MainWindow()
     {
         InitializeComponent();
@@ -143,7 +131,6 @@ public partial class MainWindow : Window
         Opened += (_, _) =>
         {
             ApplyWorkingAreaHeightLimit();
-            ScheduleThemeContrast();
             ApplyResponsiveRails(Bounds.Width);
         };
         SizeChanged += MainWindow_OnSizeChanged;
@@ -170,7 +157,9 @@ public partial class MainWindow : Window
             SetInspectorRailCollapsed(true);
             return;
         }
-        SetReviewRailCollapsed(reviewRailUserPreference ?? width < 1400);
+        // Keep an empty review queue out of the workspace. Actionable findings open
+        // automatically on wide layouts, and an explicit user choice always wins.
+        SetReviewRailCollapsed(reviewRailUserPreference ?? (reviewRows.Length == 0 || width < 1400));
         SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1240);
     }
 
@@ -209,36 +198,8 @@ public partial class MainWindow : Window
 
     private void Application_OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        ScheduleThemeContrast();
         PaintSurface.InvalidateVisual();
         RefreshCurrentOutputVideoFrame();
-    }
-
-    private void ScheduleThemeContrast() => Dispatcher.UIThread.Post(ApplyThemeContrast, DispatcherPriority.Loaded);
-
-    private void ApplyThemeContrast()
-    {
-        var isLight = Application.Current?.RequestedThemeVariant == ThemeVariant.Light;
-        if (!isLight)
-        {
-            foreach (var pair in originalTextBrushes) pair.Key.Foreground = pair.Value;
-            originalTextBrushes.Clear();
-            return;
-        }
-        foreach (var textBlock in this.GetVisualDescendants().OfType<TextBlock>())
-        {
-            if (textBlock.Foreground is not ISolidColorBrush brush || !DarkLiteralTextColors.Contains(brush.Color.ToUInt32())) continue;
-            originalTextBrushes.TryAdd(textBlock, textBlock.Foreground);
-            var color = brush.Color.ToUInt32() switch
-            {
-                0xFFC8F36C => Color.Parse("#537D00"),
-                0xFFD8AD62 => Color.Parse("#8A5900"),
-                0xFF58C7D9 => Color.Parse("#006B78"),
-                var value when ((value >> 16) & 0xff) + ((value >> 8) & 0xff) + (value & 0xff) > 480 => Color.Parse("#17201B"),
-                _ => Color.Parse("#536159"),
-            };
-            textBlock.Foreground = new SolidColorBrush(color);
-        }
     }
 
     private void CommandPaletteButton_OnClick(object? sender, RoutedEventArgs e) => ToggleCommandPalette();
@@ -345,7 +306,6 @@ public partial class MainWindow : Window
             SourceConfidenceText.Text = $"{session.Probe.Confidence} confidence · {session.Probe.Reasons.FirstOrDefault()}";
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
-            DecodeButton.IsEnabled = true;
             RegisterProfileComboBox.IsEnabled = true;
             ExportReadableLogButton.IsEnabled = true;
             configuringRegisterProfile = true;
@@ -359,7 +319,6 @@ public partial class MainWindow : Window
             {
                 RawRecordsList.SelectedIndex = 0;
             }
-            ScheduleThemeContrast();
         }
         catch (OperationCanceledException)
         {
@@ -390,8 +349,6 @@ public partial class MainWindow : Window
             SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
     }
-
-    private async void DecodeButton_OnClick(object? sender, RoutedEventArgs e) => await DecodeSelectedAsync();
 
     internal async Task ApplyStartupDecodeAsync(string eventVersion, string? palmProfile, string? registerProfile = null)
     {
@@ -572,7 +529,6 @@ public partial class MainWindow : Window
             {
                 WorkspaceTabs.SelectedIndex = 0;
             }
-            ScheduleThemeContrast();
         }
         catch (OperationCanceledException)
         {
@@ -687,9 +643,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        var isDesay97 = (sender as ComboBox)?.SelectedItem is ComboBoxItem item &&
+        var comboBox = sender as ComboBox;
+        var isDesay97 = comboBox?.SelectedItem is ComboBoxItem item &&
                         item.Content?.ToString() == "0x97";
         if (Desay97ProfileComboBox is null)
         {
@@ -709,6 +666,8 @@ public partial class MainWindow : Window
                     : "IC profile confirmed · select Standard or Benz Palm to decode 0x97."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
+        if (session is not null && !isDesay97 && comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false })
+            await DecodeSelectedAsync();
     }
 
     private void OpenOutputPreviewButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1107,12 +1066,12 @@ public partial class MainWindow : Window
             RegisterActivitySurface.SetSelected(null);
             InspectorTitleText.Text = "No matching record";
             InspectorSubtitleText.Text = "Adjust the Raw Explorer search or register filter.";
-            InspectorLogicalText.Text = "—";
-            InspectorPhysicalText.Text = "—";
-            InspectorTouchesText.Text = "—";
-            InspectorCrcText.Text = "—";
-            InspectorAsilText.Text = "—";
-            InspectorAllBreakText.Text = "—";
+            InspectorLogicalText.Text = "-";
+            InspectorPhysicalText.Text = "-";
+            InspectorTouchesText.Text = "-";
+            InspectorCrcText.Text = "-";
+            InspectorAsilText.Text = "-";
+            InspectorAllBreakText.Text = "-";
             DecodedFieldsText.Text = "No physical source record matches the current Raw Explorer query.";
         }
     }
@@ -1308,9 +1267,9 @@ public partial class MainWindow : Window
         var evidence = details?.GetValueOrDefault("evidence");
         ReviewStateText.Text =
             $"captured={group.CurrentCapturedAlarmState} · workflow={group.WorkflowState} · " +
-            $"lifecycle={group.AsilLifecycle?.ToString() ?? "—"} · disposition={group.Disposition}" +
+            $"lifecycle={group.AsilLifecycle?.ToString() ?? "-"} · disposition={group.Disposition}" +
             (string.IsNullOrWhiteSpace(qa) ? string.Empty : $"\nQA={qa}") +
-            (string.IsNullOrWhiteSpace(evidence) || evidence == "—" ? string.Empty : $"\nevidence={evidence}");
+            (string.IsNullOrWhiteSpace(evidence) || evidence == "-" ? string.Empty : $"\nevidence={evidence}");
     }
 
     private void CreateReviewSession(IReadOnlyList<ReplayDiagnostic> diagnostics)
@@ -1337,14 +1296,14 @@ public partial class MainWindow : Window
         return new ReplayDiagnostic(
             DiagnosticSeverity.Info,
             "ANNOTATION_MARKER",
-            marker.IsRange ? $"{marker.Label} · frames {marker.StartLogicalIndex + 1}–{marker.EndLogicalIndex + 1}" : $"{marker.Label} · frame {marker.StartLogicalIndex + 1}",
+            marker.IsRange ? $"{marker.Label} · frames {marker.StartLogicalIndex + 1}-{marker.EndLogicalIndex + 1}" : $"{marker.Label} · frame {marker.StartLogicalIndex + 1}",
             source?.StableId ?? session?.SourceSha256 ?? "sidecar",
             source?.Location ?? new SourceLocation(0, 0),
             new Dictionary<string, string>
             {
                 ["marker_id"] = marker.Id,
                 ["qa_case_ids"] = string.Join(", ", marker.QaCaseIds ?? []),
-                ["evidence"] = evidence.Count == 0 ? "—" : string.Join("; ", evidence.Select(item => $"{item.Kind}:{item.Label ?? Path.GetFileName(item.Path)}:{(File.Exists(item.Path) ? "available" : "missing")}")),
+                ["evidence"] = evidence.Count == 0 ? "-" : string.Join("; ", evidence.Select(item => $"{item.Kind}:{item.Label ?? Path.GetFileName(item.Path)}:{(File.Exists(item.Path) ? "available" : "missing")}")),
             });
     }
 
@@ -1358,6 +1317,7 @@ public partial class MainWindow : Window
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
         var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
         if (selected is not null) DiagnosticListBox.SelectedItem = selected;
+        if (Bounds.Width > 0) ApplyResponsiveRails(Bounds.Width);
     }
 
     private void AddMarkerButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1376,7 +1336,7 @@ public partial class MainWindow : Window
         CreateReviewSession(baseDiagnostics);
         RefreshReviewQueue($"ANNOTATION_MARKER:{marker.Id}");
         SessionStatusText.Text = marker.IsRange
-            ? $"Added range marker · frames {start + 1}–{end + 1}"
+            ? $"Added range marker · frames {start + 1}-{end + 1}"
             : $"Added marker · frame {start + 1}";
     }
 
@@ -1588,31 +1548,31 @@ public partial class MainWindow : Window
         };
         InspectorLogicalText.Text = currentLogicalIndex >= 0 && replaySession is not null
             ? $"{currentLogicalIndex + 1} / {replaySession.Count}"
-            : "—";
+            : "-";
         InspectorPhysicalText.Text = record.Index.ToString(CultureInfo.InvariantCulture);
         InspectorTouchesText.Text = frame switch
         {
             CommonEventBufferFrame common => common.NumTouches.ToString(CultureInfo.InvariantCulture),
             Desay97Frame desay => desay.NumTouches.ToString(CultureInfo.InvariantCulture),
-            _ => "—",
+            _ => "-",
         };
         InspectorCrcText.Text = frame switch
         {
             CommonEventBufferFrame common => common.CrcValid ? "OK" : "FAIL",
             Desay97Frame desay => desay.CrcValid ? "OK" : "FAIL",
-            _ => "—",
+            _ => "-",
         };
         InspectorAsilText.Text = frame switch
         {
             CommonEventBufferFrame common => $"0x{common.Asil.Raw:X2}",
-            Desay97Frame desay => desay.TpAsilError ? "TP alarm" : "—",
-            _ => "—",
+            Desay97Frame desay => desay.TpAsilError ? "TP alarm" : "-",
+            _ => "-",
         };
         InspectorAllBreakText.Text = frame switch
         {
             CommonEventBufferFrame common => common.AllBreak.ToString(),
             Desay97Frame desay => desay.AllBreak.ToString(),
-            _ => "—",
+            _ => "-",
         };
 
         var frameAlerts = reviewSession?.Diagnostics
@@ -1668,17 +1628,17 @@ public partial class MainWindow : Window
     {
         var text = new StringBuilder()
             .Append(record.Operation).Append(' ').Append(record.Target).Append(' ')
-            .Append(record.Address is { } address ? $"0x{address:X}" : "address=—")
+            .Append(record.Address is { } address ? $"0x{address:X}" : "address=-")
             .AppendLine()
-            .Append("declared=").Append(record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—")
+            .Append("declared=").Append(record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-")
             .Append(" actual=").Append(record.Data.Count);
         if (record.I2c is { } i2c)
         {
             text.AppendLine().Append($"slave=0x{i2c.SlaveAddress:X2} address-ack={AckText(i2c.AddressAcknowledged)}");
             text.AppendLine().Append("write commands=")
-                .Append(i2c.WriteCommands.Count == 0 ? "—" : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes)));
+                .Append(i2c.WriteCommands.Count == 0 ? "-" : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes)));
             text.AppendLine().Append("data ACKs=")
-                .Append(i2c.Acked.Count == 0 ? "—" : string.Join(' ', i2c.Acked.Select(value => value ? "ACK" : "NAK")));
+                .Append(i2c.Acked.Count == 0 ? "-" : string.Join(' ', i2c.Acked.Select(value => value ? "ACK" : "NAK")));
             if (!string.IsNullOrWhiteSpace(i2c.Error)) text.AppendLine().Append("transport error=").Append(i2c.Error);
         }
         if (record.SourceFields is { Count: > 0 })
@@ -1690,7 +1650,7 @@ public partial class MainWindow : Window
         return text.ToString();
     }
 
-    private static string AckText(bool? value) => value switch { true => "ACK", false => "NAK", null => "—" };
+    private static string AckText(bool? value) => value switch { true => "ACK", false => "NAK", null => "-" };
 
     private sealed record SourceAdapterChoice(string AdapterId, string DisplayName, ProbeConfidence Confidence)
     {
@@ -1745,7 +1705,6 @@ public partial class MainWindow : Window
         EventVersionComboBox.IsEnabled = false;
         Desay97ProfileComboBox.SelectedIndex = -1;
         Desay97ProfileComboBox.IsVisible = false;
-        DecodeButton.IsEnabled = false;
         PaintTab.IsEnabled = false;
         PreviousFrameButton.IsEnabled = false;
         PlayPauseButton.IsEnabled = false;
@@ -1782,7 +1741,7 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.SetLoopRange(null, null, false);
         ReplayClockText.Text = "00:00.000";
         ReplayEndClockText.Text = "00:00.000";
-        LoopRangeText.Text = "Loop —";
+        LoopRangeText.Text = "Loop -";
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
         PaintZoomHintBorder.IsVisible = false;
@@ -1808,12 +1767,12 @@ public partial class MainWindow : Window
         DiagnosticCountText.Text = "0";
         InspectorTitleText.Text = "Frame Summary";
         InspectorSubtitleText.Text = "Select a physical record or decoded event.";
-        InspectorLogicalText.Text = "—";
-        InspectorPhysicalText.Text = "—";
-        InspectorTouchesText.Text = "—";
-        InspectorCrcText.Text = "—";
-        InspectorAsilText.Text = "—";
-        InspectorAllBreakText.Text = "—";
+        InspectorLogicalText.Text = "-";
+        InspectorPhysicalText.Text = "-";
+        InspectorTouchesText.Text = "-";
+        InspectorCrcText.Text = "-";
+        InspectorAsilText.Text = "-";
+        InspectorAllBreakText.Text = "-";
         InspectorAlertBorder.IsVisible = false;
         InspectorAlertText.Text = string.Empty;
         SourceAdapterText.Text = "Probing…";
@@ -1828,7 +1787,6 @@ public partial class MainWindow : Window
         LoadingProgress.IsVisible = busy;
         LoadButton.IsVisible = !busy;
         CancelButton.IsVisible = busy;
-        DecodeButton.IsEnabled = !busy && session is not null;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
         RegisterProfileComboBox.IsEnabled = !busy && session is not null;
@@ -2358,8 +2316,8 @@ public partial class MainWindow : Window
     {
         var hasRange = loopIn is not null && loopOut is not null;
         LoopRangeText.Text = !hasRange
-            ? "Loop —"
-            : $"Loop {loopIn!.Value + 1:N0}–{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " · off")}";
+            ? "Loop -"
+            : $"Loop {loopIn!.Value + 1:N0}-{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " · off")}";
         ClearLoopButton.IsEnabled = hasRange;
         ReplayTimelineSurface.SetLoopRange(loopIn, loopOut, loopEnabled);
         RefreshOutputPreviewIfVisible();
