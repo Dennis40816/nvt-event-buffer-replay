@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Nvt.Replay.Avalonia.Controls;
 using Xunit;
 
 namespace Nvt.Replay.Avalonia.Tests;
@@ -148,6 +149,49 @@ public sealed class MainWindowLayoutTests
             Assert.NotEqual(paintDark, paintLight);
             Assert.NotEqual(outputDark, outputLight);
             Assert.NotEqual(paintDark, outputDark);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Drop_downs_reserve_the_longest_visible_option_without_fixed_widths()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var names = new[]
+            {
+                "SourceAdapterComboBox",
+                "EventVersionComboBox",
+                "RegisterProfileComboBox",
+                "Desay97ProfileComboBox",
+                "RegisterFilterComboBox",
+                "PaintModeComboBox",
+                "TrailModeComboBox",
+                "TrailLengthComboBox",
+                "LegendPositionComboBox",
+                "ReviewOccurrenceComboBox",
+                "ClockModeComboBox",
+                "ReplaySpeedComboBox",
+            };
+
+            foreach (var name in names)
+            {
+                var comboBox = Required<ComboBox>(window, name);
+                Assert.True(double.IsNaN(comboBox.Width), $"{name} still has a fixed width.");
+                Assert.True(
+                    comboBox.MinWidth >= ComboBoxAutoSizer.RequiredWidth(comboBox),
+                    $"{name} does not reserve its longest option.");
+            }
+
+            var legend = Required<ComboBox>(window, "LegendPositionComboBox");
+            var selectedWidth = ComboBoxAutoSizer.MeasureLabelWidth(legend, "Auto");
+            var longestWidth = ComboBoxAutoSizer.MeasureLabelWidth(legend, "Bottom right");
+            Assert.True(longestWidth > selectedWidth);
+            Assert.True(legend.MinWidth >= longestWidth + ComboBoxAutoSizer.ChromeAndPaddingWidth);
         }
         finally
         {

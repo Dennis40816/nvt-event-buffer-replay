@@ -125,6 +125,19 @@ public partial class MainWindow : Window
         configuringRegisterProfile = false;
         RegisterFilterComboBox.SelectedIndex = 0;
         ShortcutModulesItemsControl.ItemsSource = ReplayShortcutCatalog.Modules;
+        ComboBoxAutoSizer.Fit(
+            SourceAdapterComboBox,
+            EventVersionComboBox,
+            RegisterProfileComboBox,
+            Desay97ProfileComboBox,
+            RegisterFilterComboBox,
+            PaintModeComboBox,
+            TrailModeComboBox,
+            TrailLengthComboBox,
+            LegendPositionComboBox,
+            ReviewOccurrenceComboBox,
+            ClockModeComboBox,
+            ReplaySpeedComboBox);
         ApplyShortcutToolTips();
         PaintSurface.LegendCollapsedChanged += PaintSurface_OnLegendCollapsedChanged;
         RegisterActivitySurface.ActivitySelected += RegisterActivitySurface_OnActivitySelected;
@@ -331,6 +344,7 @@ public partial class MainWindow : Window
             SourceAdapterComboBox.ItemsSource = exception.Candidates
                 .Select(candidate => new SourceAdapterChoice(candidate.AdapterId, candidate.DisplayName, candidate.Confidence))
                 .ToArray();
+            ComboBoxAutoSizer.Fit(SourceAdapterComboBox);
             SourceAdapterComboBox.SelectedIndex = -1;
             SourceAdapterComboBox.IsVisible = true;
             SourceAdapterText.IsVisible = false;
@@ -1192,6 +1206,7 @@ public partial class MainWindow : Window
         ReviewOccurrenceComboBox.ItemsSource = row.Group.Occurrences
             .Select((occurrence, index) => new ReviewOccurrenceRow(index + 1, occurrence))
             .ToArray();
+        ComboBoxAutoSizer.Fit(ReviewOccurrenceComboBox);
         ReviewOccurrenceComboBox.SelectedIndex = 0;
         UpdateReviewState(row.Group);
     }

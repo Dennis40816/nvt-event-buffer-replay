@@ -509,7 +509,7 @@
         </Grid>
 
         <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
-          <Grid Margin="16,0" ColumnDefinitions="Auto,8,190,18,Auto,8,92,18,Auto,8,150,18,Auto,18,*" VerticalAlignment="Center">
+          <Grid Margin="16,0" ColumnDefinitions="Auto,8,Auto,18,Auto,8,Auto,18,Auto,8,Auto,18,Auto,18,*" VerticalAlignment="Center">
             <TextBlock Text="Source" Classes="fieldLabel" />
             <Grid Grid.Column="2">
               <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
@@ -518,7 +518,7 @@
             </Grid>
 
             <TextBlock Grid.Column="4" Text="Version" Classes="fieldLabel" />
-            <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" Width="92" PlaceholderText="Select" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
+            <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" PlaceholderText="Select" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
               <ComboBoxItem Content="0x82" />
               <ComboBoxItem Content="0x83" />
               <ComboBoxItem Content="0x84" />
@@ -527,8 +527,8 @@
             </ComboBox>
 
             <TextBlock Grid.Column="8" Text="IC profile" Classes="fieldLabel" />
-            <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="10" Width="150" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
-            <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="12" Width="126" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
+            <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="10" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
+            <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="12" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
               <ComboBoxItem Content="Standard" />
               <ComboBoxItem Content="Benz Palm" />
             </ComboBox>
@@ -594,9 +594,9 @@
           <TabItem Header="RAW EXPLORER">
             <Grid RowDefinitions="48,24,34,*">
               <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="10,0" ColumnDefinitions="Auto,8,164,14,*,14,Auto" VerticalAlignment="Center">
+                <Grid Margin="10,0" ColumnDefinitions="Auto,8,Auto,14,*,14,Auto" VerticalAlignment="Center">
                   <TextBlock Text="Show" Classes="fieldLabel" />
-                  <ComboBox x:Name="RegisterFilterComboBox" Grid.Column="2" Width="164" SelectionChanged="RegisterFilterComboBox_OnSelectionChanged" AutomationProperties.Name="Register activity filter" />
+                  <ComboBox x:Name="RegisterFilterComboBox" Grid.Column="2" SelectionChanged="RegisterFilterComboBox_OnSelectionChanged" AutomationProperties.Name="Register activity filter" />
                   <TextBox x:Name="RegisterSearchTextBox" Grid.Column="4" Classes="registerSearch" MinWidth="180" MaxWidth="360" HorizontalAlignment="Stretch" PlaceholderText="Search address, register, payload…" TextChanged="RegisterSearchTextBox_OnTextChanged" AutomationProperties.Name="Search physical records" />
                   <Button x:Name="ExportReadableLogButton" Grid.Column="6" Classes="toolbarAction" Content="Export readable" IsEnabled="False" Click="ExportReadableLogButton_OnClick" AutomationProperties.Name="Export readable communication log" />
                 </Grid>
@@ -677,7 +677,7 @@
           <TabItem x:Name="PaintTab" Header="PAINT" IsEnabled="False">
             <Grid RowDefinitions="52,*">
                 <Border Grid.Row="0" Classes="paintSettingsBar">
-                  <Grid Margin="16,0" ColumnDefinitions="Auto,16,1,16,Auto,9,62,Auto,62,16,1,16,Auto,9,126,*" VerticalAlignment="Center">
+                  <Grid Margin="16,0" ColumnDefinitions="Auto,16,1,16,Auto,9,62,Auto,62,16,1,16,Auto,9,Auto,*" VerticalAlignment="Center">
                     <TextBlock Text="Paint settings" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
                     <Border Grid.Column="2" Classes="separator" />
                     <TextBlock Grid.Column="4" Text="Panel resolution" Classes="fieldLabel" />
@@ -686,7 +686,7 @@
                     <TextBox x:Name="PanelHeightTextBox" Grid.Column="8" Classes="panelSize" Width="62" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
                     <Border Grid.Column="10" Classes="separator" />
                     <TextBlock Grid.Column="12" Text="Point view" Classes="fieldLabel" />
-                    <ComboBox x:Name="PaintModeComboBox" Grid.Column="14" Classes="semanticSelect" Width="126" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Choose host, report, or comparison points" AutomationProperties.Name="Point view">
+                    <ComboBox x:Name="PaintModeComboBox" Grid.Column="14" Classes="semanticSelect" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Choose host, report, or comparison points" AutomationProperties.Name="Point view">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectOption">
                           <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -711,8 +711,8 @@
                 </Border>
                 <StackPanel Margin="14" Spacing="7" VerticalAlignment="Top" HorizontalAlignment="Right">
                     <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                      <Grid Width="154" Height="34">
-                      <ComboBox x:Name="TrailModeComboBox" Classes="canvasSemanticSelect" Width="154" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
+                      <Grid Height="34">
+                      <ComboBox x:Name="TrailModeComboBox" Classes="canvasSemanticSelect" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
                         <ComboBox.ItemTemplate>
                           <DataTemplate x:DataType="vm:SelectOption">
                             <Grid Width="218" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -730,7 +730,7 @@
                       <TextBlock Margin="11,0,0,0" Text="&#xE8AB;" FontFamily="Segoe Fluent Icons" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False" />
                       </Grid>
                       <TextBlock x:Name="TrailLengthLabel" Text="Frames" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" IsVisible="False" VerticalAlignment="Center" />
-                      <ComboBox x:Name="TrailLengthComboBox" Classes="canvasControl" Width="58" SelectedIndex="2" IsVisible="False" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
+                      <ComboBox x:Name="TrailLengthComboBox" Classes="canvasControl" SelectedIndex="2" IsVisible="False" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
                         <ComboBoxItem Content="2" Tag="2" />
                         <ComboBoxItem Content="5" Tag="5" />
                         <ComboBoxItem Content="10" Tag="10" />
@@ -752,9 +752,9 @@
                         <TextBlock Text="CANVAS SETTINGS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" LetterSpacing="0.4" VerticalAlignment="Center" />
                         <Button Grid.Column="1" Classes="canvasQuick" Content="Clear trail" Click="ClearTrailsButton_OnClick" ToolTip.Tip="Clear visible trajectory history" AutomationProperties.Name="Clear visible trajectories" />
                       </Grid>
-                      <Grid ColumnDefinitions="Auto,8,118,8,*">
+                      <Grid ColumnDefinitions="Auto,8,Auto,8,*">
                         <TextBlock Text="Legend" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                        <ComboBox x:Name="LegendPositionComboBox" Grid.Column="2" Classes="canvasControl" Width="118" SelectionChanged="LegendPositionComboBox_OnSelectionChanged" AutomationProperties.Name="Legend position">
+                        <ComboBox x:Name="LegendPositionComboBox" Grid.Column="2" Classes="canvasControl" SelectionChanged="LegendPositionComboBox_OnSelectionChanged" AutomationProperties.Name="Legend position">
                           <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:SelectOption">
                               <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" />
@@ -1015,7 +1015,7 @@
 
     <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
       <Grid Margin="16,8" RowDefinitions="40,62,24">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,184,12,Auto,6,72,12,Auto,4,Auto,4,Auto,*,Auto,8,Auto,14,Auto">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,Auto,12,Auto,6,Auto,12,Auto,4,Auto,4,Auto,*,Auto,8,Auto,14,Auto">
           <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" AutomationProperties.Name="Previous logical frame" />
           <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="transportPlay" MinWidth="92" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play replay" />
           <Button x:Name="NextFrameButton" Grid.Column="4" Classes="canvasIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" AutomationProperties.Name="Next logical frame" />
@@ -1026,7 +1026,7 @@
             <ComboBoxItem Content="TP Frame · 120 Hz" />
           </ComboBox>
           <TextBlock Grid.Column="12" Classes="fieldLabel" Text="Speed" />
-          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="14" Width="72" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
+          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="14" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
             <ComboBoxItem Content="0.1×" Tag="0.1" />
             <ComboBoxItem Content="0.25×" Tag="0.25" />
             <ComboBoxItem Content="0.5×" Tag="0.5" />
