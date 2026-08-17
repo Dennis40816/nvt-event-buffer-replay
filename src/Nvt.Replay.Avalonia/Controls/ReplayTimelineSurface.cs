@@ -3,10 +3,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Rendering;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
-public sealed class ReplayTimelineSurface : Control
+public sealed class ReplayTimelineSurface : Control, ICustomHitTest
 {
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(TrackBrush));
@@ -47,6 +48,8 @@ public sealed class ReplayTimelineSurface : Control
     public IBrush? PlayheadBrush { get => GetValue(PlayheadBrushProperty); set => SetValue(PlayheadBrushProperty, value); }
     public IBrush? LoopBrush { get => GetValue(LoopBrushProperty); set => SetValue(LoopBrushProperty, value); }
     public IBrush? LoopSurfaceBrush { get => GetValue(LoopSurfaceBrushProperty); set => SetValue(LoopSurfaceBrushProperty, value); }
+
+    bool ICustomHitTest.HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
 
     public void SetMaximum(int value)
     {

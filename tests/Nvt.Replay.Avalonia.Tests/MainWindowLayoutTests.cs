@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
@@ -147,6 +148,34 @@ public sealed class MainWindowLayoutTests
             Assert.NotEqual(paintDark, paintLight);
             Assert.NotEqual(outputDark, outputLight);
             Assert.NotEqual(paintDark, outputDark);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Timeline_empty_space_click_seeks_to_the_nearest_logical_frame()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var timeline = Required<Control>(window, "ReplayTimelineSurface");
+            var localPoint = new Point(timeline.Bounds.Width * 0.75, timeline.Bounds.Height * 0.32);
+            var windowPoint = timeline.TranslatePoint(localPoint, window) ??
+                throw new InvalidOperationException("Timeline could not translate its click point to the window.");
+            var hit = window.InputHitTest(windowPoint);
+            Assert.Same(timeline, hit);
+
+            window.MouseDown(windowPoint, MouseButton.Left, RawInputModifiers.None);
+            window.MouseUp(windowPoint, MouseButton.Left, RawInputModifiers.None);
+
+            Assert.Equal("15 / 19", Required<TextBlock>(window, "InspectorLogicalText").Text);
         }
         finally
         {
