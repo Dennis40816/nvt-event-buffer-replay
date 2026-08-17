@@ -137,6 +137,51 @@ public sealed class CommonEventBufferDecoderTests
         Assert.Contains(result.Diagnostics, item => item.Code == "COMMON_TOUCH_COUNT_OUT_OF_RANGE");
     }
 
+    [Fact]
+    public void Duplicate_contact_ids_remain_decodable_but_cannot_update_host_state()
+    {
+        var packet = NewAllBreak(CommonEventBufferVersion.V83);
+        packet[0] = 0x02;
+        WriteFinger(packet, 0, id: 3, TouchStatus.Enter, x: 100, y: 200);
+        WriteFinger(packet, 1, id: 3, TouchStatus.Move, x: 300, y: 400);
+        Seal(packet);
+
+        var result = Decode(packet, CommonEventBufferVersion.V83);
+
+        Assert.NotNull(result.Frame);
+        Assert.False(result.Frame.HostStateEligible);
+        Assert.Equal(2, result.Frame.Fingers.Count(finger => finger.IsReported));
+        Assert.Contains(result.Diagnostics, item => item.Code == "COMMON_DUPLICATE_CONTACT_ID");
+    }
+
+    [Fact]
+    public void Unambiguous_active_touch_count_mismatch_cannot_update_host_state()
+    {
+        var packet = NewAllBreak(CommonEventBufferVersion.V83);
+        packet[0] = 0x02;
+        WriteFinger(packet, 0, id: 1, TouchStatus.Move, x: 100, y: 200);
+        Seal(packet);
+
+        var result = Decode(packet, CommonEventBufferVersion.V83);
+
+        Assert.False(result.Frame?.HostStateEligible);
+        Assert.Contains(result.Diagnostics, item => item.Code == "COMMON_ACTIVE_TOUCH_COUNT_MISMATCH");
+    }
+
+    [Fact]
+    public void Break_evidence_does_not_guess_project_specific_touch_count_semantics()
+    {
+        var packet = NewAllBreak(CommonEventBufferVersion.V83);
+        packet[0] = 0x01;
+        WriteFinger(packet, 0, id: 1, TouchStatus.Break, x: 100, y: 200);
+        Seal(packet);
+
+        var result = Decode(packet, CommonEventBufferVersion.V83);
+
+        Assert.True(result.Frame?.HostStateEligible);
+        Assert.DoesNotContain(result.Diagnostics, item => item.Code == "COMMON_ACTIVE_TOUCH_COUNT_MISMATCH");
+    }
+
     internal static byte[] NewAllBreak(CommonEventBufferVersion version)
     {
         var packet = new byte[CommonEventBufferDecoder.FrameLength];
@@ -150,6 +195,18 @@ public sealed class CommonEventBufferDecoderTests
     internal static void Seal(byte[] packet)
     {
         packet[79] = CommonCrc8.Compute(packet.AsSpan(0, 79));
+    }
+
+    private static void WriteFinger(byte[] packet, int slot, byte id, TouchStatus status, ushort x, ushort y)
+    {
+        var offset = 1 + (slot * CommonEventBufferDecoder.FingerLength);
+        packet[offset] = (byte)((id << 4) | (byte)status);
+        packet[offset + 1] = (byte)(x >> 8);
+        packet[offset + 2] = (byte)x;
+        packet[offset + 3] = (byte)(y >> 8);
+        packet[offset + 4] = (byte)y;
+        packet[offset + 5] = 0xFF;
+        packet[offset + 6] = 0xFF;
     }
 
     internal static SourceRecord Source(byte[] packet, long index = 1) =>

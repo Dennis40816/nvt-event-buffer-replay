@@ -6,6 +6,8 @@ namespace Nvt.Replay.Formats.Desay97;
 
 public sealed class Desay97Decoder
 {
+    public const int MaximumTouchCount = 10;
+
     public Desay97DecodeResult Decode(Desay97AssembledPacket packet, Desay97Profile profile)
     {
         ArgumentNullException.ThrowIfNull(packet);
@@ -18,6 +20,18 @@ public sealed class Desay97Decoder
         }
 
         var touchCount = (byte)(data[0] & 0x0F);
+        if (touchCount > MaximumTouchCount)
+        {
+            diagnostics.Add(Diagnostic(
+                packet,
+                "DESAY97_TOUCH_COUNT_OUT_OF_RANGE",
+                $"Desay 0x97 touch count {touchCount} exceeds the supported maximum {MaximumTouchCount}.",
+                new Dictionary<string, string>
+                {
+                    ["touch_count"] = touchCount.ToString(CultureInfo.InvariantCulture),
+                    ["maximum"] = MaximumTouchCount.ToString(CultureInfo.InvariantCulture),
+                }));
+        }
         var expectedLength = 1 + (5 * touchCount) + 1;
         if (data.Count != expectedLength)
         {
@@ -60,6 +74,24 @@ public sealed class Desay97Decoder
                 (meta & 0x10) != 0);
         }
 
+        var duplicateIds = fingers
+            .GroupBy(finger => finger.Id)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .Order()
+            .ToArray();
+        if (duplicateIds.Length > 0)
+        {
+            diagnostics.Add(Diagnostic(
+                packet,
+                "DESAY97_DUPLICATE_CONTACT_ID",
+                $"Desay 0x97 reports duplicate contact ID(s): {string.Join(", ", duplicateIds)}.",
+                new Dictionary<string, string>
+                {
+                    ["duplicate_ids"] = string.Join(',', duplicateIds),
+                }));
+        }
+
         var header = data[0];
         foreach (var alarm in HeaderAlarms(header))
         {
@@ -83,7 +115,7 @@ public sealed class Desay97Decoder
             data[^1],
             computedCrc,
             crcValid,
-            crcValid);
+            crcValid && touchCount <= MaximumTouchCount && duplicateIds.Length == 0);
         return new Desay97DecodeResult(frame, diagnostics);
     }
 
