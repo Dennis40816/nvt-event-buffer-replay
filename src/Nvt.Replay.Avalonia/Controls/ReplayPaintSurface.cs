@@ -49,6 +49,7 @@ public sealed class ReplayPaintSurface : Control
     private bool legendHovered;
     private Rect? legendBounds;
     private bool isPanning;
+    private byte? highlightedContactId;
     private Point panStart;
     private Vector panStartOffset;
     private IPointer? panPointer;
@@ -61,6 +62,13 @@ public sealed class ReplayPaintSurface : Control
     public ReplayLegendPosition LegendPosition => legendPosition;
     public event EventHandler? ZoomChanged;
     public event EventHandler? LegendCollapsedChanged;
+
+    public void SetHighlightedContact(byte? contactId)
+    {
+        if (highlightedContactId == contactId) return;
+        highlightedContactId = contactId;
+        InvalidateVisual();
+    }
 
     public ReplayPaintSurface()
     {
@@ -100,6 +108,7 @@ public sealed class ReplayPaintSurface : Control
     {
         scene = null;
         outgoingScene = null;
+        highlightedContactId = null;
         loopCrossfadeTimer.Stop();
         EndPan(releaseCapture: true);
         legendBounds = null;
@@ -599,6 +608,11 @@ public sealed class ReplayPaintSurface : Control
         var center = Project(viewport, scene, contact.X, contact.Y);
         var color = ContactColor(contact.Id);
         var idBrush = new SolidColorBrush(color);
+        if (highlightedContactId == contact.Id)
+        {
+            context.DrawEllipse(null, new Pen(LabelTextBrush, 2), center, 24, 24);
+            context.DrawEllipse(null, new Pen(idBrush, 2), center, 28, 28);
+        }
         if (contact.Invalid)
         {
             const double half = 12;
@@ -704,7 +718,11 @@ public sealed class ReplayPaintSurface : Control
             Math.Clamp(center.X, labelRect.Left, labelRect.Right),
             Math.Clamp(center.Y, labelRect.Top, labelRect.Bottom));
         context.DrawLine(new Pen(idBrush, 1), center, leaderEnd);
-        context.DrawRectangle(LabelSurfaceBrush, new Pen(idBrush, 1), labelRect);
+        var selected = highlightedContactId == contact.Id;
+        context.DrawRectangle(
+            selected ? HoverLabelSurfaceBrush : LabelSurfaceBrush,
+            new Pen(idBrush, selected ? 2 : 1),
+            labelRect);
         DrawTypeIcon(
             context,
             contact.Type,
