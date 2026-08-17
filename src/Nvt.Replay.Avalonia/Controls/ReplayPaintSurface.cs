@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Rendering;
@@ -13,6 +15,7 @@ namespace Nvt.Replay.Avalonia.Controls;
 public sealed class ReplayPaintSurface : Control
 {
     private static readonly Cursor PanCursor = new(StandardCursorType.SizeAll);
+    private static readonly TimeSpan LoopCrossfadeDuration = TimeSpan.FromMilliseconds(140);
 
     private static readonly PaintPalette DarkPalette = new(
         Stage: Brush("#10171A"),
@@ -77,6 +80,9 @@ public sealed class ReplayPaintSurface : Control
     private IBrush InvalidBrush => Palette.Invalid;
 
     private ReplayScene? scene;
+    private ReplayScene? outgoingScene;
+    private readonly DispatcherTimer loopCrossfadeTimer;
+    private long loopCrossfadeStarted;
     private double zoomFactor = 1;
     private Vector viewportOffset;
     private bool strongGrid;
@@ -98,14 +104,34 @@ public sealed class ReplayPaintSurface : Control
     public event EventHandler? ZoomChanged;
     public event EventHandler? LegendCollapsedChanged;
 
+    public ReplayPaintSurface()
+    {
+        loopCrossfadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        loopCrossfadeTimer.Tick += (_, _) =>
+        {
+            if (LoopCrossfadeProgress() >= 1)
+            {
+                outgoingScene = null;
+                loopCrossfadeTimer.Stop();
+            }
+            InvalidateVisual();
+        };
+    }
+
     public void SetMode(ReplayRenderMode mode)
     {
         Mode = mode;
         InvalidateVisual();
     }
 
-    public void Show(ReplayScene value)
+    public void Show(ReplayScene value, bool crossfade = false)
     {
+        if (crossfade && scene is not null)
+        {
+            outgoingScene = scene;
+            loopCrossfadeStarted = Stopwatch.GetTimestamp();
+            loopCrossfadeTimer.Start();
+        }
         scene = value;
         viewportOffset = ClampViewportOffset(viewportOffset, value.Extent, zoomFactor);
         UpdatePanCursor();
@@ -115,6 +141,8 @@ public sealed class ReplayPaintSurface : Control
     public void Clear()
     {
         scene = null;
+        outgoingScene = null;
+        loopCrossfadeTimer.Stop();
         EndPan(releaseCapture: true);
         legendBounds = null;
         legendHovered = false;
@@ -288,36 +316,57 @@ public sealed class ReplayPaintSurface : Control
         DrawGrid(context, viewport, strongGrid);
         DrawAxisLabels(context, viewport, scene);
 
-        DrawTrails(context, viewport, scene);
+        var transition = LoopCrossfadeProgress();
+        if (outgoingScene is { } previous)
+        {
+            var previousViewport = BuildViewport(bounds, previous.Extent, zoomFactor, viewportOffset);
+            DrawSceneContacts(context, previousViewport, available, previous, 1 - transition);
+        }
+        DrawSceneContacts(context, viewport, available, scene, transition);
+        DrawLegend(context, legendViewport, scene);
+    }
+
+    private void DrawSceneContacts(DrawingContext context, Rect viewport, Rect available, ReplayScene value, double opacity)
+    {
+        if (opacity <= 0) return;
+        using var opacityScope = context.PushOpacity(Math.Clamp(opacity, 0, 1));
+        DrawTrails(context, viewport, value);
 
         if (Mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
         {
-            foreach (var contact in scene.ReportedContacts)
-                DrawContact(context, viewport, contact, scene, reported: true);
+            foreach (var contact in value.ReportedContacts)
+                DrawContact(context, viewport, contact, value, reported: true);
         }
         if (Mode is ReplayRenderMode.HostState or ReplayRenderMode.Compare)
         {
-            foreach (var contact in scene.HostContacts)
-                DrawContact(context, viewport, contact, scene, reported: false);
+            foreach (var contact in value.HostContacts)
+                DrawContact(context, viewport, contact, value, reported: false);
         }
 
         var labels = (Mode == ReplayRenderMode.HostState
-            ? scene.HostContacts
-            : scene.ReportedContacts.Concat(scene.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First()))
+            ? value.HostContacts
+            : value.ReportedContacts.Concat(value.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First()))
             .OrderBy(contact => contact.Id)
             .ToArray();
         var protectedPoints = labels
-            .Select(contact => Project(viewport, scene, contact.X, contact.Y))
+            .Select(contact => Project(viewport, value, contact.X, contact.Y))
             .Select(center => new Rect(center.X - 23, center.Y - 23, 46, 46))
             .ToArray();
         var occupiedLabels = new List<Rect>();
         foreach (var contact in labels)
-            DrawContactLabel(context, viewport, available, contact, scene, protectedPoints, occupiedLabels);
+            DrawContactLabel(context, viewport, available, contact, value, protectedPoints, occupiedLabels);
 
-        DrawLegend(context, legendViewport, scene);
-
-        if (scene.GlobalPalm)
+        if (value.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
+    }
+
+    private double LoopCrossfadeProgress()
+    {
+        if (outgoingScene is null || loopCrossfadeStarted == 0) return 1;
+        return Math.Clamp(
+            Stopwatch.GetElapsedTime(loopCrossfadeStarted).TotalMilliseconds / LoopCrossfadeDuration.TotalMilliseconds,
+            0,
+            1);
     }
 
     private static Rect BuildAvailableBounds(Rect bounds)

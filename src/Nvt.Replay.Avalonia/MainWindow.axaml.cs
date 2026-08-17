@@ -1621,7 +1621,7 @@ public partial class MainWindow : Window
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
     }
 
-    private void SeekReplay(int logicalIndex)
+    private void SeekReplay(int logicalIndex, bool crossfade = false)
     {
         if (replaySession is null || replaySession.Count == 0)
         {
@@ -1639,7 +1639,7 @@ public partial class MainWindow : Window
             markers,
             trailHistory?.Build(clampedIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
             reverseX,
-            reverseY));
+            reverseY), crossfade);
         ReplayClockText.Text = FormatClock(SelectedTime(snapshot.Timeline));
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
         ReplayTimelineSurface.SetPosition(clampedIndex);
@@ -1723,7 +1723,7 @@ public partial class MainWindow : Window
                 {
                     if (loopEnabled && loopIn is { } start && start <= end)
                     {
-                        SeekReplay(start);
+                        SeekReplay(start, crossfade: true);
                         continue;
                     }
                     StopPlayback("Replay complete · use Home, seek, or Play to restart");
