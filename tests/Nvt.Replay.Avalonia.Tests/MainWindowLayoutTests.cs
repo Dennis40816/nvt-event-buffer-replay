@@ -6,6 +6,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Xunit;
 
 namespace Nvt.Replay.Avalonia.Tests;
@@ -47,8 +48,10 @@ public sealed class MainWindowLayoutTests
             var profile = Required<ComboBox>(window, "RegisterProfileComboBox");
             var panelWidth = Required<TextBox>(window, "PanelWidthTextBox");
             var load = Required<Button>(window, "LoadButton");
+            var save = Required<Button>(window, "SaveReviewButton");
 
             Assert.Null(window.FindControl<Button>("DecodeButton"));
+            Assert.Equal("Select", version.PlaceholderText);
             Assert.Equal(34, version.Bounds.Height);
             Assert.Equal(34, profile.Bounds.Height);
             Assert.Equal(34, panelWidth.Height);
@@ -56,6 +59,12 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(VerticalAlignment.Center, version.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, panelWidth.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, load.VerticalContentAlignment);
+            Assert.Equal(
+                global::Avalonia.Media.Colors.Transparent,
+                Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(save.Background).Color);
+            Assert.Equal(
+                global::Avalonia.Media.Colors.Transparent,
+                Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(save.BorderBrush).Color);
         }
         finally
         {
@@ -93,11 +102,51 @@ public sealed class MainWindowLayoutTests
             var application = Assert.IsType<App>(Application.Current);
 
             application.RequestedThemeVariant = ThemeVariant.Dark;
-            var dark = CaptureHash(window);
+            var dark = CaptureHash(window, "01-empty-dark.png");
             application.RequestedThemeVariant = ThemeVariant.Light;
-            var light = CaptureHash(window);
+            var light = CaptureHash(window, "02-empty-light.png");
 
             Assert.NotEqual(dark, light);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Golden_capture_renders_distinct_Paint_and_exact_MP4_preview_themes()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            var application = Assert.IsType<App>(Application.Current);
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            application.RequestedThemeVariant = ThemeVariant.Dark;
+            var paintDark = CaptureHash(window, "03-golden-paint-dark.png");
+            application.RequestedThemeVariant = ThemeVariant.Light;
+            var paintLight = CaptureHash(window, "04-golden-paint-light.png");
+
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            tabs.SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            var previewFrame = Required<TextBlock>(window, "OutputPreviewFrameText");
+            await WaitUntilAsync(() => !string.Equals(previewFrame.Text, "output 0/0", StringComparison.Ordinal));
+            Assert.Contains("1280 × 720", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
+            Assert.False(Required<Button>(window, "PlayPauseButton").IsEnabled);
+            Assert.True(Required<Button>(window, "OutputPreviewPlayPauseButton").IsEnabled);
+            var sourceLines = Required<TextBlock>(window, "OutputSourceText").Text!.Split('\n');
+            Assert.Equal(32, sourceLines[^2].Length);
+            Assert.Equal(32, sourceLines[^1].Length);
+            var outputLight = CaptureHash(window, "05-golden-output-light.png");
+            application.RequestedThemeVariant = ThemeVariant.Dark;
+            var outputDark = CaptureHash(window, "06-golden-output-dark.png");
+
+            Assert.NotEqual(paintDark, paintLight);
+            Assert.NotEqual(outputDark, outputLight);
+            Assert.NotEqual(paintDark, outputDark);
         }
         finally
         {
@@ -115,11 +164,28 @@ public sealed class MainWindowLayoutTests
     private static T Required<T>(Control root, string name) where T : Control =>
         root.FindControl<T>(name) ?? throw new InvalidOperationException($"Missing control '{name}'.");
 
-    private static string CaptureHash(Window window)
+    private static async Task WaitUntilAsync(Func<bool> predicate)
+    {
+        var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (!predicate() && DateTime.UtcNow < timeout)
+        {
+            Dispatcher.UIThread.RunJobs();
+            await Task.Delay(10);
+        }
+        Assert.True(predicate(), "Timed out while waiting for the output preview.");
+    }
+
+    private static string CaptureHash(Window window, string artifactName)
     {
         using var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("Headless renderer returned no frame.");
         using var stream = new MemoryStream();
         frame.Save(stream, PngBitmapEncoderOptions.Default);
+        var artifactDirectory = Environment.GetEnvironmentVariable("NVT_UI_AUDIT_DIR");
+        if (!string.IsNullOrWhiteSpace(artifactDirectory))
+        {
+            Directory.CreateDirectory(artifactDirectory);
+            frame.Save(Path.Combine(artifactDirectory, artifactName), PngBitmapEncoderOptions.Default);
+        }
         return Convert.ToHexString(SHA256.HashData(stream.ToArray()));
     }
 }

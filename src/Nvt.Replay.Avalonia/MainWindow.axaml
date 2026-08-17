@@ -129,8 +129,14 @@
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     </Style>
     <Style Selector="Button.headerIcon:disabled">
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.headerIcon:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="TextBox.panelSize">
       <Setter Property="Height" Value="34" />
@@ -438,6 +444,10 @@
       <Setter Property="Padding" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
     <Style Selector="TabItem">
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -508,7 +518,7 @@
             </Grid>
 
             <TextBlock Grid.Column="4" Text="Version" Classes="fieldLabel" />
-            <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" Width="92" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
+            <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" Width="92" PlaceholderText="Select" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
               <ComboBoxItem Content="0x82" />
               <ComboBoxItem Content="0x83" />
               <ComboBoxItem Content="0x84" />

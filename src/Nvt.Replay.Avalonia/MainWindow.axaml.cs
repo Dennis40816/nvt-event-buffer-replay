@@ -515,7 +515,7 @@ public partial class MainWindow : Window
             CreateReviewSession(diagnosticRows.Select(row => row.Diagnostic).ToArray());
 
             DecodedFramesList.ItemsSource = decodedRows;
-            SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} decoded frames · {diagnosticRows.Length:N0} diagnostics";
+            SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
             ConfigurationHintText.Text = $"{formatLabel} confirmed · decoded automatically · raw source remains unchanged";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = decodedRows.Length > 0
@@ -694,6 +694,9 @@ public partial class MainWindow : Window
         outputWorkspaceActive = outputSelected;
         if (outputSelected)
         {
+            StopPlayback();
+            SetSourceTransportEnabled(false);
+            TimelineStatusText.Text = "Output preview active · use Preview above · drag Loop handles to change the export range";
             SetReviewRailCollapsed(true);
             SetInspectorRailCollapsed(true);
             await RefreshOutputPreviewAsync();
@@ -701,6 +704,9 @@ public partial class MainWindow : Window
         else
         {
             StopOutputVideoPreviewPlayback();
+            SetSourceTransportEnabled(true);
+            if (replaySession is { Count: > 0 })
+                TimelineStatusText.Text = "Paused · Space play/pause · ←/→ step · drag Loop handles to set range";
             ApplyResponsiveRails(Bounds.Width);
         }
     }
@@ -829,7 +835,8 @@ public partial class MainWindow : Window
             $"evidence {report.Manifest.FormatEvidenceStatus}\n" +
             $"paint    {PaintSurface.Mode}\n" +
             $"replay   {clockName} at {speed}";
-        OutputSourceText.Text = $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{session.SourceSha256}";
+        OutputSourceText.Text =
+            $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{FormatSha256(session.SourceSha256)}";
         AnalysisHeatmapPreview.Show(report.Hotspot);
         PrepareOutputVideoPreview(range, clockName, speed);
     }
@@ -1818,9 +1825,7 @@ public partial class MainWindow : Window
 
         var maximum = Math.Max(1, replaySession.Count - 1);
         PaintTab.IsEnabled = replaySession.Count > 0;
-        PreviousFrameButton.IsEnabled = replaySession.Count > 0;
-        PlayPauseButton.IsEnabled = replaySession.Count > 0;
-        NextFrameButton.IsEnabled = replaySession.Count > 0;
+        SetSourceTransportEnabled(!outputWorkspaceActive);
         LoopToggleButton.IsEnabled = replaySession.Count > 1;
         ReplayTimelineSurface.IsEnabled = replaySession.Count > 0;
         ReplayTimelineSurface.SetMaximum(maximum);
@@ -1833,6 +1838,14 @@ public partial class MainWindow : Window
         PaintSurface.Fit();
         UpdatePaintZoomText();
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
+    }
+
+    private void SetSourceTransportEnabled(bool enabled)
+    {
+        var available = enabled && replaySession is { Count: > 0 };
+        PreviousFrameButton.IsEnabled = available;
+        PlayPauseButton.IsEnabled = available;
+        NextFrameButton.IsEnabled = available;
     }
 
     private void SeekReplay(int logicalIndex, bool crossfade = false)
@@ -2400,6 +2413,10 @@ public partial class MainWindow : Window
         value.TotalHours >= 1
             ? value.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture)
             : value.ToString(@"mm\:ss\.fff", CultureInfo.InvariantCulture);
+
+    private static string FormatSha256(string value) => value.Length == 64
+        ? $"{value[..32]}\n{value[32..]}"
+        : value;
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

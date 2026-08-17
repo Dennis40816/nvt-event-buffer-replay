@@ -12,6 +12,9 @@ only scales that completed frame to its available screen area, so labels,
 legend placement, axes, and contact geometry cannot diverge because of a second
 preview layout. It reuses the RGB, RGBA, and `WriteableBitmap` storage across
 frames; changing dimensions is the only operation that reallocates them.
+While Output is open, the hidden Paint source transport is stopped and disabled;
+the visible Preview button is the only playback action. Clock, speed, and Loop
+range remain available because they define the output plan.
 
 `nvt-replay export` accepts a one-based inclusive range, Recorded or Frame
 clock, speed, frame rate, even output dimensions, an optional review sidecar,
