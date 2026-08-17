@@ -707,7 +707,7 @@ public partial class MainWindow : Window
 
     private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (WorkspaceTabs.SelectedItem == AnalysisTab)
+        if (sender is TabControl tabs && AnalysisTab is not null && tabs.SelectedItem == AnalysisTab)
             await RefreshOutputPreviewAsync();
     }
 

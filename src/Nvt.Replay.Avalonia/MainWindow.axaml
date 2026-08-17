@@ -816,9 +816,9 @@
                   <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
                     <StackPanel Spacing="8">
                       <TextBlock Text="EXPORT CONFIGURATION" Classes="section" />
-                      <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
                       <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Margin="0,3,0,0" Padding="0,9,0,0">
-                        <TextBlock x:Name="OutputSourceText" Text="Source identity will appear here." FontFamily="Cascadia Mono" FontSize="10.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="OutputSourceText" Text="Source identity will appear here." FontFamily="Cascadia Mono" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                       </Border>
                     </StackPanel>
                   </Border>
@@ -828,13 +828,13 @@
                         <TextBlock Text="DATA PACKAGE" Classes="section" />
                         <TextBlock Grid.Column="1" Text="9 files" FontFamily="Cascadia Mono" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
                       </Grid>
-                      <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv / .jsonl&#x0a;manifest.json / heatmap.png" FontFamily="Cascadia Mono" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv&#x0a;communication-readable.jsonl&#x0a;manifest.json / heatmap.png" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                   <Border Grid.Row="4" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
                     <StackPanel Spacing="7">
                       <TextBlock Text="LAST OUTPUT" Classes="section" />
-                      <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="10.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </Grid>

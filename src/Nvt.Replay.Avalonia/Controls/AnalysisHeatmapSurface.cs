@@ -2,12 +2,14 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Nvt.Replay.Analysis;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
 public sealed class AnalysisHeatmapSurface : Control
 {
+    private static readonly IBrush LightHeatmapBrush = new SolidColorBrush(Color.Parse("#416700"));
     public static readonly StyledProperty<IBrush?> AccentBrushProperty =
         AvaloniaProperty.Register<AnalysisHeatmapSurface, IBrush?>(nameof(AccentBrush));
     public static readonly StyledProperty<IBrush?> GridBrushProperty =
@@ -48,6 +50,7 @@ public sealed class AnalysisHeatmapSurface : Control
         }
 
         var peak = Math.Max(1, data.Counts.Max());
+        var heatmapBrush = ActualThemeVariant == ThemeVariant.Light ? LightHeatmapBrush : AccentBrush;
         var cellWidth = plot.Width / data.Columns;
         var cellHeight = plot.Height / data.Rows;
         for (var row = 0; row < data.Rows; row++)
@@ -56,10 +59,10 @@ public sealed class AnalysisHeatmapSurface : Control
             {
                 var count = data.Counts[(row * data.Columns) + column];
                 if (count == 0) continue;
-                var intensity = 0.18 + (0.82 * Math.Sqrt(count / (double)peak));
+                var intensity = 0.28 + (0.72 * Math.Sqrt(count / (double)peak));
                 using var opacity = context.PushOpacity(intensity);
                 context.DrawRectangle(
-                    AccentBrush,
+                    heatmapBrush,
                     null,
                     new Rect(
                         plot.X + (column * cellWidth),
