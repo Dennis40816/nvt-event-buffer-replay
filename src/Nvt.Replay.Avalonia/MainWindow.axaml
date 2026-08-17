@@ -632,7 +632,12 @@
           <ListBox x:Name="DiagnosticListBox" Grid.Row="2" SelectionChanged="DiagnosticListBox_OnSelectionChanged" AutomationProperties.Name="Review queue findings">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:ReviewGroupRow">
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,10" PointerPressed="ReviewGroupBorder_OnPointerPressed">
+                <Border Classes="reviewGroupHitTarget"
+                        Background="Transparent"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="8,10"
+                        ContextRequested="ReviewGroupBorder_OnContextRequested">
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="*,Auto">
                       <TextBlock Text="{Binding Code}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" />
@@ -1065,7 +1070,7 @@
                   <TextBlock x:Name="InspectorSubtitleText" Grid.Row="2" Grid.ColumnSpan="2" Text="Select a physical record or decoded event." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                 </Grid>
 
-                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                <Grid RowDefinitions="Auto,6,Auto">
                   <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
                     <TextBlock Text="Touch" Classes="fieldLabel" Margin="0,0,3,0" />
                     <controls:TouchTypeIcon Width="16" Height="16" ContactId="1" TouchType="Finger" />
@@ -1075,7 +1080,7 @@
                     <controls:TouchTypeIcon Width="16" Height="16" ContactId="3" TouchType="Palm" Margin="5,0,0,0" />
                     <TextBlock x:Name="InspectorPalmText" Text="0" Classes="monoValue" />
                   </StackPanel>
-                  <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                  <WrapPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <Border x:Name="InspectorCrcBadge" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,14,0">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <TextBlock Text="CRC" Classes="fieldLabel" />
@@ -1093,8 +1098,6 @@
                       <TextBlock x:Name="InspectorAllBreakText" Text="ALL BREAK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" />
                     </Border>
                   </WrapPanel>
-                  <TextBlock x:Name="InspectorPhysicalText" Text="-" IsVisible="False" />
-                  <TextBlock x:Name="InspectorTouchesText" Text="-" IsVisible="False" />
                 </Grid>
 
                 <Border x:Name="InspectorAlertBorder" IsVisible="False" Padding="9,7" CornerRadius="4" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1">
@@ -1136,8 +1139,8 @@
               </StackPanel>
             </Border>
 
-            <TabControl Grid.Row="2" Margin="0">
-              <TabItem Header="Protocol">
+            <TabControl x:Name="InspectorDetailsTabs" Grid.Row="2" Margin="0">
+              <TabItem x:Name="InspectorProtocolTab" Header="Protocol">
                 <ScrollViewer>
                   <StackPanel Margin="14,10,14,16" Spacing="14">
                     <TextBlock Classes="inspectorSectionTitle" Text="Frame" />
@@ -1151,7 +1154,6 @@
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock x:Name="DecodedFieldsText" IsVisible="False" Text="Confirm Event Buffer Version to decode automatically." />
                     <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
                       <StackPanel Spacing="7">
                         <TextBlock Classes="inspectorSectionTitle" Text="I²C transaction" />
@@ -1165,14 +1167,13 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock x:Name="TransportText" IsVisible="False" Text="No transport selected" />
                       </StackPanel>
                     </Border>
                   </StackPanel>
                 </ScrollViewer>
               </TabItem>
 
-              <TabItem Header="Raw">
+              <TabItem x:Name="InspectorRawTab" Header="Raw">
                 <ScrollViewer>
                   <StackPanel Margin="14,10,14,16" Spacing="14">
                     <StackPanel Spacing="3">
@@ -1198,15 +1199,15 @@
                         <TextBlock x:Name="RawBytesText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
                       </Border>
                     </Expander>
-                    <Expander Header="Source identity" FontSize="13" FontWeight="SemiBold">
+                    <Expander x:Name="SourceIdentityExpander" Header="Source identity" FontSize="13" FontWeight="SemiBold">
                       <StackPanel Margin="0,8,0,0" Spacing="7">
-                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,7,Auto,7,Auto">
+                        <Grid ColumnDefinitions="86,*" RowDefinitions="Auto,7,Auto,7,Auto">
                           <TextBlock Classes="fieldLabel" Text="Source line" />
                           <TextBlock x:Name="SourceLineText" Grid.Column="1" Classes="monoValue" Text="-" />
                           <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Byte offset" />
                           <TextBlock x:Name="SourceOffsetText" Grid.Row="2" Grid.Column="1" Classes="monoValue" Text="-" />
                           <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Stable ID" />
-                          <TextBlock x:Name="StableIdText" Grid.Row="4" Grid.Column="1" MaxWidth="240" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock x:Name="StableIdText" Grid.Row="4" Grid.Column="1" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
                         </Grid>
                         <TextBlock x:Name="SourceFieldsText" Text="No adapter-specific source fields." FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                         <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
@@ -1216,7 +1217,7 @@
                 </ScrollViewer>
               </TabItem>
 
-              <TabItem Header="Review">
+              <TabItem x:Name="InspectorReviewTab" Header="Review">
                 <ScrollViewer>
                   <StackPanel Margin="14,10,14,16" Spacing="10">
                     <TextBlock x:Name="ReviewEmptyText" Text="No finding is selected. Choose one from the Review queue or use the alert arrows." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
@@ -1250,43 +1251,61 @@
 
     <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
       <Grid Margin="16,8" RowDefinitions="40,62,24">
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,4,Auto,4,Auto,12,1,12,Auto,6,Auto,12,Auto,6,Auto,12,Auto,4,Auto,4,Auto,*,Auto,8,Auto,14,Auto">
-          <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" AutomationProperties.Name="Previous logical frame" />
-          <Button x:Name="PlayPauseButton" Grid.Column="2" Classes="transportPlay" MinWidth="92" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play replay" />
-          <Button x:Name="NextFrameButton" Grid.Column="4" Classes="canvasIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" AutomationProperties.Name="Next logical frame" />
-          <Border Grid.Column="6" Width="1" Height="24" Background="{DynamicResource BorderBrush}" />
-          <TextBlock Grid.Column="8" Classes="fieldLabel" Text="Clock" />
-          <ComboBox x:Name="ClockModeComboBox" Grid.Column="10" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
-            <ComboBoxItem Content="Recorded" />
-            <ComboBoxItem Content="TP Frame · 120 Hz" />
-          </ComboBox>
-          <TextBlock Grid.Column="12" Classes="fieldLabel" Text="Speed" />
-          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="14" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
-            <ComboBoxItem Content="0.1×" Tag="0.1" />
-            <ComboBoxItem Content="0.25×" Tag="0.25" />
-            <ComboBoxItem Content="0.5×" Tag="0.5" />
-            <ComboBoxItem Content="1×" Tag="1" />
-            <ComboBoxItem Content="2×" Tag="2" />
-            <ComboBoxItem Content="5×" Tag="5" />
-            <ComboBoxItem Content="10×" Tag="10" />
-            <ComboBoxItem Content="MAX" Tag="max" />
-          </ComboBox>
-          <ToggleButton x:Name="LoopToggleButton" Grid.Column="16" Classes="axisToggle" Width="58" MinWidth="58" Content="Loop" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Enable loop range" />
-          <Button x:Name="ClearLoopButton" Grid.Column="18" Classes="canvasIcon" Content="&#xE894;" IsEnabled="False" Click="ClearLoopButton_OnClick" ToolTip.Tip="Clear loop range" AutomationProperties.Name="Clear loop range" />
-          <Button x:Name="AddMarkerButton" Grid.Column="20" Classes="ghost" IsEnabled="False" Click="AddMarkerButton_OnClick" AutomationProperties.Name="Mark special event">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
-              <TextBlock Text="Mark" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button x:Name="ShortcutHelpButton" Grid.Column="22" Classes="canvasIcon" Content="&#xE765;" Click="CommandPaletteButton_OnClick" ToolTip.Tip="Keyboard shortcuts (Ctrl+K)" AutomationProperties.Name="Open keyboard shortcuts" />
-          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="24" Content="Compress idle" IsChecked="True" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" IsCheckedChanged="ReplayTimingOption_OnChanged" />
-          <TextBlock x:Name="TimelineSummaryText" Grid.Column="26" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+        <Grid x:Name="TimelineControlBar" Grid.Row="0" ColumnDefinitions="Auto,18,Auto,18,Auto,*,Auto">
+          <StackPanel x:Name="TransportPlaybackGroup" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous logical frame (Left)" AutomationProperties.Name="Previous logical frame" />
+            <Button x:Name="PlayPauseButton" Classes="transportPlay" MinWidth="92" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play replay" />
+            <Button x:Name="NextFrameButton" Classes="canvasIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" ToolTip.Tip="Next logical frame (Right)" AutomationProperties.Name="Next logical frame" />
+          </StackPanel>
+
+          <Border Grid.Column="1" Width="1" Height="24" Background="{DynamicResource BorderBrush}" HorizontalAlignment="Center" />
+
+          <Grid x:Name="TransportTimingGroup" Grid.Column="2" ColumnDefinitions="Auto,6,Auto,14,Auto,6,Auto" VerticalAlignment="Center">
+            <TextBlock Classes="fieldLabel" Text="Clock" />
+            <ComboBox x:Name="ClockModeComboBox" Grid.Column="2" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
+              <ComboBoxItem Content="Recorded" />
+              <ComboBoxItem Content="TP Frame · 120 Hz" />
+            </ComboBox>
+            <TextBlock Grid.Column="4" Classes="fieldLabel" Text="Speed" />
+            <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="6" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
+              <ComboBoxItem Content="0.1×" Tag="0.1" />
+              <ComboBoxItem Content="0.25×" Tag="0.25" />
+              <ComboBoxItem Content="0.5×" Tag="0.5" />
+              <ComboBoxItem Content="1×" Tag="1" />
+              <ComboBoxItem Content="2×" Tag="2" />
+              <ComboBoxItem Content="5×" Tag="5" />
+              <ComboBoxItem Content="10×" Tag="10" />
+              <ComboBoxItem Content="MAX" Tag="max" />
+            </ComboBox>
+          </Grid>
+
+          <Border Grid.Column="3" Width="1" Height="24" Background="{DynamicResource BorderBrush}" HorizontalAlignment="Center" />
+
+          <StackPanel x:Name="TransportAnnotationGroup" Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+            <ToggleButton x:Name="LoopToggleButton" Classes="axisToggle" Width="58" MinWidth="58" Content="Loop" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Enable loop range" />
+            <Button x:Name="ClearLoopButton" Classes="canvasIcon" Content="&#xE894;" IsVisible="False" IsEnabled="False" Click="ClearLoopButton_OnClick" ToolTip.Tip="Clear loop range" AutomationProperties.Name="Clear loop range" />
+            <Button x:Name="AddMarkerButton" Classes="ghost" Margin="8,0,0,0" IsEnabled="False" Click="AddMarkerButton_OnClick" AutomationProperties.Name="Mark special event">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
+                <TextBlock Text="Mark" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <StackPanel x:Name="TransportViewGroup" Grid.Column="6" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button x:Name="ShortcutHelpButton" Classes="canvasIcon" Content="&#xE765;" Click="CommandPaletteButton_OnClick" ToolTip.Tip="Keyboard shortcuts (Ctrl+K)" AutomationProperties.Name="Open keyboard shortcuts" />
+            <CheckBox x:Name="CompressIdleCheckBox" Content="Compress idle" IsChecked="True" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" IsCheckedChanged="ReplayTimingOption_OnChanged" />
+          </StackPanel>
         </Grid>
-        <Grid Grid.Row="1" RowDefinitions="16,28,16" ColumnDefinitions="82,*">
-          <TextBlock Text="Physical" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Row="1" Text="Logical" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Row="2" Text="Evidence" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
+        <Grid Grid.Row="1" RowDefinitions="16,28,16" ColumnDefinitions="116,*">
+          <Grid x:Name="TimelineTrackLabels" Grid.RowSpan="3" RowDefinitions="16,28,16" ColumnDefinitions="*,Auto" Margin="0,0,14,0">
+            <TextBlock Text="Physical" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+            <TextBlock x:Name="TimelinePhysicalCountText" Grid.Column="1" Text="0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Text="Logical" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+            <TextBlock x:Name="TimelineLogicalCountText" Grid.Row="1" Grid.Column="1" Text="0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Text="Evidence" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
+            <TextBlock x:Name="TimelineEvidenceCountText" Grid.Row="2" Grid.Column="1" Text="0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
+          </Grid>
           <controls:ReplayTimelineSurface x:Name="ReplayTimelineSurface"
                                           Grid.RowSpan="3"
                                           Grid.Column="1"
@@ -1301,12 +1320,13 @@
                                           LoopSurfaceBrush="{DynamicResource AccentSurfaceBrush}"
                                           SeekRequested="ReplayTimelineSurface_OnSeekRequested"
                                           LoopRangeChanged="ReplayTimelineSurface_OnLoopRangeChanged"
+                                          ContextFrameRequested="ReplayTimelineSurface_OnMarkerContextRequested"
                                           AutomationProperties.Name="Replay and loop range timeline" />
         </Grid>
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,12,Auto">
           <TextBlock x:Name="ReplayClockText" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Bottom" />
           <TextBlock x:Name="TimelineStatusText" Grid.Column="1" Text="Load a capture to index physical records" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
-          <TextBlock x:Name="LoopRangeText" Grid.Column="2" Text="Loop -" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Bottom" />
+          <TextBlock x:Name="LoopRangeText" Grid.Column="2" Text="Loop: off" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Bottom" />
           <TextBlock x:Name="ReplayEndClockText" Grid.Column="4" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Bottom" />
         </Grid>
       </Grid>

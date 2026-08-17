@@ -39,6 +39,12 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
 
     public event EventHandler<ReplayTimelineSeekEventArgs>? SeekRequested;
     public event EventHandler<ReplayTimelineLoopEventArgs>? LoopRangeChanged;
+    public event EventHandler<ReplayTimelineContextEventArgs>? ContextFrameRequested;
+
+    public ReplayTimelineSurface()
+    {
+        ContextRequested += OnContextRequested;
+    }
 
     public IBrush? TrackBrush { get => GetValue(TrackBrushProperty); set => SetValue(TrackBrushProperty, value); }
     public IBrush? HoverTrackBrush { get => GetValue(HoverTrackBrushProperty); set => SetValue(HoverTrackBrushProperty, value); }
@@ -139,8 +145,13 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
+        if (!IsEnabled || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
+            return;
+        }
+
         base.OnPointerPressed(e);
-        if (!IsEnabled || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         var position = e.GetPosition(this);
         var frame = FrameFor(position.X);
         if (loopEnabled && loopStart is { } start && Math.Abs(PositionFor(start) - position.X) <= 9)
@@ -187,11 +198,29 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
+        if (dragTarget == DragTarget.None)
+        {
+            base.OnPointerReleased(e);
+            return;
+        }
+
         base.OnPointerReleased(e);
         dragTarget = DragTarget.None;
-        e.Pointer.Capture(null);
+        if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
         e.Handled = true;
         InvalidateVisual();
+    }
+
+    private void OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (!IsEnabled) return;
+
+        var logicalIndex = e.TryGetPosition(this, out var position)
+            ? FrameFor(position.X)
+            : value;
+        var request = new ReplayTimelineContextEventArgs(logicalIndex);
+        ContextFrameRequested?.Invoke(this, request);
+        e.Handled = request.Handled;
     }
 
     private void DrawTrack(
@@ -253,4 +282,10 @@ public sealed class ReplayTimelineLoopEventArgs(int startLogicalIndex, int endLo
 {
     public int StartLogicalIndex { get; } = startLogicalIndex;
     public int EndLogicalIndex { get; } = endLogicalIndex;
+}
+
+public sealed class ReplayTimelineContextEventArgs(int logicalIndex) : EventArgs
+{
+    public int LogicalIndex { get; } = logicalIndex;
+    public bool Handled { get; set; }
 }

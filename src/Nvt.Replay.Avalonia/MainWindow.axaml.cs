@@ -253,6 +253,11 @@ public partial class MainWindow : Window
         if (row is null) return;
         DiagnosticListBox.SelectedItem = row;
         DiagnosticListBox.ScrollIntoView(row);
+        var targetOccurrence = ReviewOccurrenceComboBox.Items
+            .OfType<ReviewOccurrenceRow>()
+            .FirstOrDefault(item => item.Occurrence.LogicalIndex == target);
+        if (targetOccurrence is not null)
+            ReviewOccurrenceComboBox.SelectedItem = targetOccurrence;
     }
 
     private void InspectorContactsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) =>
@@ -417,7 +422,7 @@ public partial class MainWindow : Window
             RegisterProfileComboBox.SelectedIndex = 0;
             configuringRegisterProfile = false;
             ConfigurationHintText.Text = "Confirm the version to decode automatically; source detection never infers it.";
-            TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · 0 logical · {diagnosticRows.Length:N0} evidence";
+            SetTimelineCounts(session.Records.Count, 0, diagnosticRows.Length);
             TimelineStatusText.Text = "Raw capture indexed · confirm Event Buffer Version to open Paint";
             WorkspaceTabs.SelectedIndex = 0;
             if (allRawRows.Length > 0)
@@ -623,7 +628,7 @@ public partial class MainWindow : Window
             DecodedFramesList.ItemsSource = decodedRows;
             SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
             ConfigurationHintText.Text = $"{formatLabel} confirmed · decoded automatically · raw source remains unchanged";
-            TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
+            SetTimelineCounts(session.Records.Count, decodedRows.Length, diagnosticRows.Length);
             TimelineStatusText.Text = decodedRows.Length > 0
                 ? "Logical replay ready · Space play/pause · ←/→ step · drag Loop handles"
                 : "No replayable event-buffer frames · inspect physical records and Review Queue";
@@ -1373,13 +1378,12 @@ public partial class MainWindow : Window
             InspectorTitleText.Text = "No matching record";
             InspectorSubtitleText.Text = "Adjust the Raw Explorer search or register filter.";
             InspectorLogicalText.Text = "-";
-            InspectorPhysicalText.Text = "-";
-            InspectorTouchesText.Text = "-";
             InspectorCrcText.Text = "-";
             InspectorAsilText.Text = "-";
             InspectorAllBreakText.Text = "ALL BREAK";
             InspectorAllBreakBadge.IsVisible = false;
-            DecodedFieldsText.Text = "No physical source record matches the current Raw Explorer query.";
+            ProtocolFieldsItemsControl.ItemsSource = null;
+            TransportFieldsItemsControl.ItemsSource = null;
         }
     }
 
@@ -1489,18 +1493,41 @@ public partial class MainWindow : Window
         UpdateReviewState(row.Group);
     }
 
-    private void ReviewGroupBorder_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void ReviewGroupBorder_OnContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (sender is not Control { DataContext: ReviewGroupRow row } control || !row.CanUnmark) return;
-        var point = e.GetCurrentPoint(control);
-        if (!point.Properties.IsRightButtonPressed &&
-            point.Properties.PointerUpdateKind != PointerUpdateKind.RightButtonPressed) return;
         DiagnosticListBox.SelectedItem = row;
-        var item = new MenuItem { Header = "Unmark", Tag = row.MarkerId };
-        item.Click += UnmarkMenuItem_OnClick;
-        var menu = new ContextMenu { ItemsSource = new[] { item } };
-        menu.Open(control);
+        OpenMarkerContextMenu(control, markers.Where(marker => marker.Id == row.MarkerId));
         e.Handled = true;
+    }
+
+    private void ReplayTimelineSurface_OnMarkerContextRequested(object? sender, ReplayTimelineContextEventArgs e)
+    {
+        var matchingMarkers = markers
+            .Where(marker => marker.StartLogicalIndex <= e.LogicalIndex && marker.EndLogicalIndex >= e.LogicalIndex)
+            .OrderBy(marker => marker.StartLogicalIndex)
+            .ThenBy(marker => marker.CreatedAt)
+            .ToArray();
+        if (matchingMarkers.Length == 0) return;
+        OpenMarkerContextMenu(ReplayTimelineSurface, matchingMarkers);
+        e.Handled = true;
+    }
+
+    private void OpenMarkerContextMenu(Control target, IEnumerable<ReplayMarker> matchingMarkers)
+    {
+        var items = matchingMarkers.Select(marker =>
+        {
+            var range = marker.IsRange
+                ? $"frames {marker.StartLogicalIndex + 1:N0}-{marker.EndLogicalIndex + 1:N0}"
+                : $"frame {marker.StartLogicalIndex + 1:N0}";
+            var item = new MenuItem { Header = $"Unmark {marker.Label} · {range}", Tag = marker.Id };
+            item.Click += UnmarkMenuItem_OnClick;
+            return item;
+        }).ToArray();
+        if (items.Length == 0) return;
+        var menu = new ContextMenu { ItemsSource = items };
+        target.ContextMenu = menu;
+        menu.Open(target);
     }
 
     private void ReviewOccurrenceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1861,13 +1888,6 @@ public partial class MainWindow : Window
             };
         ApplyInspectorPresentation(currentInspectorPresentation, frame is null && registerReadable is not null);
 
-        InspectorPhysicalText.Text = record.Index.ToString(CultureInfo.InvariantCulture);
-        InspectorTouchesText.Text = frame switch
-        {
-            CommonEventBufferFrame common => common.NumTouches.ToString(CultureInfo.InvariantCulture),
-            Desay97Frame desay => desay.NumTouches.ToString(CultureInfo.InvariantCulture),
-            _ => "-",
-        };
         var frameAlerts = reviewSession?.Diagnostics
             .Where(item => item.Severity >= DiagnosticSeverity.Warning &&
                            (item.SourceRecordId == record.StableId || item.Location.LineNumber == record.Location.LineNumber))
@@ -1886,7 +1906,6 @@ public partial class MainWindow : Window
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
-        TransportText.Text = FormatTransport(record);
         TransportFieldsItemsControl.ItemsSource = BuildTransportRows(record);
         SourceFieldsText.Text = FormatSourceFields(record);
         var rawLayout = RawFrameLayoutBuilder.Build(record, frame);
@@ -1895,7 +1914,6 @@ public partial class MainWindow : Window
         RawByteSectionsItemsControl.ItemsSource = rawLayout.Sections;
         RawBytesText.Text = FormatBytes(record.Data);
         ProtocolFieldsItemsControl.ItemsSource = currentInspectorPresentation.ProtocolRows;
-        DecodedFieldsText.Text = FormatDetailRows(currentInspectorPresentation.ProtocolRows);
     }
 
     private void ApplyInspectorPresentation(InspectorFramePresentation presentation, bool registerActivity)
@@ -1962,26 +1980,6 @@ public partial class MainWindow : Window
         await OpenCaptureAsync(path, choice.AdapterId);
     }
 
-    private static string FormatTransport(SourceRecord record)
-    {
-        var text = new StringBuilder()
-            .Append(record.Operation).Append(' ').Append(record.Target).Append(' ')
-            .Append(record.Address is { } address ? $"0x{address:X}" : "address=-")
-            .AppendLine()
-            .Append("declared=").Append(record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-")
-            .Append(" actual=").Append(record.Data.Count);
-        if (record.I2c is { } i2c)
-        {
-            text.AppendLine().Append($"slave=0x{i2c.SlaveAddress:X2} address-ack={AckText(i2c.AddressAcknowledged)}");
-            text.AppendLine().Append("write commands=")
-                .Append(i2c.WriteCommands.Count == 0 ? "-" : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes)));
-            text.AppendLine().Append("data ACKs=")
-                .Append(I2cAckSummary.Format(i2c.Acked));
-            if (!string.IsNullOrWhiteSpace(i2c.Error)) text.AppendLine().Append("transport error=").Append(i2c.Error);
-        }
-        return text.ToString();
-    }
-
     private static IReadOnlyList<InspectorDetailRow> BuildTransportRows(SourceRecord record)
     {
         var rows = new List<InspectorDetailRow>
@@ -2008,17 +2006,12 @@ public partial class MainWindow : Window
         return rows;
     }
 
-    private static string FormatDetailRows(IReadOnlyList<InspectorDetailRow> rows) =>
-        string.Join('\n', rows.Select(row => $"{row.Label}: {row.Value}"));
-
     private static string FormatSourceFields(SourceRecord record) =>
         record.SourceFields is not { Count: > 0 }
             ? "No adapter-specific source fields."
             : string.Join('\n', record.SourceFields
                 .OrderBy(item => item.Key, StringComparer.Ordinal)
                 .Select(field => $"{field.Key}={field.Value}"));
-
-    private static string AckText(bool? value) => value switch { true => "ACK", false => "NAK", null => "-" };
 
     private sealed record SourceAdapterChoice(string AdapterId, string DisplayName, ProbeConfidence Confidence)
     {
@@ -2115,7 +2108,8 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.SetLoopRange(null, null, false);
         ReplayClockText.Text = "00:00.000";
         ReplayEndClockText.Text = "00:00.000";
-        LoopRangeText.Text = "Loop -";
+        LoopRangeText.Text = "Loop: off";
+        ClearLoopButton.IsVisible = false;
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
         PaintZoomHintBorder.IsVisible = false;
@@ -2143,8 +2137,6 @@ public partial class MainWindow : Window
         InspectorSubtitleText.Text = "Select a physical record or decoded event.";
         InspectorLogicalText.Text = "-";
         InspectorTimestampText.Text = "-";
-        InspectorPhysicalText.Text = "-";
-        InspectorTouchesText.Text = "-";
         InspectorFingerText.Text = "0";
         InspectorGloveText.Text = "0";
         InspectorPalmText.Text = "0";
@@ -2173,7 +2165,14 @@ public partial class MainWindow : Window
         SourceConfidenceText.Text = "Source and Event Buffer format remain separate";
         SourceHashText.Text = "SHA-256 appears after loading";
         SourceFieldsText.Text = "No adapter-specific source fields.";
-        TimelineSummaryText.Text = "0 physical · 0 logical · 0 evidence";
+        SetTimelineCounts(0, 0, 0);
+    }
+
+    private void SetTimelineCounts(int physical, int logical, int evidence)
+    {
+        TimelinePhysicalCountText.Text = physical.ToString("N0", CultureInfo.InvariantCulture);
+        TimelineLogicalCountText.Text = logical.ToString("N0", CultureInfo.InvariantCulture);
+        TimelineEvidenceCountText.Text = evidence.ToString("N0", CultureInfo.InvariantCulture);
     }
 
     private void SetBusy(bool busy, string status)
@@ -2766,8 +2765,9 @@ public partial class MainWindow : Window
     {
         var hasRange = loopIn is not null && loopOut is not null;
         LoopRangeText.Text = !hasRange
-            ? "Loop -"
-            : $"Loop {loopIn!.Value + 1:N0}-{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " · off")}";
+            ? "Loop: off"
+            : $"Loop: {loopIn!.Value + 1:N0}-{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " (off)")}";
+        ClearLoopButton.IsVisible = hasRange;
         ClearLoopButton.IsEnabled = hasRange;
         ReplayTimelineSurface.SetLoopRange(loopIn, loopOut, loopEnabled);
         RefreshOutputPreviewIfVisible();
