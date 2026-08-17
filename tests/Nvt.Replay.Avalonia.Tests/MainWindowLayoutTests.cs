@@ -88,7 +88,8 @@ public sealed class MainWindowLayoutTests
 
             Assert.Equal(new GridLength(42), shell.ColumnDefinitions[0].Width);
             Assert.False(reviewContent.IsVisible);
-            Assert.Equal(new GridLength(320), shell.ColumnDefinitions[2].Width);
+            Assert.Equal(new GridLength(4), shell.ColumnDefinitions[2].Width);
+            Assert.Equal(new GridLength(380), shell.ColumnDefinitions[3].Width);
             Assert.True(inspectorContent.IsVisible);
         }
         finally
@@ -128,11 +129,24 @@ public sealed class MainWindowLayoutTests
             var application = Assert.IsType<App>(Application.Current);
             await window.OpenCaptureAsync(fixture);
             await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var frames = Required<ListBox>(window, "DecodedFramesList");
+            frames.SelectedItem = frames.Items.OfType<DecodedFrameRow>().First(row => row.Touches == 3);
+            Dispatcher.UIThread.RunJobs();
+            Required<ListBox>(window, "InspectorContactsList").SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
 
             application.RequestedThemeVariant = ThemeVariant.Dark;
             var paintDark = CaptureHash(window, "03-golden-paint-dark.png");
             application.RequestedThemeVariant = ThemeVariant.Light;
             var paintLight = CaptureHash(window, "04-golden-paint-light.png");
+            Required<Button>(window, "InspectorRailToggleButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var collapsedLight = CaptureHash(window, "07-golden-inspector-collapsed-light.png");
+            application.RequestedThemeVariant = ThemeVariant.Dark;
+            Dispatcher.UIThread.RunJobs();
+            var collapsedDark = CaptureHash(window, "08-golden-inspector-collapsed-dark.png");
+            Required<Button>(window, "InspectorRailToggleButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
 
             var tabs = Required<TabControl>(window, "WorkspaceTabs");
             tabs.SelectedItem = Required<TabItem>(window, "AnalysisTab");
@@ -144,13 +158,83 @@ public sealed class MainWindowLayoutTests
             var sourceLines = Required<TextBlock>(window, "OutputSourceText").Text!.Split('\n');
             Assert.Equal(32, sourceLines[^2].Length);
             Assert.Equal(32, sourceLines[^1].Length);
+            application.RequestedThemeVariant = ThemeVariant.Light;
+            Dispatcher.UIThread.RunJobs();
             var outputLight = CaptureHash(window, "05-golden-output-light.png");
             application.RequestedThemeVariant = ThemeVariant.Dark;
+            Dispatcher.UIThread.RunJobs();
             var outputDark = CaptureHash(window, "06-golden-output-dark.png");
 
             Assert.NotEqual(paintDark, paintLight);
+            Assert.NotEqual(collapsedDark, collapsedLight);
             Assert.NotEqual(outputDark, outputLight);
             Assert.NotEqual(paintDark, outputDark);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Inspector_contacts_select_the_matching_canvas_contact_and_collapsed_summary_stays_useful()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var frames = Required<ListBox>(window, "DecodedFramesList");
+            frames.SelectedItem = frames.Items.OfType<DecodedFrameRow>().First(row => row.Touches == 3);
+            Dispatcher.UIThread.RunJobs();
+
+            var contacts = Required<ListBox>(window, "InspectorContactsList");
+            Assert.Equal(3, contacts.ItemCount);
+            contacts.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            var selected = Assert.IsType<InspectorContactRow>(contacts.SelectedItem);
+            Assert.Equal(selected.Id, Required<ReplayPaintSurface>(window, "PaintSurface").HighlightedContactId);
+            Assert.Equal("3 active", Required<TextBlock>(window, "InspectorContactCountText").Text);
+
+            Required<Button>(window, "InspectorRailToggleButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var shell = Required<Grid>(window, "WorkspaceShellGrid");
+            Assert.Equal(new GridLength(58), shell.ColumnDefinitions[3].Width);
+            Assert.True(Required<Grid>(window, "InspectorCollapsedSummary").IsVisible);
+            Assert.False(Required<Grid>(window, "InspectorRailContent").IsVisible);
+            Assert.Equal("3", Required<TextBlock>(window, "CollapsedFingerText").Text);
+            Assert.Equal("ASIL\nNORM", Required<TextBlock>(window, "CollapsedAsilText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Inspector_width_is_bounded_and_restored_after_collapsing()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var shell = Required<Grid>(window, "WorkspaceShellGrid");
+            var inspectorColumn = shell.ColumnDefinitions[3];
+            Assert.Equal(320, inspectorColumn.MinWidth);
+            Assert.Equal(520, inspectorColumn.MaxWidth);
+            Assert.True(Required<GridSplitter>(window, "InspectorGridSplitter").IsVisible);
+
+            inspectorColumn.Width = new GridLength(500);
+            Dispatcher.UIThread.RunJobs();
+            var toggle = Required<Button>(window, "InspectorRailToggleButton");
+            toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(new GridLength(58), inspectorColumn.Width);
+            Assert.False(Required<GridSplitter>(window, "InspectorGridSplitter").IsVisible);
+
+            toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(new GridLength(500), inspectorColumn.Width);
+            Assert.True(Required<GridSplitter>(window, "InspectorGridSplitter").IsVisible);
         }
         finally
         {

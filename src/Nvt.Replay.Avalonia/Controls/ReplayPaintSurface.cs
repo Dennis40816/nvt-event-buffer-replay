@@ -56,6 +56,7 @@ public sealed class ReplayPaintSurface : Control
 
     public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.HostState;
     public double ZoomFactor => zoomFactor;
+    public byte? HighlightedContactId => highlightedContactId;
     public bool StrongGrid => strongGrid;
     public bool LegendVisible => legendVisible;
     public bool LegendCollapsed => legendCollapsed;
@@ -610,8 +611,8 @@ public sealed class ReplayPaintSurface : Control
         var idBrush = new SolidColorBrush(color);
         if (highlightedContactId == contact.Id)
         {
-            context.DrawEllipse(null, new Pen(LabelTextBrush, 2), center, 24, 24);
-            context.DrawEllipse(null, new Pen(idBrush, 2), center, 28, 28);
+            context.DrawEllipse(null, new Pen(LabelTextBrush, 1.5), center, 19, 19);
+            context.DrawEllipse(null, new Pen(idBrush, 2), center, 23, 23);
         }
         if (contact.Invalid)
         {

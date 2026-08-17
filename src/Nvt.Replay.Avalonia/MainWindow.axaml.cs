@@ -7,6 +7,7 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
@@ -78,8 +79,16 @@ public partial class MainWindow : Window
     private bool inspectorRailCollapsed;
     private bool? reviewRailUserPreference;
     private bool? inspectorRailUserPreference;
+    private SourceRecord? currentInspectorRecord;
+    private object? currentInspectorFrame;
+    private ITouchReplaySnapshot? currentInspectorSnapshot;
+    private InspectorFramePresentation? currentInspectorPresentation;
+    private double expandedInspectorRailWidth = 380;
     private const double ExpandedReviewRailWidth = 260;
-    private const double ExpandedInspectorRailWidth = 320;
+    private const double DefaultInspectorRailWidth = 380;
+    private const double MinimumInspectorRailWidth = 320;
+    private const double MaximumInspectorRailWidth = 520;
+    private const double CollapsedInspectorRailWidth = 58;
     private const int OutputVideoWidth = 1280;
     private const int OutputVideoHeight = 720;
     private const int OutputVideoFrameRate = 30;
@@ -188,6 +197,46 @@ public partial class MainWindow : Window
         SetInspectorRailCollapsed(inspectorRailUserPreference.Value);
     }
 
+    private async void CopyInspectorButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (currentInspectorPresentation is null || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+            return;
+        await clipboard.SetTextAsync(InspectorPresentationBuilder.BuildCopyText(currentInspectorPresentation));
+        SessionStatusText.Text = $"Copied frame {currentInspectorPresentation.LogicalLabel} summary";
+    }
+
+    private void PreviousFindingButton_OnClick(object? sender, RoutedEventArgs e) => NavigateFinding(-1);
+
+    private void NextFindingButton_OnClick(object? sender, RoutedEventArgs e) => NavigateFinding(1);
+
+    private void NavigateFinding(int direction)
+    {
+        if (reviewSession is null || replaySession is null) return;
+        var indices = reviewSession.Groups
+            .SelectMany(group => group.Occurrences)
+            .Where(occurrence => occurrence.LogicalIndex is not null)
+            .Select(occurrence => occurrence.LogicalIndex!.Value)
+            .Distinct()
+            .OrderBy(index => index)
+            .ToArray();
+        if (indices.Length == 0) return;
+
+        var target = direction < 0
+            ? indices.Where(index => index < currentLogicalIndex).DefaultIfEmpty(indices[^1]).Last()
+            : indices.Where(index => index > currentLogicalIndex).DefaultIfEmpty(indices[0]).First();
+        StopPlayback();
+        SeekReplay(target);
+        reviewFilter = ReviewQueueFilter.All;
+        RefreshReviewQueue();
+        var row = reviewRows.FirstOrDefault(item => item.Group.Occurrences.Any(occurrence => occurrence.LogicalIndex == target));
+        if (row is null) return;
+        DiagnosticListBox.SelectedItem = row;
+        DiagnosticListBox.ScrollIntoView(row);
+    }
+
+    private void InspectorContactsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) =>
+        PaintSurface.SetHighlightedContact((InspectorContactsList.SelectedItem as InspectorContactRow)?.Id);
+
     private void SetReviewRailCollapsed(bool collapsed)
     {
         reviewRailCollapsed = collapsed;
@@ -201,10 +250,33 @@ public partial class MainWindow : Window
 
     private void SetInspectorRailCollapsed(bool collapsed)
     {
+        var wasCollapsed = inspectorRailCollapsed;
         inspectorRailCollapsed = collapsed;
-        WorkspaceShellGrid.ColumnDefinitions[2].Width = new GridLength(collapsed ? 42 : ExpandedInspectorRailWidth);
+        var column = WorkspaceShellGrid.ColumnDefinitions[3];
+        if (collapsed)
+        {
+            if (column.ActualWidth >= MinimumInspectorRailWidth)
+                expandedInspectorRailWidth = Math.Clamp(column.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
+            column.MinWidth = 0;
+            column.MaxWidth = CollapsedInspectorRailWidth;
+            column.Width = new GridLength(CollapsedInspectorRailWidth);
+        }
+        else
+        {
+            if (!wasCollapsed && column.ActualWidth >= MinimumInspectorRailWidth)
+                expandedInspectorRailWidth = Math.Clamp(column.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
+            column.MinWidth = MinimumInspectorRailWidth;
+            column.MaxWidth = MaximumInspectorRailWidth;
+            column.Width = new GridLength(Math.Clamp(
+                expandedInspectorRailWidth <= 0 ? DefaultInspectorRailWidth : expandedInspectorRailWidth,
+                MinimumInspectorRailWidth,
+                MaximumInspectorRailWidth));
+        }
+        InspectorGridSplitter.IsVisible = !collapsed;
         InspectorRailTitle.IsVisible = !collapsed;
+        CopyInspectorButton.IsVisible = !collapsed;
         InspectorRailContent.IsVisible = !collapsed;
+        InspectorCollapsedSummary.IsVisible = collapsed;
         InspectorRailToggleButton.Content = collapsed ? "\uE76B" : "\uE76C";
         ToolTip.SetTip(InspectorRailToggleButton, collapsed ? "Open inspector" : "Collapse inspector");
     }
@@ -1211,6 +1283,7 @@ public partial class MainWindow : Window
             ? string.Empty
             : string.Join(", ", markers.FirstOrDefault(marker => marker.Id == selectedMarkerId)?.QaCaseIds ?? []);
         ReviewActionsPanel.IsVisible = true;
+        ReviewEmptyText.IsVisible = false;
         ReviewOccurrenceComboBox.ItemsSource = row.Group.Occurrences
             .Select((occurrence, index) => new ReviewOccurrenceRow(index + 1, occurrence))
             .ToArray();
@@ -1404,6 +1477,7 @@ public partial class MainWindow : Window
         CreateReviewSession(baseDiagnostics);
         DiagnosticListBox.SelectedItem = null;
         ReviewActionsPanel.IsVisible = false;
+        ReviewEmptyText.IsVisible = true;
         AnnotationMetadataPanel.IsVisible = false;
         MarkerQaCaseTextBox.Text = string.Empty;
         if (replaySession is { Count: > 0 } && currentLogicalIndex >= 0)
@@ -1571,23 +1645,25 @@ public partial class MainWindow : Window
     private object? FindFrame(string sourceId) =>
         decodedRowsBySourceId.GetValueOrDefault(sourceId)?.Frame;
 
-    private void ShowRecord(SourceRecord record, object? frame)
+    private void ShowRecord(SourceRecord record, object? frame, ITouchReplaySnapshot? snapshot = null)
     {
         var registerReadable = record.SourceFields?.GetValueOrDefault("register_readable");
-        InspectorTitleText.Text = frame is null && registerReadable is not null ? "Register Activity" : "Frame Summary";
-        InspectorSubtitleText.Text = frame switch
-        {
-            CommonEventBufferFrame common =>
-                $"Physical #{record.Index} · Common {VersionText(common.Version)} · {(common.HostStateEligible ? "Host-state" : "Evidence only")}",
-            Desay97Frame desay =>
-                $"Physical #{record.Index} · Desay 0x97 / {ProfileText(desay.Profile)} · {(desay.HostStateEligible ? "Host-state" : "Evidence only")}",
-            _ when registerReadable is not null =>
-                $"Physical #{record.Index} · {registerReadable} · {record.SourceFields?.GetValueOrDefault("register_profile") ?? "profile unknown"}",
-            _ => $"Physical #{record.Index} · Raw source record",
-        };
-        InspectorLogicalText.Text = currentLogicalIndex >= 0 && replaySession is not null
-            ? $"{currentLogicalIndex + 1} / {replaySession.Count}"
-            : "-";
+        currentInspectorRecord = record;
+        currentInspectorFrame = frame;
+        currentInspectorSnapshot = snapshot;
+        currentInspectorPresentation = InspectorPresentationBuilder.Build(
+            record,
+            frame,
+            snapshot,
+            replaySession?.Count ?? 0,
+            PaintSurface.Mode);
+        if (snapshot is not null)
+            currentInspectorPresentation = currentInspectorPresentation with
+            {
+                TimestampLabel = FormatClock(SelectedTime(snapshot.Timeline)),
+            };
+        ApplyInspectorPresentation(currentInspectorPresentation, frame is null && registerReadable is not null);
+
         InspectorPhysicalText.Text = record.Index.ToString(CultureInfo.InvariantCulture);
         InspectorTouchesText.Text = frame switch
         {
@@ -1595,64 +1671,81 @@ public partial class MainWindow : Window
             Desay97Frame desay => desay.NumTouches.ToString(CultureInfo.InvariantCulture),
             _ => "-",
         };
-        InspectorCrcText.Text = frame switch
-        {
-            CommonEventBufferFrame common => common.CrcValid ? "OK" : "FAIL",
-            Desay97Frame desay => desay.CrcValid ? "OK" : "FAIL",
-            _ => "-",
-        };
-        InspectorAsilText.Text = frame switch
-        {
-            CommonEventBufferFrame common => $"0x{common.Asil.Raw:X2}",
-            Desay97Frame desay => desay.TpAsilError ? "TP alarm" : "-",
-            _ => "-",
-        };
-        InspectorAllBreakText.Text = frame switch
-        {
-            CommonEventBufferFrame common => common.AllBreak.ToString(),
-            Desay97Frame desay => desay.AllBreak.ToString(),
-            _ => "-",
-        };
-
         var frameAlerts = reviewSession?.Diagnostics
             .Where(item => item.Severity >= DiagnosticSeverity.Warning &&
                            (item.SourceRecordId == record.StableId || item.Location.LineNumber == record.Location.LineNumber))
             .Take(2)
             .ToArray() ?? [];
-        var crcFailed = frame switch
-        {
-            CommonEventBufferFrame common => !common.CrcValid,
-            Desay97Frame desay => !desay.CrcValid,
-            _ => false,
-        };
-        var asilAlarm = frame switch
-        {
-            CommonEventBufferFrame common => common.TpAsilError || common.Asil.Alarm,
-            Desay97Frame desay => desay.TpAsilError,
-            _ => false,
-        };
+        var crcFailed = currentInspectorPresentation.CrcFailed;
+        var asilAlarm = currentInspectorPresentation.AsilAlarm;
         InspectorAlertBorder.IsVisible = frameAlerts.Length > 0 || crcFailed || asilAlarm;
         InspectorAlertText.Text = frameAlerts.Length > 0
             ? string.Join(" · ", frameAlerts.Select(item => item.Code))
             : crcFailed ? "CRC validation failed" : asilAlarm ? "ASIL alarm active" : string.Empty;
+        var hasNavigableFindings = reviewSession?.Groups.Any(group =>
+            group.Occurrences.Any(occurrence => occurrence.LogicalIndex is not null)) == true;
+        PreviousFindingButton.IsVisible = hasNavigableFindings;
+        NextFindingButton.IsVisible = hasNavigableFindings;
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
         TransportText.Text = FormatTransport(record);
+        SourceFieldsText.Text = FormatSourceFields(record);
         var rawLayout = RawFrameLayoutBuilder.Build(record, frame);
         RawLayoutTitleText.Text = rawLayout.Title;
         RawLayoutSummaryText.Text = rawLayout.Summary;
         RawByteSectionsItemsControl.ItemsSource = rawLayout.Sections;
         RawBytesText.Text = FormatBytes(record.Data);
-        DecodedFieldsText.Text = frame switch
+        DecodedFieldsText.Text = currentInspectorPresentation.ProtocolDetails;
+    }
+
+    private void ApplyInspectorPresentation(InspectorFramePresentation presentation, bool registerActivity)
+    {
+        var selectedId = (InspectorContactsList.SelectedItem as InspectorContactRow)?.Id;
+        InspectorTitleText.Text = registerActivity ? "Register" : "Frame";
+        InspectorLogicalText.Text = presentation.LogicalLabel;
+        InspectorTimestampText.Text = presentation.TimestampLabel;
+        InspectorSubtitleText.Text = presentation.Subtitle;
+        InspectorFingerText.Text = presentation.ContactSummary.Fingers.ToString(CultureInfo.InvariantCulture);
+        InspectorGloveText.Text = presentation.ContactSummary.Gloves.ToString(CultureInfo.InvariantCulture);
+        InspectorPalmText.Text = presentation.ContactSummary.Palms.ToString(CultureInfo.InvariantCulture);
+        InspectorContactCountText.Text = presentation.ContactSummary.Total == 1
+            ? "1 active"
+            : $"{presentation.ContactSummary.Total} active";
+        InspectorNoContactsText.IsVisible = presentation.Contacts.Count == 0;
+        InspectorContactsList.IsVisible = presentation.Contacts.Count > 0;
+        InspectorContactsList.ItemsSource = presentation.Contacts;
+        InspectorContactsList.SelectedItem = selectedId is { } id
+            ? presentation.Contacts.FirstOrDefault(contact => contact.Id == id)
+            : null;
+        PaintSurface.SetHighlightedContact((InspectorContactsList.SelectedItem as InspectorContactRow)?.Id);
+
+        InspectorCrcText.Text = presentation.CrcLabel;
+        InspectorAsilText.Text = presentation.AsilLabel;
+        InspectorAsilRawText.Text = presentation.AsilRawLabel is "-" ? string.Empty : presentation.AsilRawLabel;
+        SetHealthState(InspectorCrcBadge, presentation.CrcFailed, presentation.CrcLabel != "-");
+        SetHealthState(InspectorAsilBadge, presentation.AsilAlarm, presentation.AsilLabel != "-");
+        InspectorAllBreakBadge.IsVisible = presentation.AllBreak;
+
+        CollapsedFingerText.Text = presentation.ContactSummary.Fingers.ToString(CultureInfo.InvariantCulture);
+        CollapsedGloveText.Text = presentation.ContactSummary.Gloves.ToString(CultureInfo.InvariantCulture);
+        CollapsedPalmText.Text = presentation.ContactSummary.Palms.ToString(CultureInfo.InvariantCulture);
+        CollapsedAsilText.Text = presentation.AsilLabel switch
         {
-            CommonEventBufferFrame common => FormatDecodedFields(common),
-            Desay97Frame desay => FormatDecodedFields(desay),
-            _ when registerReadable is not null =>
-                $"{registerReadable}\nraw={record.SourceFields?.GetValueOrDefault("register_value") ?? FormatBytes(record.Data)}\n" +
-                $"profile-resolution={record.SourceFields?.GetValueOrDefault("register_profile_resolution") ?? "unknown"}",
-            _ => "No decoded event is linked to this physical record.",
+            "NORMAL" => "ASIL\nNORM",
+            "ALARM" => "ASIL\nALRM",
+            _ => "ASIL -",
         };
+        ToolTip.SetTip(CollapsedAsilBadge, presentation.AsilLabel == "-"
+            ? "ASIL unavailable"
+            : $"ASIL {presentation.AsilLabel} {presentation.AsilRawLabel}");
+        SetHealthState(CollapsedAsilBadge, presentation.AsilAlarm, presentation.AsilLabel != "-");
+    }
+
+    private static void SetHealthState(Border border, bool alarm, bool known)
+    {
+        border.Classes.Set("healthGood", known && !alarm);
+        border.Classes.Set("healthAlarm", known && alarm);
     }
 
     private async void SourceAdapterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1680,14 +1773,15 @@ public partial class MainWindow : Window
                 .Append(I2cAckSummary.Format(i2c.Acked));
             if (!string.IsNullOrWhiteSpace(i2c.Error)) text.AppendLine().Append("transport error=").Append(i2c.Error);
         }
-        if (record.SourceFields is { Count: > 0 })
-        {
-            text.AppendLine().AppendLine().Append("source fields");
-            foreach (var field in record.SourceFields.OrderBy(item => item.Key, StringComparer.Ordinal))
-                text.AppendLine().Append(field.Key).Append('=').Append(field.Value);
-        }
         return text.ToString();
     }
+
+    private static string FormatSourceFields(SourceRecord record) =>
+        record.SourceFields is not { Count: > 0 }
+            ? "No adapter-specific source fields."
+            : string.Join('\n', record.SourceFields
+                .OrderBy(item => item.Key, StringComparer.Ordinal)
+                .Select(field => $"{field.Key}={field.Value}"));
 
     private static string AckText(bool? value) => value switch { true => "ACK", false => "NAK", null => "-" };
 
@@ -1719,6 +1813,10 @@ public partial class MainWindow : Window
         decodeConfiguration = null;
         pendingSidecar = null;
         currentLogicalIndex = -1;
+        currentInspectorRecord = null;
+        currentInspectorFrame = null;
+        currentInspectorSnapshot = null;
+        currentInspectorPresentation = null;
         loopIn = null;
         loopOut = null;
         loopEnabled = false;
@@ -1738,6 +1836,7 @@ public partial class MainWindow : Window
         DiagnosticListBox.ItemsSource = null;
         ReviewOccurrenceComboBox.ItemsSource = null;
         ReviewActionsPanel.IsVisible = false;
+        ReviewEmptyText.IsVisible = true;
         AnnotationMetadataPanel.IsVisible = false;
         MarkerQaCaseTextBox.Text = string.Empty;
         EventVersionComboBox.SelectedIndex = -1;
@@ -1804,19 +1903,38 @@ public partial class MainWindow : Window
         PaintSurface.SetLegendCollapsed(true);
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
-        InspectorTitleText.Text = "Frame Summary";
+        InspectorTitleText.Text = "Frame";
         InspectorSubtitleText.Text = "Select a physical record or decoded event.";
         InspectorLogicalText.Text = "-";
+        InspectorTimestampText.Text = "-";
         InspectorPhysicalText.Text = "-";
         InspectorTouchesText.Text = "-";
+        InspectorFingerText.Text = "0";
+        InspectorGloveText.Text = "0";
+        InspectorPalmText.Text = "0";
+        InspectorContactCountText.Text = "0 active";
+        InspectorContactsList.ItemsSource = null;
+        InspectorContactsList.SelectedItem = null;
+        InspectorContactsList.IsVisible = false;
+        InspectorNoContactsText.IsVisible = true;
         InspectorCrcText.Text = "-";
         InspectorAsilText.Text = "-";
-        InspectorAllBreakText.Text = "-";
+        InspectorAsilRawText.Text = string.Empty;
+        InspectorAllBreakText.Text = "ALL BREAK";
+        InspectorAllBreakBadge.IsVisible = false;
+        SetHealthState(InspectorCrcBadge, false, false);
+        SetHealthState(InspectorAsilBadge, false, false);
+        CollapsedFingerText.Text = "0";
+        CollapsedGloveText.Text = "0";
+        CollapsedPalmText.Text = "0";
+        CollapsedAsilText.Text = "ASIL -";
+        SetHealthState(CollapsedAsilBadge, false, false);
         InspectorAlertBorder.IsVisible = false;
         InspectorAlertText.Text = string.Empty;
         SourceAdapterText.Text = "Probing…";
         SourceConfidenceText.Text = "Source and Event Buffer format remain separate";
         SourceHashText.Text = "SHA-256 appears after loading";
+        SourceFieldsText.Text = "No adapter-specific source fields.";
         TimelineSummaryText.Text = "0 physical · 0 logical · 0 evidence";
     }
 
@@ -1920,7 +2038,7 @@ public partial class MainWindow : Window
             synchronizingSelection = false;
         }
 
-        ShowRecord(snapshot.PhysicalRecords[^1], snapshot.DecodedFrame);
+        ShowRecord(snapshot.PhysicalRecords[^1], snapshot.DecodedFrame, snapshot);
     }
 
     private void PreviousFrameButton_OnClick(object? sender, RoutedEventArgs e)
@@ -2147,6 +2265,8 @@ public partial class MainWindow : Window
         {
             ReplayClockText.Text = FormatClock(SelectedTime(replaySession.Timeline[currentLogicalIndex]));
             ReplayEndClockText.Text = FormatClock(SelectedEndTime());
+            if (currentInspectorRecord is not null)
+                ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
         }
         RefreshOutputPreviewIfVisible();
     }
@@ -2159,6 +2279,8 @@ public partial class MainWindow : Window
             !Enum.TryParse<ReplayRenderMode>(option.Value, out var mode))
             return;
         PaintSurface?.SetMode(mode);
+        if (currentInspectorRecord is not null)
+            ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
         RefreshOutputPreviewIfVisible();
     }
 

@@ -475,6 +475,54 @@
       <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <Style Selector="Button.inspectorIcon">
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="MinWidth" Value="32" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons" />
+      <Setter Property="FontSize" Value="15" />
+    </Style>
+    <Style Selector="Button.inspectorIcon:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    </Style>
+    <Style Selector="Border.inspectorMetric">
+      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="Padding" Value="9,6" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.healthGood">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+    </Style>
+    <Style Selector="Border.healthAlarm">
+      <Setter Property="Background" Value="{DynamicResource WarningSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+    </Style>
+    <Style Selector="ListBox.inspectorContacts ListBoxItem">
+      <Setter Property="Margin" Value="0,0,0,3" />
+      <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector="ListBox.inspectorContacts ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+    </Style>
+    <Style Selector="ListBox.inspectorContacts ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+    </Style>
+    <Style Selector="GridSplitter.inspectorSplitter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="GridSplitter.inspectorSplitter:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentBorderBrush}" />
+    </Style>
   </Window.Styles>
 
   <Grid RowDefinitions="104,*,160">
@@ -544,7 +592,8 @@
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="260" />
         <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="320" />
+        <ColumnDefinition Width="4" />
+        <ColumnDefinition Width="380" MinWidth="320" MaxWidth="520" />
       </Grid.ColumnDefinitions>
       <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
         <Grid RowDefinitions="46,*">
@@ -895,82 +944,138 @@
         </TabControl>
       </Border>
 
-      <Border Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
+      <GridSplitter x:Name="InspectorGridSplitter" Grid.Column="2" Classes="inspectorSplitter" Width="4" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
+
+      <Border Grid.Column="3" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
         <Grid RowDefinitions="46,*">
-          <Grid Grid.Row="0" Margin="8,0,14,0" ColumnDefinitions="Auto,8,*">
+          <Grid Grid.Row="0" Margin="8,0,8,0" ColumnDefinitions="Auto,8,*,Auto">
             <Button x:Name="InspectorRailToggleButton" Classes="canvasIcon" Content="&#xE76C;" Click="InspectorRailToggleButton_OnClick" AutomationProperties.Name="Collapse inspector" />
             <TextBlock x:Name="InspectorRailTitle" Grid.Column="2" Text="Inspector" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+            <Button x:Name="CopyInspectorButton" Grid.Column="3" Classes="inspectorIcon" Content="&#xE8C8;" Click="CopyInspectorButton_OnClick" ToolTip.Tip="Copy current frame summary" AutomationProperties.Name="Copy current frame summary" />
           </Grid>
-          <Grid x:Name="InspectorRailContent" Grid.Row="1" RowDefinitions="Auto,*">
-            <Border Padding="16,4,16,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-              <StackPanel Spacing="12">
-                <StackPanel Spacing="3">
-                  <TextBlock x:Name="InspectorTitleText" Text="Frame Summary" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock x:Name="InspectorSubtitleText" Text="Select a physical record or decoded event." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                </StackPanel>
-                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,7,Auto,7,Auto,7,Auto,7,Auto,7,Auto">
-                  <TextBlock Classes="fieldLabel" Text="Logical" />
-                  <TextBlock x:Name="InspectorLogicalText" Grid.Column="1" Classes="monoValue" Text="-" />
-                  <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Physical" />
-                  <TextBlock x:Name="InspectorPhysicalText" Grid.Row="2" Grid.Column="1" Classes="monoValue" Text="-" />
-                  <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Touches" />
-                  <TextBlock x:Name="InspectorTouchesText" Grid.Row="4" Grid.Column="1" Classes="monoValue" Text="-" />
-                  <TextBlock Grid.Row="6" Classes="fieldLabel" Text="CRC" />
-                  <TextBlock x:Name="InspectorCrcText" Grid.Row="6" Grid.Column="1" Classes="monoValue" Text="-" Foreground="{DynamicResource AccentBrush}" />
-                  <TextBlock Grid.Row="8" Classes="fieldLabel" Text="ASIL" />
-                  <TextBlock x:Name="InspectorAsilText" Grid.Row="8" Grid.Column="1" Classes="monoValue" Text="-" />
-                  <TextBlock Grid.Row="10" Classes="fieldLabel" Text="All Break" />
-                  <TextBlock x:Name="InspectorAllBreakText" Grid.Row="10" Grid.Column="1" Classes="monoValue" Text="-" />
+          <Grid x:Name="InspectorCollapsedSummary" Grid.Row="1" IsVisible="False" Margin="0,8,0,12" RowDefinitions="Auto,10,Auto,6,Auto,6,Auto,12,Auto">
+            <TextBlock Text="LIVE" Classes="section" HorizontalAlignment="Center" />
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+              <controls:TouchTypeIcon Width="17" Height="17" ContactId="1" TouchType="Finger" />
+              <TextBlock x:Name="CollapsedFingerText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+              <controls:TouchTypeIcon Width="17" Height="17" ContactId="2" TouchType="Glove" />
+              <TextBlock x:Name="CollapsedGloveText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+              <controls:TouchTypeIcon Width="17" Height="17" ContactId="3" TouchType="Palm" />
+              <TextBlock x:Name="CollapsedPalmText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+            <Border x:Name="CollapsedAsilBadge" Grid.Row="8" Classes="inspectorMetric" Margin="6,12,6,0" Padding="4,6">
+              <TextBlock x:Name="CollapsedAsilText" Text="ASIL -" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" TextAlignment="Center" TextWrapping="NoWrap" />
+            </Border>
+          </Grid>
+
+          <Grid x:Name="InspectorRailContent" Grid.Row="1" RowDefinitions="Auto,Auto,*">
+            <Border Padding="14,4,14,13" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+              <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,3,Auto">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <TextBlock x:Name="InspectorTitleText" Text="Frame" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                    <TextBlock x:Name="InspectorLogicalText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <TextBlock x:Name="InspectorTimestampText" Grid.Column="1" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                  <TextBlock x:Name="InspectorSubtitleText" Grid.Row="2" Grid.ColumnSpan="2" Text="Select a physical record or decoded event." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                 </Grid>
+
+                <WrapPanel Orientation="Horizontal">
+                  <Border Classes="inspectorMetric" Margin="0,0,5,5">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <controls:TouchTypeIcon Width="18" Height="18" ContactId="1" TouchType="Finger" />
+                      <TextBlock Text="F" Classes="fieldLabel" />
+                      <TextBlock x:Name="InspectorFingerText" Text="0" Classes="monoValue" />
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="inspectorMetric" Margin="0,0,5,5">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <controls:TouchTypeIcon Width="18" Height="18" ContactId="2" TouchType="Glove" />
+                      <TextBlock Text="G" Classes="fieldLabel" />
+                      <TextBlock x:Name="InspectorGloveText" Text="0" Classes="monoValue" />
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="inspectorMetric" Margin="0,0,5,5">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <controls:TouchTypeIcon Width="18" Height="18" ContactId="3" TouchType="Palm" />
+                      <TextBlock Text="P" Classes="fieldLabel" />
+                      <TextBlock x:Name="InspectorPalmText" Text="0" Classes="monoValue" />
+                    </StackPanel>
+                  </Border>
+                  <Border x:Name="InspectorCrcBadge" Classes="inspectorMetric healthGood" Margin="0,0,5,5">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="CRC" Classes="fieldLabel" />
+                      <TextBlock x:Name="InspectorCrcText" Text="-" Classes="monoValue" />
+                    </StackPanel>
+                  </Border>
+                  <Border x:Name="InspectorAsilBadge" Classes="inspectorMetric" Margin="0,0,5,5">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="ASIL" Classes="fieldLabel" />
+                      <TextBlock x:Name="InspectorAsilText" Text="-" Classes="monoValue" />
+                      <TextBlock x:Name="InspectorAsilRawText" Text="" FontFamily="Cascadia Mono" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Border>
+                  <Border x:Name="InspectorAllBreakBadge" Classes="inspectorMetric healthAlarm" Margin="0,0,5,5" IsVisible="False">
+                    <TextBlock x:Name="InspectorAllBreakText" Text="ALL BREAK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
+                  </Border>
+                  <TextBlock x:Name="InspectorPhysicalText" Text="-" IsVisible="False" />
+                  <TextBlock x:Name="InspectorTouchesText" Text="-" IsVisible="False" />
+                </WrapPanel>
+
                 <Border x:Name="InspectorAlertBorder" IsVisible="False" Padding="9,7" CornerRadius="4" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1">
-                  <TextBlock x:Name="InspectorAlertText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" />
+                  <Grid ColumnDefinitions="*,Auto,3,Auto">
+                    <TextBlock x:Name="InspectorAlertText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button x:Name="PreviousFindingButton" Grid.Column="1" Classes="inspectorIcon" Content="&#xE70E;" Click="PreviousFindingButton_OnClick" ToolTip.Tip="Previous finding" AutomationProperties.Name="Previous finding" />
+                    <Button x:Name="NextFindingButton" Grid.Column="3" Classes="inspectorIcon" Content="&#xE70D;" Click="NextFindingButton_OnClick" ToolTip.Tip="Next finding" AutomationProperties.Name="Next finding" />
+                  </Grid>
                 </Border>
               </StackPanel>
             </Border>
 
-            <TabControl Grid.Row="1" Margin="0">
-              <TabItem Header="Decoded">
-                <ScrollViewer>
-                  <StackPanel Margin="16,12,16,16" Spacing="14">
-                    <TextBlock x:Name="DecodedFieldsText" Text="Confirm Event Buffer Version to decode automatically." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-                    <StackPanel x:Name="ReviewActionsPanel" Spacing="7" IsVisible="False">
-                      <TextBlock Classes="section" Text="Review event" />
-                      <ComboBox x:Name="ReviewOccurrenceComboBox" PlaceholderText="Occurrence" SelectionChanged="ReviewOccurrenceComboBox_OnSelectionChanged" />
-                      <StackPanel Orientation="Horizontal" Spacing="5">
-                        <Button Classes="ghost" Content="Acknowledge" Click="AcknowledgeReviewButton_OnClick" />
-                        <Button Classes="ghost" Content="Resolve" Click="ResolveReviewButton_OnClick" />
-                      </StackPanel>
-                      <StackPanel Orientation="Horizontal" Spacing="5">
-                        <Button Classes="ghost" Content="Expected" Tag="Expected" Click="DispositionReviewButton_OnClick" />
-                        <Button Classes="ghost" Content="False positive" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
-                      </StackPanel>
-                      <StackPanel x:Name="AnnotationMetadataPanel" Spacing="5" IsVisible="False">
-                        <TextBox x:Name="MarkerQaCaseTextBox" PlaceholderText="QA case IDs (comma separated)" FontSize="13" />
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                          <Button Classes="ghost" Content="Apply QA refs" Click="ApplyMarkerQaButton_OnClick" />
-                          <Button Classes="ghost" Content="Attach raw log" Click="AttachMarkerEvidenceButton_OnClick" />
-                          <Button x:Name="UnmarkButton" Classes="ghost" Content="Unmark" Click="UnmarkButton_OnClick" AutomationProperties.Name="Remove selected marker" />
+            <Border Grid.Row="1" Padding="14,10,14,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+              <StackPanel Spacing="7">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="CONTACTS" Classes="section" VerticalAlignment="Center" />
+                  <TextBlock x:Name="InspectorContactCountText" Grid.Column="1" Text="0 active" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                </Grid>
+                <TextBlock x:Name="InspectorNoContactsText" Text="No active contacts in this frame." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                <ListBox x:Name="InspectorContactsList" Classes="inspectorContacts" MaxHeight="236" SelectionMode="Single" SelectionChanged="InspectorContactsList_OnSelectionChanged" AutomationProperties.Name="Contacts in current frame">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:InspectorContactRow">
+                      <Grid Margin="7,6" ColumnDefinitions="26,8,*,Auto" RowDefinitions="Auto,3,Auto">
+                        <controls:TouchTypeIcon Grid.RowSpan="3" Width="24" Height="24" ContactId="{Binding Id}" TouchType="{Binding Type}" Invalid="{Binding Invalid}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7">
+                          <TextBlock Text="{Binding IdLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                          <TextBlock Text="{Binding TypeLabel}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
                         </StackPanel>
-                      </StackPanel>
-                      <TextBlock x:Name="ReviewStateText" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                    </StackPanel>
-                  </StackPanel>
-                </ScrollViewer>
-              </TabItem>
-
-              <TabItem Header="I²C">
-                <ScrollViewer>
-                  <StackPanel Margin="16,12,16,16" Spacing="14">
-                    <TextBlock x:Name="TransportText" Text="No transport selected" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
-                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,8,Auto,8,Auto">
-                        <TextBlock Classes="fieldLabel" Text="Source line" />
-                        <TextBlock x:Name="SourceLineText" Grid.Column="1" Classes="monoValue" Text="-" />
-                        <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Byte offset" />
-                        <TextBlock x:Name="SourceOffsetText" Grid.Row="2" Grid.Column="1" Classes="monoValue" Text="-" />
-                        <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Stable ID" />
-                        <TextBlock x:Name="StableIdText" Grid.Row="4" Grid.Column="1" MaxWidth="190" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{Binding StateLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                          <StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="X" Classes="fieldLabel" /><TextBlock Text="{Binding XLabel}" Classes="monoValue" /></StackPanel>
+                          <StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="Y" Classes="fieldLabel" /><TextBlock Text="{Binding YLabel}" Classes="monoValue" /></StackPanel>
+                        </StackPanel>
+                        <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding SourceLabel}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                       </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </Border>
+
+            <TabControl Grid.Row="2" Margin="0">
+              <TabItem Header="Protocol">
+                <ScrollViewer>
+                  <StackPanel Margin="14,10,14,16" Spacing="14">
+                    <TextBlock Classes="section" Text="FRAME FIELDS" />
+                    <TextBlock x:Name="DecodedFieldsText" Text="Confirm Event Buffer Version to decode automatically." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+                      <StackPanel Spacing="7">
+                        <TextBlock Classes="section" Text="I²C TRANSACTION" />
+                        <TextBlock x:Name="TransportText" Text="No transport selected" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
                     </Border>
                   </StackPanel>
                 </ScrollViewer>
@@ -978,7 +1083,7 @@
 
               <TabItem Header="Raw">
                 <ScrollViewer>
-                  <StackPanel Margin="16,12,16,16" Spacing="14">
+                  <StackPanel Margin="14,10,14,16" Spacing="14">
                     <StackPanel Spacing="3">
                       <TextBlock x:Name="RawLayoutTitleText" Text="Raw transaction" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
                       <TextBlock x:Name="RawLayoutSummaryText" Text="Select a decoded frame to inspect its byte layout." FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
@@ -1002,8 +1107,47 @@
                         <TextBlock x:Name="RawBytesText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
                       </Border>
                     </Expander>
-                    <TextBlock Classes="section" Text="Source identity" />
-                    <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    <Expander Header="Source identity" FontSize="13" FontWeight="SemiBold">
+                      <StackPanel Margin="0,8,0,0" Spacing="7">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,7,Auto,7,Auto">
+                          <TextBlock Classes="fieldLabel" Text="Source line" />
+                          <TextBlock x:Name="SourceLineText" Grid.Column="1" Classes="monoValue" Text="-" />
+                          <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Byte offset" />
+                          <TextBlock x:Name="SourceOffsetText" Grid.Row="2" Grid.Column="1" Classes="monoValue" Text="-" />
+                          <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Stable ID" />
+                          <TextBlock x:Name="StableIdText" Grid.Row="4" Grid.Column="1" MaxWidth="240" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                        <TextBlock x:Name="SourceFieldsText" Text="No adapter-specific source fields." FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Expander>
+                  </StackPanel>
+                </ScrollViewer>
+              </TabItem>
+
+              <TabItem Header="Review">
+                <ScrollViewer>
+                  <StackPanel Margin="14,10,14,16" Spacing="10">
+                    <TextBlock x:Name="ReviewEmptyText" Text="No finding is selected. Choose one from the Review queue or use the alert arrows." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    <StackPanel x:Name="ReviewActionsPanel" Spacing="7" IsVisible="False">
+                      <TextBlock Classes="section" Text="SELECTED FINDING" />
+                      <ComboBox x:Name="ReviewOccurrenceComboBox" PlaceholderText="Occurrence" SelectionChanged="ReviewOccurrenceComboBox_OnSelectionChanged" />
+                      <WrapPanel>
+                        <Button Classes="ghost" Content="Acknowledge" Margin="0,0,5,5" Click="AcknowledgeReviewButton_OnClick" />
+                        <Button Classes="ghost" Content="Resolve" Margin="0,0,5,5" Click="ResolveReviewButton_OnClick" />
+                        <Button Classes="ghost" Content="Expected" Margin="0,0,5,5" Tag="Expected" Click="DispositionReviewButton_OnClick" />
+                        <Button Classes="ghost" Content="False positive" Margin="0,0,5,5" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
+                      </WrapPanel>
+                      <StackPanel x:Name="AnnotationMetadataPanel" Spacing="5" IsVisible="False">
+                        <TextBox x:Name="MarkerQaCaseTextBox" PlaceholderText="QA case IDs (comma separated)" FontSize="13" />
+                        <WrapPanel>
+                          <Button Classes="ghost" Content="Apply QA refs" Margin="0,0,5,5" Click="ApplyMarkerQaButton_OnClick" />
+                          <Button Classes="ghost" Content="Attach raw log" Margin="0,0,5,5" Click="AttachMarkerEvidenceButton_OnClick" />
+                          <Button x:Name="UnmarkButton" Classes="ghost" Content="Unmark" Margin="0,0,5,5" Click="UnmarkButton_OnClick" AutomationProperties.Name="Remove selected marker" />
+                        </WrapPanel>
+                      </StackPanel>
+                      <TextBlock x:Name="ReviewStateText" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
                   </StackPanel>
                 </ScrollViewer>
               </TabItem>
