@@ -825,7 +825,8 @@
                   </Grid>
                 </Border>
 
-                <Grid Grid.Column="2" RowDefinitions="Auto,10,Auto,10,Auto,10,*">
+                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                  <StackPanel Margin="0,0,4,0" Spacing="10">
                   <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
                     <StackPanel Spacing="8">
                       <TextBlock Text="EXPORT CONFIGURATION" Classes="section" />
@@ -835,7 +836,7 @@
                       </Border>
                     </StackPanel>
                   </Border>
-                  <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
+                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
                     <StackPanel Spacing="7">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="DATA PACKAGE" Classes="section" />
@@ -844,7 +845,7 @@
                       <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv&#x0a;communication-readable.jsonl&#x0a;manifest.json / heatmap.png" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
-                  <Border Grid.Row="4" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
+                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
                     <Grid RowDefinitions="Auto,7,*">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="HOTSPOT" Classes="section" />
@@ -859,13 +860,14 @@
                                                        AutomationProperties.Name="Output hotspot preview" />
                     </Grid>
                   </Border>
-                  <Border Grid.Row="6" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
+                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
                     <StackPanel Spacing="7">
                       <TextBlock Text="LAST OUTPUT" Classes="section" />
                       <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
-                </Grid>
+                  </StackPanel>
+                </ScrollViewer>
               </Grid>
             </Grid>
           </TabItem>
