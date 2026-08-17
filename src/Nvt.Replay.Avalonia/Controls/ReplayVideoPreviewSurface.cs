@@ -11,14 +11,13 @@ namespace Nvt.Replay.Avalonia.Controls;
 
 public sealed class ReplayVideoPreviewSurface : Control
 {
-    private const int PreviewWidth = 640;
-    private const int PreviewHeight = 360;
     private WriteableBitmap? bitmap;
+    private PixelSize bitmapSize;
 
-    public void Show(ReplayScene scene, ReplayRenderMode mode)
+    public void Show(ReplayScene scene, ReplayRenderSettings settings, int width, int height)
     {
-        var rgb = ReplayFrameRenderer.RenderRgb(scene, PreviewWidth, PreviewHeight, mode);
-        var rgba = new byte[PreviewWidth * PreviewHeight * 4];
+        var rgb = ReplayFrameRenderer.RenderRgb(scene, width, height, settings);
+        var rgba = new byte[width * height * 4];
         for (int source = 0, destination = 0; source < rgb.Length; source += 3, destination += 4)
         {
             rgba[destination] = rgb[source];
@@ -33,11 +32,12 @@ public sealed class ReplayVideoPreviewSurface : Control
                 PixelFormat.Rgba8888,
                 AlphaFormat.Unpremul,
                 handle.AddrOfPinnedObject(),
-                new PixelSize(PreviewWidth, PreviewHeight),
+                new PixelSize(width, height),
                 new Vector(96, 96),
-                PreviewWidth * 4);
+                width * 4);
             bitmap?.Dispose();
             bitmap = next;
+            bitmapSize = new PixelSize(width, height);
         }
         finally
         {
@@ -50,19 +50,20 @@ public sealed class ReplayVideoPreviewSurface : Control
     {
         bitmap?.Dispose();
         bitmap = null;
+        bitmapSize = default;
         InvalidateVisual();
     }
 
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        if (bitmap is null || Bounds.Width <= 0 || Bounds.Height <= 0) return;
+        if (bitmap is null || bitmapSize.Width <= 0 || bitmapSize.Height <= 0 || Bounds.Width <= 0 || Bounds.Height <= 0) return;
 
-        var scale = Math.Min(Bounds.Width / PreviewWidth, Bounds.Height / PreviewHeight);
-        var width = PreviewWidth * scale;
-        var height = PreviewHeight * scale;
+        var scale = Math.Min(Bounds.Width / bitmapSize.Width, Bounds.Height / bitmapSize.Height);
+        var width = bitmapSize.Width * scale;
+        var height = bitmapSize.Height * scale;
         var destination = new Rect((Bounds.Width - width) / 2, (Bounds.Height - height) / 2, width, height);
-        context.DrawImage(bitmap, new Rect(0, 0, PreviewWidth, PreviewHeight), destination);
+        context.DrawImage(bitmap, new Rect(0, 0, bitmapSize.Width, bitmapSize.Height), destination);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

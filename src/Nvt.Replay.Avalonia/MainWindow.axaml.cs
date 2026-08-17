@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -70,6 +71,7 @@ public partial class MainWindow : Window
     private bool configuringSourceChoice;
     private bool configuringRegisterProfile;
     private bool operationInProgress;
+    private bool outputWorkspaceActive;
     private int themeMode;
     private bool reviewRailCollapsed;
     private bool inspectorRailCollapsed;
@@ -80,6 +82,8 @@ public partial class MainWindow : Window
     private const int OutputVideoWidth = 1280;
     private const int OutputVideoHeight = 720;
     private const int OutputVideoFrameRate = 30;
+    private const int OutputPreviewWidth = 960;
+    private const int OutputPreviewHeight = 540;
     private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
     private static readonly HashSet<uint> DarkLiteralTextColors =
     [
@@ -160,6 +164,12 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveRails(double width)
     {
+        if (outputWorkspaceActive)
+        {
+            SetReviewRailCollapsed(true);
+            SetInspectorRailCollapsed(true);
+            return;
+        }
         SetReviewRailCollapsed(reviewRailUserPreference ?? width < 1400);
         SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1240);
     }
@@ -201,6 +211,7 @@ public partial class MainWindow : Window
     {
         ScheduleThemeContrast();
         PaintSurface.InvalidateVisual();
+        RefreshCurrentOutputVideoFrame();
     }
 
     private void ScheduleThemeContrast() => Dispatcher.UIThread.Post(ApplyThemeContrast, DispatcherPriority.Loaded);
@@ -693,11 +704,22 @@ public partial class MainWindow : Window
 
     private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is not TabControl tabs || AnalysisTab is null) return;
-        if (tabs.SelectedItem == AnalysisTab)
+        if (AnalysisTab is null) return;
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+        var outputSelected = ReferenceEquals(WorkspaceTabs.SelectedItem, AnalysisTab);
+        if (outputWorkspaceActive == outputSelected) return;
+        outputWorkspaceActive = outputSelected;
+        if (outputSelected)
+        {
+            SetReviewRailCollapsed(true);
+            SetInspectorRailCollapsed(true);
             await RefreshOutputPreviewAsync();
+        }
         else
+        {
             StopOutputVideoPreviewPlayback();
+            ApplyResponsiveRails(Bounds.Width);
+        }
     }
 
     private AnalysisRange SelectedOutputRange()
@@ -724,8 +746,19 @@ public partial class MainWindow : Window
             PaintSurface.Mode,
             SourceFileName: Path.GetFileName(session.SourcePath),
             SourceSha256: session.SourceSha256,
-            DecodeConfiguration: decodeConfiguration);
+            DecodeConfiguration: decodeConfiguration,
+            RenderSettings: CurrentReplayRenderSettings());
     }
+
+    private ReplayRenderSettings CurrentReplayRenderSettings() => new(
+        PaintSurface.Mode,
+        Application.Current?.ActualThemeVariant == ThemeVariant.Light
+            ? ReplayRenderTheme.Light
+            : ReplayRenderTheme.Dark,
+        PaintSurface.StrongGrid,
+        PaintSurface.LegendVisible,
+        PaintSurface.LegendCollapsed,
+        PaintSurface.LegendPosition);
 
     private ReplayScene CreateReplayScene(int logicalIndex)
     {
@@ -839,7 +872,11 @@ public partial class MainWindow : Window
         if (replaySession is null || outputVideoFrameCount == 0 || outputVideoPlan.Count == 0) return;
         outputVideoFrameIndex = Math.Clamp(outputFrameIndex, 0, outputVideoFrameCount - 1);
         var logicalIndex = ReplayFramePlan.LogicalIndexAt(outputVideoPlan, outputVideoFrameIndex);
-        OutputVideoPreview.Show(CreateReplayScene(logicalIndex), PaintSurface.Mode);
+        OutputVideoPreview.Show(
+            CreateReplayScene(logicalIndex),
+            CurrentReplayRenderSettings(),
+            OutputPreviewWidth,
+            OutputPreviewHeight);
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
         var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)OutputVideoFrameRate);
         var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)OutputVideoFrameRate);
@@ -867,12 +904,23 @@ public partial class MainWindow : Window
         var cancellation = new CancellationTokenSource();
         outputVideoPlaybackCancellation = cancellation;
         SetOutputVideoPlaybackVisualState(true);
+        var firstOutputFrame = outputVideoFrameIndex;
+        var playbackStarted = Stopwatch.GetTimestamp();
         try
         {
             while (outputVideoFrameIndex < outputVideoFrameCount - 1)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1d / OutputVideoFrameRate), cancellation.Token);
-                ShowOutputVideoFrame(outputVideoFrameIndex + 1);
+                var elapsed = Stopwatch.GetElapsedTime(playbackStarted).TotalSeconds;
+                var targetFrame = Math.Min(
+                    outputVideoFrameCount - 1,
+                    firstOutputFrame + (int)Math.Floor(elapsed * OutputVideoFrameRate));
+                if (targetFrame > outputVideoFrameIndex)
+                    ShowOutputVideoFrame(targetFrame);
+                if (targetFrame >= outputVideoFrameCount - 1) break;
+
+                var nextFrameAt = (targetFrame - firstOutputFrame + 1d) / OutputVideoFrameRate;
+                var delay = Math.Max(1, (int)Math.Round((nextFrameAt - elapsed) * 1000));
+                await Task.Delay(delay, cancellation.Token);
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -917,6 +965,12 @@ public partial class MainWindow : Window
         OutputPreviewPlayPauseButton.IsEnabled = false;
         OutputPreviewClockText.Text = "00:00.000 / 00:00.000";
         OutputPreviewFrameText.Text = "output 0/0";
+    }
+
+    private void RefreshCurrentOutputVideoFrame()
+    {
+        if (outputVideoFrameCount > 0 && outputVideoPlan.Count > 0)
+            ShowOutputVideoFrame(outputVideoFrameIndex);
     }
 
     private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -2143,11 +2197,17 @@ public partial class MainWindow : Window
         RefreshLegendPlacement();
     }
 
-    private void LegendVisibleToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e) =>
+    private void LegendVisibleToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
         PaintSurface.SetLegendVisible(LegendVisibleToggleButton.IsChecked == true);
+        RefreshCurrentOutputVideoFrame();
+    }
 
-    private void LegendCompactToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e) =>
+    private void LegendCompactToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
         PaintSurface.SetLegendCollapsed(LegendCompactToggleButton.IsChecked == true);
+        RefreshCurrentOutputVideoFrame();
+    }
 
     private void PaintSurface_OnLegendCollapsedChanged(object? sender, EventArgs e)
     {
@@ -2165,6 +2225,7 @@ public partial class MainWindow : Window
                 : ReplayLegendPositioner.Choose(replaySession.AllReportedContacts, replayExtent, reverseX, reverseY);
         }
         PaintSurface.SetLegendPosition(resolved);
+        RefreshCurrentOutputVideoFrame();
     }
 
     private void ReverseAxisToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -2181,6 +2242,7 @@ public partial class MainWindow : Window
         var strong = GridStrengthToggleButton.IsChecked == true;
         GridStrengthToggleButton.Content = strong ? "Grid +" : "Grid";
         PaintSurface.SetStrongGrid(strong);
+        RefreshCurrentOutputVideoFrame();
     }
 
     private void LoopInButton_OnClick(object? sender, RoutedEventArgs e)
