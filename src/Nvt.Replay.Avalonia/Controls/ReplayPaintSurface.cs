@@ -17,51 +17,8 @@ public sealed class ReplayPaintSurface : Control
     private static readonly Cursor PanCursor = new(StandardCursorType.SizeAll);
     private static readonly TimeSpan LoopCrossfadeDuration = TimeSpan.FromMilliseconds(140);
 
-    private static readonly PaintPalette DarkPalette = new(
-        Stage: Brush("#10171A"),
-        Surface: Brush("#162428"),
-        Grid: Brush("#26383D"),
-        StrongGrid: Brush("#34464F"),
-        Axis: Brush("#324149"),
-        StrongAxis: Brush("#60747D"),
-        AxisLabel: Brush("#829097"),
-        LabelSurface: Brush("#EE101619"),
-        HoverLabelSurface: Brush("#F5101619"),
-        LabelText: Brush("#F3F7F5"),
-        Break: Brush("#F1A85B"),
-        Palm: Brush("#D98AC6"),
-        Alarm: Brush("#E86A64"),
-        Invalid: Brush("#F06B6B"),
-        ContactColors:
-        [
-            Color.Parse("#67D5E4"), Color.Parse("#C8F36C"), Color.Parse("#FFBE6B"),
-            Color.Parse("#BBA2FF"), Color.Parse("#FF7F91"), Color.Parse("#78A9FF"),
-            Color.Parse("#66D39A"), Color.Parse("#E48CE0"), Color.Parse("#F2DD70"),
-            Color.Parse("#76D7B7"),
-        ]);
-
-    private static readonly PaintPalette LightPalette = new(
-        Stage: Brush("#E9EFEC"),
-        Surface: Brush("#F7FAF8"),
-        Grid: Brush("#DCE5E1"),
-        StrongGrid: Brush("#C8D5D0"),
-        Axis: Brush("#B5C6BF"),
-        StrongAxis: Brush("#819890"),
-        AxisLabel: Brush("#586D64"),
-        LabelSurface: Brush("#F7FFFFFF"),
-        HoverLabelSurface: Brush("#FFFFFFFF"),
-        LabelText: Brush("#182821"),
-        Break: Brush("#A65D10"),
-        Palm: Brush("#8F467D"),
-        Alarm: Brush("#B63D3A"),
-        Invalid: Brush("#C13D3D"),
-        ContactColors:
-        [
-            Color.Parse("#007C91"), Color.Parse("#5D8100"), Color.Parse("#B56500"),
-            Color.Parse("#6848C7"), Color.Parse("#C53A59"), Color.Parse("#3567C8"),
-            Color.Parse("#27855A"), Color.Parse("#A14299"), Color.Parse("#8E7600"),
-            Color.Parse("#177D68"),
-        ]);
+    private static readonly PaintPalette DarkPalette = PaintPalette.From(ReplayVisualStyle.Dark);
+    private static readonly PaintPalette LightPalette = PaintPalette.From(ReplayVisualStyle.Light);
 
     private PaintPalette Palette => ActualThemeVariant == ThemeVariant.Light ? LightPalette : DarkPalette;
     private IBrush StageBrush => Palette.Stage;
@@ -101,6 +58,7 @@ public sealed class ReplayPaintSurface : Control
     public bool StrongGrid => strongGrid;
     public bool LegendVisible => legendVisible;
     public bool LegendCollapsed => legendCollapsed;
+    public ReplayLegendPosition LegendPosition => legendPosition;
     public event EventHandler? ZoomChanged;
     public event EventHandler? LegendCollapsedChanged;
 
@@ -483,11 +441,11 @@ public sealed class ReplayPaintSurface : Control
             .Take(10)
             .ToArray();
         var activeContacts = (Mode switch
-            {
-                ReplayRenderMode.HostState => scene.HostContacts,
-                ReplayRenderMode.ReportedFrame => scene.ReportedContacts,
-                _ => scene.ReportedContacts.Concat(scene.HostContacts).ToArray(),
-            })
+        {
+            ReplayRenderMode.HostState => scene.HostContacts,
+            ReplayRenderMode.ReportedFrame => scene.ReportedContacts,
+            _ => scene.ReportedContacts.Concat(scene.HostContacts).ToArray(),
+        })
             .Where(contact => contact.IsActive)
             .GroupBy(contact => contact.Id)
             .Select(group => group.First())
@@ -506,12 +464,12 @@ public sealed class ReplayPaintSurface : Control
             return;
         }
 
-        const double headerHeight = 26;
-        const double itemHeight = 22;
+        const double headerHeight = 28;
+        const double itemHeight = 24;
         const double bottomPadding = 7;
         var legendRect = PositionLegend(
             viewport,
-            new Size(140, headerHeight + (entries.Length * itemHeight) + bottomPadding));
+            new Size(150, headerHeight + (entries.Length * itemHeight) + bottomPadding));
         legendBounds = legendRect;
         context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
 
@@ -520,7 +478,7 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            11,
+            12.5,
             AxisLabelBrush);
         var headingBounds = new Rect(legendRect.X + 10, legendRect.Y, legendRect.Width - 20, headerHeight);
         context.DrawText(heading, new Point(headingBounds.X, CenteredTextY(headingBounds, heading)));
@@ -541,7 +499,7 @@ public sealed class ReplayPaintSurface : Control
                 CultureInfo.InvariantCulture,
                 FlowDirection.LeftToRight,
                 new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
-                12,
+                13,
                 LabelTextBrush);
             context.DrawText(text, new Point(rowBounds.X + 11, CenteredTextY(rowBounds, text)));
             DrawLegendType(
@@ -563,9 +521,9 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            12,
+            13,
             LabelTextBrush);
-        var legendRect = PositionLegend(viewport, new Size(text.Width + 37, 30));
+        var legendRect = PositionLegend(viewport, new Size(text.Width + 39, 32));
         legendBounds = legendRect;
         context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 15, 15);
         context.DrawEllipse(AxisLabelBrush, null, new Point(legendRect.X + 13, legendRect.Center.Y), 3.5, 3.5);
@@ -584,7 +542,7 @@ public sealed class ReplayPaintSurface : Control
         AddContactCount(parts, gloves, "glove");
         AddContactCount(parts, palms, "palm");
         AddContactCount(parts, other, "other", pluralize: false);
-        return parts.Count == 0 ? "0 contacts" : string.Join(" · ", parts);
+        return parts.Count == 0 ? "0 contacts" : string.Join("  |  ", parts);
     }
 
     private static void AddContactCount(
@@ -623,7 +581,7 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
-            11,
+            12.5,
             AxisLabelBrush);
         context.DrawText(text, new Point(bounds.X + 11, CenteredTextY(bounds, text)));
     }
@@ -701,14 +659,14 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            13,
+            14,
             LabelTextBrush);
         var coordinateText = new FormattedText(
-            $"X {contact.X}  Y {contact.Y}  ·  {TypeLabel(contact.Type)}",
+            $"X {contact.X}   Y {contact.Y}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
-            12,
+            13,
             AxisLabelBrush);
         var width = Math.Max(headerText.Width + 17, coordinateText.Width) + 14;
         var height = headerText.Height + coordinateText.Height + 8;
@@ -796,7 +754,7 @@ public sealed class ReplayPaintSurface : Control
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
-            12,
+            13,
             AxisLabelBrush);
         var x = centered ? origin.X - (text.Width / 2) : rightAligned ? origin.X - text.Width : origin.X;
         var y = rightAligned ? origin.Y - (text.Height / 2) : origin.Y;
@@ -884,5 +842,23 @@ public sealed class ReplayPaintSurface : Control
         IBrush Palm,
         IBrush Alarm,
         IBrush Invalid,
-        IReadOnlyList<Color> ContactColors);
+        IReadOnlyList<Color> ContactColors)
+    {
+        public static PaintPalette From(ReplayVisualPalette source) => new(
+            Brush(source.Stage.Hex),
+            Brush(source.Surface.Hex),
+            Brush(source.Grid.Hex),
+            Brush(source.StrongGrid.Hex),
+            Brush(source.Axis.Hex),
+            Brush(source.StrongAxis.Hex),
+            Brush(source.AxisLabel.Hex),
+            Brush(source.LabelSurface.Hex),
+            Brush(source.HoverLabelSurface.Hex),
+            Brush(source.LabelText.Hex),
+            Brush(source.Break.Hex),
+            Brush(source.Palm.Hex),
+            Brush(source.Alarm.Hex),
+            Brush(source.Invalid.Hex),
+            source.ContactColors.Select(color => Color.Parse(color.Hex)).ToArray());
+    }
 }

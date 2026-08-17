@@ -37,11 +37,12 @@ public sealed partial class AcuteDecodedI2cAdapter : ISourceAdapter
     {
         using var stream = new FileStream(context.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+        var layout = TextFileLayout.Detect(context.Path);
         var extension = Path.GetExtension(context.Path);
         var tracker = new NvtRegisterTracker();
         AcuteColumns? columns = null;
         char delimiter = ',';
-        long byteOffset = 0;
+        long byteOffset = layout.FirstLineOffset;
         long outputIndex = 0;
         var lineNumber = 0;
         double? firstTimestamp = null;
@@ -51,7 +52,7 @@ public sealed partial class AcuteDecodedI2cAdapter : ISourceAdapter
             cancellationToken.ThrowIfCancellationRequested();
             lineNumber++;
             var lineOffset = byteOffset;
-            byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+            byteOffset += layout.Advance(line);
 
             if (columns is null)
             {
@@ -117,6 +118,7 @@ public sealed partial class AcuteDecodedI2cAdapter : ISourceAdapter
             }
             catch (Exception exception) when (exception is FormatException or OverflowException)
             {
+                tracker.ResetEvidence();
                 SourceDiagnostics.Report(
                     context,
                     DiagnosticSeverity.Error,

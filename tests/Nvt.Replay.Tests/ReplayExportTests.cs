@@ -71,8 +71,101 @@ public sealed class ReplayExportTests : IDisposable
         var firstFrame = Directory.GetFiles(output + ".frames", "frame-*.png").Order().First();
         Assert.Equal([137, 80, 78, 71, 13, 10, 26, 10], (await File.ReadAllBytesAsync(firstFrame))[..8]);
         var hash = Hash(firstFrame);
-        Assert.Equal("439f9bcbf97760c7f2cc0fc37bf3f0de1c3a84d2375a3b9ca93b89b5f0f338c1", hash);
+        Assert.Equal("6184757f848265dd68fbc58757bcbb05f40f0a92dacc000f2ac9e3e47204cab0", hash);
         Assert.Empty(Directory.GetDirectories(directory, ".*.tmp"));
+    }
+
+    [Fact]
+    public void Render_settings_apply_theme_grid_and_legend_to_the_same_export_renderer()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var scene = ReplaySceneFactory.Create(replay.Seek(0), replay.Count, extent);
+        var dark = new ReplayRenderSettings(ReplayRenderMode.Compare);
+        var light = dark with
+        {
+            Theme = ReplayRenderTheme.Light,
+            StrongGrid = true,
+            LegendCollapsed = false,
+            LegendPosition = ReplayLegendPosition.BottomRight,
+        };
+
+        var darkFrame = ReplayFrameRenderer.RenderRgb(scene, 320, 180, dark);
+        var lightFrame = ReplayFrameRenderer.RenderRgb(scene, 320, 180, light);
+
+        Assert.Equal([16, 23, 26], darkFrame[..3]);
+        Assert.Equal([237, 242, 239], lightFrame[..3]);
+        Assert.NotEqual(SHA256.HashData(darkFrame), SHA256.HashData(lightFrame));
+    }
+
+    [Fact]
+    public void Reusable_render_buffer_is_pixel_identical_to_allocating_renderer()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var scene = ReplaySceneFactory.Create(replay.Seek(0), replay.Count, extent);
+        var settings = new ReplayRenderSettings(
+            ReplayRenderMode.Compare,
+            ReplayRenderTheme.Light,
+            StrongGrid: true,
+            LegendVisible: true,
+            LegendCollapsed: false,
+            ReplayLegendPosition.TopLeft);
+        var expected = ReplayFrameRenderer.RenderRgb(scene, 320, 180, settings);
+        var actual = new byte[320 * 180 * 3];
+
+        ReplayFrameRenderer.RenderRgb(scene, 320, 180, settings, actual);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Reusable_render_buffer_rejects_incorrect_size()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var scene = ReplaySceneFactory.Create(replay.Seek(0), replay.Count, extent);
+
+        var exception = Assert.Throws<ArgumentException>(() => ReplayFrameRenderer.RenderRgb(
+            scene,
+            320,
+            180,
+            new ReplayRenderSettings(ReplayRenderMode.Compare),
+            new byte[(320 * 180 * 3) - 1]));
+
+        Assert.Equal("destination", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task Export_manifest_records_the_visual_settings_used_by_preview_and_mp4()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var output = Path.Combine(directory, "styled.mp4");
+        var settings = new ReplayRenderSettings(
+            ReplayRenderMode.HostState,
+            ReplayRenderTheme.Light,
+            StrongGrid: true,
+            LegendVisible: false,
+            LegendCollapsed: true,
+            ReplayLegendPosition.BottomRight);
+        var options = Options(output, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe")) with
+        {
+            Mode = ReplayRenderMode.HostState,
+            RenderSettings = settings,
+        };
+
+        var result = await new ReplayRangeExporter().ExportAsync(
+            replay,
+            index => ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent),
+            options);
+        var manifest = await File.ReadAllTextAsync(result.ManifestPath);
+
+        Assert.Contains("\"schemaVersion\": 2", manifest);
+        Assert.Contains("\"theme\": \"light\"", manifest);
+        Assert.Contains("\"strongGrid\": true", manifest);
+        Assert.Contains("\"legendVisible\": false", manifest);
+        Assert.Contains("\"legendPosition\": \"bottomRight\"", manifest);
     }
 
     [Fact]

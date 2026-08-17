@@ -5,6 +5,17 @@ Avalonia Paint and headless export consume the same UI-independent
 global Palm, logical/captured clocks, diagnostics, markers, and the coordinate
 extent. Export is C# raster rendering; it never screen-records the desktop.
 
+The desktop Output workspace defaults to an MP4 preview. Its scrubber and
+playback use the same `ReplayFramePlan`, logical-frame sampling, render settings,
+and 1280×720 RGB pixels as the eventual desktop export. The preview control
+only scales that completed frame to its available screen area, so labels,
+legend placement, axes, and contact geometry cannot diverge because of a second
+preview layout. It reuses the RGB, RGBA, and `WriteableBitmap` storage across
+frames; changing dimensions is the only operation that reallocates them.
+While Output is open, the hidden Paint source transport is stopped and disabled;
+the visible Preview button is the only playback action. Clock, speed, and Loop
+range remain available because they define the output plan.
+
 `nvt-replay export` accepts a one-based inclusive range, Recorded or Frame
 clock, speed, frame rate, even output dimensions, an optional review sidecar,
 and an optional FFmpeg executable:
@@ -23,6 +34,11 @@ reviewed invocation uses H.264 (`libx264`) and `yuv420p` for common playback
 compatibility. The adjacent `.mp4.json` records source/config/hash, range,
 clock, Paint mode, dimensions, frame rate, speed, output-frame count, duration,
 and encoder identity.
+
+Preview playback is anchored to a monotonic absolute 30 FPS clock and skips a
+late display frame rather than accumulating render time as drift. Main replay
+uses the same absolute-deadline principle at the selected Recorded/Frame clock
+and speed. Alarm and QA pause frames remain mandatory even while catching up.
 
 If no encoder is found or it exits incompatibly, export creates an atomic
 `<name>.mp4.frames` PNG-sequence directory with the same scenes and an

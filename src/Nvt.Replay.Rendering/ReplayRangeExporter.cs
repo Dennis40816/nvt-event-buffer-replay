@@ -30,7 +30,12 @@ public sealed record ReplayExportOptions(
     string? FfmpegPath = null,
     string? SourceFileName = null,
     string? SourceSha256 = null,
-    ReplayDecodeConfiguration? DecodeConfiguration = null);
+    ReplayDecodeConfiguration? DecodeConfiguration = null,
+    ReplayRenderSettings? RenderSettings = null)
+{
+    public ReplayRenderSettings ResolvedRenderSettings =>
+        (RenderSettings ?? new ReplayRenderSettings(Mode)) with { Mode = Mode };
+}
 
 public sealed record ReplayFramePlanEntry(int LogicalIndex, int RepeatCount);
 
@@ -50,7 +55,8 @@ public sealed record ReplayVideoManifest(
     TimeSpan Duration,
     ReplayExportKind Kind,
     string Encoder,
-    string? EncoderWarning);
+    string? EncoderWarning,
+    ReplayRenderSettings RenderSettings);
 
 public sealed record ReplayExportResult(
     ReplayExportKind Kind,
@@ -226,7 +232,7 @@ public sealed class ReplayRangeExporter
             foreach (var entry in plan)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var rgb = ReplayFrameRenderer.RenderRgb(sceneFactory(entry.LogicalIndex), options.Width, options.Height, options.Mode);
+                var rgb = ReplayFrameRenderer.RenderRgb(sceneFactory(entry.LogicalIndex), options.Width, options.Height, options.ResolvedRenderSettings);
                 for (var repeat = 0; repeat < entry.RepeatCount; repeat++)
                     await process.StandardInput.BaseStream.WriteAsync(rgb, cancellationToken);
             }
@@ -274,7 +280,7 @@ public sealed class ReplayRangeExporter
             foreach (var entry in plan)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var rgb = ReplayFrameRenderer.RenderRgb(sceneFactory(entry.LogicalIndex), options.Width, options.Height, options.Mode);
+                var rgb = ReplayFrameRenderer.RenderRgb(sceneFactory(entry.LogicalIndex), options.Width, options.Height, options.ResolvedRenderSettings);
                 for (var repeat = 0; repeat < entry.RepeatCount; repeat++)
                 {
                     var path = Path.Combine(temporaryDirectory, $"frame-{outputIndex++:D8}.png");
@@ -302,9 +308,10 @@ public sealed class ReplayRangeExporter
     {
         var count = ReplayFramePlan.OutputFrameCount(plan);
         return new ReplayVideoManifest(
-            1, options.SourceFileName, options.SourceSha256, options.DecodeConfiguration, options.Range,
+            2, options.SourceFileName, options.SourceSha256, options.DecodeConfiguration, options.Range,
             options.Clock, options.Mode, options.Width, options.Height, options.FrameRate, options.Speed,
-            count, TimeSpan.FromSeconds((double)count / options.FrameRate), kind, encoder, warning);
+            count, TimeSpan.FromSeconds((double)count / options.FrameRate), kind, encoder, warning,
+            options.ResolvedRenderSettings);
     }
 
     private static ReplayExportResult Result(

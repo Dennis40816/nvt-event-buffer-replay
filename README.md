@@ -10,9 +10,10 @@ generator; the desktop application does not require Python at runtime.
 
 ## Status
 
-Milestone 1, **C# Parity Core**, is in progress. The committed product boundary
-is documented in [the product specification](docs/product-spec.md) and
-[roadmap](ROADMAP.md).
+Milestones 1 through 5 are implemented. The built-in portion of Milestone 6 is
+also complete; custom register-profile import remains evidence-gated. The
+committed product boundary is documented in [the product specification](docs/product-spec.md)
+and [roadmap](ROADMAP.md).
 
 The first vertical slice includes:
 
@@ -29,7 +30,9 @@ The first vertical slice includes:
 The desktop now loads and indexes supported captures in the background, opens
 in Raw Explorer before semantic configuration is complete, and keeps the
 indexed records in memory while the operator switches among Common
-`0x82`–`0x85`. Selecting a decoded frame synchronizes its physical record,
+`0x82`–`0x85`. There is no separate Decode action: confirming a Common version
+starts decoding immediately, while Desay `0x97` waits until IC and Palm profiles
+are both explicit. Selecting a decoded frame synchronizes its physical record,
 source location, stable ID, raw evidence, and decoded fields in the Inspector.
 
 Decoded-I2C adapters normalize LA exports into the same physical record model.
@@ -55,6 +58,9 @@ The Common replay slice reduces each logical frame into separate Reported
 Frame and Host State views. Paint supports deterministic forward/backward
 seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.1×–10×
 and MAX playback, idle-gap compression, and a draggable two-handle loop range.
+Playback is scheduled against an absolute clock: a busy UI may skip obsolete
+intermediate drawings to stay on time, but never skips an Alarm or QA pause.
+Loop wrap uses a short crossfade instead of a hard visual cut.
 Per-contact colors
 stay consistent across the point, coordinate label, and trajectory. Trajectory
 retention can show a recent 2–120 frame window, retain each gesture until its
@@ -87,6 +93,9 @@ manifest, and deterministic Reported Frame heatmap PNG. Every aggregate links
 back to diagnostic, event, and physical source IDs. See [analysis outputs](docs/analysis-outputs.md).
 
 Avalonia Paint and deterministic headless export now share one `ReplayScene`.
+The desktop MP4 preview also uses the exact export frame plan and 1280×720
+raster; only the on-screen presentation is scaled. Preview RGB/RGBA buffers and
+the Avalonia bitmap are reused between frames to avoid playback GC churn.
 `nvt-replay export` renders selected ranges to raw RGB and pipes them to an
 operator-reviewed FFmpeg executable, or atomically falls back to a PNG
 sequence when no compatible encoder is available. See [replay video export](docs/video-export.md).
@@ -96,7 +105,9 @@ an eight-hour timeline, sparse seek checkpoints, and 60 FPS Paint rendering.
 See [performance and scale gates](docs/performance.md).
 
 The desktop UI includes a keyboard-first command palette, explicit automation
-names, textual severity cues, and reviewed dark/light palettes. See
+names, textual severity cues, compact 34–36 px controls, and reviewed dark/light
+palettes. A Skia-backed Avalonia headless suite verifies auto-decode, layout,
+rail defaults, and both rendered themes in CI. See
 [UI interaction and accessibility](docs/ui-accessibility.md).
 
 Supported inputs and deliberately evidence-gated post-MVP work are summarized
@@ -118,7 +129,7 @@ dotnet run --project src/Nvt.Replay.Cli -- export ./capture.txt --event-buffer-v
 dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83
-dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x97 --palm-profile Benz-Palm
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x97 --register-profile 51927 --palm-profile Benz-Palm
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83 --register-profile 51927
 dotnet run --project src/Nvt.Replay.Cli -- readable ./capture.txt --output ./analysis --register-profile 51927
 ```

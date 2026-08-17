@@ -169,6 +169,44 @@ public sealed class Desay97Tests
     }
 
     [Fact]
+    public void More_than_ten_contacts_remain_visible_but_cannot_update_host_state()
+    {
+        var body = new List<byte> { 0x0B };
+        for (byte id = 1; id <= 11; id++)
+        {
+            body.Add((byte)(0x40 | id));
+            body.AddRange([0x00, id, 0x00, id]);
+        }
+        var full = Seal(body);
+        var packet = Assert.Single(new Desay97Assembler().Assemble([Record(1, [0x0B]), Record(2, full)]).Packets);
+
+        var result = new Desay97Decoder().Decode(packet, Desay97Profile.Standard);
+
+        Assert.Equal(11, result.Frame?.Fingers.Count);
+        Assert.False(result.Frame?.HostStateEligible);
+        Assert.Contains(result.Diagnostics, item => item.Code == "DESAY97_TOUCH_COUNT_OUT_OF_RANGE");
+    }
+
+    [Fact]
+    public void Duplicate_contact_ids_remain_visible_but_cannot_update_host_state()
+    {
+        var full = Seal([
+            0x02,
+            0x41, 0x00, 0x64, 0x00, 0xC8,
+            0x41, 0x01, 0x2C, 0x01, 0x90,
+        ]);
+        var packet = Assert.Single(new Desay97Assembler().Assemble([Record(1, [0x02]), Record(2, full)]).Packets);
+
+        var result = new Desay97Decoder().Decode(packet, Desay97Profile.Standard);
+        var frame = Assert.IsType<Desay97Frame>(result.Frame);
+
+        Assert.Equal(2, frame.Fingers.Count);
+        Assert.False(frame.HostStateEligible);
+        Assert.Empty(new Desay97ReplaySession([frame]).Seek(0).HostContacts);
+        Assert.Contains(result.Diagnostics, item => item.Code == "DESAY97_DUPLICATE_CONTACT_ID");
+    }
+
+    [Fact]
     public void Dropped_crc_pair_cannot_mutate_prior_host_state()
     {
         var enter = Seal([0x01, 0x21, 0x03, 0x14, 0x07, 0x19]);

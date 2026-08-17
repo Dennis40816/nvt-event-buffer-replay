@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -7,7 +8,6 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -66,10 +66,13 @@ public partial class MainWindow : Window
     private bool maxReplaySpeed;
     private bool synchronizingSelection;
     private bool synchronizingLoopControls;
+    private bool configuringEventVersion;
     private string? pendingSourcePath;
     private bool configuringSourceChoice;
     private bool configuringRegisterProfile;
     private bool operationInProgress;
+    private int playbackTimingRevision;
+    private bool outputWorkspaceActive;
     private int themeMode;
     private bool reviewRailCollapsed;
     private bool inspectorRailCollapsed;
@@ -80,17 +83,6 @@ public partial class MainWindow : Window
     private const int OutputVideoWidth = 1280;
     private const int OutputVideoHeight = 720;
     private const int OutputVideoFrameRate = 30;
-    private readonly Dictionary<TextBlock, IBrush?> originalTextBrushes = [];
-    private static readonly HashSet<uint> DarkLiteralTextColors =
-    [
-        0xFF59646B, 0xFF657078, 0xFF667279, 0xFF68747A, 0xFF69757B, 0xFF707B81,
-        0xFF707C82, 0xFF737F85, 0xFF77848A, 0xFF78848A, 0xFF7C878C, 0xFF7D888E,
-        0xFF7E898F, 0xFF869197, 0xFF8A969B, 0xFF8D989D, 0xFF8E999E, 0xFF9AA4A8,
-        0xFF9FB6BE, 0xFFA6B0B4, 0xFFA8B1B5, 0xFFAAB3B6, 0xFFAEB7BB, 0xFFB8C1C4,
-        0xFFC2CACD, 0xFFC4CCCE, 0xFFC8CED0, 0xFFC9D0D2, 0xFFD2D8D6, 0xFFD3D9D7,
-        0xFFD8AD62, 0xFFDDE3E1, 0xFFE0E5E3, 0xFFF0F4F2, 0xFFC8F36C, 0xFF58C7D9,
-    ];
-
     public MainWindow()
     {
         InitializeComponent();
@@ -139,7 +131,6 @@ public partial class MainWindow : Window
         Opened += (_, _) =>
         {
             ApplyWorkingAreaHeightLimit();
-            ScheduleThemeContrast();
             ApplyResponsiveRails(Bounds.Width);
         };
         SizeChanged += MainWindow_OnSizeChanged;
@@ -160,7 +151,15 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveRails(double width)
     {
-        SetReviewRailCollapsed(reviewRailUserPreference ?? width < 1400);
+        if (outputWorkspaceActive)
+        {
+            SetReviewRailCollapsed(true);
+            SetInspectorRailCollapsed(true);
+            return;
+        }
+        // Keep an empty review queue out of the workspace. Actionable findings open
+        // automatically on wide layouts, and an explicit user choice always wins.
+        SetReviewRailCollapsed(reviewRailUserPreference ?? (reviewRows.Length == 0 || width < 1400));
         SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1240);
     }
 
@@ -199,35 +198,8 @@ public partial class MainWindow : Window
 
     private void Application_OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
-        ScheduleThemeContrast();
         PaintSurface.InvalidateVisual();
-    }
-
-    private void ScheduleThemeContrast() => Dispatcher.UIThread.Post(ApplyThemeContrast, DispatcherPriority.Loaded);
-
-    private void ApplyThemeContrast()
-    {
-        var isLight = Application.Current?.RequestedThemeVariant == ThemeVariant.Light;
-        if (!isLight)
-        {
-            foreach (var pair in originalTextBrushes) pair.Key.Foreground = pair.Value;
-            originalTextBrushes.Clear();
-            return;
-        }
-        foreach (var textBlock in this.GetVisualDescendants().OfType<TextBlock>())
-        {
-            if (textBlock.Foreground is not ISolidColorBrush brush || !DarkLiteralTextColors.Contains(brush.Color.ToUInt32())) continue;
-            originalTextBrushes.TryAdd(textBlock, textBlock.Foreground);
-            var color = brush.Color.ToUInt32() switch
-            {
-                0xFFC8F36C => Color.Parse("#537D00"),
-                0xFFD8AD62 => Color.Parse("#8A5900"),
-                0xFF58C7D9 => Color.Parse("#006B78"),
-                var value when ((value >> 16) & 0xff) + ((value >> 8) & 0xff) + (value & 0xff) > 480 => Color.Parse("#17201B"),
-                _ => Color.Parse("#536159"),
-            };
-            textBlock.Foreground = new SolidColorBrush(color);
-        }
+        RefreshCurrentOutputVideoFrame();
     }
 
     private void CommandPaletteButton_OnClick(object? sender, RoutedEventArgs e) => ToggleCommandPalette();
@@ -334,7 +306,6 @@ public partial class MainWindow : Window
             SourceConfidenceText.Text = $"{session.Probe.Confidence} confidence · {session.Probe.Reasons.FirstOrDefault()}";
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
-            DecodeButton.IsEnabled = true;
             RegisterProfileComboBox.IsEnabled = true;
             ExportReadableLogButton.IsEnabled = true;
             configuringRegisterProfile = true;
@@ -348,7 +319,6 @@ public partial class MainWindow : Window
             {
                 RawRecordsList.SelectedIndex = 0;
             }
-            ScheduleThemeContrast();
         }
         catch (OperationCanceledException)
         {
@@ -379,8 +349,6 @@ public partial class MainWindow : Window
             SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
     }
-
-    private async void DecodeButton_OnClick(object? sender, RoutedEventArgs e) => await DecodeSelectedAsync();
 
     internal async Task ApplyStartupDecodeAsync(string eventVersion, string? palmProfile, string? registerProfile = null)
     {
@@ -418,9 +386,22 @@ public partial class MainWindow : Window
             return;
         }
 
-        EventVersionComboBox.SelectedIndex = versionIndex;
+        configuringEventVersion = true;
+        try
+        {
+            EventVersionComboBox.SelectedIndex = versionIndex;
+        }
+        finally
+        {
+            configuringEventVersion = false;
+        }
         if (versionIndex == 4)
         {
+            if (string.IsNullOrWhiteSpace(registerProfile))
+            {
+                ConfigurationHintText.Text = "Startup 0x97 decode requires --register-profile and --palm-profile.";
+                return;
+            }
             var profileIndex = palmProfile?.Trim().ToUpperInvariant() switch
             {
                 "STANDARD" => 0,
@@ -453,9 +434,15 @@ public partial class MainWindow : Window
         }
 
         var isDesay97 = versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase);
+        var registerProfile = NvtRegisterCatalog.FindProfile(session.RegisterProfile);
         Desay97Profile? desayProfile = null;
         if (isDesay97)
         {
+            if (registerProfile is null)
+            {
+                ConfigurationHintText.Text = "Desay 0x97 requires an explicit IC profile before decoding.";
+                return;
+            }
             desayProfile = Desay97ProfileComboBox.SelectedItem is ComboBoxItem profileItem &&
                            profileItem.Content?.ToString() == "Benz Palm"
                 ? Desay97Profile.BenzPalm
@@ -487,7 +474,9 @@ public partial class MainWindow : Window
             if (isDesay97)
             {
                 var profile = desayProfile ?? throw new InvalidOperationException("Desay profile was validated before decoding.");
-                var report = await Task.Run(() => session.DecodeDesay97(profile), cancellationToken);
+                var eventBufferBase = registerProfile?.EventBufferBase ??
+                    throw new InvalidOperationException("Desay IC profile was validated before decoding.");
+                var report = await Task.Run(() => session.DecodeDesay97(profile, eventBufferBase), cancellationToken);
                 replaySession = await Task.Run(() => new Desay97ReplaySession(report.Frames), cancellationToken);
                 decodedRows = report.Frames.Select((frame, index) => DecodedFrameRow.FromDesay97(index, frame)).ToArray();
                 decodeDiagnostics = report.Diagnostics;
@@ -507,7 +496,7 @@ public partial class MainWindow : Window
                 versionText,
                 isDesay97 ? ProfileText(desayProfile!.Value) : null,
                 session.Probe.AdapterId,
-                NvtRegisterCatalog.FindProfile(session.RegisterProfile)?.EventBufferBase ?? 0x99000,
+                registerProfile?.EventBufferBase ?? 0,
                 session.RegisterProfile);
             if (decodeConfiguration is not null && decodeConfiguration != nextConfiguration)
                 markers.Clear();
@@ -526,7 +515,7 @@ public partial class MainWindow : Window
             CreateReviewSession(diagnosticRows.Select(row => row.Diagnostic).ToArray());
 
             DecodedFramesList.ItemsSource = decodedRows;
-            SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} decoded frames · {diagnosticRows.Length:N0} diagnostics";
+            SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
             ConfigurationHintText.Text = $"{formatLabel} confirmed · decoded automatically · raw source remains unchanged";
             TimelineSummaryText.Text = $"{session.Records.Count:N0} physical · {decodedRows.Length:N0} logical · {diagnosticRows.Length:N0} evidence";
             TimelineStatusText.Text = decodedRows.Length > 0
@@ -548,7 +537,6 @@ public partial class MainWindow : Window
             {
                 WorkspaceTabs.SelectedIndex = 0;
             }
-            ScheduleThemeContrast();
         }
         catch (OperationCanceledException)
         {
@@ -663,9 +651,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        var isDesay97 = (sender as ComboBox)?.SelectedItem is ComboBoxItem item &&
+        var comboBox = sender as ComboBox;
+        var isDesay97 = comboBox?.SelectedItem is ComboBoxItem item &&
                         item.Content?.ToString() == "0x97";
         if (Desay97ProfileComboBox is null)
         {
@@ -680,9 +669,14 @@ public partial class MainWindow : Window
         if (session is not null)
         {
             ConfigurationHintText.Text = isDesay97
-                ? "Confirm Standard or Benz Palm; decoding starts immediately after that selection."
+                ? NvtRegisterCatalog.FindProfile(session.RegisterProfile) is null
+                    ? "0x97 selected · confirm IC profile, then Standard or Benz Palm."
+                    : "IC profile confirmed · select Standard or Benz Palm to decode 0x97."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
+        if (!configuringEventVersion && session is not null && !isDesay97 &&
+            comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false })
+            await DecodeSelectedAsync();
     }
 
     private void OpenOutputPreviewButton_OnClick(object? sender, RoutedEventArgs e)
@@ -693,11 +687,28 @@ public partial class MainWindow : Window
 
     private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is not TabControl tabs || AnalysisTab is null) return;
-        if (tabs.SelectedItem == AnalysisTab)
+        if (AnalysisTab is null) return;
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+        var outputSelected = ReferenceEquals(WorkspaceTabs.SelectedItem, AnalysisTab);
+        if (outputWorkspaceActive == outputSelected) return;
+        outputWorkspaceActive = outputSelected;
+        if (outputSelected)
+        {
+            StopPlayback();
+            SetSourceTransportEnabled(false);
+            TimelineStatusText.Text = "Output preview active · use Preview above · drag Loop handles to change the export range";
+            SetReviewRailCollapsed(true);
+            SetInspectorRailCollapsed(true);
             await RefreshOutputPreviewAsync();
+        }
         else
+        {
             StopOutputVideoPreviewPlayback();
+            SetSourceTransportEnabled(true);
+            if (replaySession is { Count: > 0 })
+                TimelineStatusText.Text = "Paused · Space play/pause · ←/→ step · drag Loop handles to set range";
+            ApplyResponsiveRails(Bounds.Width);
+        }
     }
 
     private AnalysisRange SelectedOutputRange()
@@ -724,8 +735,19 @@ public partial class MainWindow : Window
             PaintSurface.Mode,
             SourceFileName: Path.GetFileName(session.SourcePath),
             SourceSha256: session.SourceSha256,
-            DecodeConfiguration: decodeConfiguration);
+            DecodeConfiguration: decodeConfiguration,
+            RenderSettings: CurrentReplayRenderSettings());
     }
+
+    private ReplayRenderSettings CurrentReplayRenderSettings() => new(
+        PaintSurface.Mode,
+        Application.Current?.ActualThemeVariant == ThemeVariant.Light
+            ? ReplayRenderTheme.Light
+            : ReplayRenderTheme.Dark,
+        PaintSurface.StrongGrid,
+        PaintSurface.LegendVisible,
+        PaintSurface.LegendCollapsed,
+        PaintSurface.LegendPosition);
 
     private ReplayScene CreateReplayScene(int logicalIndex)
     {
@@ -813,7 +835,8 @@ public partial class MainWindow : Window
             $"evidence {report.Manifest.FormatEvidenceStatus}\n" +
             $"paint    {PaintSurface.Mode}\n" +
             $"replay   {clockName} at {speed}";
-        OutputSourceText.Text = $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{session.SourceSha256}";
+        OutputSourceText.Text =
+            $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{FormatSha256(session.SourceSha256)}";
         AnalysisHeatmapPreview.Show(report.Hotspot);
         PrepareOutputVideoPreview(range, clockName, speed);
     }
@@ -839,7 +862,11 @@ public partial class MainWindow : Window
         if (replaySession is null || outputVideoFrameCount == 0 || outputVideoPlan.Count == 0) return;
         outputVideoFrameIndex = Math.Clamp(outputFrameIndex, 0, outputVideoFrameCount - 1);
         var logicalIndex = ReplayFramePlan.LogicalIndexAt(outputVideoPlan, outputVideoFrameIndex);
-        OutputVideoPreview.Show(CreateReplayScene(logicalIndex), PaintSurface.Mode);
+        OutputVideoPreview.Show(
+            CreateReplayScene(logicalIndex),
+            CurrentReplayRenderSettings(),
+            OutputVideoWidth,
+            OutputVideoHeight);
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
         var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)OutputVideoFrameRate);
         var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)OutputVideoFrameRate);
@@ -867,12 +894,23 @@ public partial class MainWindow : Window
         var cancellation = new CancellationTokenSource();
         outputVideoPlaybackCancellation = cancellation;
         SetOutputVideoPlaybackVisualState(true);
+        var firstOutputFrame = outputVideoFrameIndex;
+        var playbackStarted = Stopwatch.GetTimestamp();
         try
         {
             while (outputVideoFrameIndex < outputVideoFrameCount - 1)
             {
-                await Task.Delay(TimeSpan.FromSeconds(1d / OutputVideoFrameRate), cancellation.Token);
-                ShowOutputVideoFrame(outputVideoFrameIndex + 1);
+                var elapsed = Stopwatch.GetElapsedTime(playbackStarted).TotalSeconds;
+                var targetFrame = Math.Min(
+                    outputVideoFrameCount - 1,
+                    firstOutputFrame + (int)Math.Floor(elapsed * OutputVideoFrameRate));
+                if (targetFrame > outputVideoFrameIndex)
+                    ShowOutputVideoFrame(targetFrame);
+                if (targetFrame >= outputVideoFrameCount - 1) break;
+
+                var nextFrameAt = (targetFrame - firstOutputFrame + 1d) / OutputVideoFrameRate;
+                var delay = Math.Max(1, (int)Math.Round((nextFrameAt - elapsed) * 1000));
+                await Task.Delay(delay, cancellation.Token);
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -919,6 +957,12 @@ public partial class MainWindow : Window
         OutputPreviewFrameText.Text = "output 0/0";
     }
 
+    private void RefreshCurrentOutputVideoFrame()
+    {
+        if (outputVideoFrameCount > 0 && outputVideoPlan.Count > 0)
+            ShowOutputVideoFrame(outputVideoFrameIndex);
+    }
+
     private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (session is not null && Desay97ProfileComboBox.SelectedIndex >= 0)
@@ -937,8 +981,11 @@ public partial class MainWindow : Window
     {
         var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
                         versionItem.Content?.ToString() == "0x97";
-        if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
+        if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0 &&
+            NvtRegisterCatalog.FindProfile(session.RegisterProfile) is not null)
             await DecodeSelectedAsync();
+        else if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
+            ConfigurationHintText.Text = "Palm profile confirmed · select the IC profile to decode 0x97.";
     }
 
     private async void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -981,7 +1028,8 @@ public partial class MainWindow : Window
         }
 
         var canDecode = EventVersionComboBox.SelectedIndex >= 0 &&
-            (EventVersionComboBox.SelectedIndex != 4 || Desay97ProfileComboBox.SelectedIndex >= 0);
+            (EventVersionComboBox.SelectedIndex != 4 ||
+             (choice.IcFamily is not null && Desay97ProfileComboBox.SelectedIndex >= 0));
         if (canDecode) await DecodeSelectedAsync();
     }
 
@@ -1034,12 +1082,12 @@ public partial class MainWindow : Window
             RegisterActivitySurface.SetSelected(null);
             InspectorTitleText.Text = "No matching record";
             InspectorSubtitleText.Text = "Adjust the Raw Explorer search or register filter.";
-            InspectorLogicalText.Text = "—";
-            InspectorPhysicalText.Text = "—";
-            InspectorTouchesText.Text = "—";
-            InspectorCrcText.Text = "—";
-            InspectorAsilText.Text = "—";
-            InspectorAllBreakText.Text = "—";
+            InspectorLogicalText.Text = "-";
+            InspectorPhysicalText.Text = "-";
+            InspectorTouchesText.Text = "-";
+            InspectorCrcText.Text = "-";
+            InspectorAsilText.Text = "-";
+            InspectorAllBreakText.Text = "-";
             DecodedFieldsText.Text = "No physical source record matches the current Raw Explorer query.";
         }
     }
@@ -1235,9 +1283,9 @@ public partial class MainWindow : Window
         var evidence = details?.GetValueOrDefault("evidence");
         ReviewStateText.Text =
             $"captured={group.CurrentCapturedAlarmState} · workflow={group.WorkflowState} · " +
-            $"lifecycle={group.AsilLifecycle?.ToString() ?? "—"} · disposition={group.Disposition}" +
+            $"lifecycle={group.AsilLifecycle?.ToString() ?? "-"} · disposition={group.Disposition}" +
             (string.IsNullOrWhiteSpace(qa) ? string.Empty : $"\nQA={qa}") +
-            (string.IsNullOrWhiteSpace(evidence) || evidence == "—" ? string.Empty : $"\nevidence={evidence}");
+            (string.IsNullOrWhiteSpace(evidence) || evidence == "-" ? string.Empty : $"\nevidence={evidence}");
     }
 
     private void CreateReviewSession(IReadOnlyList<ReplayDiagnostic> diagnostics)
@@ -1264,14 +1312,14 @@ public partial class MainWindow : Window
         return new ReplayDiagnostic(
             DiagnosticSeverity.Info,
             "ANNOTATION_MARKER",
-            marker.IsRange ? $"{marker.Label} · frames {marker.StartLogicalIndex + 1}–{marker.EndLogicalIndex + 1}" : $"{marker.Label} · frame {marker.StartLogicalIndex + 1}",
+            marker.IsRange ? $"{marker.Label} · frames {marker.StartLogicalIndex + 1}-{marker.EndLogicalIndex + 1}" : $"{marker.Label} · frame {marker.StartLogicalIndex + 1}",
             source?.StableId ?? session?.SourceSha256 ?? "sidecar",
             source?.Location ?? new SourceLocation(0, 0),
             new Dictionary<string, string>
             {
                 ["marker_id"] = marker.Id,
                 ["qa_case_ids"] = string.Join(", ", marker.QaCaseIds ?? []),
-                ["evidence"] = evidence.Count == 0 ? "—" : string.Join("; ", evidence.Select(item => $"{item.Kind}:{item.Label ?? Path.GetFileName(item.Path)}:{(File.Exists(item.Path) ? "available" : "missing")}")),
+                ["evidence"] = evidence.Count == 0 ? "-" : string.Join("; ", evidence.Select(item => $"{item.Kind}:{item.Label ?? Path.GetFileName(item.Path)}:{(File.Exists(item.Path) ? "available" : "missing")}")),
             });
     }
 
@@ -1285,6 +1333,7 @@ public partial class MainWindow : Window
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
         var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
         if (selected is not null) DiagnosticListBox.SelectedItem = selected;
+        if (Bounds.Width > 0) ApplyResponsiveRails(Bounds.Width);
     }
 
     private void AddMarkerButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1303,7 +1352,7 @@ public partial class MainWindow : Window
         CreateReviewSession(baseDiagnostics);
         RefreshReviewQueue($"ANNOTATION_MARKER:{marker.Id}");
         SessionStatusText.Text = marker.IsRange
-            ? $"Added range marker · frames {start + 1}–{end + 1}"
+            ? $"Added range marker · frames {start + 1}-{end + 1}"
             : $"Added marker · frame {start + 1}";
     }
 
@@ -1515,31 +1564,31 @@ public partial class MainWindow : Window
         };
         InspectorLogicalText.Text = currentLogicalIndex >= 0 && replaySession is not null
             ? $"{currentLogicalIndex + 1} / {replaySession.Count}"
-            : "—";
+            : "-";
         InspectorPhysicalText.Text = record.Index.ToString(CultureInfo.InvariantCulture);
         InspectorTouchesText.Text = frame switch
         {
             CommonEventBufferFrame common => common.NumTouches.ToString(CultureInfo.InvariantCulture),
             Desay97Frame desay => desay.NumTouches.ToString(CultureInfo.InvariantCulture),
-            _ => "—",
+            _ => "-",
         };
         InspectorCrcText.Text = frame switch
         {
             CommonEventBufferFrame common => common.CrcValid ? "OK" : "FAIL",
             Desay97Frame desay => desay.CrcValid ? "OK" : "FAIL",
-            _ => "—",
+            _ => "-",
         };
         InspectorAsilText.Text = frame switch
         {
             CommonEventBufferFrame common => $"0x{common.Asil.Raw:X2}",
-            Desay97Frame desay => desay.TpAsilError ? "TP alarm" : "—",
-            _ => "—",
+            Desay97Frame desay => desay.TpAsilError ? "TP alarm" : "-",
+            _ => "-",
         };
         InspectorAllBreakText.Text = frame switch
         {
             CommonEventBufferFrame common => common.AllBreak.ToString(),
             Desay97Frame desay => desay.AllBreak.ToString(),
-            _ => "—",
+            _ => "-",
         };
 
         var frameAlerts = reviewSession?.Diagnostics
@@ -1595,17 +1644,17 @@ public partial class MainWindow : Window
     {
         var text = new StringBuilder()
             .Append(record.Operation).Append(' ').Append(record.Target).Append(' ')
-            .Append(record.Address is { } address ? $"0x{address:X}" : "address=—")
+            .Append(record.Address is { } address ? $"0x{address:X}" : "address=-")
             .AppendLine()
-            .Append("declared=").Append(record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "—")
+            .Append("declared=").Append(record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-")
             .Append(" actual=").Append(record.Data.Count);
         if (record.I2c is { } i2c)
         {
             text.AppendLine().Append($"slave=0x{i2c.SlaveAddress:X2} address-ack={AckText(i2c.AddressAcknowledged)}");
             text.AppendLine().Append("write commands=")
-                .Append(i2c.WriteCommands.Count == 0 ? "—" : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes)));
+                .Append(i2c.WriteCommands.Count == 0 ? "-" : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes)));
             text.AppendLine().Append("data ACKs=")
-                .Append(i2c.Acked.Count == 0 ? "—" : string.Join(' ', i2c.Acked.Select(value => value ? "ACK" : "NAK")));
+                .Append(i2c.Acked.Count == 0 ? "-" : string.Join(' ', i2c.Acked.Select(value => value ? "ACK" : "NAK")));
             if (!string.IsNullOrWhiteSpace(i2c.Error)) text.AppendLine().Append("transport error=").Append(i2c.Error);
         }
         if (record.SourceFields is { Count: > 0 })
@@ -1617,7 +1666,7 @@ public partial class MainWindow : Window
         return text.ToString();
     }
 
-    private static string AckText(bool? value) => value switch { true => "ACK", false => "NAK", null => "—" };
+    private static string AckText(bool? value) => value switch { true => "ACK", false => "NAK", null => "-" };
 
     private sealed record SourceAdapterChoice(string AdapterId, string DisplayName, ProbeConfidence Confidence)
     {
@@ -1672,7 +1721,6 @@ public partial class MainWindow : Window
         EventVersionComboBox.IsEnabled = false;
         Desay97ProfileComboBox.SelectedIndex = -1;
         Desay97ProfileComboBox.IsVisible = false;
-        DecodeButton.IsEnabled = false;
         PaintTab.IsEnabled = false;
         PreviousFrameButton.IsEnabled = false;
         PlayPauseButton.IsEnabled = false;
@@ -1709,7 +1757,7 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.SetLoopRange(null, null, false);
         ReplayClockText.Text = "00:00.000";
         ReplayEndClockText.Text = "00:00.000";
-        LoopRangeText.Text = "Loop —";
+        LoopRangeText.Text = "Loop -";
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
         PaintZoomHintBorder.IsVisible = false;
@@ -1735,12 +1783,12 @@ public partial class MainWindow : Window
         DiagnosticCountText.Text = "0";
         InspectorTitleText.Text = "Frame Summary";
         InspectorSubtitleText.Text = "Select a physical record or decoded event.";
-        InspectorLogicalText.Text = "—";
-        InspectorPhysicalText.Text = "—";
-        InspectorTouchesText.Text = "—";
-        InspectorCrcText.Text = "—";
-        InspectorAsilText.Text = "—";
-        InspectorAllBreakText.Text = "—";
+        InspectorLogicalText.Text = "-";
+        InspectorPhysicalText.Text = "-";
+        InspectorTouchesText.Text = "-";
+        InspectorCrcText.Text = "-";
+        InspectorAsilText.Text = "-";
+        InspectorAllBreakText.Text = "-";
         InspectorAlertBorder.IsVisible = false;
         InspectorAlertText.Text = string.Empty;
         SourceAdapterText.Text = "Probing…";
@@ -1755,7 +1803,6 @@ public partial class MainWindow : Window
         LoadingProgress.IsVisible = busy;
         LoadButton.IsVisible = !busy;
         CancelButton.IsVisible = busy;
-        DecodeButton.IsEnabled = !busy && session is not null;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
         RegisterProfileComboBox.IsEnabled = !busy && session is not null;
@@ -1778,9 +1825,7 @@ public partial class MainWindow : Window
 
         var maximum = Math.Max(1, replaySession.Count - 1);
         PaintTab.IsEnabled = replaySession.Count > 0;
-        PreviousFrameButton.IsEnabled = replaySession.Count > 0;
-        PlayPauseButton.IsEnabled = replaySession.Count > 0;
-        NextFrameButton.IsEnabled = replaySession.Count > 0;
+        SetSourceTransportEnabled(!outputWorkspaceActive);
         LoopToggleButton.IsEnabled = replaySession.Count > 1;
         ReplayTimelineSurface.IsEnabled = replaySession.Count > 0;
         ReplayTimelineSurface.SetMaximum(maximum);
@@ -1793,6 +1838,14 @@ public partial class MainWindow : Window
         PaintSurface.Fit();
         UpdatePaintZoomText();
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
+    }
+
+    private void SetSourceTransportEnabled(bool enabled)
+    {
+        var available = enabled && replaySession is { Count: > 0 };
+        PreviousFrameButton.IsEnabled = available;
+        PlayPauseButton.IsEnabled = available;
+        NextFrameButton.IsEnabled = available;
     }
 
     private void SeekReplay(int logicalIndex, bool crossfade = false)
@@ -1887,40 +1940,69 @@ public partial class MainWindow : Window
 
     private async Task RunPlaybackAsync(CancellationToken cancellationToken)
     {
+        var playbackStarted = Stopwatch.GetTimestamp();
+        var scheduledElapsed = TimeSpan.Zero;
+        var timingRevision = playbackTimingRevision;
         try
         {
             while (replaySession is { Count: > 0 })
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (timingRevision != playbackTimingRevision)
+                {
+                    playbackStarted = Stopwatch.GetTimestamp();
+                    scheduledElapsed = TimeSpan.Zero;
+                    timingRevision = playbackTimingRevision;
+                }
+
                 var end = loopEnabled ? loopOut ?? replaySession.Count - 1 : replaySession.Count - 1;
                 if (currentLogicalIndex >= end)
                 {
                     if (loopEnabled && loopIn is { } start && start <= end)
                     {
                         SeekReplay(start, crossfade: true);
+                        playbackStarted = Stopwatch.GetTimestamp();
+                        scheduledElapsed = TimeSpan.Zero;
                         continue;
                     }
                     StopPlayback("Replay complete · use Home, seek, or Play to restart");
                     return;
                 }
 
-                var next = maxReplaySpeed
-                    ? Math.Min(end, currentLogicalIndex + 50)
-                    : currentLogicalIndex + 1;
-                var pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, next);
-                if (pauseIndex is { } alarmIndex) next = alarmIndex;
-                var delay = maxReplaySpeed
-                    ? TimeSpan.FromMilliseconds(16)
-                    : DelayBetween(currentLogicalIndex, next);
-                if (delay > TimeSpan.Zero)
+                int next;
+                int? pauseIndex;
+                if (maxReplaySpeed)
                 {
-                    await Task.Delay(delay, cancellationToken);
+                    var interval = TimeSpan.FromMilliseconds(16);
+                    var firstDue = scheduledElapsed + interval;
+                    await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
+                    var elapsed = Stopwatch.GetElapsedTime(playbackStarted);
+                    var elapsedTicks = Math.Max(interval.Ticks, elapsed.Ticks - scheduledElapsed.Ticks);
+                    var dueSteps = Math.Max(1L, elapsedTicks / interval.Ticks);
+                    var availableSteps = Math.Max(1L, (end - currentLogicalIndex + 49L) / 50L);
+                    var steps = Math.Min(dueSteps, availableSteps);
+                    var frameAdvance = Math.Min((long)end - currentLogicalIndex, steps * 50L);
+                    next = currentLogicalIndex + (int)frameAdvance;
+                    pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, next);
+                    if (pauseIndex is { } alarmIndex) next = alarmIndex;
+                    scheduledElapsed += TimeSpan.FromTicks(interval.Ticks * steps);
                 }
                 else
                 {
-                    await Task.Yield();
-                    cancellationToken.ThrowIfCancellationRequested();
+                    var firstDue = scheduledElapsed + DelayBetween(currentLogicalIndex, currentLogicalIndex + 1);
+                    await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
+                    pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, end);
+                    var position = ReplayPlaybackSchedule.CatchUp(
+                        currentLogicalIndex,
+                        end,
+                        scheduledElapsed,
+                        Stopwatch.GetElapsedTime(playbackStarted),
+                        DelayBetween,
+                        pauseIndex);
+                    next = position.LogicalIndex;
+                    scheduledElapsed = position.ScheduledElapsed;
                 }
+
                 SeekReplay(next);
                 if (pauseIndex == next)
                 {
@@ -1933,6 +2015,19 @@ public partial class MainWindow : Window
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
+    }
+
+    private static async Task DelayUntilAsync(
+        long startedTimestamp,
+        TimeSpan scheduledElapsed,
+        CancellationToken cancellationToken)
+    {
+        var remaining = scheduledElapsed - Stopwatch.GetElapsedTime(startedTimestamp);
+        if (remaining > TimeSpan.Zero)
+            await Task.Delay(remaining, cancellationToken);
+        else
+            await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private void SelectReviewAt(int logicalIndex)
@@ -2018,11 +2113,13 @@ public partial class MainWindow : Window
         {
             replaySpeed = speed;
         }
+        playbackTimingRevision++;
         RefreshOutputPreviewIfVisible();
     }
 
     private void ClockModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        playbackTimingRevision++;
         if (replaySession is not null && currentLogicalIndex >= 0)
         {
             ReplayClockText.Text = FormatClock(SelectedTime(replaySession.Timeline[currentLogicalIndex]));
@@ -2030,6 +2127,8 @@ public partial class MainWindow : Window
         }
         RefreshOutputPreviewIfVisible();
     }
+
+    private void ReplayTimingOption_OnChanged(object? sender, RoutedEventArgs e) => playbackTimingRevision++;
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -2143,11 +2242,17 @@ public partial class MainWindow : Window
         RefreshLegendPlacement();
     }
 
-    private void LegendVisibleToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e) =>
+    private void LegendVisibleToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
         PaintSurface.SetLegendVisible(LegendVisibleToggleButton.IsChecked == true);
+        RefreshCurrentOutputVideoFrame();
+    }
 
-    private void LegendCompactToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e) =>
+    private void LegendCompactToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
         PaintSurface.SetLegendCollapsed(LegendCompactToggleButton.IsChecked == true);
+        RefreshCurrentOutputVideoFrame();
+    }
 
     private void PaintSurface_OnLegendCollapsedChanged(object? sender, EventArgs e)
     {
@@ -2165,6 +2270,7 @@ public partial class MainWindow : Window
                 : ReplayLegendPositioner.Choose(replaySession.AllReportedContacts, replayExtent, reverseX, reverseY);
         }
         PaintSurface.SetLegendPosition(resolved);
+        RefreshCurrentOutputVideoFrame();
     }
 
     private void ReverseAxisToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -2181,6 +2287,7 @@ public partial class MainWindow : Window
         var strong = GridStrengthToggleButton.IsChecked == true;
         GridStrengthToggleButton.Content = strong ? "Grid +" : "Grid";
         PaintSurface.SetStrongGrid(strong);
+        RefreshCurrentOutputVideoFrame();
     }
 
     private void LoopInButton_OnClick(object? sender, RoutedEventArgs e)
@@ -2277,8 +2384,8 @@ public partial class MainWindow : Window
     {
         var hasRange = loopIn is not null && loopOut is not null;
         LoopRangeText.Text = !hasRange
-            ? "Loop —"
-            : $"Loop {loopIn!.Value + 1:N0}–{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " · off")}";
+            ? "Loop -"
+            : $"Loop {loopIn!.Value + 1:N0}-{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " · off")}";
         ClearLoopButton.IsEnabled = hasRange;
         ReplayTimelineSurface.SetLoopRange(loopIn, loopOut, loopEnabled);
         RefreshOutputPreviewIfVisible();
@@ -2306,6 +2413,10 @@ public partial class MainWindow : Window
         value.TotalHours >= 1
             ? value.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture)
             : value.ToString(@"mm\:ss\.fff", CultureInfo.InvariantCulture);
+
+    private static string FormatSha256(string value) => value.Length == 64
+        ? $"{value[..32]}\n{value[32..]}"
+        : value;
 
     protected override void OnKeyDown(KeyEventArgs e)
     {

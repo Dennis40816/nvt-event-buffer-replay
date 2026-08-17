@@ -15,6 +15,9 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+#if DEBUG
+            this.AttachDeveloperTools();
+#endif
             var window = new MainWindow();
             desktop.MainWindow = window;
             var initialCapture = desktop.Args?.FirstOrDefault(File.Exists);

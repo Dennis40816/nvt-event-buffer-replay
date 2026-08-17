@@ -31,6 +31,7 @@ public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
     {
         using var stream = new FileStream(context.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+        var layout = TextFileLayout.Detect(context.Path);
         var header = await reader.ReadLineAsync(cancellationToken);
         if (!DelimitedText.HeaderEquals(header, Header))
         {
@@ -40,7 +41,7 @@ public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
 
         var pending = new List<DecodedByte>();
         var lineNumber = 1;
-        long byteOffset = Encoding.UTF8.GetByteCount(header ?? string.Empty) + Environment.NewLine.Length;
+        long byteOffset = layout.FirstLineOffset + layout.Advance(header ?? string.Empty);
         long outputIndex = 0;
         var tracker = new NvtRegisterTracker();
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
@@ -48,11 +49,12 @@ public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
             cancellationToken.ThrowIfCancellationRequested();
             lineNumber++;
             var lineOffset = byteOffset;
-            byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+            byteOffset += layout.Advance(line);
             if (!TryParse(line, lineNumber, lineOffset, out var decoded, out var error))
             {
                 SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "SALEAE_MALFORMED_ROW", error, lineNumber, lineOffset);
                 pending.Clear();
+                tracker.ResetEvidence();
                 continue;
             }
             pending.Add(decoded!);
@@ -66,6 +68,7 @@ public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
             if (record is null)
             {
                 SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "SALEAE_INVALID_TRANSACTION", error, lineNumber, lineOffset);
+                tracker.ResetEvidence();
                 continue;
             }
             outputIndex++;
@@ -74,6 +77,7 @@ public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
 
         if (pending.Count > 0)
         {
+            tracker.ResetEvidence();
             var first = pending[0];
             SourceDiagnostics.Report(
                 context,
@@ -109,7 +113,10 @@ public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
         var operation = reads.Length > 0 ? BusOperation.Read : BusOperation.Write;
         var raw = string.Join(Environment.NewLine, rows.Select(row => row.RawText));
         var writeCommands = reads.Length > 0 && writes.Length > 0
-            ? new IReadOnlyList<byte>[] { writes.Select(row => row.Value).ToArray() }
+            ? writes
+                .GroupBy(row => row.PacketId)
+                .Select(group => (IReadOnlyList<byte>)group.Select(row => row.Value).ToArray())
+                .ToArray()
             : [];
         error = string.Empty;
         return new SourceRecord(

@@ -55,6 +55,45 @@ public sealed class CommonEventBufferDecoder
                 new Dictionary<string, string> { ["num_touches"] = numTouches.ToString(System.Globalization.CultureInfo.InvariantCulture) }));
         }
 
+        var reportedFingers = fingers.Where(finger => finger.IsReported).ToArray();
+        var duplicateIds = reportedFingers
+            .GroupBy(finger => finger.Id)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .Order()
+            .ToArray();
+        if (duplicateIds.Length > 0)
+        {
+            diagnostics.Add(Diagnostic(
+                source,
+                DiagnosticSeverity.Warning,
+                "COMMON_DUPLICATE_CONTACT_ID",
+                $"Common event buffer reports duplicate contact ID(s): {string.Join(", ", duplicateIds)}.",
+                new Dictionary<string, string>
+                {
+                    ["duplicate_ids"] = string.Join(',', duplicateIds),
+                }));
+        }
+
+        var activeFingerCount = reportedFingers.Count(IsActiveAfterFrame);
+        // A Break slot may be carried for one evidence frame while projects differ on
+        // whether it is still included in NumTouches. Validate only unambiguous frames.
+        var touchCountComparable = reportedFingers.All(finger => finger.Status != TouchStatus.Break);
+        var touchCountConsistent = !touchCountComparable || activeFingerCount == numTouches;
+        if (numTouches <= FingerCount && !touchCountConsistent)
+        {
+            diagnostics.Add(Diagnostic(
+                source,
+                DiagnosticSeverity.Warning,
+                "COMMON_ACTIVE_TOUCH_COUNT_MISMATCH",
+                $"NumTouches is {numTouches}, but {activeFingerCount} contact(s) remain active after this frame.",
+                new Dictionary<string, string>
+                {
+                    ["num_touches"] = numTouches.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["active_contacts"] = activeFingerCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                }));
+        }
+
         var (buttonLength, asilOffset, reservedOffset, reservedLength) = version switch
         {
             CommonEventBufferVersion.V82 => (2, 73, 76, 3),
@@ -109,7 +148,10 @@ public sealed class CommonEventBufferDecoder
             computedCrc,
             crcValid,
             source.Data.Skip(FrameLength).ToArray(),
-            crcValid && numTouches <= FingerCount);
+            crcValid &&
+            numTouches <= FingerCount &&
+            duplicateIds.Length == 0 &&
+            touchCountConsistent);
 
         return new CommonDecodeResult(frame, diagnostics);
     }
@@ -159,6 +201,10 @@ public sealed class CommonEventBufferDecoder
 
     private static ushort ReadUInt16BigEndian(byte[] packet, int offset) =>
         (ushort)((packet[offset] << 8) | packet[offset + 1]);
+
+    private static bool IsActiveAfterFrame(CommonFinger finger) =>
+        finger.Status is TouchStatus.Enter or TouchStatus.Move ||
+        finger.Type == TouchType.Palm && finger.Status == TouchStatus.NoFinger;
 
     internal static ReplayDiagnostic Diagnostic(
         SourceRecord source,

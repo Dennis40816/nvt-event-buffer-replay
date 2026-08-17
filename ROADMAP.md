@@ -11,9 +11,9 @@
 
 ## M2 — Replay Slice
 
-- [x] Load and progressive Decode Configuration
+- [x] Load and confirmation-driven auto Decode Configuration (no separate Decode action)
 - [x] Reported Frame and Host State Paint
-- [x] Recorded/Frame clocks and playback controls
+- [x] Recorded/Frame clocks, absolute-deadline playback, late-frame coalescing, and loop crossfade
 - [x] Logical stepping, physical drill-down, range, and sparse checkpoints
 - [x] Basic multi-track timeline
 
@@ -27,6 +27,7 @@
 ## M4 — Export Slice
 
 - [x] Shared ReplayScene
+- [x] Exact 1280×720 desktop MP4 preview with scrubber and reusable frame buffers
 - [x] Selected-range FFmpeg MP4 with PNG fallback
 - [x] Heatmap PNG
 - [x] Parsed/diagnostic JSON and CSV
@@ -36,7 +37,7 @@
 
 - [x] One-GB/one-million-record/eight-hour performance gate
 - [x] Cancellation, recovery journal, and atomic output
-- [x] Keyboard, command palette, scaling, theme, and accessibility checks
+- [x] Keyboard, command palette, scaling, theme, accessibility, and Skia headless UI checks
 - [x] Windows self-contained portable package and release gates
 
 ## M6 — Register-aware communication log

@@ -1,6 +1,6 @@
 # MVP evidence boundaries and deferrals
 
-The MVP supports decoded-I2C sources (NDS communication log, Saleae, KingstVIS, DSL, the conservative Acute prototype, Excel, and canonical text), Common 0x82–0x85, and Desay 0x97 with explicit Standard/Benz Palm selection. It does not infer Event Buffer Version or Benz Palm, and it never rewrites captured bytes.
+The MVP supports decoded-I2C sources (NDS communication log, Saleae, KingstVIS, DSL, the conservative Acute prototype, Excel, and canonical text), Common 0x82-0x85, and Desay 0x97 with explicit IC and Standard/Benz Palm selection. It does not infer Event Buffer Version, IC profile, or Benz Palm, and it never rewrites captured bytes.
 
 The following remain deliberately gated rather than guessed:
 

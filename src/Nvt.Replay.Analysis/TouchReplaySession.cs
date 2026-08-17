@@ -203,7 +203,7 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
 
     private static HostCheckpoint Apply(HostCheckpoint prior, TouchReplayFrameProjection frame)
     {
-        if (!frame.HostStateEligible)
+        if (!frame.HostStateEligible || frame.HostReportedContacts.GroupBy(contact => contact.Id).Any(group => group.Count() > 1))
         {
             return prior;
         }
