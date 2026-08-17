@@ -70,6 +70,7 @@ public partial class MainWindow : Window
     private bool configuringSourceChoice;
     private bool configuringRegisterProfile;
     private bool operationInProgress;
+    private int playbackTimingRevision;
     private bool outputWorkspaceActive;
     private int themeMode;
     private bool reviewRailCollapsed;
@@ -1916,40 +1917,69 @@ public partial class MainWindow : Window
 
     private async Task RunPlaybackAsync(CancellationToken cancellationToken)
     {
+        var playbackStarted = Stopwatch.GetTimestamp();
+        var scheduledElapsed = TimeSpan.Zero;
+        var timingRevision = playbackTimingRevision;
         try
         {
             while (replaySession is { Count: > 0 })
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (timingRevision != playbackTimingRevision)
+                {
+                    playbackStarted = Stopwatch.GetTimestamp();
+                    scheduledElapsed = TimeSpan.Zero;
+                    timingRevision = playbackTimingRevision;
+                }
+
                 var end = loopEnabled ? loopOut ?? replaySession.Count - 1 : replaySession.Count - 1;
                 if (currentLogicalIndex >= end)
                 {
                     if (loopEnabled && loopIn is { } start && start <= end)
                     {
                         SeekReplay(start, crossfade: true);
+                        playbackStarted = Stopwatch.GetTimestamp();
+                        scheduledElapsed = TimeSpan.Zero;
                         continue;
                     }
                     StopPlayback("Replay complete · use Home, seek, or Play to restart");
                     return;
                 }
 
-                var next = maxReplaySpeed
-                    ? Math.Min(end, currentLogicalIndex + 50)
-                    : currentLogicalIndex + 1;
-                var pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, next);
-                if (pauseIndex is { } alarmIndex) next = alarmIndex;
-                var delay = maxReplaySpeed
-                    ? TimeSpan.FromMilliseconds(16)
-                    : DelayBetween(currentLogicalIndex, next);
-                if (delay > TimeSpan.Zero)
+                int next;
+                int? pauseIndex;
+                if (maxReplaySpeed)
                 {
-                    await Task.Delay(delay, cancellationToken);
+                    var interval = TimeSpan.FromMilliseconds(16);
+                    var firstDue = scheduledElapsed + interval;
+                    await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
+                    var elapsed = Stopwatch.GetElapsedTime(playbackStarted);
+                    var elapsedTicks = Math.Max(interval.Ticks, elapsed.Ticks - scheduledElapsed.Ticks);
+                    var dueSteps = Math.Max(1L, elapsedTicks / interval.Ticks);
+                    var availableSteps = Math.Max(1L, (end - currentLogicalIndex + 49L) / 50L);
+                    var steps = Math.Min(dueSteps, availableSteps);
+                    var frameAdvance = Math.Min((long)end - currentLogicalIndex, steps * 50L);
+                    next = currentLogicalIndex + (int)frameAdvance;
+                    pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, next);
+                    if (pauseIndex is { } alarmIndex) next = alarmIndex;
+                    scheduledElapsed += TimeSpan.FromTicks(interval.Ticks * steps);
                 }
                 else
                 {
-                    await Task.Yield();
-                    cancellationToken.ThrowIfCancellationRequested();
+                    var firstDue = scheduledElapsed + DelayBetween(currentLogicalIndex, currentLogicalIndex + 1);
+                    await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
+                    pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, end);
+                    var position = ReplayPlaybackSchedule.CatchUp(
+                        currentLogicalIndex,
+                        end,
+                        scheduledElapsed,
+                        Stopwatch.GetElapsedTime(playbackStarted),
+                        DelayBetween,
+                        pauseIndex);
+                    next = position.LogicalIndex;
+                    scheduledElapsed = position.ScheduledElapsed;
                 }
+
                 SeekReplay(next);
                 if (pauseIndex == next)
                 {
@@ -1962,6 +1992,19 @@ public partial class MainWindow : Window
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
+    }
+
+    private static async Task DelayUntilAsync(
+        long startedTimestamp,
+        TimeSpan scheduledElapsed,
+        CancellationToken cancellationToken)
+    {
+        var remaining = scheduledElapsed - Stopwatch.GetElapsedTime(startedTimestamp);
+        if (remaining > TimeSpan.Zero)
+            await Task.Delay(remaining, cancellationToken);
+        else
+            await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private void SelectReviewAt(int logicalIndex)
@@ -2047,11 +2090,13 @@ public partial class MainWindow : Window
         {
             replaySpeed = speed;
         }
+        playbackTimingRevision++;
         RefreshOutputPreviewIfVisible();
     }
 
     private void ClockModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        playbackTimingRevision++;
         if (replaySession is not null && currentLogicalIndex >= 0)
         {
             ReplayClockText.Text = FormatClock(SelectedTime(replaySession.Timeline[currentLogicalIndex]));
@@ -2059,6 +2104,8 @@ public partial class MainWindow : Window
         }
         RefreshOutputPreviewIfVisible();
     }
+
+    private void ReplayTimingOption_OnChanged(object? sender, RoutedEventArgs e) => playbackTimingRevision++;
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {

@@ -1035,7 +1035,7 @@
             </StackPanel>
           </Button>
           <Button x:Name="ShortcutHelpButton" Grid.Column="22" Classes="canvasIcon" Content="&#xE765;" Click="CommandPaletteButton_OnClick" ToolTip.Tip="Keyboard shortcuts (Ctrl+K)" AutomationProperties.Name="Open keyboard shortcuts" />
-          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="24" Content="Compress idle" IsChecked="True" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+          <CheckBox x:Name="CompressIdleCheckBox" Grid.Column="24" Content="Compress idle" IsChecked="True" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" IsCheckedChanged="ReplayTimingOption_OnChanged" />
           <TextBlock x:Name="TimelineSummaryText" Grid.Column="26" Text="0 physical · 0 logical · 0 evidence" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
         </Grid>
         <Grid Grid.Row="1" RowDefinitions="16,28,16" ColumnDefinitions="82,*">
