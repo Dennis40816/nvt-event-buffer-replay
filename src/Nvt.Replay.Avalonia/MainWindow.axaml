@@ -300,7 +300,7 @@
       <Setter Property="MinWidth" Value="36" />
       <Setter Property="Padding" Value="11,0" />
       <Setter Property="CornerRadius" Value="5" />
-      <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="1" />
@@ -318,15 +318,16 @@
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
-    <Style Selector="Button.canvasQuick:focus">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+    <Style Selector="Button.canvasQuick:focus-visible">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick">
       <Setter Property="Height" Value="36" />
       <Setter Property="MinWidth" Value="44" />
       <Setter Property="Padding" Value="11,0" />
       <Setter Property="CornerRadius" Value="5" />
-      <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="BorderThickness" Value="1" />
@@ -345,17 +346,18 @@
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick:checked">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="ToggleButton.canvasQuick:checked /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
-    <Style Selector="ToggleButton.canvasQuick:focus">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+    <Style Selector="ToggleButton.canvasQuick:focus-visible">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="Border.canvasSettingsPanel">
       <Setter Property="Background" Value="{DynamicResource HeaderBrush}" />
