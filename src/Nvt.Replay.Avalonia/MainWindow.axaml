@@ -748,7 +748,7 @@
                         <TextBlock Text="Click legend to expand · L show/hide" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                         <ToggleButton x:Name="LegendCompactToggleButton" Grid.Column="1" Classes="canvasQuick" MinWidth="76" Content="Compact" IsChecked="True" IsCheckedChanged="LegendCompactToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Compact legend" />
                       </Grid>
-                      <TextBlock Text="Scroll over the canvas to zoom around the pointer." FontSize="11" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock Text="Scroll to zoom · hold left mouse button and drag to pan." FontSize="11" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </StackPanel>

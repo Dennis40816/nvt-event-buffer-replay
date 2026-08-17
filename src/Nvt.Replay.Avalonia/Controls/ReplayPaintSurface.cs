@@ -12,6 +12,8 @@ namespace Nvt.Replay.Avalonia.Controls;
 
 public sealed class ReplayPaintSurface : Control
 {
+    private static readonly Cursor PanCursor = new(StandardCursorType.SizeAll);
+
     private static readonly PaintPalette DarkPalette = new(
         Stage: Brush("#10171A"),
         Surface: Brush("#162428"),
@@ -83,6 +85,10 @@ public sealed class ReplayPaintSurface : Control
     private bool legendCollapsed = true;
     private bool legendHovered;
     private Rect? legendBounds;
+    private bool isPanning;
+    private Point panStart;
+    private Vector panStartOffset;
+    private IPointer? panPointer;
 
     public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.HostState;
     public double ZoomFactor => zoomFactor;
@@ -101,14 +107,18 @@ public sealed class ReplayPaintSurface : Control
     public void Show(ReplayScene value)
     {
         scene = value;
+        viewportOffset = ClampViewportOffset(viewportOffset, value.Extent, zoomFactor);
+        UpdatePanCursor();
         InvalidateVisual();
     }
 
     public void Clear()
     {
         scene = null;
+        EndPan(releaseCapture: true);
         legendBounds = null;
         legendHovered = false;
+        UpdatePanCursor();
         InvalidateVisual();
     }
 
@@ -118,6 +128,7 @@ public sealed class ReplayPaintSurface : Control
 
     public void Fit()
     {
+        EndPan(releaseCapture: true);
         viewportOffset = default;
         SetZoom(1, force: true);
     }
@@ -176,6 +187,9 @@ public sealed class ReplayPaintSurface : Control
         }
 
         zoomFactor = nextZoom;
+        if (scene is not null)
+            viewportOffset = ClampViewportOffset(viewportOffset, scene.Extent, zoomFactor);
+        UpdatePanCursor();
         InvalidateVisual();
         ZoomChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -191,7 +205,19 @@ public sealed class ReplayPaintSurface : Control
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        var hovered = legendVisible && legendBounds?.Contains(e.GetPosition(this)) == true;
+        var position = e.GetPosition(this);
+        if (isPanning && scene is not null)
+        {
+            viewportOffset = ClampViewportOffset(
+                panStartOffset + (position - panStart),
+                scene.Extent,
+                zoomFactor);
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
+        var hovered = legendVisible && legendBounds?.Contains(position) == true;
         if (hovered == legendHovered) return;
         legendHovered = hovered;
         InvalidateVisual();
@@ -208,12 +234,41 @@ public sealed class ReplayPaintSurface : Control
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (!legendVisible || legendBounds?.Contains(e.GetPosition(this)) != true ||
-            !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
 
-        SetLegendCollapsed(!legendCollapsed);
+        var position = e.GetPosition(this);
+        if (legendVisible && legendBounds?.Contains(position) == true)
+        {
+            SetLegendCollapsed(!legendCollapsed);
+            e.Handled = true;
+            return;
+        }
+
+        if (scene is null || !CanPan(scene.Extent, zoomFactor)) return;
+
+        isPanning = true;
+        panStart = position;
+        panStartOffset = viewportOffset;
+        panPointer = e.Pointer;
+        legendHovered = false;
+        e.Pointer.Capture(this);
+        UpdatePanCursor();
         e.Handled = true;
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (!isPanning) return;
+
+        EndPan(releaseCapture: true);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        EndPan(releaseCapture: false);
     }
 
     public override void Render(DrawingContext context)
@@ -290,6 +345,45 @@ public sealed class ReplayPaintSurface : Control
             available.Center.Y + offset.Y - (viewportHeight / 2),
             viewportWidth,
             viewportHeight);
+    }
+
+    private Vector ClampViewportOffset(Vector offset, ReplayExtent extent, double zoom)
+    {
+        var bounds = new Rect(Bounds.Size);
+        var available = BuildAvailableBounds(bounds);
+        var centeredViewport = BuildViewport(bounds, extent, zoom, default);
+        var maximumX = Math.Max(0, (centeredViewport.Width - available.Width) / 2);
+        var maximumY = Math.Max(0, (centeredViewport.Height - available.Height) / 2);
+        return new Vector(
+            Math.Clamp(offset.X, -maximumX, maximumX),
+            Math.Clamp(offset.Y, -maximumY, maximumY));
+    }
+
+    private bool CanPan(ReplayExtent extent, double zoom)
+    {
+        var bounds = new Rect(Bounds.Size);
+        var available = BuildAvailableBounds(bounds);
+        var viewport = BuildViewport(bounds, extent, zoom, default);
+        return viewport.Width > available.Width + 0.5 || viewport.Height > available.Height + 0.5;
+    }
+
+    private void EndPan(bool releaseCapture)
+    {
+        if (!isPanning && panPointer is null) return;
+
+        var pointer = panPointer;
+        isPanning = false;
+        panPointer = null;
+        if (releaseCapture)
+            pointer?.Capture(null);
+        UpdatePanCursor();
+    }
+
+    private void UpdatePanCursor()
+    {
+        Cursor = isPanning || (scene is not null && CanPan(scene.Extent, zoomFactor))
+            ? PanCursor
+            : null;
     }
 
     private void DrawGrid(DrawingContext context, Rect viewport, bool strong)
