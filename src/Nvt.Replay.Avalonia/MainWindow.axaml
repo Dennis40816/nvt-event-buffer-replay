@@ -517,6 +517,21 @@
     <Style Selector="ListBox.inspectorContacts ListBoxItem:selected">
       <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
     </Style>
+    <Style Selector="ListBox.inspectorContacts ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="TextBlock.inspectorSectionTitle">
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.healthTextAlarm">
+      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
+    <Style Selector="TextBlock.healthTextNormal">
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+    </Style>
     <Style Selector="GridSplitter.inspectorSplitter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
@@ -973,8 +988,8 @@
           </Grid>
 
           <Grid x:Name="InspectorRailContent" Grid.Row="1" RowDefinitions="Auto,Auto,*">
-            <Border Padding="14,4,14,13" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-              <StackPanel Spacing="10">
+            <Border Padding="14,3,14,11" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+              <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,3,Auto">
                   <StackPanel Orientation="Horizontal" Spacing="7">
                     <TextBlock x:Name="InspectorTitleText" Text="Frame" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
@@ -984,47 +999,37 @@
                   <TextBlock x:Name="InspectorSubtitleText" Grid.Row="2" Grid.ColumnSpan="2" Text="Select a physical record or decoded event." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                 </Grid>
 
-                <WrapPanel Orientation="Horizontal">
-                  <Border Classes="inspectorMetric" Margin="0,0,5,5">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <controls:TouchTypeIcon Width="18" Height="18" ContactId="1" TouchType="Finger" />
-                      <TextBlock Text="F" Classes="fieldLabel" />
-                      <TextBlock x:Name="InspectorFingerText" Text="0" Classes="monoValue" />
-                    </StackPanel>
-                  </Border>
-                  <Border Classes="inspectorMetric" Margin="0,0,5,5">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <controls:TouchTypeIcon Width="18" Height="18" ContactId="2" TouchType="Glove" />
-                      <TextBlock Text="G" Classes="fieldLabel" />
-                      <TextBlock x:Name="InspectorGloveText" Text="0" Classes="monoValue" />
-                    </StackPanel>
-                  </Border>
-                  <Border Classes="inspectorMetric" Margin="0,0,5,5">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <controls:TouchTypeIcon Width="18" Height="18" ContactId="3" TouchType="Palm" />
-                      <TextBlock Text="P" Classes="fieldLabel" />
-                      <TextBlock x:Name="InspectorPalmText" Text="0" Classes="monoValue" />
-                    </StackPanel>
-                  </Border>
-                  <Border x:Name="InspectorCrcBadge" Classes="inspectorMetric healthGood" Margin="0,0,5,5">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <TextBlock Text="CRC" Classes="fieldLabel" />
-                      <TextBlock x:Name="InspectorCrcText" Text="-" Classes="monoValue" />
-                    </StackPanel>
-                  </Border>
-                  <Border x:Name="InspectorAsilBadge" Classes="inspectorMetric" Margin="0,0,5,5">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                      <TextBlock Text="ASIL" Classes="fieldLabel" />
-                      <TextBlock x:Name="InspectorAsilText" Text="-" Classes="monoValue" />
-                      <TextBlock x:Name="InspectorAsilRawText" Text="" FontFamily="Cascadia Mono" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                    </StackPanel>
-                  </Border>
-                  <Border x:Name="InspectorAllBreakBadge" Classes="inspectorMetric healthAlarm" Margin="0,0,5,5" IsVisible="False">
-                    <TextBlock x:Name="InspectorAllBreakText" Text="ALL BREAK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
-                  </Border>
+                <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                    <TextBlock Text="Touch" Classes="fieldLabel" Margin="0,0,3,0" />
+                    <controls:TouchTypeIcon Width="16" Height="16" ContactId="1" TouchType="Finger" />
+                    <TextBlock x:Name="InspectorFingerText" Text="0" Classes="monoValue" />
+                    <controls:TouchTypeIcon Width="16" Height="16" ContactId="2" TouchType="Glove" Margin="5,0,0,0" />
+                    <TextBlock x:Name="InspectorGloveText" Text="0" Classes="monoValue" />
+                    <controls:TouchTypeIcon Width="16" Height="16" ContactId="3" TouchType="Palm" Margin="5,0,0,0" />
+                    <TextBlock x:Name="InspectorPalmText" Text="0" Classes="monoValue" />
+                  </StackPanel>
+                  <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="InspectorCrcBadge" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,14,0">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="CRC" Classes="fieldLabel" />
+                        <TextBlock x:Name="InspectorCrcText" Text="-" Classes="monoValue healthTextNormal" />
+                      </StackPanel>
+                    </Border>
+                    <Border x:Name="InspectorAsilBadge" Background="Transparent" BorderThickness="0" Padding="0">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="ASIL" Classes="fieldLabel" />
+                        <TextBlock x:Name="InspectorAsilText" Text="-" Classes="monoValue healthTextNormal" />
+                        <TextBlock x:Name="InspectorAsilRawText" Text="" FontFamily="Cascadia Mono" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </Border>
+                    <Border x:Name="InspectorAllBreakBadge" Background="Transparent" BorderThickness="0" Padding="0" Margin="14,0,0,0" IsVisible="False">
+                      <TextBlock x:Name="InspectorAllBreakText" Text="ALL BREAK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" />
+                    </Border>
+                  </WrapPanel>
                   <TextBlock x:Name="InspectorPhysicalText" Text="-" IsVisible="False" />
                   <TextBlock x:Name="InspectorTouchesText" Text="-" IsVisible="False" />
-                </WrapPanel>
+                </Grid>
 
                 <Border x:Name="InspectorAlertBorder" IsVisible="False" Padding="9,7" CornerRadius="4" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1">
                   <Grid ColumnDefinitions="*,Auto,3,Auto">
@@ -1039,10 +1044,10 @@
             <Border Grid.Row="1" Padding="14,10,14,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
               <StackPanel Spacing="7">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="CONTACTS" Classes="section" VerticalAlignment="Center" />
+                  <TextBlock Text="Contacts" Classes="inspectorSectionTitle" VerticalAlignment="Center" />
                   <TextBlock x:Name="InspectorContactCountText" Grid.Column="1" Text="0 active" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
                 </Grid>
-                <TextBlock x:Name="InspectorNoContactsText" Text="No active contacts in this frame." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                <TextBlock x:Name="InspectorNoContactsText" IsVisible="False" Text="No active contacts in this frame." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
                 <ListBox x:Name="InspectorContactsList" Classes="inspectorContacts" MaxHeight="236" SelectionMode="Single" SelectionChanged="InspectorContactsList_OnSelectionChanged" AutomationProperties.Name="Contacts in current frame">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:InspectorContactRow">
@@ -1069,12 +1074,32 @@
               <TabItem Header="Protocol">
                 <ScrollViewer>
                   <StackPanel Margin="14,10,14,16" Spacing="14">
-                    <TextBlock Classes="section" Text="FRAME FIELDS" />
-                    <TextBlock x:Name="DecodedFieldsText" Text="Confirm Event Buffer Version to decode automatically." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                    <TextBlock Classes="inspectorSectionTitle" Text="Frame" />
+                    <ItemsControl x:Name="ProtocolFieldsItemsControl">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:InspectorDetailRow">
+                          <Grid ColumnDefinitions="108,*" Margin="0,0,0,8">
+                            <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="DecodedFieldsText" IsVisible="False" Text="Confirm Event Buffer Version to decode automatically." />
                     <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
                       <StackPanel Spacing="7">
-                        <TextBlock Classes="section" Text="I²C TRANSACTION" />
-                        <TextBlock x:Name="TransportText" Text="No transport selected" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock Classes="inspectorSectionTitle" Text="I²C transaction" />
+                        <ItemsControl x:Name="TransportFieldsItemsControl">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:InspectorDetailRow">
+                              <Grid ColumnDefinitions="108,*" Margin="0,0,0,8">
+                                <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                              </Grid>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock x:Name="TransportText" IsVisible="False" Text="No transport selected" />
                       </StackPanel>
                     </Border>
                   </StackPanel>

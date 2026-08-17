@@ -44,6 +44,8 @@ public sealed record InspectorContactSummary(int Fingers, int Gloves, int Palms,
     public int Total => Fingers + Gloves + Palms + Other;
 }
 
+public sealed record InspectorDetailRow(string Label, string Value);
+
 public sealed record InspectorFramePresentation(
     string LogicalLabel,
     string TimestampLabel,
@@ -56,7 +58,7 @@ public sealed record InspectorFramePresentation(
     string AsilRawLabel,
     bool AsilAlarm,
     bool AllBreak,
-    string ProtocolDetails);
+    IReadOnlyList<InspectorDetailRow> ProtocolRows);
 
 public static class InspectorPresentationBuilder
 {
@@ -90,7 +92,7 @@ public static class InspectorPresentationBuilder
                 $"0x{common.Asil.Raw:X2}",
                 common.TpAsilError || common.Asil.Alarm,
                 common.AllBreak,
-                FormatProtocolDetails(common)),
+                FormatProtocolRows(common)),
             Desay97Frame desay => new InspectorFramePresentation(
                 logicalLabel,
                 timestamp,
@@ -103,7 +105,7 @@ public static class InspectorPresentationBuilder
                 desay.TpAsilError ? "TP" : "-",
                 desay.TpAsilError,
                 desay.AllBreak,
-                FormatProtocolDetails(desay)),
+                FormatProtocolRows(desay)),
             _ => new InspectorFramePresentation(
                 logicalLabel,
                 timestamp,
@@ -118,7 +120,7 @@ public static class InspectorPresentationBuilder
                 "-",
                 false,
                 false,
-                FormatProtocolDetails(record)),
+                FormatProtocolRows(record)),
         };
     }
 
@@ -172,35 +174,42 @@ public static class InspectorPresentationBuilder
             active.Count(contact => contact.Type == TouchType.Reserved));
     }
 
-    private static string FormatProtocolDetails(CommonEventBufferFrame frame)
+    private static IReadOnlyList<InspectorDetailRow> FormatProtocolRows(CommonEventBufferFrame frame)
     {
-        var builder = new StringBuilder()
-            .AppendLine($"format        Common {VersionText(frame.Version)}")
-            .AppendLine($"ASIL byte     0x{frame.Asil.Raw:X2}")
-            .AppendLine($"button valid  {frame.Button.Valid}");
+        var rows = new List<InspectorDetailRow>
+        {
+            new("Format", $"Common {VersionText(frame.Version)}"),
+            new("ASIL byte", $"0x{frame.Asil.Raw:X2}"),
+            new("Button payload", frame.Button.Valid ? "Valid" : "Not present"),
+        };
         if (frame.BusStatus is { } bus)
-            builder.AppendLine($"bus counters  no-response={bus.NoResponseCounter} busy={bus.BusyCounter}");
+            rows.Add(new InspectorDetailRow("Bus counters", $"No response {bus.NoResponseCounter}, busy {bus.BusyCounter}"));
         if (frame.DiagnosticPacket is { } diagnostic)
         {
-            builder.AppendLine($"EMS bitmap    {Convert.ToString(diagnostic.EmsBitmap, 2).PadLeft(4, '0')}");
-            builder.AppendLine($"global palm   {diagnostic.PalmOn}");
+            rows.Add(new InspectorDetailRow("EMS bitmap", Convert.ToString(diagnostic.EmsBitmap, 2).PadLeft(4, '0')));
+            rows.Add(new InspectorDetailRow("Global palm", diagnostic.PalmOn ? "On" : "Off"));
         }
-        return builder.ToString().TrimEnd();
+        return rows;
     }
 
-    private static string FormatProtocolDetails(Desay97Frame frame) =>
-        $"format        Desay 0x97 / {ProfileText(frame.Profile)}\n" +
-        $"short/open    {frame.Short}/{frame.Open}\n" +
-        $"phase 1       Physical #{frame.Packet.Probe.Index} · L{frame.Packet.Probe.Location.LineNumber}\n" +
-        $"phase 2       Physical #{frame.Packet.PayloadRead.Index} · L{frame.Packet.PayloadRead.Location.LineNumber}";
+    private static IReadOnlyList<InspectorDetailRow> FormatProtocolRows(Desay97Frame frame) =>
+    [
+        new("Format", $"Desay 0x97, {ProfileText(frame.Profile)}"),
+        new("Short / Open", $"{frame.Short} / {frame.Open}"),
+        new("Phase 1", $"Physical #{frame.Packet.Probe.Index}, line {frame.Packet.Probe.Location.LineNumber}"),
+        new("Phase 2", $"Physical #{frame.Packet.PayloadRead.Index}, line {frame.Packet.PayloadRead.Location.LineNumber}"),
+    ];
 
-    private static string FormatProtocolDetails(SourceRecord record)
+    private static IReadOnlyList<InspectorDetailRow> FormatProtocolRows(SourceRecord record)
     {
         var readable = record.SourceFields?.GetValueOrDefault("register_readable");
-        if (readable is null) return "No decoded event is linked to this physical record.";
-        return $"{readable}\n" +
-               $"raw={record.SourceFields?.GetValueOrDefault("register_value") ?? FormatBytes(record.Data)}\n" +
-               $"profile-resolution={record.SourceFields?.GetValueOrDefault("register_profile_resolution") ?? "unknown"}";
+        if (readable is null) return [new("Decode", "No decoded event is linked to this physical record")];
+        return
+        [
+            new("Register", readable),
+            new("Raw value", record.SourceFields?.GetValueOrDefault("register_value") ?? FormatBytes(record.Data)),
+            new("Profile", record.SourceFields?.GetValueOrDefault("register_profile_resolution") ?? "Unknown"),
+        ];
     }
 
     public static string BuildCopyText(InspectorFramePresentation presentation)

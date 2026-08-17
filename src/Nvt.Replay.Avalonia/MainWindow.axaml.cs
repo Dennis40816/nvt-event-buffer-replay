@@ -1181,7 +1181,8 @@ public partial class MainWindow : Window
             InspectorTouchesText.Text = "-";
             InspectorCrcText.Text = "-";
             InspectorAsilText.Text = "-";
-            InspectorAllBreakText.Text = "-";
+            InspectorAllBreakText.Text = "ALL BREAK";
+            InspectorAllBreakBadge.IsVisible = false;
             DecodedFieldsText.Text = "No physical source record matches the current Raw Explorer query.";
         }
     }
@@ -1690,13 +1691,15 @@ public partial class MainWindow : Window
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
         TransportText.Text = FormatTransport(record);
+        TransportFieldsItemsControl.ItemsSource = BuildTransportRows(record);
         SourceFieldsText.Text = FormatSourceFields(record);
         var rawLayout = RawFrameLayoutBuilder.Build(record, frame);
         RawLayoutTitleText.Text = rawLayout.Title;
         RawLayoutSummaryText.Text = rawLayout.Summary;
         RawByteSectionsItemsControl.ItemsSource = rawLayout.Sections;
         RawBytesText.Text = FormatBytes(record.Data);
-        DecodedFieldsText.Text = currentInspectorPresentation.ProtocolDetails;
+        ProtocolFieldsItemsControl.ItemsSource = currentInspectorPresentation.ProtocolRows;
+        DecodedFieldsText.Text = FormatDetailRows(currentInspectorPresentation.ProtocolRows);
     }
 
     private void ApplyInspectorPresentation(InspectorFramePresentation presentation, bool registerActivity)
@@ -1712,7 +1715,7 @@ public partial class MainWindow : Window
         InspectorContactCountText.Text = presentation.ContactSummary.Total == 1
             ? "1 active"
             : $"{presentation.ContactSummary.Total} active";
-        InspectorNoContactsText.IsVisible = presentation.Contacts.Count == 0;
+        InspectorNoContactsText.IsVisible = false;
         InspectorContactsList.IsVisible = presentation.Contacts.Count > 0;
         InspectorContactsList.ItemsSource = presentation.Contacts;
         InspectorContactsList.SelectedItem = selectedId is { } id
@@ -1723,9 +1726,10 @@ public partial class MainWindow : Window
         InspectorCrcText.Text = presentation.CrcLabel;
         InspectorAsilText.Text = presentation.AsilLabel;
         InspectorAsilRawText.Text = presentation.AsilRawLabel is "-" ? string.Empty : presentation.AsilRawLabel;
-        SetHealthState(InspectorCrcBadge, presentation.CrcFailed, presentation.CrcLabel != "-");
-        SetHealthState(InspectorAsilBadge, presentation.AsilAlarm, presentation.AsilLabel != "-");
+        SetHealthText(InspectorCrcText, presentation.CrcFailed, presentation.CrcLabel != "-");
+        SetHealthText(InspectorAsilText, presentation.AsilAlarm, presentation.AsilLabel != "-");
         InspectorAllBreakBadge.IsVisible = presentation.AllBreak;
+        InspectorAllBreakText.Text = "ALL BREAK";
 
         CollapsedFingerText.Text = presentation.ContactSummary.Fingers.ToString(CultureInfo.InvariantCulture);
         CollapsedGloveText.Text = presentation.ContactSummary.Gloves.ToString(CultureInfo.InvariantCulture);
@@ -1746,6 +1750,12 @@ public partial class MainWindow : Window
     {
         border.Classes.Set("healthGood", known && !alarm);
         border.Classes.Set("healthAlarm", known && alarm);
+    }
+
+    private static void SetHealthText(TextBlock textBlock, bool alarm, bool known)
+    {
+        textBlock.Classes.Set("healthTextAlarm", known && alarm);
+        textBlock.Classes.Set("healthTextNormal", !alarm || !known);
     }
 
     private async void SourceAdapterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1775,6 +1785,35 @@ public partial class MainWindow : Window
         }
         return text.ToString();
     }
+
+    private static IReadOnlyList<InspectorDetailRow> BuildTransportRows(SourceRecord record)
+    {
+        var rows = new List<InspectorDetailRow>
+        {
+            new("Operation", $"{record.Operation} {record.Target}"),
+            new("Register", record.Address is { } address ? $"0x{address:X}" : "Not reported"),
+            new("Payload", record.DeclaredByteCount is { } declared
+                ? $"{record.Data.Count} bytes, declared {declared}"
+                : $"{record.Data.Count} bytes"),
+        };
+        if (record.I2c is not { } i2c) return rows;
+        rows.Add(new InspectorDetailRow("Slave", $"0x{i2c.SlaveAddress:X2}"));
+        rows.Add(new InspectorDetailRow("Address ACK", i2c.AddressAcknowledged switch
+        {
+            true => "ACK",
+            false => "NAK",
+            null => "Not reported",
+        }));
+        rows.Add(new InspectorDetailRow("Write", i2c.WriteCommands.Count == 0
+            ? "None"
+            : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes))));
+        rows.Add(new InspectorDetailRow("Data ACK", I2cAckSummary.Format(i2c.Acked)));
+        if (!string.IsNullOrWhiteSpace(i2c.Error)) rows.Add(new InspectorDetailRow("Transport error", i2c.Error));
+        return rows;
+    }
+
+    private static string FormatDetailRows(IReadOnlyList<InspectorDetailRow> rows) =>
+        string.Join('\n', rows.Select(row => $"{row.Label}: {row.Value}"));
 
     private static string FormatSourceFields(SourceRecord record) =>
         record.SourceFields is not { Count: > 0 }
@@ -1916,14 +1955,16 @@ public partial class MainWindow : Window
         InspectorContactsList.ItemsSource = null;
         InspectorContactsList.SelectedItem = null;
         InspectorContactsList.IsVisible = false;
-        InspectorNoContactsText.IsVisible = true;
+        InspectorNoContactsText.IsVisible = false;
+        ProtocolFieldsItemsControl.ItemsSource = null;
+        TransportFieldsItemsControl.ItemsSource = null;
         InspectorCrcText.Text = "-";
         InspectorAsilText.Text = "-";
         InspectorAsilRawText.Text = string.Empty;
         InspectorAllBreakText.Text = "ALL BREAK";
         InspectorAllBreakBadge.IsVisible = false;
-        SetHealthState(InspectorCrcBadge, false, false);
-        SetHealthState(InspectorAsilBadge, false, false);
+        SetHealthText(InspectorCrcText, false, false);
+        SetHealthText(InspectorAsilText, false, false);
         CollapsedFingerText.Text = "0";
         CollapsedGloveText.Text = "0";
         CollapsedPalmText.Text = "0";
