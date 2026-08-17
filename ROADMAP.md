@@ -15,7 +15,7 @@
 - [x] Reported Frame and Host State Paint
 - [x] Recorded/Frame clocks, absolute-deadline playback, late-frame coalescing, and loop crossfade
 - [x] Logical stepping, physical drill-down, range, and sparse checkpoints
-- [x] Basic multi-track timeline
+- [x] Multi-track timeline with grouped transport controls, per-track counts, direct seek, loop handles, and frame-aware marker context actions
 
 ## M3 — Analysis Slice
 
@@ -23,7 +23,7 @@
 - [x] Review Queue and occurrence grouping
 - [x] Structured Inspector with health-first frame state, color-linked Contact selection, Protocol/Raw/Review layers, and on-demand source identity
 - [x] Resizable 320–520 px Inspector rail with useful type/ASIL summary while collapsed
-- [x] Marker and `.nvtreplay.json` round trip
+- [x] Marker and `.nvtreplay.json` round trip, including full-row and timeline-frame Unmark menus
 
 ## M4 — Export Slice
 
