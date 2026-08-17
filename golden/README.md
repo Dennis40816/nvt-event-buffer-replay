@@ -34,6 +34,25 @@ scoped observations, and which tests were skipped when evidence was absent.
   inventing a physical page address and nominal 120 Hz replay. They do not
   validate KingstVIS schema detection, export grouping, or provenance.
 
+## Validated KingstVIS transaction-row observation
+
+- Source role: private KingstVIS decoded-I2C CSV recovered from the owner's
+  numbered HackMD transfer on 2026-08-17; payload is not copied here.
+- SHA-256:
+  `063ad09b6b1a810177ed54b924810963e8a371005768f1642baf40f14a1841e5`
+- Schema: `Time[s],Packet ID,Address,Read/Write,Data`; 2,842 sequential rows
+  spanning 5.0508599 seconds. Each row is one complete I2C transaction.
+- Transport shape: 2,274 writes to 8-bit address `0x02` (1- or 3-byte payloads)
+  and 568 reads from `0x03` (80-byte payloads). ACK/NAK is not exported.
+- Page shape: `FF 08 08` followed by offset `00` resolves to `0x80800`; the IC
+  profile remains an operator choice because that base is shared by two catalog
+  profiles.
+- C# inspection result: the adapter selects with High confidence and yields
+  568/568 CRC-valid frames when Common `0x83` and profile `51929/51932` are
+  explicitly selected. The format version and IC profile were validation inputs,
+  not inferred from the transport file. Thirteen all-break-payload warnings are
+  retained without rewriting the source bytes.
+
 ## Frozen public regression surface
 
 The private payload is not copied into this repository. Its reviewed parity

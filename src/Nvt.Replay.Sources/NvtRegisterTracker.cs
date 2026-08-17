@@ -55,11 +55,14 @@ public sealed class NvtRegisterTracker
         offset = null;
         foreach (var command in commands)
         {
-            if (command.Count >= 4 && command[0] == 0xFF)
+            if (command.Count >= 3 && command[0] == 0xFF)
             {
                 var page = (uint)((command[1] << 16) | (command[2] << 8));
                 pageBySlave[slave] = page;
-                offset = command[3];
+                if (command.Count >= 4)
+                {
+                    offset = command[3];
+                }
             }
             else if (command.Count > 0)
             {

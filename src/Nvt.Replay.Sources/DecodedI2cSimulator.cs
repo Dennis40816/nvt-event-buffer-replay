@@ -29,22 +29,17 @@ public static class DecodedI2cSimulator
 
     public static string ToKingstVisCsv(IEnumerable<SyntheticI2cTransaction> transactions)
     {
-        var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
+        var lines = new List<string> { "Time[s],Packet ID,Address,Read/Write,Data" };
         long packetId = 0;
         foreach (var transaction in transactions)
         {
             foreach (var command in transaction.WriteCommands)
             {
-                foreach (var value in command)
-                    lines.Add($"{Seconds(transaction.TimestampSeconds)},{packetId},0x{transaction.SlaveAddress << 1:X2},0x{value:X2},Write,ACK");
                 packetId++;
-            }
-            for (var index = 0; index < transaction.ReadData.Count; index++)
-            {
-                var acknowledgement = index == transaction.ReadData.Count - 1 ? "NAK" : "ACK";
-                lines.Add($"{Seconds(transaction.TimestampSeconds)},{packetId},0x{(transaction.SlaveAddress << 1) | 1:X2},0x{transaction.ReadData[index]:X2},Read,{acknowledgement}");
+                lines.Add($"{Seconds(transaction.TimestampSeconds)},{packetId},0x{transaction.SlaveAddress << 1:X2},Write,{PrefixedBytes(command)}");
             }
             packetId++;
+            lines.Add($"{Seconds(transaction.TimestampSeconds)},{packetId},0x{(transaction.SlaveAddress << 1) | 1:X2},Read,{PrefixedBytes(transaction.ReadData)}");
         }
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
@@ -170,6 +165,7 @@ public static class DecodedI2cSimulator
 
     private static string Seconds(double value) => value.ToString("R", CultureInfo.InvariantCulture);
     private static string Bytes(IEnumerable<byte> values) => string.Join(' ', values.Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
+    private static string PrefixedBytes(IEnumerable<byte> values) => string.Join(' ', values.Select(value => $"0x{value:X2}"));
 
     private static void WriteEntry(ZipArchive archive, string name, string contents)
     {

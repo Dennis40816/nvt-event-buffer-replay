@@ -7,7 +7,8 @@ namespace Nvt.Replay.Sources;
 
 public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
 {
-    private static readonly string[] Header = ["Time [s]", "Packet ID", "Address", "Data", "Read/Write", "ACK"];
+    private static readonly string[] TransactionHeader = ["Time[s]", "Packet ID", "Address", "Read/Write", "Data"];
+    private static readonly string[] LegacyByteHeader = ["Time [s]", "Packet ID", "Address", "Data", "Read/Write", "ACK"];
 
     public string Id => "kingstvis-decoded-i2c";
     public string DisplayName => "KingstVIS decoded I2C CSV";
@@ -19,9 +20,12 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
 
         using var reader = File.OpenText(path);
         var first = await reader.ReadLineAsync(cancellationToken);
-        return DelimitedText.HeaderEquals(first, Header)
-            ? new(Id, DisplayName, ProbeConfidence.High, ["Matched the official KingstVIS v3.5 byte-per-row I2C columns exactly."])
-            : None("Official KingstVIS decoded-I2C columns were not found.");
+        return DetectDialect(first) switch
+        {
+            Dialect.TransactionRow => new(Id, DisplayName, ProbeConfidence.High, ["Matched the validated KingstVIS transaction-per-row I2C columns exactly."]),
+            Dialect.LegacyByteRow => new(Id, DisplayName, ProbeConfidence.High, ["Matched the legacy KingstVIS byte-per-row I2C columns exactly."]),
+            _ => None("Supported KingstVIS decoded-I2C columns were not found."),
+        };
     }
 
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
@@ -31,17 +35,37 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
         using var stream = new FileStream(context.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
         var header = await reader.ReadLineAsync(cancellationToken);
-        if (!DelimitedText.HeaderEquals(header, Header))
+        var dialect = DetectDialect(header);
+        if (dialect == Dialect.None)
         {
-            SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_UNSUPPORTED_COLUMNS", "KingstVIS decoded I2C columns do not match the official supported schema.", 1);
+            SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_UNSUPPORTED_COLUMNS", "KingstVIS decoded I2C columns do not match a supported schema.", 1);
             yield break;
         }
 
         var tracker = new NvtRegisterTracker();
-        var pending = new List<DecodedByte>();
         var lineNumber = 1;
         long byteOffset = Encoding.UTF8.GetByteCount(header ?? string.Empty) + Environment.NewLine.Length;
         long outputIndex = 0;
+        if (dialect == Dialect.TransactionRow)
+        {
+            while (await reader.ReadLineAsync(cancellationToken) is { } line)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                lineNumber++;
+                var lineOffset = byteOffset;
+                byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+                if (!TryParseTransaction(context, line, lineNumber, lineOffset, outputIndex, out var record, out var error))
+                {
+                    SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_MALFORMED_ROW", error, lineNumber, lineOffset);
+                    continue;
+                }
+                outputIndex++;
+                yield return tracker.Observe(record!);
+            }
+            yield break;
+        }
+
+        var pending = new List<DecodedByte>();
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -49,7 +73,7 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
             var lineOffset = byteOffset;
             byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
 
-            if (!TryParse(line, lineNumber, lineOffset, out var decoded, out var error))
+            if (!TryParseLegacyByte(line, lineNumber, lineOffset, out var decoded, out var error))
             {
                 SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_MALFORMED_ROW", error, lineNumber, lineOffset);
                 pending.Clear();
@@ -85,7 +109,66 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
         yield return tracker.Observe(final);
     }
 
-    private static bool TryParse(
+    private static bool TryParseTransaction(
+        SourceOpenContext context,
+        string line,
+        int lineNumber,
+        long lineOffset,
+        long outputIndex,
+        out SourceRecord? record,
+        out string error)
+    {
+        record = null;
+        try
+        {
+            var fields = DelimitedText.ParseCsvLine(line);
+            if (fields.Length != TransactionHeader.Length) throw new FormatException($"expected {TransactionHeader.Length} columns, got {fields.Length}");
+            var seconds = double.Parse(fields[0], NumberStyles.Float, CultureInfo.InvariantCulture);
+            if (!double.IsFinite(seconds)) throw new FormatException("timestamp is not finite");
+            var packetId = long.Parse(fields[1], NumberStyles.Integer, CultureInfo.InvariantCulture);
+            if (packetId < 0) throw new FormatException("packet ID is negative");
+            var rawAddress = DelimitedText.ParseInteger(fields[2]);
+            if (rawAddress is < 0 or > byte.MaxValue) throw new FormatException("8-bit slave address is outside 0x00..0xFF");
+            var operation = ParseOperation(fields[3]);
+            if ((rawAddress & 1) != (operation == BusOperation.Read ? 1 : 0))
+                throw new FormatException("8-bit slave address R/W bit conflicts with direction");
+            var data = DelimitedText.ParseBytes(fields[4]);
+            if (data.Length == 0) throw new FormatException("transaction data is empty");
+            var slave = rawAddress >> 1;
+            record = new SourceRecord(
+                outputIndex,
+                $"{context.SourceId}:L{lineNumber}",
+                DateTimeOffset.UnixEpoch + TimeSpan.FromSeconds(seconds),
+                operation,
+                slave == 1 ? "TP" : $"I2C 0x{slave:X2}",
+                null,
+                data.Length,
+                data,
+                line,
+                new SourceLocation(lineOffset, lineNumber),
+                new I2cTransport(slave, [], [], null),
+                new Dictionary<string, string>
+                {
+                    ["adapter"] = "kingstvis",
+                    ["dialect"] = "validated-transaction-row",
+                    ["packet_id"] = packetId.ToString(CultureInfo.InvariantCulture),
+                    ["raw_address"] = $"0x{rawAddress:X2}",
+                    ["row_start"] = lineNumber.ToString(CultureInfo.InvariantCulture),
+                    ["row_end"] = lineNumber.ToString(CultureInfo.InvariantCulture),
+                    ["time_seconds"] = seconds.ToString("R", CultureInfo.InvariantCulture),
+                    ["ack_evidence"] = "unavailable",
+                });
+            error = string.Empty;
+            return true;
+        }
+        catch (Exception exception) when (exception is FormatException or OverflowException or ArgumentException)
+        {
+            error = $"Invalid KingstVIS row {lineNumber}: {exception.Message}";
+            return false;
+        }
+    }
+
+    private static bool TryParseLegacyByte(
         string line,
         int lineNumber,
         long lineOffset,
@@ -96,7 +179,7 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
         try
         {
             var fields = DelimitedText.ParseCsvLine(line);
-            if (fields.Length != Header.Length) throw new FormatException($"expected {Header.Length} columns, got {fields.Length}");
+            if (fields.Length != LegacyByteHeader.Length) throw new FormatException($"expected {LegacyByteHeader.Length} columns, got {fields.Length}");
             var operation = ParseOperation(fields[4]);
             var seconds = double.Parse(fields[0], NumberStyles.Float, CultureInfo.InvariantCulture);
             if (!double.IsFinite(seconds)) throw new FormatException("timestamp is not finite");
@@ -182,7 +265,21 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
         _ => throw new FormatException($"invalid direction '{value}'"),
     };
 
+    private static Dialect DetectDialect(string? header)
+    {
+        if (DelimitedText.HeaderEquals(header, TransactionHeader)) return Dialect.TransactionRow;
+        if (DelimitedText.HeaderEquals(header, LegacyByteHeader)) return Dialect.LegacyByteRow;
+        return Dialect.None;
+    }
+
     private SourceProbeResult None(string reason) => new(Id, DisplayName, ProbeConfidence.None, [reason]);
+
+    private enum Dialect
+    {
+        None,
+        TransactionRow,
+        LegacyByteRow,
+    }
 
     private sealed record DecodedByte(
         double Seconds,

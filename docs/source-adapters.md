@@ -23,7 +23,7 @@ address ACK when exposed, per-byte ACK/NAK values, and decoder errors.
 | Adapter ID | Input contract |
 | --- | --- |
 | `saleae-decoded-i2c` | CSV header `Time [s],Packet ID,Address,Data,Read/Write,ACK/NAK`; byte-per-row transactions terminate at NAK. |
-| `kingstvis-decoded-i2c` | Official v3.5 CSV header `Time [s],Packet ID,Address,Data,Read/Write,ACK`; byte-per-row records are grouped by Packet ID and the 8-bit address R/W bit is validated. |
+| `kingstvis-decoded-i2c` | Validated CSV header `Time[s],Packet ID,Address,Read/Write,Data`; each row is one complete I2C transaction and `Data` contains space-separated `0xNN` bytes. The legacy `Time [s],Packet ID,Address,Data,Read/Write,ACK` byte-per-row dialect remains supported and is grouped by Packet ID. Both paths validate the 8-bit address R/W bit. |
 | `dsl-decoded-i2c` | CSV header `Id,Time[ns],1:I²C: Address/Data`; Start, repeated Start, ACK/NAK, and Stop are assembled as one transaction. |
 | `acute-decoded-i2c` | Acute `.csv`/`.txt` row-per-transaction report with `Timestamp`, `Status`, `Address(7b/8b/10b)`, and ordered `D0...` columns. English headers, comma/tab/semicolon delimiters, numeric or time-of-day timestamps, direction/address validation, and ACK/NACK suffixes are supported. Ambiguous continuation rows fail closed pending a real export. |
 | `excel-decoded-i2c` | `.xlsx`/`.xlsm` worksheet columns `Transaction`, `Start_Time_s`, `Type`, `Byte_Count`, `Bytes_Hex`; rows are streamed from Open XML without Microsoft Excel. The current long-read contract requires leading register-address byte `0x03`, strips it, and maps the payload to `0x99000`. |
@@ -55,13 +55,13 @@ canonical TXT, and Excel decoder exports from one `SyntheticI2cTransaction`. Tes
 generated export back through its adapter and compare the normalized read,
 address, slave, payload, timestamp, and provenance.
 
-The KingstVIS contract follows the export example in the official v3.5 user
-guide. That guide documents time, packet sequence, analyzed data, and shows the
-exact byte-per-row I2C columns above. The previously supplied
-transaction-per-row file was confirmed to be an incorrect golden and is
-deliberately rejected rather than treated as another KingstVIS dialect. The
-official guide does not promise cross-version schema stability, so any future
-variant requires a real export and a separate evidence-backed adapter update.
+The primary KingstVIS contract is based on the owner-supplied export recovered
+on 2026-08-17. It records one complete transaction per row, uses 8-bit write/read
+addresses such as `0x02`/`0x03`, and does not expose ACK/NAK evidence. The parser
+therefore records `ack_evidence=unavailable` rather than inventing acknowledgements.
+The earlier byte-per-row v3.5 example remains a compatibility dialect. Any
+additional variant still requires a real export and a separate evidence-backed
+adapter update.
 
 ## Reserved raw-waveform boundary
 

@@ -97,7 +97,7 @@ public sealed class DecodedI2cAdapterTests : IDisposable
     }
 
     [Fact]
-    public async Task KingstVis_official_byte_rows_are_grouped_by_packet_id()
+    public async Task KingstVis_validated_transaction_rows_preserve_each_complete_payload()
     {
         var path = Write(".csv", DecodedI2cSimulator.ToKingstVisCsv([Transaction]));
         var adapter = new KingstVisDecodedI2cAdapter();
@@ -106,18 +106,70 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         var read = Assert.Single(records, record => record.Operation == BusOperation.Read);
 
         Assert.Equal(2, records.Count);
-        Assert.Equal("official-v3.5-byte-row", read.SourceFields?["dialect"]);
-        Assert.Equal([true, true, true, false], read.I2c?.Acked);
+        Assert.Equal("validated-transaction-row", read.SourceFields?["dialect"]);
+        Assert.Equal(Transaction.ReadData, read.Data);
+        Assert.Empty(read.I2c?.Acked ?? []);
+        Assert.Equal("unavailable", read.SourceFields?["ack_evidence"]);
     }
 
     [Fact]
-    public async Task Incorrect_transaction_per_row_golden_is_not_accepted_as_KingstVis()
+    public async Task KingstVis_transaction_row_validates_8bit_address_direction()
     {
-        var path = Write(".csv", "Time[s],Packet ID,Address,Read/Write,Data\n1,1,0x03,R,00 01\n");
+        var path = Write(".csv", "Time[s],Packet ID,Address,Read/Write,Data\n1,1,0x02,Read,0x00 0x01\n");
+        var diagnostics = new List<ReplayDiagnostic>();
+        var adapter = new KingstVisDecodedI2cAdapter();
 
-        var probe = await new KingstVisDecodedI2cAdapter().ProbeAsync(path);
+        var probe = await adapter.ProbeAsync(path);
+        var records = await Read(adapter, path, diagnostics.Add);
 
-        Assert.Equal(ProbeConfidence.None, probe.Confidence);
+        Assert.Equal(ProbeConfidence.High, probe.Confidence);
+        Assert.Empty(records);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Code == "KINGSTVIS_MALFORMED_ROW");
+    }
+
+    [Fact]
+    public async Task KingstVis_legacy_byte_rows_remain_grouped_by_packet_id()
+    {
+        var path = Write(".csv", string.Join('\n',
+            "Time [s],Packet ID,Address,Data,Read/Write,ACK",
+            "1,7,0x02,0xFF,Write,ACK",
+            "1,7,0x02,0x09,Write,ACK",
+            "1,7,0x02,0x90,Write,ACK",
+            "1,7,0x02,0x00,Write,ACK",
+            "1.1,8,0x03,0x01,Read,ACK",
+            "1.1,8,0x03,0x02,Read,NAK") + "\n");
+        var adapter = new KingstVisDecodedI2cAdapter();
+
+        var probe = await adapter.ProbeAsync(path);
+        var records = await Read(adapter, path);
+        var read = Assert.Single(records, record => record.Operation == BusOperation.Read);
+
+        Assert.Equal(ProbeConfidence.High, probe.Confidence);
+        Assert.Equal(2, records.Count);
+        Assert.Equal("official-v3.5-byte-row", read.SourceFields?["dialect"]);
+        Assert.Equal([true, false], read.I2c?.Acked);
+        Assert.Equal(0x99000u, read.Address);
+    }
+
+    [Fact]
+    public async Task KingstVis_three_byte_page_command_and_separate_offset_resolve_the_real_capture_shape()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var transaction = Transaction with
+        {
+            WriteCommands = [new byte[] { 0xFF, 0x08, 0x08 }, new byte[] { 0x00 }],
+            ReadData = packet,
+        };
+        var path = Write(".csv", DecodedI2cSimulator.ToKingstVisCsv([transaction]));
+
+        var session = (await CaptureSession.LoadAsync(path)).WithRegisterProfile("51929/51932");
+        var read = Assert.Single(session.Records, record => record.Operation == BusOperation.Read);
+        var report = session.DecodeCommon(CommonEventBufferVersion.V83);
+
+        Assert.Equal(0x80800u, read.Address);
+        Assert.Equal(2, read.I2c?.WriteCommands.Count);
+        Assert.True(Assert.Single(report.Frames).CrcValid);
+        Assert.DoesNotContain(report.Diagnostics, diagnostic => diagnostic.Code == "NO_EVENT_BUFFER_RECORDS");
     }
 
     [Fact]
