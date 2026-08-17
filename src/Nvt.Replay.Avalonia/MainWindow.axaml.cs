@@ -1495,9 +1495,20 @@ public partial class MainWindow : Window
 
     private void ReviewGroupBorder_OnContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is not Control { DataContext: ReviewGroupRow row } control || !row.CanUnmark) return;
+        if (sender is not Control control) return;
+        if (control.DataContext is not ReviewGroupRow { CanUnmark: true } row)
+        {
+            control.ContextMenu = null;
+            return;
+        }
         DiagnosticListBox.SelectedItem = row;
-        OpenMarkerContextMenu(control, markers.Where(marker => marker.Id == row.MarkerId));
+        var matchingMarkers = markers.Where(marker => marker.Id == row.MarkerId).ToArray();
+        if (matchingMarkers.Length == 0)
+        {
+            control.ContextMenu = null;
+            return;
+        }
+        OpenMarkerContextMenu(control, matchingMarkers);
         e.Handled = true;
     }
 
@@ -1508,7 +1519,11 @@ public partial class MainWindow : Window
             .OrderBy(marker => marker.StartLogicalIndex)
             .ThenBy(marker => marker.CreatedAt)
             .ToArray();
-        if (matchingMarkers.Length == 0) return;
+        if (matchingMarkers.Length == 0)
+        {
+            ReplayTimelineSurface.ContextMenu = null;
+            return;
+        }
         OpenMarkerContextMenu(ReplayTimelineSurface, matchingMarkers);
         e.Handled = true;
     }
@@ -1521,11 +1536,21 @@ public partial class MainWindow : Window
                 ? $"frames {marker.StartLogicalIndex + 1:N0}-{marker.EndLogicalIndex + 1:N0}"
                 : $"frame {marker.StartLogicalIndex + 1:N0}";
             var item = new MenuItem { Header = $"Unmark {marker.Label} · {range}", Tag = marker.Id };
-            item.Click += UnmarkMenuItem_OnClick;
+            item.Click += (_, _) =>
+            {
+                target.ContextMenu = null;
+                RemoveMarker(marker.Id);
+            };
             return item;
         }).ToArray();
         if (items.Length == 0) return;
+        target.ContextMenu?.Close();
+        target.ContextMenu = null;
         var menu = new ContextMenu { ItemsSource = items };
+        menu.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(target.ContextMenu, menu)) target.ContextMenu = null;
+        };
         target.ContextMenu = menu;
         menu.Open(target);
     }
@@ -1686,9 +1711,6 @@ public partial class MainWindow : Window
 
     private void UnmarkButton_OnClick(object? sender, RoutedEventArgs e) => RemoveMarker(selectedMarkerId);
 
-    private void UnmarkMenuItem_OnClick(object? sender, RoutedEventArgs e) =>
-        RemoveMarker((sender as MenuItem)?.Tag?.ToString() ?? selectedMarkerId);
-
     private void RemoveMarker(string? markerId)
     {
         if (markerId is null) return;
@@ -1698,6 +1720,7 @@ public partial class MainWindow : Window
         markers.RemoveAt(index);
         selectedMarkerId = null;
         selectedReviewGroupId = null;
+        ReplayTimelineSurface.ContextMenu = null;
         CreateReviewSession(baseDiagnostics);
         DiagnosticListBox.SelectedItem = null;
         ReviewActionsPanel.IsVisible = false;

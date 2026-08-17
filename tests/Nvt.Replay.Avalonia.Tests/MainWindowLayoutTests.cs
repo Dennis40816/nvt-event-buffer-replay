@@ -662,6 +662,7 @@ public sealed class MainWindowLayoutTests
             reviewUnmark.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("0", Required<TextBlock>(window, "DiagnosticCountText").Text);
+            Assert.Null(reviewTarget.ContextMenu);
 
             mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
@@ -679,6 +680,15 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("0", Required<TextBlock>(window, "DiagnosticCountText").Text);
             Assert.Contains("Removed marker", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Null(timeline.ContextMenu);
+
+            var emptyFramePoint = timeline.TranslatePoint(
+                new Point(Math.Max(5, timeline.Bounds.Width - 5), timeline.Bounds.Height / 2),
+                window) ?? throw new InvalidOperationException("Timeline could not translate its empty-frame point.");
+            window.MouseDown(emptyFramePoint, MouseButton.Right, RawInputModifiers.None);
+            window.MouseUp(emptyFramePoint, MouseButton.Right, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(timeline.ContextMenu);
         }
         finally
         {
