@@ -23,8 +23,9 @@ MVP source adapters:
 2. Saleae decoded I2C
 3. KingstVIS decoded I2C
 4. DSL decoded I2C
-5. Excel decoded I2C
-6. Canonical I2C TXT
+5. Acute decoded I2C
+6. Excel decoded I2C
+7. Canonical I2C TXT
 
 Source format detection and event-buffer interpretation are separate:
 
@@ -35,6 +36,10 @@ Source format detection and event-buffer interpretation are separate:
   event-buffer version;
 - Desay 0x97 always requires both an IC profile and Standard or Benz Palm selection;
 - incomplete configuration opens Raw Explorer without semantic parsing.
+
+There is no standalone Decode action. Confirming Common `0x82`–`0x85` starts
+decoding immediately. Desay `0x97` starts only when all required choices are
+complete; programmatic startup options use the same awaited decode path.
 
 A Capture Bundle has one primary touch capture and optional evidence files.
 Project Presets are portable `.nvtproject.json` files. Per-capture markers,
@@ -105,6 +110,9 @@ supported. Color is never the only severity or touch-type signal.
 Logical events are the default step unit. Physical transactions are available
 through drill-down. Playback supports 0.1x through 10x and Max, event/frame
 navigation, looped In/Out ranges, keyboard operation, and a command palette.
+Normal playback uses monotonic absolute deadlines and may coalesce late visual
+updates without skipping Alarm/QA pause frames. Loop wrap is visually blended
+but does not create, remove, or alter a logical frame.
 
 ## Diagnostics, findings, and human review
 
@@ -143,6 +151,10 @@ replay sidecar, and a source/config/hash manifest. UI and export share a
 to a reviewed FFmpeg build. If no encoder is available, PNG sequence remains
 available.
 
+The desktop preview is a presentation of the exact default MP4 frame plan and
+1280×720 raster, not a separately laid-out approximation. Its range/time
+scrubber operates in output-frame time.
+
 HTML/PDF reports, evidence ZIP packaging, and redaction UI are post-MVP.
 
 ## Non-functional requirements
@@ -155,6 +167,8 @@ HTML/PDF reports, evidence ZIP packaging, and redaction UI are post-MVP.
   persistent disk cache is added only if measurements require it.
 - Background jobs write temporary output and atomically replace the target on
   success; cancellation never overwrites existing output.
+- CI opens and renders the real Avalonia `MainWindow` through the headless Skia
+  backend and verifies decode, compact layout, responsive rails, and both themes.
 - Production target is 18,000-22,000 handwritten C#/XAML lines. At 25,000 an
   architecture review is mandatory. 30,000 is a hard cap. Tests are counted
   separately; generated code cannot hide product logic.
