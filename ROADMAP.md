@@ -21,7 +21,8 @@
 
 - [x] Protocol diagnostics and ASIL lifecycle
 - [x] Review Queue and occurrence grouping
-- [x] Event/Raw/Transport/Evidence inspector
+- [x] Structured Inspector with health-first frame state, color-linked Contact selection, Protocol/Raw/Review layers, and on-demand source identity
+- [x] Resizable 320–520 px Inspector rail with useful type/ASIL summary while collapsed
 - [x] Marker and `.nvtreplay.json` round trip
 
 ## M4 — Export Slice
