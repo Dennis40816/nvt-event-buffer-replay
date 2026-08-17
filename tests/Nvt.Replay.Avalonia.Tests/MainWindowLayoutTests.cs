@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -165,10 +166,45 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             var outputDark = CaptureHash(window, "06-golden-output-dark.png");
 
+            var outputContent = Required<ComboBox>(window, "OutputContentComboBox");
+            outputContent.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            var heatmapDark = CaptureHash(window, "09-golden-heatmap-dark.png");
+            outputContent.SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            var packageDark = CaptureHash(window, "10-golden-package-dark.png");
+            outputContent.SelectedIndex = 0;
+            Required<ToggleButton>(window, "OutputSettingsToggleButton").IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            var settingsDark = CaptureHash(window, "11-golden-output-settings-dark.png");
+            Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 5;
+            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 3;
+            Dispatcher.UIThread.RunJobs();
+            var customSettingsDark = CaptureHash(window, "15-golden-output-custom-settings-dark.png");
+            Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 2;
+            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 0;
+            Required<ToggleButton>(window, "OutputSettingsToggleButton").IsChecked = false;
+            window.Width = 1180;
+            window.Height = 720;
+            Dispatcher.UIThread.RunJobs();
+            var compactOutputDark = CaptureHash(window, "12-golden-output-compact-dark.png");
+            outputContent.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            var compactHeatmapDark = CaptureHash(window, "13-golden-heatmap-compact-dark.png");
+            application.RequestedThemeVariant = ThemeVariant.Light;
+            Dispatcher.UIThread.RunJobs();
+            var compactHeatmapLight = CaptureHash(window, "14-golden-heatmap-compact-light.png");
+
             Assert.NotEqual(paintDark, paintLight);
             Assert.NotEqual(collapsedDark, collapsedLight);
             Assert.NotEqual(outputDark, outputLight);
             Assert.NotEqual(paintDark, outputDark);
+            Assert.NotEqual(outputDark, heatmapDark);
+            Assert.NotEqual(heatmapDark, packageDark);
+            Assert.NotEqual(outputDark, settingsDark);
+            Assert.NotEqual(settingsDark, customSettingsDark);
+            Assert.NotEqual(outputDark, compactOutputDark);
+            Assert.NotEqual(compactHeatmapDark, compactHeatmapLight);
         }
         finally
         {
@@ -262,6 +298,11 @@ public sealed class MainWindowLayoutTests
                 "ReviewOccurrenceComboBox",
                 "ClockModeComboBox",
                 "ReplaySpeedComboBox",
+                "OutputContentComboBox",
+                "OutputClockComboBox",
+                "OutputSpeedComboBox",
+                "OutputFrameRateComboBox",
+                "OutputResolutionComboBox",
             };
 
             foreach (var name in names)
@@ -278,6 +319,50 @@ public sealed class MainWindowLayoutTests
             var longestWidth = ComboBoxAutoSizer.MeasureLabelWidth(legend, "Bottom right");
             Assert.True(longestWidth > selectedWidth);
             Assert.True(legend.MinWidth >= longestWidth + ComboBoxAutoSizer.ChromeAndPaddingWidth);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Output_selector_shows_one_primary_surface_and_video_settings_drive_preview_sampling()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => Required<TextBlock>(window, "OutputPreviewFrameText").Text != "output 0/0");
+
+            var outputContent = Required<ComboBox>(window, "OutputContentComboBox");
+            Assert.Equal(3, outputContent.ItemCount);
+            Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
+            Assert.False(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
+            Assert.False(Required<Border>(window, "OutputPackagePanel").IsVisible);
+
+            outputContent.SelectedIndex = 1;
+            Assert.False(Required<Grid>(window, "OutputVideoPanel").IsVisible);
+            Assert.True(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
+            Assert.Equal("Export PNG", Required<Button>(window, "ExportSelectedOutputButton").Content);
+
+            outputContent.SelectedIndex = 0;
+            var settings = Required<ToggleButton>(window, "OutputSettingsToggleButton");
+            settings.IsChecked = true;
+            Assert.True(Required<Border>(window, "OutputVideoSettingsPanel").IsVisible);
+            Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 5;
+            var customSpeed = Required<TextBox>(window, "OutputCustomSpeedTextBox");
+            Assert.True(customSpeed.IsVisible);
+            customSpeed.Text = "1.75";
+            customSpeed.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            await WaitUntilAsync(() => Required<TextBlock>(window, "OutputVideoBadgeText").Text?.Contains("1.75×", StringComparison.Ordinal) == true);
+
+            Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 3;
+            await WaitUntilAsync(() => Required<TextBlock>(window, "OutputVideoBadgeText").Text?.Contains("2×", StringComparison.Ordinal) == true);
+            Assert.Contains("2×", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
         }
         finally
         {

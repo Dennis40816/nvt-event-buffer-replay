@@ -91,6 +91,30 @@ public sealed class CaptureAnalysisTests : IDisposable
     }
 
     [Fact]
+    public async Task Standalone_heatmap_writer_matches_the_package_heatmap()
+    {
+        var replay = Replay();
+        var report = new CaptureAnalyzer().Analyze(
+            "capture.txt",
+            new string('a', 64),
+            new ReplayDecodeConfiguration("0x83", null, "synthetic"),
+            EvidenceStatus.Verified,
+            replay,
+            Diagnostics(replay),
+            heatmapColumns: 4,
+            heatmapRows: 2,
+            heatmapPixelWidth: 40,
+            heatmapPixelHeight: 20);
+        var package = await new AnalysisOutputWriter().WriteAsync(Path.Combine(directory, "package"), report);
+        var standalone = Path.Combine(directory, "standalone.png");
+
+        await new HeatmapPngWriter().WriteAsync(standalone, report);
+
+        Assert.Equal(Hash(package.HeatmapPng), Hash(standalone));
+        Assert.Empty(Directory.GetFiles(directory, ".*.tmp"));
+    }
+
+    [Fact]
     public async Task Cancelled_output_preserves_prior_file_and_removes_temporary_file()
     {
         var output = Path.Combine(directory, "cancelled");

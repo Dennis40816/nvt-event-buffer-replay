@@ -35,10 +35,10 @@ public sealed class AnalysisHeatmapSurface : Control
         var bounds = new Rect(Bounds.Size);
         if (bounds.Width <= 1 || bounds.Height <= 1) return;
 
-        const double left = 32;
-        const double top = 12;
-        const double right = 12;
-        const double bottom = 24;
+        const double left = 54;
+        const double top = 20;
+        const double right = 28;
+        const double bottom = 42;
         var plot = new Rect(left, top, Math.Max(1, bounds.Width - left - right), Math.Max(1, bounds.Height - top - bottom));
         context.DrawRectangle(null, new Pen(GridBrush, 1), plot);
         DrawGuideLines(context, plot);
@@ -53,28 +53,32 @@ public sealed class AnalysisHeatmapSurface : Control
         var heatmapBrush = ActualThemeVariant == ThemeVariant.Light ? LightHeatmapBrush : AccentBrush;
         var cellWidth = plot.Width / data.Columns;
         var cellHeight = plot.Height / data.Rows;
+        var baseRadius = Math.Max(2.5, Math.Min(cellWidth, cellHeight) * 0.22);
+        var radiusScale = Math.Max(4, Math.Min(cellWidth, cellHeight) * 1.55);
         for (var row = 0; row < data.Rows; row++)
         {
             for (var column = 0; column < data.Columns; column++)
             {
                 var count = data.Counts[(row * data.Columns) + column];
                 if (count == 0) continue;
-                var intensity = 0.28 + (0.72 * Math.Sqrt(count / (double)peak));
-                using var opacity = context.PushOpacity(intensity);
-                context.DrawRectangle(
-                    heatmapBrush,
-                    null,
-                    new Rect(
-                        plot.X + (column * cellWidth),
-                        plot.Y + (row * cellHeight),
-                        Math.Max(1, cellWidth + 0.35),
-                        Math.Max(1, cellHeight + 0.35)));
+                var normalized = Math.Log(1 + count) / Math.Log(1 + peak);
+                var radius = baseRadius + (radiusScale * Math.Sqrt(count / (double)peak));
+                var center = new Point(
+                    plot.X + ((column + 0.5) * cellWidth),
+                    plot.Y + ((row + 0.5) * cellHeight));
+                using (context.PushOpacity(0.14 + (0.48 * normalized)))
+                    context.DrawEllipse(heatmapBrush, null, center, radius, radius);
+                using (context.PushOpacity(0.45 + (0.45 * normalized)))
+                    context.DrawEllipse(null, new Pen(heatmapBrush, 1.1), center, radius, radius);
             }
         }
 
-        DrawText(context, "0", new Point(plot.X - 2, plot.Bottom + 5), 10, FontWeight.Medium);
-        DrawText(context, data.Transform.MaximumX.ToString("0", CultureInfo.InvariantCulture), new Point(plot.Right - 34, plot.Bottom + 5), 10, FontWeight.Medium);
-        DrawText(context, "Y", new Point(8, plot.Y), 10, FontWeight.SemiBold);
+        DrawText(context, "0", new Point(plot.X - 2, plot.Bottom + 9), 11, FontWeight.Medium);
+        DrawText(context, data.Transform.MaximumX.ToString("0", CultureInfo.InvariantCulture), new Point(plot.Right - 42, plot.Bottom + 9), 11, FontWeight.Medium);
+        DrawText(context, "X", new Point(plot.Center.X, plot.Bottom + 20), 12, FontWeight.SemiBold);
+        DrawText(context, "0", new Point(24, plot.Y - 6), 11, FontWeight.Medium);
+        DrawText(context, data.Transform.MaximumY.ToString("0", CultureInfo.InvariantCulture), new Point(8, plot.Bottom - 8), 11, FontWeight.Medium);
+        DrawText(context, "Y", new Point(14, plot.Center.Y - 7), 12, FontWeight.SemiBold);
     }
 
     private void DrawGuideLines(DrawingContext context, Rect plot)

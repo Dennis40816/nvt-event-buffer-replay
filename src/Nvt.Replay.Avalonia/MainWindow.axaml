@@ -850,109 +850,175 @@
 
           <TabItem x:Name="AnalysisTab" Header="OUTPUT" IsEnabled="False">
             <Grid Margin="16" RowDefinitions="Auto,14,*">
-              <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="4">
-                  <TextBlock Text="MP4 OUTPUT" Classes="section" />
-                  <TextBlock Text="Scrub the exact sampled video before choosing a destination" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                  <Button x:Name="ExportOutputPackageButton" Classes="ghost" Content="Data package" Click="ExportAnalysisButton_OnClick" />
-                  <Button x:Name="ExportReplayOutputButton" Classes="primary" Content="Export MP4" Click="ExportReplayButton_OnClick" />
-                </StackPanel>
+              <Grid ColumnDefinitions="Auto,12,Auto,18,*,12,Auto">
+                <TextBlock Text="Content" Classes="fieldLabel" />
+                <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Classes="semanticSelect" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SelectOption">
+                      <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
+                        <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12.5" Opacity="0.8" TextWrapping="Wrap" />
+                      </Grid>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                  <ComboBox.SelectionBoxItemTemplate>
+                    <DataTemplate x:DataType="vm:SelectOption">
+                      <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </DataTemplate>
+                  </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+                <TextBlock x:Name="OutputContentDescriptionText" Grid.Column="4" Text="Scrub the exact video that will be exported." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <Button x:Name="ExportSelectedOutputButton" Grid.Column="6" Classes="primary" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
               </Grid>
-              <Grid Grid.Row="2" ColumnDefinitions="5*,14,3*">
-                <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
-                  <Grid RowDefinitions="Auto,12,*,12,Auto,12,Auto">
+
+              <Grid Grid.Row="2">
+                <Grid x:Name="OutputVideoPanel">
+                  <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
+                    <Grid RowDefinitions="Auto,12,*,12,Auto,12,Auto">
+                      <Grid ColumnDefinitions="*,Auto,8,Auto">
+                        <StackPanel Spacing="4">
+                          <TextBlock x:Name="AnalysisSummaryText" Text="Open Output to prepare a preview." FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                          <TextBlock Text="Preview and export share the same sampler, renderer, range, and video settings." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Text="1280 × 720  /  30 FPS  /  1×" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                        <ToggleButton x:Name="OutputSettingsToggleButton" Grid.Column="3" Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="16" IsCheckedChanged="OutputSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="MP4 export settings" AutomationProperties.Name="Show MP4 export settings" />
+                      </Grid>
+                      <Border Grid.Row="2" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                        <Grid MinHeight="300">
+                          <controls:ReplayVideoPreviewSurface x:Name="OutputVideoPreview" AutomationProperties.Name="MP4 replay preview" />
+                        </Grid>
+                      </Border>
+                      <Grid Grid.Row="4" RowDefinitions="Auto,7,36" ColumnDefinitions="Auto,14,*,Auto">
+                        <Button x:Name="OutputPreviewPlayPauseButton" Grid.RowSpan="3" Classes="transportPlay" MinWidth="92" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" AutomationProperties.Name="Play MP4 preview" />
+                        <TextBlock x:Name="OutputPreviewClockText" Grid.Column="2" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="3" Text="output 0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                        <controls:OutputVideoTimelineSurface x:Name="OutputVideoTimeline"
+                                                             Grid.Row="2"
+                                                             Grid.Column="2"
+                                                             Grid.ColumnSpan="2"
+                                                             Height="36"
+                                                             TrackBrush="{DynamicResource CanvasTextBrush}"
+                                                             HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
+                                                             ProgressBrush="{DynamicResource AccentBrush}"
+                                                             PlayheadBrush="{DynamicResource PrimaryTextBrush}"
+                                                             LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
+                                                             LabelTextBrush="{DynamicResource PrimaryTextBrush}"
+                                                             SeekRequested="OutputVideoTimeline_OnSeekRequested"
+                                                             AutomationProperties.Name="Scrub MP4 preview time" />
+                      </Grid>
+                      <Grid Grid.Row="6" ColumnDefinitions="*,12,*,12,*">
+                        <StackPanel>
+                          <TextBlock Classes="fieldLabel" Text="RANGE" />
+                          <TextBlock x:Name="OutputRangeText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                          <TextBlock Classes="fieldLabel" Text="VIDEO DURATION" />
+                          <TextBlock x:Name="OutputClockText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4">
+                          <TextBlock Classes="fieldLabel" Text="FINDINGS" />
+                          <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Grid>
+                    </Grid>
+                  </Border>
+
+                  <Border x:Name="OutputVideoSettingsPanel" Classes="canvasSettingsPanel" Width="390" Margin="0,48,18,0" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" ZIndex="20">
+                    <StackPanel Spacing="10">
+                      <TextBlock Text="MP4 SETTINGS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" LetterSpacing="0.4" />
+                      <Grid ColumnDefinitions="112,*" RowDefinitions="34,8,34,8,34,8,34,8,Auto">
+                        <TextBlock Text="Clock" Classes="fieldLabel" />
+                        <ComboBox x:Name="OutputClockComboBox" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output clock">
+                          <ComboBoxItem Content="Recorded time" Tag="recorded" />
+                          <ComboBoxItem Content="TP Frame 120 Hz" Tag="frame" />
+                        </ComboBox>
+                        <TextBlock Grid.Row="2" Text="Speed" Classes="fieldLabel" />
+                        <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,8,*">
+                          <ComboBox x:Name="OutputSpeedComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output speed">
+                            <ComboBoxItem Content="0.25×" Tag="0.25" />
+                            <ComboBoxItem Content="0.5×" Tag="0.5" />
+                            <ComboBoxItem Content="1×" Tag="1" />
+                            <ComboBoxItem Content="2×" Tag="2" />
+                            <ComboBoxItem Content="4×" Tag="4" />
+                            <ComboBoxItem Content="Customized" Tag="custom" />
+                          </ComboBox>
+                          <TextBox x:Name="OutputCustomSpeedTextBox" Grid.Column="2" Classes="panelSize" Width="86" Text="1.00" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Speed from 0.01× to 100×" AutomationProperties.Name="Customized MP4 speed" />
+                        </Grid>
+                        <TextBlock Grid.Row="4" Text="Frame rate" Classes="fieldLabel" />
+                        <ComboBox x:Name="OutputFrameRateComboBox" Grid.Row="4" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 frame rate">
+                          <ComboBoxItem Content="24 FPS" Tag="24" />
+                          <ComboBoxItem Content="30 FPS" Tag="30" />
+                          <ComboBoxItem Content="60 FPS" Tag="60" />
+                          <ComboBoxItem Content="120 FPS" Tag="120" />
+                        </ComboBox>
+                        <TextBlock Grid.Row="6" Text="Resolution" Classes="fieldLabel" />
+                        <ComboBox x:Name="OutputResolutionComboBox" Grid.Row="6" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
+                          <ComboBoxItem Content="1280 × 720" Tag="1280x720" />
+                          <ComboBoxItem Content="1920 × 1080" Tag="1920x1080" />
+                          <ComboBoxItem Content="2560 × 1440" Tag="2560x1440" />
+                          <ComboBoxItem Content="Customized" Tag="custom" />
+                        </ComboBox>
+                        <TextBlock x:Name="OutputCustomResolutionLabel" Grid.Row="8" Text="Custom size" Classes="fieldLabel" IsVisible="False" />
+                        <Grid x:Name="OutputCustomResolutionPanel" Grid.Row="8" Grid.Column="1" ColumnDefinitions="82,Auto,82" IsVisible="False">
+                          <TextBox x:Name="OutputWidthTextBox" Classes="panelSize" Width="82" Text="1280" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 width" />
+                          <TextBlock Grid.Column="1" Text="×" Margin="8,0" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                          <TextBox x:Name="OutputHeightTextBox" Grid.Column="2" Classes="panelSize" Width="82" Text="720" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 height" />
+                        </Grid>
+                      </Grid>
+                      <TextBlock Text="These settings drive both preview sampling and the final file." FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </Grid>
+
+                <Border x:Name="OutputHeatmapPanel" IsVisible="False" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
+                  <Grid RowDefinitions="Auto,14,*,14,Auto">
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="4">
-                        <TextBlock x:Name="AnalysisSummaryText" Text="Open Output to prepare a preview." FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                        <TextBlock Text="The preview uses the same frame sampler and renderer as the final MP4." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="Touch density" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                        <TextBlock Text="Circle area represents samples; opacity represents density relative to the peak." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
                       </StackPanel>
-                      <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Margin="16,2,0,0" Text="1280 × 720  /  30 FPS" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Top" />
+                      <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
                     </Grid>
-                    <Border Grid.Row="2" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
-                      <Grid MinHeight="300">
-                        <controls:ReplayVideoPreviewSurface x:Name="OutputVideoPreview" AutomationProperties.Name="MP4 replay preview" />
-                      </Grid>
-                    </Border>
-                    <Grid Grid.Row="4" RowDefinitions="Auto,7,36" ColumnDefinitions="Auto,14,*,Auto">
-                      <Button x:Name="OutputPreviewPlayPauseButton" Grid.RowSpan="3" Classes="transportPlay" MinWidth="92" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" AutomationProperties.Name="Play MP4 preview" />
-                      <TextBlock x:Name="OutputPreviewClockText" Grid.Column="2" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" VerticalAlignment="Center" />
-                      <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="3" Text="output 0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
-                      <controls:OutputVideoTimelineSurface x:Name="OutputVideoTimeline"
-                                                           Grid.Row="2"
-                                                           Grid.Column="2"
-                                                           Grid.ColumnSpan="2"
-                                                           Height="36"
-                                                           TrackBrush="{DynamicResource CanvasTextBrush}"
-                                                           HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
-                                                           ProgressBrush="{DynamicResource AccentBrush}"
-                                                           PlayheadBrush="{DynamicResource PrimaryTextBrush}"
-                                                           LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
-                                                           LabelTextBrush="{DynamicResource PrimaryTextBrush}"
-                                                           SeekRequested="OutputVideoTimeline_OnSeekRequested"
-                                                           AutomationProperties.Name="Scrub MP4 preview time" />
-                    </Grid>
-                    <Grid Grid.Row="6" ColumnDefinitions="*,12,*,12,*">
-                      <StackPanel>
-                        <TextBlock Classes="fieldLabel" Text="RANGE" />
-                        <TextBlock x:Name="OutputRangeText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                      </StackPanel>
-                      <StackPanel Grid.Column="2">
-                        <TextBlock Classes="fieldLabel" Text="VIDEO DURATION" />
-                        <TextBlock x:Name="OutputClockText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                      </StackPanel>
-                      <StackPanel Grid.Column="4">
-                        <TextBlock Classes="fieldLabel" Text="FINDINGS" />
-                        <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                      </StackPanel>
+                    <controls:AnalysisHeatmapSurface x:Name="AnalysisHeatmapPreview"
+                                                     Grid.Row="2"
+                                                     MinHeight="190"
+                                                     AccentBrush="{DynamicResource AccentBrush}"
+                                                     GridBrush="{DynamicResource StrongBorderBrush}"
+                                                     TextBrush="{DynamicResource CanvasMutedTextBrush}"
+                                                     AutomationProperties.Name="Output hotspot preview" />
+                    <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
+                      <TextBlock x:Name="HeatmapRangeText" Text="Selected replay range" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
+                      <TextBlock Grid.Column="1" Text="Origin top-left · active reported contacts only" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" />
                     </Grid>
                   </Grid>
                 </Border>
 
-                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                  <StackPanel Margin="0,0,4,0" Spacing="10">
-                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
-                    <StackPanel Spacing="8">
-                      <TextBlock Text="EXPORT CONFIGURATION" Classes="section" />
-                      <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-                      <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Margin="0,3,0,0" Padding="0,9,0,0">
-                        <TextBlock x:Name="OutputSourceText" Text="Source identity will appear here." FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                      </Border>
+                <Border x:Name="OutputPackagePanel" IsVisible="False" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
+                  <Grid ColumnDefinitions="3*,1,22,2*">
+                    <StackPanel Spacing="12">
+                      <StackPanel Spacing="4">
+                        <TextBlock Text="Data package" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                        <TextBlock Text="Nine linked files for QA, automation, and traceable hand-off." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
+                      </StackPanel>
+                      <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv / communication-readable.jsonl&#x0a;manifest.json&#x0a;heatmap.png" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" LineHeight="24" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
-                  </Border>
-                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
-                    <StackPanel Spacing="7">
-                      <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="DATA PACKAGE" Classes="section" />
-                        <TextBlock Grid.Column="1" Text="9 files" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-                      </Grid>
-                      <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv&#x0a;communication-readable.jsonl&#x0a;manifest.json / heatmap.png" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                    <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
+                    <StackPanel Grid.Column="3" Spacing="18">
+                      <StackPanel Spacing="7">
+                        <TextBlock Text="Configuration" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                        <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Spacing="7">
+                        <TextBlock Text="Source identity" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                        <TextBlock x:Name="OutputSourceText" Text="Source identity will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Spacing="7">
+                        <TextBlock Text="Last output" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                        <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
                     </StackPanel>
-                  </Border>
-                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
-                    <Grid RowDefinitions="Auto,7,*">
-                      <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="HOTSPOT" Classes="section" />
-                        <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
-                      </Grid>
-                      <controls:AnalysisHeatmapSurface x:Name="AnalysisHeatmapPreview"
-                                                       Grid.Row="2"
-                                                       MinHeight="120"
-                                                       AccentBrush="{DynamicResource AccentBrush}"
-                                                       GridBrush="{DynamicResource StrongBorderBrush}"
-                                                       TextBrush="{DynamicResource MutedTextBrush}"
-                                                       AutomationProperties.Name="Output hotspot preview" />
-                    </Grid>
-                  </Border>
-                  <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
-                    <StackPanel Spacing="7">
-                      <TextBlock Text="LAST OUTPUT" Classes="section" />
-                      <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                    </StackPanel>
-                  </Border>
-                  </StackPanel>
-                </ScrollViewer>
+                  </Grid>
+                </Border>
               </Grid>
             </Grid>
           </TabItem>
