@@ -66,9 +66,11 @@ adapter update.
 ## Reserved raw-waveform boundary
 
 Raw SDA/SCL waveform decoding is intentionally not part of this milestone.
-The Python reference already has validated KingstVIS and DSL waveform readers;
-their C# ports remain evidence-gated rather than being reported as decoded-LA
-support.
+The decoded DSL adapter recognizes the analyzer-produced column
+`1:I²C: Address/Data`; it does not discover which raw channels are SDA/SCL or
+classify unrelated signals. The Python reference has waveform-reader logic,
+but only its decoded DSL golden is currently present locally, so the C# raw
+ports remain evidence-gated rather than being reported as decoded-LA support.
 Future waveform adapters implement `ISourceAdapter` and produce the same
 `SourceRecord`/`I2cTransport` boundary; they do not bypass source probing or
 feed Event Buffer decoders directly. This preserves a single downstream path:

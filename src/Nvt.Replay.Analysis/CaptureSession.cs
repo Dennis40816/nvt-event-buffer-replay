@@ -115,8 +115,9 @@ public sealed class CaptureSession
                     $"NDS event record target is '{record.Target}', expected 'TP'."));
             }
 
-            if (record.DeclaredByteCount != CommonEventBufferDecoder.FrameLength ||
-                record.Data.Count != CommonEventBufferDecoder.FrameLength)
+            if (isNdsPaint &&
+                (record.DeclaredByteCount != CommonEventBufferDecoder.FrameLength ||
+                 record.Data.Count != CommonEventBufferDecoder.FrameLength))
             {
                 diagnostics.Add(NewDiagnostic(
                     record,
@@ -161,7 +162,7 @@ public sealed class CaptureSession
 
     private static bool IsEventBufferRead(SourceRecord record) =>
         record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
-        record.Data.Count == CommonEventBufferDecoder.FrameLength &&
+        record.Data.Count >= CommonEventBufferDecoder.FrameLength &&
         record.SourceFields?.TryGetValue("register_offset", out var offset) == true &&
         offset.Equals("0x00", StringComparison.OrdinalIgnoreCase) &&
         (record.SourceFields.GetValueOrDefault("register_page_known") == "false" ||

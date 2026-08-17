@@ -53,6 +53,23 @@ scoped observations, and which tests were skipped when evidence was absent.
   not inferred from the transport file. Thirteen all-break-payload warnings are
   retained without rewriting the source bytes.
 
+## Validated DSL decoded-I2C observation
+
+- Source role: private DreamLab/libsigrok4DSL decoded-I2C event log retained in
+  the sibling Python reference repository; payload is not copied here.
+- SHA-256:
+  `e7e277fd3ae8445882938b0f9e3b89218e37cbfd78efdd23898719890dbbccb8`
+- Schema: `Id,Time[ns],1:I²C: Address/Data`; Start/address/data/ACK/Stop events
+  are assembled into 435 complete read transactions.
+- Read shape: the 80-byte Common Event Buffer is followed by zero or more raw
+  trailing bytes. The normalized source record preserves all bytes; the Common
+  decoder consumes the first 80 and exposes the remainder as unconsumed data.
+- C# inspection result: 435/435 CRC-valid frames and zero diagnostics when
+  Common `0x84` and profile `51929/51932` are explicitly selected.
+- Evidence gap: the decoded golden is present locally, but the corresponding
+  raw multi-channel DSL waveform named by the Python README is not currently
+  present. Automatic SDA/SCL channel discovery therefore remains gated.
+
 ## Frozen public regression surface
 
 The private payload is not copied into this repository. Its reviewed parity

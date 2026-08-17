@@ -173,6 +173,32 @@ public sealed class DecodedI2cAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task Dsl_event_buffer_reads_preserve_and_decode_trailing_bytes()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V84);
+        var trailing = new byte[] { 0xA5, 0x5A };
+        var transaction = Transaction with
+        {
+            WriteCommands = [new byte[] { 0xFF, 0x08, 0x08, 0x00 }],
+            ReadData = packet.Concat(trailing).ToArray(),
+        };
+        var path = Write(".csv", DecodedI2cSimulator.ToDslCsv([transaction]));
+
+        var session = (await CaptureSession.LoadAsync(path)).WithRegisterProfile("51929/51932");
+        var read = Assert.Single(session.Records, record => record.Operation == BusOperation.Read);
+        Assert.Equal(0x80800u, read.Address);
+        Assert.Equal("0x00", read.SourceFields?["register_offset"]);
+        Assert.Equal("Event Buffer", read.SourceFields?["register_region"]);
+        Assert.Equal(packet.Length + trailing.Length, read.Data.Count);
+
+        var report = session.DecodeCommon(CommonEventBufferVersion.V84);
+        var frame = Assert.Single(report.Frames);
+        Assert.True(frame.CrcValid);
+        Assert.Equal(trailing, frame.UnconsumedData);
+        Assert.DoesNotContain(report.Diagnostics, diagnostic => diagnostic.Code == "NO_EVENT_BUFFER_RECORDS");
+    }
+
+    [Fact]
     public void Built_in_sources_include_every_supported_decoded_LA_path()
     {
         var ids = BuiltInSources.All.Select(adapter => adapter.Id).ToHashSet(StringComparer.Ordinal);
