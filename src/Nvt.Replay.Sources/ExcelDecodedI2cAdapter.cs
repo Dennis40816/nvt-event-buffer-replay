@@ -65,31 +65,44 @@ public sealed class ExcelDecodedI2cAdapter : ISourceAdapter
                 var declared = int.Parse(row[3], CultureInfo.InvariantCulture);
                 var raw = Convert.FromHexString(row[4].Replace(" ", string.Empty, StringComparison.Ordinal));
                 if (declared != raw.Length) throw new FormatException($"Byte_Count declares {declared}, decoded {raw.Length}");
-                var isRead = raw.Length >= 3;
-                if (isRead && raw[0] != 0x03) throw new FormatException($"expected read-address byte 0x03, got 0x{raw[0]:X2}");
-                var data = isRead ? raw[1..] : raw;
+                if (raw.Length < 2) throw new FormatException("transaction requires an 8-bit slave address and at least one data byte");
+                var rawAddress = raw[0];
+                var operation = ResolveOperation(row[2], rawAddress);
+                var slave = rawAddress >> 1;
+                var data = raw[1..];
+                var fields = new Dictionary<string, string>
+                {
+                    ["adapter"] = "excel",
+                    ["dialect"] = "legacy-event-buffer-workbook",
+                    ["transaction"] = transaction.ToString(CultureInfo.InvariantCulture),
+                    ["type"] = row[2],
+                    ["byte_count"] = declared.ToString(CultureInfo.InvariantCulture),
+                    ["register_address_byte"] = $"0x{rawAddress:X2}",
+                    ["register_address"] = "unknown",
+                    ["time_seconds"] = seconds.ToString("R", CultureInfo.InvariantCulture),
+                };
+                if (operation == BusOperation.Read)
+                {
+                    // This legacy workbook is an Event Buffer extraction, but it carries no
+                    // page evidence. Preserve only the offset-level contract; IC profile
+                    // selection must resolve an absolute address elsewhere.
+                    fields["register_offset"] = "0x00";
+                    fields["register_name"] = "event_buffer";
+                    fields["register_page_known"] = "false";
+                }
                 record = new SourceRecord(
                     transaction,
                     $"{context.SourceId}:R{rowNumber}",
                     DateTimeOffset.UnixEpoch + TimeSpan.FromSeconds(seconds),
-                    isRead ? BusOperation.Read : BusOperation.Write,
-                    "TP",
-                    isRead ? 0x99000u : null,
+                    operation,
+                    slave == 1 ? "TP" : $"I2C 0x{slave:X2}",
+                    null,
                     data.Length,
                     data,
                     string.Join(" | ", row.Take(Header.Length)),
                     new SourceLocation(0, rowNumber),
-                    new I2cTransport(1, [], [], null),
-                    new Dictionary<string, string>
-                    {
-                        ["adapter"] = "excel",
-                        ["transaction"] = transaction.ToString(CultureInfo.InvariantCulture),
-                        ["type"] = row[2],
-                        ["byte_count"] = declared.ToString(CultureInfo.InvariantCulture),
-                        ["register_address_byte"] = isRead ? "0x03" : "none",
-                        ["register_address"] = isRead ? "0x99000" : "unknown",
-                        ["time_seconds"] = seconds.ToString("R", CultureInfo.InvariantCulture),
-                    });
+                    new I2cTransport(slave, [], [], null),
+                    fields);
             }
             catch (Exception exception) when (exception is FormatException or OverflowException)
             {
@@ -187,6 +200,21 @@ public sealed class ExcelDecodedI2cAdapter : ISourceAdapter
             value = (value * 26) + character - 'A' + 1;
         }
         return found ? value - 1 : -1;
+    }
+
+    private static BusOperation ResolveOperation(string type, byte rawAddress)
+    {
+        var fromAddress = (rawAddress & 1) == 0 ? BusOperation.Write : BusOperation.Read;
+        var normalized = type.Trim().ToUpperInvariant();
+        var fromType = normalized switch
+        {
+            "READ" or "R" or "I2C READ" => BusOperation.Read,
+            "WRITE" or "W" or "I2C WRITE" => BusOperation.Write,
+            _ => fromAddress,
+        };
+        if (fromType != fromAddress)
+            throw new FormatException($"8-bit slave address 0x{rawAddress:X2} conflicts with Type '{type}'");
+        return fromType;
     }
 
     private SourceProbeResult None(string reason) => new(Id, DisplayName, ProbeConfidence.None, [reason]);

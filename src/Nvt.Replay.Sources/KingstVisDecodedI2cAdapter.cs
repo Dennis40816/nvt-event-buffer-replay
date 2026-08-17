@@ -34,6 +34,7 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
     {
         using var stream = new FileStream(context.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+        var layout = TextFileLayout.Detect(context.Path);
         var header = await reader.ReadLineAsync(cancellationToken);
         var dialect = DetectDialect(header);
         if (dialect == Dialect.None)
@@ -44,8 +45,10 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
 
         var tracker = new NvtRegisterTracker();
         var lineNumber = 1;
-        long byteOffset = Encoding.UTF8.GetByteCount(header ?? string.Empty) + Environment.NewLine.Length;
+        long byteOffset = layout.FirstLineOffset + layout.Advance(header ?? string.Empty);
         long outputIndex = 0;
+        long? lastPacketId = null;
+        double? lastTimestamp = null;
         if (dialect == Dialect.TransactionRow)
         {
             while (await reader.ReadLineAsync(cancellationToken) is { } line)
@@ -53,13 +56,15 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
                 cancellationToken.ThrowIfCancellationRequested();
                 lineNumber++;
                 var lineOffset = byteOffset;
-                byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+                byteOffset += layout.Advance(line);
                 if (!TryParseTransaction(context, line, lineNumber, lineOffset, outputIndex, out var record, out var error))
                 {
                     SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_MALFORMED_ROW", error, lineNumber, lineOffset);
+                    tracker.ResetEvidence();
                     continue;
                 }
                 outputIndex++;
+                ValidateSequence(context, record!, ref lastPacketId, ref lastTimestamp);
                 yield return tracker.Observe(record!);
             }
             yield break;
@@ -71,12 +76,13 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
             cancellationToken.ThrowIfCancellationRequested();
             lineNumber++;
             var lineOffset = byteOffset;
-            byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+            byteOffset += layout.Advance(line);
 
             if (!TryParseLegacyByte(line, lineNumber, lineOffset, out var decoded, out var error))
             {
                 SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_MALFORMED_ROW", error, lineNumber, lineOffset);
                 pending.Clear();
+                tracker.ResetEvidence();
                 continue;
             }
 
@@ -87,10 +93,12 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
                 if (grouped is null)
                 {
                     SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_INVALID_PACKET", groupError, lineNumber - 1, lineOffset);
+                    tracker.ResetEvidence();
                 }
                 else
                 {
                     outputIndex++;
+                    ValidateSequence(context, grouped, ref lastPacketId, ref lastTimestamp);
                     yield return tracker.Observe(grouped);
                 }
             }
@@ -104,8 +112,10 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
         if (final is null)
         {
             SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "KINGSTVIS_INVALID_PACKET", finalError, pending[0].LineNumber, pending[0].ByteOffset);
+            tracker.ResetEvidence();
             yield break;
         }
+        ValidateSequence(context, final, ref lastPacketId, ref lastTimestamp);
         yield return tracker.Observe(final);
     }
 
@@ -264,6 +274,46 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
         "W" or "WRITE" => BusOperation.Write,
         _ => throw new FormatException($"invalid direction '{value}'"),
     };
+
+    private static void ValidateSequence(
+        SourceOpenContext context,
+        SourceRecord record,
+        ref long? lastPacketId,
+        ref double? lastTimestamp)
+    {
+        var fields = record.SourceFields;
+        if (fields is null) return;
+        if (fields.TryGetValue("packet_id", out var packetText) &&
+            long.TryParse(packetText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var packetId))
+        {
+            if (lastPacketId is { } previous && packetId <= previous)
+            {
+                SourceDiagnostics.Report(
+                    context,
+                    DiagnosticSeverity.Warning,
+                    "KINGSTVIS_PACKET_ID_NON_MONOTONIC",
+                    $"Packet ID {packetId} does not follow the previous packet ID {previous}; records were retained in source order.",
+                    record.Location.LineNumber,
+                    record.Location.ByteOffset);
+            }
+            lastPacketId = packetId;
+        }
+        if (fields.TryGetValue("time_seconds", out var timeText) &&
+            double.TryParse(timeText, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds))
+        {
+            if (lastTimestamp is { } previous && seconds < previous)
+            {
+                SourceDiagnostics.Report(
+                    context,
+                    DiagnosticSeverity.Warning,
+                    "KINGSTVIS_TIMESTAMP_REGRESSION",
+                    $"Timestamp {seconds:R}s precedes the prior timestamp {previous:R}s; records were retained in source order.",
+                    record.Location.LineNumber,
+                    record.Location.ByteOffset);
+            }
+            lastTimestamp = seconds;
+        }
+    }
 
     private static Dialect DetectDialect(string? header)
     {

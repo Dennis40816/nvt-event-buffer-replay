@@ -65,17 +65,18 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
             bufferSize: 4096,
             useAsync: true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+        var layout = TextFileLayout.Detect(context.Path);
 
         PendingRecord? pending = null;
         long recordIndex = 0;
         var lineNumber = 0;
-        long byteOffset = 0;
+        long byteOffset = layout.FirstLineOffset;
 
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
             lineNumber++;
             var lineOffset = byteOffset;
-            byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+            byteOffset += layout.Advance(line);
 
             var match = HeaderPattern().Match(line);
             if (match.Success)

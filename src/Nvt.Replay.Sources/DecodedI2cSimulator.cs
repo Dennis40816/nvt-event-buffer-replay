@@ -17,12 +17,18 @@ public static class DecodedI2cSimulator
     public static string ToSaleaeCsv(IEnumerable<SyntheticI2cTransaction> transactions)
     {
         var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK/NAK" };
+        long packetId = 0;
         foreach (var transaction in transactions)
         {
-            foreach (var value in transaction.WriteCommands.SelectMany(command => command))
-                lines.Add(Row(transaction.TimestampSeconds, transaction.Index, transaction.SlaveAddress, value, "Write", "ACK"));
+            foreach (var command in transaction.WriteCommands)
+            {
+                packetId++;
+                foreach (var value in command)
+                    lines.Add(Row(transaction.TimestampSeconds, packetId, transaction.SlaveAddress, value, "Write", "ACK"));
+            }
+            packetId++;
             for (var index = 0; index < transaction.ReadData.Count; index++)
-                lines.Add(Row(transaction.TimestampSeconds, transaction.Index, transaction.SlaveAddress, transaction.ReadData[index], "Read", index == transaction.ReadData.Count - 1 ? "NAK" : "ACK"));
+                lines.Add(Row(transaction.TimestampSeconds, packetId, transaction.SlaveAddress, transaction.ReadData[index], "Read", index == transaction.ReadData.Count - 1 ? "NAK" : "ACK"));
         }
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
@@ -52,10 +58,10 @@ public static class DecodedI2cSimulator
             var time = (transaction.TimestampSeconds * 1_000_000_000d).ToString("0", CultureInfo.InvariantCulture);
             void Add(string value) => lines.Add($"{transaction.Index},{time},{value}");
             Add("Start");
-            if (transaction.WriteCommands.Count > 0)
+            for (var commandIndex = 0; commandIndex < transaction.WriteCommands.Count; commandIndex++)
             {
                 Add($"Address write: {transaction.SlaveAddress:X2}"); Add("ACK");
-                foreach (var value in transaction.WriteCommands.SelectMany(command => command)) { Add($"Data write: {value:X2}"); Add("ACK"); }
+                foreach (var value in transaction.WriteCommands[commandIndex]) { Add($"Data write: {value:X2}"); Add("ACK"); }
                 Add("Start repeat");
             }
             Add($"Address read: {transaction.SlaveAddress:X2}"); Add("ACK");
@@ -135,7 +141,10 @@ public static class DecodedI2cSimulator
         var row = 2;
         foreach (var transaction in transactions)
         {
-            var bytes = new byte[] { 0x03 }.Concat(transaction.ReadData).ToArray();
+            if (transaction.SlaveAddress is < 0 or > 0x7F)
+                throw new ArgumentOutOfRangeException(nameof(transactions), transaction.SlaveAddress, "I²C slave address must fit seven bits.");
+            var readAddress = checked((byte)((transaction.SlaveAddress << 1) | 1));
+            var bytes = new[] { readAddress }.Concat(transaction.ReadData).ToArray();
             AppendRow(xml, row++, [transaction.Index.ToString(CultureInfo.InvariantCulture), Seconds(transaction.TimestampSeconds), "I2C", bytes.Length.ToString(CultureInfo.InvariantCulture), Bytes(bytes)]);
         }
         xml.Append("</sheetData></worksheet>");

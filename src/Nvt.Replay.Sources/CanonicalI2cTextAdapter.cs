@@ -29,6 +29,7 @@ public sealed class CanonicalI2cTextAdapter : ISourceAdapter
     {
         using var stream = new FileStream(context.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, true);
         using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+        var layout = TextFileLayout.Detect(context.Path);
         var header = await reader.ReadLineAsync(cancellationToken);
         if (header != Magic)
         {
@@ -38,13 +39,13 @@ public sealed class CanonicalI2cTextAdapter : ISourceAdapter
 
         var tracker = new NvtRegisterTracker();
         var lineNumber = 1;
-        long byteOffset = Encoding.UTF8.GetByteCount(header) + Environment.NewLine.Length;
+        long byteOffset = layout.FirstLineOffset + layout.Advance(header);
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
             cancellationToken.ThrowIfCancellationRequested();
             lineNumber++;
             var lineOffset = byteOffset;
-            byteOffset += Encoding.UTF8.GetByteCount(line) + Environment.NewLine.Length;
+            byteOffset += layout.Advance(line);
             if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith('#'))
                 continue;
 
@@ -88,6 +89,7 @@ public sealed class CanonicalI2cTextAdapter : ISourceAdapter
             }
             catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException or OverflowException)
             {
+                tracker.ResetEvidence();
                 SourceDiagnostics.Report(context, DiagnosticSeverity.Error, "CANONICAL_MALFORMED_RECORD", $"Invalid canonical record at line {lineNumber}: {exception.Message}", lineNumber, lineOffset);
                 continue;
             }

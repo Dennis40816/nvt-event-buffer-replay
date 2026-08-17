@@ -2,6 +2,7 @@ using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Sources;
+using System.Text;
 
 namespace Nvt.Replay.Tests;
 
@@ -60,9 +61,12 @@ public sealed class DecodedI2cAdapterTests : IDisposable
 
         Assert.Equal(ProbeConfidence.High, probe.Confidence);
         Assert.Equal(BusOperation.Read, read.Operation);
-        Assert.Equal(0x99000u, read.Address);
+        Assert.Null(read.Address);
         Assert.Equal(Transaction.ReadData, read.Data);
         Assert.Equal("0x03", read.SourceFields?["register_address_byte"]);
+        Assert.Equal("0x00", read.SourceFields?["register_offset"]);
+        Assert.Equal("false", read.SourceFields?["register_page_known"]);
+        Assert.Equal("unknown", read.SourceFields?["register_address"]);
     }
 
     [Fact]
@@ -113,6 +117,20 @@ public sealed class DecodedI2cAdapterTests : IDisposable
     }
 
     [Fact]
+    public async Task Excel_normalizes_the_8bit_address_without_assuming_the_TP_slave()
+    {
+        var transaction = Transaction with { SlaveAddress = 0x2A };
+        var path = Path.Combine(directory, "other-slave.xlsx");
+        DecodedI2cSimulator.WriteExcel(path, [transaction]);
+
+        var read = Assert.Single(await Read(new ExcelDecodedI2cAdapter(), path));
+
+        Assert.Equal(0x2A, read.I2c?.SlaveAddress);
+        Assert.Equal("0x55", read.SourceFields?["register_address_byte"]);
+        Assert.Equal("I2C 0x2A", read.Target);
+    }
+
+    [Fact]
     public async Task KingstVis_transaction_row_validates_8bit_address_direction()
     {
         var path = Write(".csv", "Time[s],Packet ID,Address,Read/Write,Data\n1,1,0x02,Read,0x00 0x01\n");
@@ -125,6 +143,22 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         Assert.Equal(ProbeConfidence.High, probe.Confidence);
         Assert.Empty(records);
         Assert.Contains(diagnostics, diagnostic => diagnostic.Code == "KINGSTVIS_MALFORMED_ROW");
+    }
+
+    [Fact]
+    public async Task KingstVis_non_monotonic_packet_and_timestamp_are_retained_with_warnings()
+    {
+        var path = Write(".csv", string.Join('\n',
+            "Time[s],Packet ID,Address,Read/Write,Data",
+            "2,2,0x03,Read,0x01",
+            "1.5,1,0x03,Read,0x02") + "\n");
+        var diagnostics = new List<ReplayDiagnostic>();
+
+        var records = await Read(new KingstVisDecodedI2cAdapter(), path, diagnostics.Add);
+
+        Assert.Equal(2, records.Count);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Code == "KINGSTVIS_PACKET_ID_NON_MONOTONIC");
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Code == "KINGSTVIS_TIMESTAMP_REGRESSION");
     }
 
     [Fact]
@@ -196,6 +230,84 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         Assert.True(frame.CrcValid);
         Assert.Equal(trailing, frame.UnconsumedData);
         Assert.DoesNotContain(report.Diagnostics, diagnostic => diagnostic.Code == "NO_EVENT_BUFFER_RECORDS");
+    }
+
+    [Fact]
+    public async Task Dsl_discovers_the_single_I2c_analyzer_and_ignores_unrelated_signal_columns()
+    {
+        var rows = DecodedI2cSimulator.ToDslCsv([Transaction])
+            .Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)
+            .Skip(1)
+            .Select(row =>
+            {
+                var fields = row.Split(',', 3);
+                return $"{fields[0]},{fields[1]},ignored,{fields[2]},0";
+            });
+        var text = "Id,Time[ns],0:SPI: MOSI,2:I2C: Address/Data,3:Digital: D0\n" + string.Join('\n', rows) + "\n";
+        var path = Write(".csv", text);
+        var adapter = new DslDecodedI2cAdapter();
+
+        var probe = await adapter.ProbeAsync(path);
+        var read = Assert.Single(await Read(adapter, path));
+
+        Assert.Equal(ProbeConfidence.High, probe.Confidence);
+        Assert.Equal("2:I2C: Address/Data", read.SourceFields?["analyzer_column"]);
+        Assert.Equal(Transaction.ReadData, read.Data);
+    }
+
+    [Fact]
+    public async Task Dsl_source_location_uses_real_UTF16_BOM_and_line_width()
+    {
+        var text = DecodedI2cSimulator.ToDslCsv([Transaction]);
+        var path = Path.Combine(directory, "utf16-dsl.csv");
+        File.WriteAllText(path, text, Encoding.Unicode);
+        var header = text.Split(["\r\n", "\n"], StringSplitOptions.None)[0];
+        var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        var expected = Encoding.Unicode.GetPreamble().Length + Encoding.Unicode.GetByteCount(header + newline);
+
+        var read = Assert.Single(await Read(new DslDecodedI2cAdapter(), path));
+
+        Assert.Equal(expected, read.Location.ByteOffset);
+        Assert.Equal(2, read.Location.LineNumber);
+    }
+
+    [Theory]
+    [InlineData("saleae")]
+    [InlineData("dsl")]
+    public async Task Repeated_start_write_segments_round_trip_without_flattening(string format)
+    {
+        var transaction = Transaction with
+        {
+            WriteCommands = [new byte[] { 0xFF, 0x08, 0x08 }, new byte[] { 0x00 }],
+        };
+        var (adapter, extension, text) = format switch
+        {
+            "saleae" => ((ISourceAdapter)new SaleaeDecodedI2cAdapter(), ".csv", DecodedI2cSimulator.ToSaleaeCsv([transaction])),
+            _ => (new DslDecodedI2cAdapter(), ".csv", DecodedI2cSimulator.ToDslCsv([transaction])),
+        };
+        var path = Write(extension, text);
+
+        var read = Assert.Single(await Read(adapter, path), record => record.Operation == BusOperation.Read);
+
+        Assert.Equal(2, read.I2c?.WriteCommands.Count);
+        Assert.Equal(new byte[] { 0xFF, 0x08, 0x08 }, read.I2c?.WriteCommands[0]);
+        Assert.Equal(new byte[] { 0x00 }, read.I2c?.WriteCommands[1]);
+        Assert.Equal(0x80800u, read.Address);
+    }
+
+    [Fact]
+    public async Task Dsl_write_to_read_without_repeated_start_is_rejected()
+    {
+        var text = DecodedI2cSimulator.ToDslCsv([Transaction])
+            .Replace("7,1250000000,Start repeat\r\n", string.Empty, StringComparison.Ordinal)
+            .Replace("7,1250000000,Start repeat\n", string.Empty, StringComparison.Ordinal);
+        var path = Write(".csv", text);
+        var diagnostics = new List<ReplayDiagnostic>();
+
+        var records = await Read(new DslDecodedI2cAdapter(), path, diagnostics.Add);
+
+        Assert.Empty(records);
+        Assert.Contains(diagnostics, diagnostic => diagnostic.Code == "DSL_INVALID_TRANSACTION");
     }
 
     [Fact]
