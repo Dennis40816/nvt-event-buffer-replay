@@ -20,6 +20,6 @@ Paint keeps every contact's point, coordinate label, and trajectory in one stabl
 
 The replay timeline uses a thin neutral track that strengthens on hover, a white playhead, lime logical/loop state, muted physical progress, and amber evidence. Loop bounds are direct draggable brackets with a shaded selected range; the `Loop` toggle creates a one-second default range and `Clear` removes it. No default platform slider thumb is exposed.
 
-For reproducible desktop QA, a capture may be opened with an explicit decoder choice: `Nvt.Replay.Avalonia capture.txt --event-version 0x83`. Desay 0x97 additionally requires `--palm-profile Standard` or `--palm-profile Benz-Palm`. These options never guess semantic configuration.
+For reproducible desktop QA, a capture may be opened with an explicit decoder choice: `Nvt.Replay.Avalonia capture.txt --event-version 0x83`. Desay 0x97 additionally requires both `--register-profile <family>` and `--palm-profile Standard` or `--palm-profile Benz-Palm`. These options never guess semantic configuration or assume NT51927's Event Buffer base.
 
 Manual release UI checks cover dark and light palettes, command palette focus/dismissal, keyboard replay, all trajectory modes, decoder selection, and a full capture/decode/Paint round trip. No telemetry, update checker, upload, or network client exists in the application.

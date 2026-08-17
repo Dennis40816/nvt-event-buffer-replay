@@ -140,19 +140,25 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
+        var isDesay97 = IsDesay97Version(versionText);
+        if (isDesay97 && registerProfile is null)
+        {
+            await error.WriteLineAsync("Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.");
+            return UsageError;
+        }
         var capture = (await CaptureSession.LoadAsync(path, adapterId: adapterId)).WithRegisterProfile(registerProfile);
-        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0x99000;
+        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0;
         ITouchReplaySession replay;
         IReadOnlyList<ReplayDiagnostic> diagnostics;
         ReplayDecodeConfiguration configuration;
-        if (versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase) || versionText.Equals("97", StringComparison.OrdinalIgnoreCase))
+        if (isDesay97)
         {
             if (!TryReadOption(operands, "--desay97-profile", out var profileText) || !TryParseDesay97Profile(profileText, out var profile))
             {
                 await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
                 return UsageError;
             }
-            var decoded = capture.DecodeDesay97(profile);
+            var decoded = capture.DecodeDesay97(profile, eventBufferBase);
             replay = new Desay97ReplaySession(decoded.Frames);
             diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
             configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId, eventBufferBase, registerProfile);
@@ -288,20 +294,26 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
+        var isDesay97 = IsDesay97Version(versionText);
+        if (isDesay97 && registerProfile is null)
+        {
+            await error.WriteLineAsync("Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.");
+            return UsageError;
+        }
         var capture = (await CaptureSession.LoadAsync(path, adapterId: adapterId)).WithRegisterProfile(registerProfile);
-        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0x99000;
+        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0;
         ITouchReplaySession replay;
         IReadOnlyList<ReplayDiagnostic> diagnostics;
         ReplayDecodeConfiguration configuration;
         EvidenceStatus evidenceStatus;
-        if (versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase) || versionText.Equals("97", StringComparison.OrdinalIgnoreCase))
+        if (isDesay97)
         {
             if (!TryReadOption(operands, "--desay97-profile", out var profileText) || !TryParseDesay97Profile(profileText, out var profile))
             {
                 await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
                 return UsageError;
             }
-            var decoded = capture.DecodeDesay97(profile);
+            var decoded = capture.DecodeDesay97(profile, eventBufferBase);
             replay = new Desay97ReplaySession(decoded.Frames);
             diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
             configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId, eventBufferBase, registerProfile);
@@ -418,10 +430,15 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
+        var isDesay97 = IsDesay97Version(versionText);
+        if (isDesay97 && registerProfile is null)
+        {
+            await error.WriteLineAsync("Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.");
+            return UsageError;
+        }
         var capture = (await CaptureSession.LoadAsync(path, adapterId: sourceAdapterId)).WithRegisterProfile(registerProfile);
 
-        if (versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase) ||
-            versionText.Equals("97", StringComparison.OrdinalIgnoreCase))
+        if (isDesay97)
         {
             if (!TryReadOption(operands, "--desay97-profile", out var profileText) ||
                 !TryParseDesay97Profile(profileText, out var profile))
@@ -430,7 +447,9 @@ internal static class ReplayCli
                 return UsageError;
             }
 
-            var desayReport = capture.DecodeDesay97(profile);
+            var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ??
+                throw new InvalidOperationException("Desay register profile was validated before decoding.");
+            var desayReport = capture.DecodeDesay97(profile, eventBufferBase);
             if (json)
             {
                 await output.WriteLineAsync(JsonSerializer.Serialize(desayReport, JsonOptions));
@@ -712,6 +731,10 @@ internal static class ReplayCli
         _ => throw new ArgumentOutOfRangeException(nameof(version)),
     };
 
+    private static bool IsDesay97Version(string value) =>
+        value.Equals("0x97", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("97", StringComparison.OrdinalIgnoreCase);
+
     private static Task WriteHelpAsync(TextWriter output)
     {
         return output.WriteLineAsync(
@@ -728,7 +751,8 @@ internal static class ReplayCli
                                            Decode Common records from any supported source
               nvt-replay inspect <file> --event-buffer-version 0x97
                                  --desay97-profile <standard|benz-palm>
-                                 [--source-adapter <id>] [--register-profile <family>] [--json]
+                                 --register-profile <family>
+                                 [--source-adapter <id>] [--json]
                                            Assemble and decode Desay reads
               nvt-replay analyze <file> --event-buffer-version <version>
                                  --output <directory> [--range <first:last>]
@@ -757,6 +781,7 @@ internal static class ReplayCli
 
             Source detection is ranked and may require --source-adapter when ambiguous.
             Event Buffer Version, Benz Palm, and collision-prone IC register profiles remain explicit operator choices.
+            Desay 0x97 always requires both --desay97-profile and --register-profile.
             """);
     }
 }

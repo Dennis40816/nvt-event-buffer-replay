@@ -432,6 +432,11 @@ public partial class MainWindow : Window
         EventVersionComboBox.SelectedIndex = versionIndex;
         if (versionIndex == 4)
         {
+            if (string.IsNullOrWhiteSpace(registerProfile))
+            {
+                ConfigurationHintText.Text = "Startup 0x97 decode requires --register-profile and --palm-profile.";
+                return;
+            }
             var profileIndex = palmProfile?.Trim().ToUpperInvariant() switch
             {
                 "STANDARD" => 0,
@@ -464,9 +469,15 @@ public partial class MainWindow : Window
         }
 
         var isDesay97 = versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase);
+        var registerProfile = NvtRegisterCatalog.FindProfile(session.RegisterProfile);
         Desay97Profile? desayProfile = null;
         if (isDesay97)
         {
+            if (registerProfile is null)
+            {
+                ConfigurationHintText.Text = "Desay 0x97 requires an explicit IC profile before decoding.";
+                return;
+            }
             desayProfile = Desay97ProfileComboBox.SelectedItem is ComboBoxItem profileItem &&
                            profileItem.Content?.ToString() == "Benz Palm"
                 ? Desay97Profile.BenzPalm
@@ -498,7 +509,9 @@ public partial class MainWindow : Window
             if (isDesay97)
             {
                 var profile = desayProfile ?? throw new InvalidOperationException("Desay profile was validated before decoding.");
-                var report = await Task.Run(() => session.DecodeDesay97(profile), cancellationToken);
+                var eventBufferBase = registerProfile?.EventBufferBase ??
+                    throw new InvalidOperationException("Desay IC profile was validated before decoding.");
+                var report = await Task.Run(() => session.DecodeDesay97(profile, eventBufferBase), cancellationToken);
                 replaySession = await Task.Run(() => new Desay97ReplaySession(report.Frames), cancellationToken);
                 decodedRows = report.Frames.Select((frame, index) => DecodedFrameRow.FromDesay97(index, frame)).ToArray();
                 decodeDiagnostics = report.Diagnostics;
@@ -518,7 +531,7 @@ public partial class MainWindow : Window
                 versionText,
                 isDesay97 ? ProfileText(desayProfile!.Value) : null,
                 session.Probe.AdapterId,
-                NvtRegisterCatalog.FindProfile(session.RegisterProfile)?.EventBufferBase ?? 0x99000,
+                registerProfile?.EventBufferBase ?? 0,
                 session.RegisterProfile);
             if (decodeConfiguration is not null && decodeConfiguration != nextConfiguration)
                 markers.Clear();
@@ -691,7 +704,9 @@ public partial class MainWindow : Window
         if (session is not null)
         {
             ConfigurationHintText.Text = isDesay97
-                ? "Confirm Standard or Benz Palm; decoding starts immediately after that selection."
+                ? NvtRegisterCatalog.FindProfile(session.RegisterProfile) is null
+                    ? "0x97 selected · confirm IC profile, then Standard or Benz Palm."
+                    : "IC profile confirmed · select Standard or Benz Palm to decode 0x97."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
     }
@@ -991,8 +1006,11 @@ public partial class MainWindow : Window
     {
         var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
                         versionItem.Content?.ToString() == "0x97";
-        if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
+        if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0 &&
+            NvtRegisterCatalog.FindProfile(session.RegisterProfile) is not null)
             await DecodeSelectedAsync();
+        else if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
+            ConfigurationHintText.Text = "Palm profile confirmed · select the IC profile to decode 0x97.";
     }
 
     private async void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1035,7 +1053,8 @@ public partial class MainWindow : Window
         }
 
         var canDecode = EventVersionComboBox.SelectedIndex >= 0 &&
-            (EventVersionComboBox.SelectedIndex != 4 || Desay97ProfileComboBox.SelectedIndex >= 0);
+            (EventVersionComboBox.SelectedIndex != 4 ||
+             (choice.IcFamily is not null && Desay97ProfileComboBox.SelectedIndex >= 0));
         if (canDecode) await DecodeSelectedAsync();
     }
 

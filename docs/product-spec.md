@@ -33,7 +33,7 @@ Source format detection and event-buffer interpretation are separate:
 - event-buffer family/version is supplied by a preset or confirmed manually;
 - NDS transport properties such as slave address and byte count never imply an
   event-buffer version;
-- Desay 0x97 always requires Standard or Benz Palm selection;
+- Desay 0x97 always requires both an IC profile and Standard or Benz Palm selection;
 - incomplete configuration opens Raw Explorer without semantic parsing.
 
 A Capture Bundle has one primary touch capture and optional evidence files.

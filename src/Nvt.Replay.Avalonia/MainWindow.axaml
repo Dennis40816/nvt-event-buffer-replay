@@ -459,61 +459,67 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="72,*,154">
+  <Grid RowDefinitions="104,*,160">
     <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid Margin="16,0" ColumnDefinitions="Auto,16,245,16,Auto,14,Auto,10,Auto,10,*,10,Auto,4,Auto,4,Auto,8,Auto,8,Auto" RowDefinitions="*,3">
-        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
-          <Border Width="6" Height="28" CornerRadius="3" Background="{DynamicResource AccentBrush}" />
-          <StackPanel Spacing="0">
-            <TextBlock Text="NVT EVENT BUFFER" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" />
-            <TextBlock Text="REPLAY" FontSize="11" FontWeight="SemiBold" LetterSpacing="1.2" Foreground="{DynamicResource MutedTextBrush}" />
+      <Grid RowDefinitions="56,47,1">
+        <Grid Grid.Row="0" Margin="16,0" ColumnDefinitions="Auto,18,300,*,Auto,4,Auto,4,Auto,8,Auto,8,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+            <Border Width="6" Height="30" CornerRadius="3" Background="{DynamicResource AccentBrush}" />
+            <StackPanel Spacing="0">
+              <TextBlock Text="NVT EVENT BUFFER" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" />
+              <TextBlock Text="REPLAY" FontSize="11" FontWeight="SemiBold" LetterSpacing="1.2" Foreground="{DynamicResource MutedTextBrush}" />
+            </StackPanel>
           </StackPanel>
-        </StackPanel>
 
-        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-          <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" />
-          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite" />
-        </StackPanel>
+          <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
+            <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite" />
+          </StackPanel>
 
-        <StackPanel Grid.Column="4" Width="178" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Text="Source" Classes="section" />
-          <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" />
-          <ComboBox x:Name="SourceAdapterComboBox" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
-          <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
-        </StackPanel>
-
-        <StackPanel Grid.Column="6" Width="88" VerticalAlignment="Center" Spacing="2">
-          <TextBlock Text="Format" Classes="section" />
-          <ComboBox x:Name="EventVersionComboBox" Width="88" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
-            <ComboBoxItem Content="0x82" />
-            <ComboBoxItem Content="0x83" />
-            <ComboBoxItem Content="0x84" />
-            <ComboBoxItem Content="0x85" />
-            <ComboBoxItem Content="0x97" />
-          </ComboBox>
-        </StackPanel>
-        <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="8" Width="112" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" VerticalAlignment="Center" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed">
-          <ComboBoxItem Content="Standard" />
-          <ComboBoxItem Content="Benz Palm" />
-        </ComboBox>
-        <Grid Grid.Column="10" VerticalAlignment="Center">
-          <TextBlock x:Name="ConfigurationHintText" Text="Select a source and explicit Event Buffer format." MaxWidth="300" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          <Button x:Name="SaveReviewButton" Grid.Column="4" Classes="headerIcon" Content="&#xE74E;" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review" />
+          <Button x:Name="LoadReviewButton" Grid.Column="6" Classes="headerIcon" Content="&#xE8E5;" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review" />
+          <Button x:Name="ApplySidecarButton" Grid.Column="6" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
+          <Button x:Name="ExportAnalysisButton" Grid.Column="8" Classes="headerIcon" Content="&#xE72D;" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview" />
+          <Button x:Name="ThemeButton" Grid.Column="10" Classes="canvasIcon" Content="&#xE706;" Click="ThemeButton_OnClick" ToolTip.Tip="Change color theme · commands remain available with Ctrl+K" AutomationProperties.Name="Change color theme" />
+          <Button x:Name="CancelButton" Grid.Column="12" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
+          <Button x:Name="LoadButton" Grid.Column="12" Classes="primary" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <TextBlock Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="16" VerticalAlignment="Center" />
+              <TextBlock Text="Load capture" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
         </Grid>
-        <Button x:Name="DecodeButton" Grid.Column="10" Classes="primary" Content="Re-decode" HorizontalAlignment="Right" IsEnabled="False" IsVisible="False" Click="DecodeButton_OnClick" AutomationProperties.Name="Decode capture" />
 
-        <Button x:Name="SaveReviewButton" Grid.Column="12" Classes="headerIcon" Content="&#xE74E;" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review" />
-        <Button x:Name="LoadReviewButton" Grid.Column="14" Classes="headerIcon" Content="&#xE8E5;" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review" />
-        <Button x:Name="ApplySidecarButton" Grid.Column="14" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
-        <Button x:Name="ExportAnalysisButton" Grid.Column="16" Classes="headerIcon" Content="&#xE72D;" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview" />
-        <Button x:Name="ThemeButton" Grid.Column="18" Classes="canvasIcon" Content="&#xE706;" Click="ThemeButton_OnClick" ToolTip.Tip="Change color theme · commands remain available with Ctrl+K" AutomationProperties.Name="Change color theme" />
-        <Button x:Name="CancelButton" Grid.Column="20" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
-        <Button x:Name="LoadButton" Grid.Column="20" Classes="primary" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
-          <StackPanel Orientation="Horizontal" Spacing="7">
-            <TextBlock Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="16" VerticalAlignment="Center" />
-            <TextBlock Text="Load capture" FontWeight="SemiBold" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
-        <ProgressBar x:Name="LoadingProgress" Grid.Row="1" Grid.ColumnSpan="21" Height="3" IsIndeterminate="True" IsVisible="False" />
+        <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+          <Grid Margin="16,0" ColumnDefinitions="Auto,8,190,18,Auto,8,92,18,Auto,8,150,18,Auto,18,*,12,Auto" VerticalAlignment="Center">
+            <TextBlock Text="Source" Classes="fieldLabel" />
+            <Grid Grid.Column="2">
+              <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+              <ComboBox x:Name="SourceAdapterComboBox" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
+              <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
+            </Grid>
+
+            <TextBlock Grid.Column="4" Text="Version" Classes="fieldLabel" />
+            <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" Width="92" PlaceholderText="Required" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
+              <ComboBoxItem Content="0x82" />
+              <ComboBoxItem Content="0x83" />
+              <ComboBoxItem Content="0x84" />
+              <ComboBoxItem Content="0x85" />
+              <ComboBoxItem Content="0x97" />
+            </ComboBox>
+
+            <TextBlock Grid.Column="8" Text="IC profile" Classes="fieldLabel" />
+            <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="10" Width="150" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
+            <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="12" Width="126" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
+              <ComboBoxItem Content="Standard" />
+              <ComboBoxItem Content="Benz Palm" />
+            </ComboBox>
+
+            <TextBlock x:Name="ConfigurationHintText" Grid.Column="14" Text="Select a source and explicit Event Buffer version." FontSize="11" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+            <Button x:Name="DecodeButton" Grid.Column="16" Classes="primary" Content="Decode" IsEnabled="False" Click="DecodeButton_OnClick" AutomationProperties.Name="Decode capture" />
+          </Grid>
+        </Border>
+        <ProgressBar x:Name="LoadingProgress" Grid.Row="2" Height="3" IsIndeterminate="True" IsVisible="False" />
       </Grid>
     </Border>
 
@@ -571,13 +577,11 @@
           <TabItem Header="RAW EXPLORER">
             <Grid RowDefinitions="48,24,34,*">
               <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="10,0" ColumnDefinitions="Auto,8,150,14,Auto,8,154,14,*,14,Auto" VerticalAlignment="Center">
-                  <TextBlock Text="IC profile" Classes="fieldLabel" />
-                  <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="2" Width="150" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
-                  <TextBlock Grid.Column="4" Text="Show" Classes="fieldLabel" />
-                  <ComboBox x:Name="RegisterFilterComboBox" Grid.Column="6" Width="154" SelectionChanged="RegisterFilterComboBox_OnSelectionChanged" AutomationProperties.Name="Register activity filter" />
-                  <TextBox x:Name="RegisterSearchTextBox" Grid.Column="8" Classes="registerSearch" MinWidth="140" MaxWidth="260" HorizontalAlignment="Stretch" PlaceholderText="Search address, register, payload…" TextChanged="RegisterSearchTextBox_OnTextChanged" AutomationProperties.Name="Search physical records" />
-                  <Button x:Name="ExportReadableLogButton" Grid.Column="10" Classes="toolbarAction" Content="Export readable" IsEnabled="False" Click="ExportReadableLogButton_OnClick" AutomationProperties.Name="Export readable communication log" />
+                <Grid Margin="10,0" ColumnDefinitions="Auto,8,164,14,*,14,Auto" VerticalAlignment="Center">
+                  <TextBlock Text="Show" Classes="fieldLabel" />
+                  <ComboBox x:Name="RegisterFilterComboBox" Grid.Column="2" Width="164" SelectionChanged="RegisterFilterComboBox_OnSelectionChanged" AutomationProperties.Name="Register activity filter" />
+                  <TextBox x:Name="RegisterSearchTextBox" Grid.Column="4" Classes="registerSearch" MinWidth="180" MaxWidth="360" HorizontalAlignment="Stretch" PlaceholderText="Search address, register, payload…" TextChanged="RegisterSearchTextBox_OnTextChanged" AutomationProperties.Name="Search physical records" />
+                  <Button x:Name="ExportReadableLogButton" Grid.Column="6" Classes="toolbarAction" Content="Export readable" IsEnabled="False" Click="ExportReadableLogButton_OnClick" AutomationProperties.Name="Export readable communication log" />
                 </Grid>
               </Border>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="10,0" VerticalAlignment="Center">

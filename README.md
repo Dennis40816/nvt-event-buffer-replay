@@ -118,7 +118,7 @@ dotnet run --project src/Nvt.Replay.Cli -- export ./capture.txt --event-buffer-v
 dotnet run --project src/Nvt.Replay.Avalonia
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83
-dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x97 --palm-profile Benz-Palm
+dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x97 --register-profile 51927 --palm-profile Benz-Palm
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83 --register-profile 51927
 dotnet run --project src/Nvt.Replay.Cli -- readable ./capture.txt --output ./analysis --register-profile 51927
 ```
