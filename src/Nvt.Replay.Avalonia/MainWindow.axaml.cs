@@ -1669,7 +1669,7 @@ public partial class MainWindow : Window
             text.AppendLine().Append("write commands=")
                 .Append(i2c.WriteCommands.Count == 0 ? "-" : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes)));
             text.AppendLine().Append("data ACKs=")
-                .Append(i2c.Acked.Count == 0 ? "-" : string.Join(' ', i2c.Acked.Select(value => value ? "ACK" : "NAK")));
+                .Append(I2cAckSummary.Format(i2c.Acked));
             if (!string.IsNullOrWhiteSpace(i2c.Error)) text.AppendLine().Append("transport error=").Append(i2c.Error);
         }
         if (record.SourceFields is { Count: > 0 })

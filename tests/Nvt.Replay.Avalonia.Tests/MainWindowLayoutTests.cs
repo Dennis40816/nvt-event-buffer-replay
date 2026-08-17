@@ -9,6 +9,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Nvt.Replay.Avalonia.Controls;
+using Nvt.Replay.Avalonia.ViewModels;
 using Xunit;
 
 namespace Nvt.Replay.Avalonia.Tests;
@@ -220,6 +221,33 @@ public sealed class MainWindowLayoutTests
             window.MouseUp(windowPoint, MouseButton.Left, RawInputModifiers.None);
 
             Assert.Equal("15 / 19", Required<TextBlock>(window, "InspectorLogicalText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Inspector_summarizes_per_byte_acknowledgements_without_losing_the_transport_data()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+
+            var rawRecords = Required<ListBox>(window, "RawRecordsList");
+            var eventBufferRead = rawRecords.Items
+                .OfType<RawRecordRow>()
+                .First(row => row.Record.I2c?.Acked.Count == 80);
+            rawRecords.SelectedItem = eventBufferRead;
+            Dispatcher.UIThread.RunJobs();
+
+            var transport = Required<TextBlock>(window, "TransportText").Text ?? string.Empty;
+            Assert.Contains("data ACKs=ACK ×79; final NAK", transport);
+            Assert.DoesNotContain("ACK ACK ACK", transport);
+            Assert.Equal(80, eventBufferRead.Record.I2c?.Acked.Count);
         }
         finally
         {
