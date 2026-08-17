@@ -433,6 +433,19 @@ public sealed class MainWindowLayoutTests
             Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width = new GridLength(520);
             Dispatcher.UIThread.RunJobs();
             CaptureHash(window, "22-inspector-ten-contacts-dark.png");
+
+            Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width = new GridLength(320);
+            contacts.ScrollIntoView(contacts.SelectedItem!);
+            Dispatcher.UIThread.RunJobs();
+            var inspectorRail = Required<Grid>(window, "InspectorRailContent");
+            var selectedContainer = contacts.GetVisualDescendants()
+                .OfType<ListBoxItem>()
+                .Single(item => item.DataContext is InspectorContactRow { Id: 10 });
+            var selectedBounds = BoundsInside(selectedContainer, inspectorRail);
+            Assert.True(selectedBounds.Left >= 0);
+            Assert.True(selectedBounds.Right <= inspectorRail.Bounds.Width + 0.5);
+            CaptureHash(window, "26-inspector-ten-contacts-320-dark.png");
+
             Required<Button>(window, "InspectorRailToggleButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("8", Required<TextBlock>(window, "CollapsedFingerText").Text);
@@ -689,6 +702,53 @@ public sealed class MainWindowLayoutTests
             window.MouseUp(emptyFramePoint, MouseButton.Right, RawInputModifiers.None);
             Dispatcher.UIThread.RunJobs();
             Assert.Null(timeline.ContextMenu);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Timeline_marker_menu_removes_only_the_chosen_marker_when_ranges_overlap()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var mark = Required<Button>(window, "AddMarkerButton");
+            mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("2", Required<TextBlock>(window, "DiagnosticCountText").Text);
+
+            var timeline = Required<ReplayTimelineSurface>(window, "ReplayTimelineSurface");
+            var firstFramePoint = timeline.TranslatePoint(new Point(5, timeline.Bounds.Height / 2), window) ??
+                throw new InvalidOperationException("Timeline could not translate its first-frame point.");
+            window.MouseDown(firstFramePoint, MouseButton.Right, RawInputModifiers.None);
+            window.MouseUp(firstFramePoint, MouseButton.Right, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            var overlapMenu = Assert.IsType<ContextMenu>(timeline.ContextMenu);
+            var overlapItems = overlapMenu.Items.OfType<MenuItem>().ToArray();
+            Assert.Equal(2, overlapItems.Length);
+            var rangeItem = Assert.Single(overlapItems, item =>
+                item.Header?.ToString()?.StartsWith("Unmark Marker 2 · frames", StringComparison.Ordinal) == true);
+            rangeItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("1", Required<TextBlock>(window, "DiagnosticCountText").Text);
+            Assert.Null(timeline.ContextMenu);
+
+            window.MouseDown(firstFramePoint, MouseButton.Right, RawInputModifiers.None);
+            window.MouseUp(firstFramePoint, MouseButton.Right, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            var remainingItem = Assert.Single(Assert.IsType<ContextMenu>(timeline.ContextMenu).Items.OfType<MenuItem>());
+            Assert.StartsWith("Unmark Marker 1 · frame 1", remainingItem.Header?.ToString(), StringComparison.Ordinal);
         }
         finally
         {
