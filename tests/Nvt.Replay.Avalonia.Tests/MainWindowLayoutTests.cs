@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
@@ -248,6 +249,51 @@ public sealed class MainWindowLayoutTests
             Assert.Contains("data ACKs=ACK ×79; final NAK", transport);
             Assert.DoesNotContain("ACK ACK ACK", transport);
             Assert.Equal(80, eventBufferRead.Record.I2c?.Acked.Count);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Pending_0x97_configuration_names_the_still_active_replay()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            Required<ComboBox>(window, "EventVersionComboBox").SelectedIndex = 4;
+
+            var hint = Required<TextBlock>(window, "ConfigurationHintText").Text ?? string.Empty;
+            Assert.Contains("0x97 pending", hint);
+            Assert.Contains("active replay: Common 0x83", hint);
+            Assert.Equal("Physical #1 · Common 0x83 · Host-state", Required<TextBlock>(window, "InspectorSubtitleText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Theme_toggle_preserves_the_capture_status_summary()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var status = Required<TextBlock>(window, "SessionStatusText");
+            var expected = status.Text;
+
+            Required<Button>(window, "ThemeButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            Assert.Equal(expected, status.Text);
         }
         finally
         {

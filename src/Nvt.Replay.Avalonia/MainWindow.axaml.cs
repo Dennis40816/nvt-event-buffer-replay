@@ -261,7 +261,6 @@ public partial class MainWindow : Window
         var variant = themeMode == 0 ? ThemeVariant.Dark : ThemeVariant.Light;
         if (Application.Current is { } application) application.RequestedThemeVariant = variant;
         ToolTip.SetTip(ThemeButton, themeMode == 0 ? "Switch to light theme" : "Switch to dark theme");
-        SessionStatusText.Text = $"Color theme · {(themeMode == 0 ? "Dark" : "Light")}";
     }
 
     private async void LoadButton_OnClick(object? sender, RoutedEventArgs e)
@@ -684,8 +683,8 @@ public partial class MainWindow : Window
         {
             ConfigurationHintText.Text = isDesay97
                 ? NvtRegisterCatalog.FindProfile(session.RegisterProfile) is null
-                    ? "0x97 selected · confirm IC profile, then Standard or Benz Palm."
-                    : "IC profile confirmed · select Standard or Benz Palm to decode 0x97."
+                    ? $"0x97 pending · {ActiveDecodeContext()} · select IC profile, then Standard or Benz Palm."
+                    : $"0x97 pending · {ActiveDecodeContext()} · select Standard or Benz Palm."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
         if (!configuringEventVersion && session is not null && !isDesay97 &&
@@ -980,7 +979,7 @@ public partial class MainWindow : Window
     private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (session is not null && Desay97ProfileComboBox.SelectedIndex >= 0)
-            ConfigurationHintText.Text = "Palm profile selected · close the menu to confirm and decode.";
+            ConfigurationHintText.Text = $"Palm profile selected · {ActiveDecodeContext()} · close the menu to decode.";
     }
 
     private async void EventVersionComboBox_OnDropDownClosed(object? sender, EventArgs e)
@@ -999,7 +998,16 @@ public partial class MainWindow : Window
             NvtRegisterCatalog.FindProfile(session.RegisterProfile) is not null)
             await DecodeSelectedAsync();
         else if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
-            ConfigurationHintText.Text = "Palm profile confirmed · select the IC profile to decode 0x97.";
+            ConfigurationHintText.Text = $"Palm profile confirmed · {ActiveDecodeContext()} · select the IC profile to decode 0x97.";
+    }
+
+    private string ActiveDecodeContext()
+    {
+        if (decodeConfiguration is null) return "no active replay";
+        var format = decodeConfiguration.EventBufferVersion.Equals("0x97", StringComparison.OrdinalIgnoreCase)
+            ? $"Desay 0x97 / {decodeConfiguration.Desay97Profile ?? "unconfirmed Palm"}"
+            : $"Common {decodeConfiguration.EventBufferVersion}";
+        return $"active replay: {format}";
     }
 
     private async void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
