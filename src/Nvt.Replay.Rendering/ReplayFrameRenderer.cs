@@ -266,8 +266,11 @@ public static class ReplayFrameRenderer
     {
         var textScale = TextScale(canvas.Height);
         var pointRadius = Math.Max(20, (int)Math.Round(23 * chromeScale));
-        var labelData = contacts.Select(contact =>
+        var labelData = new RasterLabelData[contacts.Count];
+        var requests = new ReplayLabelRequest[contacts.Count];
+        for (var index = 0; index < contacts.Count; index++)
         {
+            var contact = contacts[index];
             var center = Project(viewport, scene, contact.X, contact.Y);
             var header = $"ID {contact.Id}  {ContactState(contact)}";
             var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
@@ -277,26 +280,22 @@ public static class ReplayFrameRenderer
             var lineGap = Math.Max(2, textScale);
             var width = Math.Max(canvas.TextWidth(header, textScale) + iconReserve, canvas.TextWidth(coordinates, textScale)) + (padding * 2);
             var height = (canvas.TextHeight(textScale) * 2) + lineGap + (padding * 2);
-            return new RasterLabelData(contact, center, header, coordinates, iconReserve, padding, lineGap, width, height);
-        }).ToArray();
+            labelData[index] = new RasterLabelData(contact, center, header, coordinates, iconReserve, padding, lineGap, width, height);
+            requests[index] = new ReplayLabelRequest(contact.Id, center.X, center.Y, width, height);
+        }
 
         var placements = ReplayLabelLayout.Place(
                 new ReplayLabelBounds(labelBounds.X + 4, labelBounds.Y + 4, labelBounds.Width - 8, labelBounds.Height - 8),
-                labelData.Select(data => new ReplayLabelRequest(
-                    data.Contact.Id,
-                    data.Center.X,
-                    data.Center.Y,
-                    data.Width,
-                    data.Height)).ToArray(),
+                requests,
                 pointRadius,
                 Math.Max(20, (int)Math.Round(27 * chromeScale)),
-                Math.Max(4, (int)Math.Round(5 * chromeScale)))
-            .ToDictionary(placement => placement.Key);
+                Math.Max(4, (int)Math.Round(5 * chromeScale)));
 
-        foreach (var data in labelData)
+        for (var index = 0; index < labelData.Length; index++)
         {
+            var data = labelData[index];
             var contact = data.Contact;
-            var placement = placements[contact.Id];
+            var placement = placements[index];
             var label = new PixelRect(
                 (int)Math.Round(placement.Bounds.X),
                 (int)Math.Round(placement.Bounds.Y),

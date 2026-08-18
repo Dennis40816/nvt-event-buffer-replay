@@ -317,20 +317,24 @@ public sealed class ReplayPaintSurface : Control
             : value.ReportedContacts.Concat(value.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First()))
             .OrderBy(contact => contact.Id)
             .ToArray();
-        var labelData = labels
-            .Select(contact => CreateContactLabelData(viewport, contact, value))
-            .ToArray();
+        var labelData = new ContactLabelData[labels.Length];
+        var requests = new ReplayLabelRequest[labels.Length];
+        for (var index = 0; index < labels.Length; index++)
+        {
+            var data = CreateContactLabelData(viewport, labels[index], value);
+            labelData[index] = data;
+            requests[index] = new ReplayLabelRequest(
+                data.Contact.Id,
+                data.Center.X,
+                data.Center.Y,
+                data.Width,
+                data.Height);
+        }
         var placements = ReplayLabelLayout.Place(
                 new ReplayLabelBounds(available.X + 4, available.Y + 4, available.Width - 8, available.Height - 8),
-                labelData.Select(data => new ReplayLabelRequest(
-                    data.Contact.Id,
-                    data.Center.X,
-                    data.Center.Y,
-                    data.Width,
-                    data.Height)).ToArray())
-            .ToDictionary(placement => placement.Key);
-        foreach (var data in labelData)
-            DrawContactLabel(context, data, placements[data.Contact.Id]);
+                requests);
+        for (var index = 0; index < labelData.Length; index++)
+            DrawContactLabel(context, labelData[index], placements[index]);
 
         if (value.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);

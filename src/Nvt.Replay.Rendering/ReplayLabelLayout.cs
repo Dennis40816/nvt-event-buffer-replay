@@ -41,82 +41,71 @@ public static class ReplayLabelLayout
         if (bounds.Width <= 0 || bounds.Height <= 0 || requests.Count == 0)
             return [];
 
-        var protectedPoints = requests
-            .Select(request => new ReplayLabelBounds(
+        var protectedPoints = new ReplayLabelBounds[requests.Count];
+        var occupied = new ReplayLabelBounds[requests.Count];
+        var placements = new ReplayLabelPlacement[requests.Count];
+        for (var index = 0; index < requests.Count; index++)
+        {
+            var request = requests[index];
+            protectedPoints[index] = new ReplayLabelBounds(
                 request.AnchorX - pointRadius,
                 request.AnchorY - pointRadius,
                 pointRadius * 2,
-                pointRadius * 2))
-            .ToArray();
-        var occupied = new List<ReplayLabelBounds>(requests.Count);
-        var placements = new List<ReplayLabelPlacement>(requests.Count);
+                pointRadius * 2);
+        }
 
-        foreach (var request in requests)
+        for (var index = 0; index < requests.Count; index++)
         {
-            var candidate = NearbyCandidates(bounds, request, clearance)
-                .FirstOrDefault(value => IsFree(value, protectedPoints, occupied, labelGap));
-
-            if (candidate.Width <= 0)
-            {
-                candidate = FallbackCandidates(bounds, request, labelGap)
-                    .FirstOrDefault(value => IsFree(value, protectedPoints, occupied, labelGap));
-            }
+            var request = requests[index];
+            if (!TryNearby(bounds, request, clearance, protectedPoints, occupied, index, labelGap, out var candidate) &&
+                !TryFallback(bounds, request, protectedPoints, occupied, index, labelGap, out candidate))
+                candidate = BestEffortCandidate(bounds, request, protectedPoints, occupied, index);
 
             // A tiny viewport can be physically incapable of fitting every
             // label. Keep the result deterministic and inside the viewport;
             // normal replay/export sizes reach the hard non-overlap paths above.
-            if (candidate.Width <= 0)
-                candidate = BestEffortCandidate(bounds, request, protectedPoints, occupied);
-
-            occupied.Add(candidate);
-            placements.Add(new ReplayLabelPlacement(
+            occupied[index] = candidate;
+            placements[index] = new ReplayLabelPlacement(
                 request.Key,
                 candidate,
                 Math.Clamp(request.AnchorX, candidate.X, candidate.Right),
-                Math.Clamp(request.AnchorY, candidate.Y, candidate.Bottom)));
+                Math.Clamp(request.AnchorY, candidate.Y, candidate.Bottom));
         }
 
         return placements;
     }
 
-    private static IEnumerable<ReplayLabelBounds> NearbyCandidates(
+    private static bool TryNearby(
         ReplayLabelBounds bounds,
         ReplayLabelRequest request,
-        double clearance)
+        double clearance,
+        ReplayLabelBounds[] protectedPoints,
+        ReplayLabelBounds[] occupied,
+        int occupiedCount,
+        double gap,
+        out ReplayLabelBounds result)
     {
         var w = Math.Min(request.Width, Math.Max(1, bounds.Width));
         var h = Math.Min(request.Height, Math.Max(1, bounds.Height));
-        var x = request.AnchorX;
-        var y = request.AnchorY;
-        var offsets = new (double X, double Y)[]
+        for (var candidateIndex = 0; candidateIndex < 12; candidateIndex++)
         {
-            (x + clearance, y - (h / 2)),
-            (x - w - clearance, y - (h / 2)),
-            (x - (w / 2), y - h - clearance),
-            (x - (w / 2), y + clearance),
-            (x + clearance, y - h - clearance),
-            (x - w - clearance, y - h - clearance),
-            (x + clearance, y + clearance),
-            (x - w - clearance, y + clearance),
-            (x + (clearance * 2), y - (h / 2)),
-            (x - w - (clearance * 2), y - (h / 2)),
-            (x - (w / 2), y - h - (clearance * 2)),
-            (x - (w / 2), y + (clearance * 2)),
-        };
-
-        var seen = new HashSet<(int X, int Y)>();
-        foreach (var origin in offsets)
-        {
-            var candidate = Clamp(bounds, origin.X, origin.Y, w, h);
-            if (seen.Add(((int)Math.Round(candidate.X), (int)Math.Round(candidate.Y))))
-                yield return candidate;
+            var candidate = NearbyCandidate(bounds, request, clearance, w, h, candidateIndex);
+            if (!IsFree(candidate, protectedPoints, occupied, occupiedCount, gap)) continue;
+            result = candidate;
+            return true;
         }
+        result = default;
+        return false;
     }
 
-    private static IEnumerable<ReplayLabelBounds> FallbackCandidates(
+    private static bool TryFallback(
         ReplayLabelBounds bounds,
         ReplayLabelRequest request,
-        double gap)
+        ReplayLabelBounds[] protectedPoints,
+        ReplayLabelBounds[] occupied,
+        int occupiedCount,
+        double gap,
+        out ReplayLabelBounds result)
     {
         var w = Math.Min(request.Width, Math.Max(1, bounds.Width));
         var h = Math.Min(request.Height, Math.Max(1, bounds.Height));
@@ -125,43 +114,103 @@ public static class ReplayLabelLayout
         var right = bounds.Right - w - inset;
         var step = Math.Max(1, h + gap);
         var slots = Math.Max(1, (int)Math.Floor((bounds.Height - (inset * 2) + gap) / step));
-
-        return Enumerable.Range(0, slots)
-            .SelectMany(slot => new[]
+        var bestDistance = double.MaxValue;
+        result = default;
+        for (var slot = 0; slot < slots; slot++)
+        {
+            var y = bounds.Y + inset + (slot * step);
+            for (var side = 0; side < 2; side++)
             {
-                new ReplayLabelBounds(left, bounds.Y + inset + (slot * step), w, h),
-                new ReplayLabelBounds(right, bounds.Y + inset + (slot * step), w, h),
-            })
-            .Where(candidate => candidate.Bottom <= bounds.Bottom - inset + 0.01)
-            .OrderBy(candidate => DistanceSquared(candidate, request.AnchorX, request.AnchorY));
+                var candidate = new ReplayLabelBounds(side == 0 ? left : right, y, w, h);
+                if (candidate.Bottom > bounds.Bottom - inset + 0.01 ||
+                    !IsFree(candidate, protectedPoints, occupied, occupiedCount, gap))
+                    continue;
+                var distance = DistanceSquared(candidate, request.AnchorX, request.AnchorY);
+                if (distance >= bestDistance) continue;
+                bestDistance = distance;
+                result = candidate;
+            }
+        }
+        return result.Width > 0;
     }
 
     private static ReplayLabelBounds BestEffortCandidate(
         ReplayLabelBounds bounds,
         ReplayLabelRequest request,
-        IReadOnlyList<ReplayLabelBounds> protectedPoints,
-        IReadOnlyList<ReplayLabelBounds> occupied)
+        ReplayLabelBounds[] protectedPoints,
+        ReplayLabelBounds[] occupied,
+        int occupiedCount)
     {
-        return NearbyCandidates(bounds, request, 27)
-            .Concat(FallbackCandidates(bounds, request, 2))
-            .Select((candidate, index) => new
-            {
-                Candidate = candidate,
-                Score = protectedPoints.Sum(point => IntersectionArea(point, candidate) * 1000) +
-                        occupied.Sum(label => IntersectionArea(label, candidate) * 100) + index,
-            })
-            .OrderBy(value => value.Score)
-            .Select(value => value.Candidate)
-            .FirstOrDefault(Clamp(bounds, request.AnchorX, request.AnchorY, request.Width, request.Height));
+        var w = Math.Min(request.Width, Math.Max(1, bounds.Width));
+        var h = Math.Min(request.Height, Math.Max(1, bounds.Height));
+        var best = Clamp(bounds, request.AnchorX, request.AnchorY, w, h);
+        var bestScore = double.MaxValue;
+        for (var candidateIndex = 0; candidateIndex < 12; candidateIndex++)
+        {
+            var candidate = NearbyCandidate(bounds, request, 27, w, h, candidateIndex);
+            var score = CandidateScore(candidate, protectedPoints, occupied, occupiedCount) + candidateIndex;
+            if (score >= bestScore) continue;
+            best = candidate;
+            bestScore = score;
+        }
+        return best;
     }
 
     private static bool IsFree(
         ReplayLabelBounds candidate,
-        IReadOnlyList<ReplayLabelBounds> protectedPoints,
-        IReadOnlyList<ReplayLabelBounds> occupied,
-        double gap) =>
-        !protectedPoints.Any(point => candidate.Intersects(point)) &&
-        !occupied.Any(label => candidate.Intersects(label, gap));
+        ReplayLabelBounds[] protectedPoints,
+        ReplayLabelBounds[] occupied,
+        int occupiedCount,
+        double gap)
+    {
+        for (var index = 0; index < protectedPoints.Length; index++)
+            if (candidate.Intersects(protectedPoints[index])) return false;
+        for (var index = 0; index < occupiedCount; index++)
+            if (candidate.Intersects(occupied[index], gap)) return false;
+        return true;
+    }
+
+    private static ReplayLabelBounds NearbyCandidate(
+        ReplayLabelBounds bounds,
+        ReplayLabelRequest request,
+        double clearance,
+        double width,
+        double height,
+        int index)
+    {
+        var x = request.AnchorX;
+        var y = request.AnchorY;
+        var origin = index switch
+        {
+            0 => (x + clearance, y - (height / 2)),
+            1 => (x - width - clearance, y - (height / 2)),
+            2 => (x - (width / 2), y - height - clearance),
+            3 => (x - (width / 2), y + clearance),
+            4 => (x + clearance, y - height - clearance),
+            5 => (x - width - clearance, y - height - clearance),
+            6 => (x + clearance, y + clearance),
+            7 => (x - width - clearance, y + clearance),
+            8 => (x + (clearance * 2), y - (height / 2)),
+            9 => (x - width - (clearance * 2), y - (height / 2)),
+            10 => (x - (width / 2), y - height - (clearance * 2)),
+            _ => (x - (width / 2), y + (clearance * 2)),
+        };
+        return Clamp(bounds, origin.Item1, origin.Item2, width, height);
+    }
+
+    private static double CandidateScore(
+        ReplayLabelBounds candidate,
+        ReplayLabelBounds[] protectedPoints,
+        ReplayLabelBounds[] occupied,
+        int occupiedCount)
+    {
+        double score = 0;
+        for (var index = 0; index < protectedPoints.Length; index++)
+            score += IntersectionArea(protectedPoints[index], candidate) * 1000;
+        for (var index = 0; index < occupiedCount; index++)
+            score += IntersectionArea(occupied[index], candidate) * 100;
+        return score;
+    }
 
     private static ReplayLabelBounds Clamp(
         ReplayLabelBounds bounds,
