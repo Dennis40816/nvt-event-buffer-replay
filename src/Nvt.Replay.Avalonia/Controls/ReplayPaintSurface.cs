@@ -437,10 +437,15 @@ public sealed class ReplayPaintSurface : Control
             var brush = new SolidColorBrush(color);
             for (var index = 1; index < trail.Points.Count; index++)
             {
+                var prior = Project(viewport, scene, trail.Points[index - 1].X, trail.Points[index - 1].Y);
+                var current = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
                 context.DrawLine(
                     new Pen(brush, 2.5),
-                    Project(viewport, scene, trail.Points[index - 1].X, trail.Points[index - 1].Y),
-                    Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y));
+                    prior,
+                    current);
+                if (index == 1)
+                    context.DrawEllipse(brush, null, prior, 2.8, 2.8);
+                context.DrawEllipse(brush, null, current, 2.8, 2.8);
             }
         }
     }
@@ -589,10 +594,10 @@ public sealed class ReplayPaintSurface : Control
 
     private static string TypeLabel(TouchType type) => type switch
     {
-        TouchType.Finger => "finger",
-        TouchType.Glove => "glove",
-        TouchType.Palm => "palm",
-        _ => "other",
+        TouchType.Finger => "Finger",
+        TouchType.Glove => "Glove",
+        TouchType.Palm => "Palm",
+        _ => "Other",
     };
 
     private void DrawLegendType(DrawingContext context, Rect bounds, TouchType type, string label)
@@ -660,7 +665,7 @@ public sealed class ReplayPaintSurface : Control
         }
         else
         {
-            context.DrawEllipse(idBrush, new Pen(SurfaceBrush, 2), center, 8, 8);
+            context.DrawEllipse(null, new Pen(idBrush, 3), center, 9, 9);
         }
     }
 
@@ -670,30 +675,24 @@ public sealed class ReplayPaintSurface : Control
         ReplayScene scene)
     {
         var center = Project(viewport, scene, contact.X, contact.Y);
-        var state = contact.Status switch
-        {
-            TouchStatus.Enter => "ENTER",
-            TouchStatus.Move => "MOVE",
-            TouchStatus.Break => "BREAK",
-            _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
-        };
+        var idBrush = new SolidColorBrush(ContactColor(contact.Id));
         var headerText = new FormattedText(
-            $"ID {contact.Id}  {state}",
+            $"{TypeLabel(contact.Type)} {contact.Id}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
             14,
-            LabelTextBrush);
+            idBrush);
         var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
         var coordinateText = new FormattedText(
-            $"X {viewCoordinates.X:0}   Y {viewCoordinates.Y:0}",
+            $"({viewCoordinates.X:0}, {viewCoordinates.Y:0})",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
             13,
-            AxisLabelBrush);
-        var width = Math.Max(headerText.Width + 17, coordinateText.Width) + 14;
-        var height = headerText.Height + coordinateText.Height + 8;
+            idBrush);
+        var width = Math.Max(headerText.Width + 15, coordinateText.Width) + 4;
+        var height = headerText.Height + coordinateText.Height + 2;
         return new ContactLabelData(contact, center, headerText, coordinateText, width, height);
     }
 
@@ -709,20 +708,14 @@ public sealed class ReplayPaintSurface : Control
             placement.Bounds.Width,
             placement.Bounds.Height);
         var idBrush = new SolidColorBrush(ContactColor(contact.Id));
-        context.DrawLine(new Pen(idBrush, 1), data.Center, new Point(placement.LeaderX, placement.LeaderY));
-        var selected = highlightedContactId == contact.Id;
-        context.DrawRectangle(
-            selected ? HoverLabelSurfaceBrush : LabelSurfaceBrush,
-            new Pen(idBrush, selected ? 2 : 1),
-            labelRect);
         DrawTypeIcon(
             context,
             contact.Type,
-            new Point(labelRect.X + 11, labelRect.Y + 3 + (data.HeaderText.Height / 2)),
+            new Point(labelRect.X + 5, labelRect.Y + (data.HeaderText.Height / 2)),
             idBrush,
-            4);
-        context.DrawText(data.HeaderText, new Point(labelRect.X + 21, labelRect.Y + 3));
-        context.DrawText(data.CoordinateText, new Point(labelRect.X + 7, labelRect.Y + 3 + data.HeaderText.Height));
+            3.5);
+        context.DrawText(data.HeaderText, new Point(labelRect.X + 14, labelRect.Y));
+        context.DrawText(data.CoordinateText, new Point(labelRect.X + 14, labelRect.Y + data.HeaderText.Height));
     }
 
     private static Point Project(Rect viewport, ReplayScene scene, ushort x, ushort y) =>

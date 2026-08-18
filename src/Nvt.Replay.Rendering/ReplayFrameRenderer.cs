@@ -59,12 +59,13 @@ public static class ReplayFrameRenderer
         var palette = ReplayVisualStyle.For(settings.Theme);
         using var canvas = new RasterCanvas(width, height, palette.Stage);
         var chromeScale = Math.Min(width / 1280d, height / 720d);
-        var top = Math.Max(26, (int)Math.Round(48 * chromeScale));
-        var bottom = Math.Max(24, (int)Math.Round(42 * chromeScale));
+        var top = settings.ShowFrameChrome ? Math.Max(26, (int)Math.Round(48 * chromeScale)) : 0;
+        var bottom = settings.ShowFrameChrome ? Math.Max(24, (int)Math.Round(42 * chromeScale)) : 0;
         var contentBounds = new PixelRect(0, top, width, height - top - bottom);
         var viewport = BuildViewport(scene.ViewExtent, contentBounds, chromeScale);
 
-        DrawChrome(canvas, scene, settings, palette, top, bottom);
+        if (settings.ShowFrameChrome)
+            DrawChrome(canvas, scene, settings, palette, top, bottom);
         canvas.FillRectangle(viewport.X, viewport.Y, viewport.Width, viewport.Height, palette.Surface);
         DrawGrid(canvas, viewport, settings.StrongGrid, palette);
         DrawAxisLabels(canvas, viewport, scene, palette, TextScale(height));
@@ -227,8 +228,7 @@ public static class ReplayFrameRenderer
         }
         else
         {
-            canvas.FillCircle(center.X, center.Y, radius, idColor);
-            canvas.Circle(center.X, center.Y, radius, palette.Surface, 2);
+            canvas.Circle(center.X, center.Y, radius, idColor, Math.Max(2, (int)Math.Round(3 * chromeScale)));
         }
     }
 
@@ -252,6 +252,9 @@ public static class ReplayFrameRenderer
             var prior = Project(viewport, scene, trail.Points[index - 1].X, trail.Points[index - 1].Y);
             var current = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
             canvas.Line(prior.X, prior.Y, current.X, current.Y, color, thickness);
+            if (index == 1)
+                canvas.FillCircle(prior.X, prior.Y, Math.Max(2, thickness), color);
+            canvas.FillCircle(current.X, current.Y, Math.Max(2, thickness), color);
         }
     }
 
@@ -272,15 +275,15 @@ public static class ReplayFrameRenderer
         {
             var contact = contacts[index];
             var center = Project(viewport, scene, contact.X, contact.Y);
-            var header = $"ID {contact.Id}  {ContactState(contact)}";
+            var header = $"{TypeLabel(contact.Type)} {contact.Id}";
             var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
-            var coordinates = $"X {viewCoordinates.X:0}  Y {viewCoordinates.Y:0}  {TypeLabel(contact.Type)}";
+            var coordinates = $"({viewCoordinates.X:0}, {viewCoordinates.Y:0})";
             var iconReserve = 13 * textScale;
-            var padding = 5 * textScale;
-            var lineGap = Math.Max(2, textScale);
-            var width = Math.Max(canvas.TextWidth(header, textScale) + iconReserve, canvas.TextWidth(coordinates, textScale)) + (padding * 2);
-            var height = (canvas.TextHeight(textScale) * 2) + lineGap + (padding * 2);
-            labelData[index] = new RasterLabelData(contact, center, header, coordinates, iconReserve, padding, lineGap, width, height);
+            var padding = 2 * textScale;
+            var lineGap = Math.Max(1, textScale);
+            var width = Math.Max(canvas.TextWidth(header, textScale) + iconReserve, canvas.TextWidth(coordinates, textScale) + iconReserve) + padding;
+            var height = (canvas.TextHeight(textScale) * 2) + lineGap;
+            labelData[index] = new RasterLabelData(contact, center, header, coordinates, iconReserve, lineGap, width, height);
             requests[index] = new ReplayLabelRequest(contact.Id, center.X, center.Y, width, height);
         }
 
@@ -309,12 +312,10 @@ public static class ReplayFrameRenderer
                 (int)Math.Round(placement.LeaderX),
                 (int)Math.Round(placement.LeaderY),
                 color);
-            canvas.FillRectangle(label.X, label.Y, label.Width, label.Height, palette.LabelSurface);
-            canvas.Rectangle(label, color, 1);
-            var headerY = label.Y + data.Padding;
-            DrawTypeIcon(canvas, contact.Type, new PixelPoint(label.X + data.Padding + (4 * textScale), headerY + (canvas.TextHeight(textScale) / 2)), color, Math.Max(3, 3 * textScale));
-            canvas.Text(label.X + data.Padding + data.IconReserve, headerY, data.Header, palette.LabelText, textScale);
-            canvas.Text(label.X + data.Padding, headerY + canvas.TextHeight(textScale) + data.LineGap, data.Coordinates, palette.AxisLabel, textScale);
+            var headerY = label.Y;
+            DrawTypeIcon(canvas, contact.Type, new PixelPoint(label.X + (4 * textScale), headerY + (canvas.TextHeight(textScale) / 2)), color, Math.Max(3, 3 * textScale));
+            canvas.Text(label.X + data.IconReserve, headerY, data.Header, color, textScale);
+            canvas.Text(label.X + data.IconReserve, headerY + canvas.TextHeight(textScale) + data.LineGap, data.Coordinates, color, textScale);
         }
     }
 
@@ -415,20 +416,12 @@ public static class ReplayFrameRenderer
         if (count > 0) parts.Add($"{count} {label}{(count == 1 ? string.Empty : "S")}");
     }
 
-    private static string ContactState(ReplayContact contact) => contact.Status switch
-    {
-        TouchStatus.Enter => "ENTER",
-        TouchStatus.Move => "MOVE",
-        TouchStatus.Break => "BREAK",
-        _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
-    };
-
     private static string TypeLabel(TouchType type) => type switch
     {
-        TouchType.Finger => "FINGER",
-        TouchType.Glove => "GLOVE",
-        TouchType.Palm => "PALM",
-        _ => "OTHER",
+        TouchType.Finger => "Finger",
+        TouchType.Glove => "Glove",
+        TouchType.Palm => "Palm",
+        _ => "Other",
     };
 
     private static void DrawTypeIcon(RasterCanvas canvas, TouchType type, PixelPoint center, ReplayColor color, int radius)
@@ -483,7 +476,6 @@ public static class ReplayFrameRenderer
         string Header,
         string Coordinates,
         int IconReserve,
-        int Padding,
         int LineGap,
         int Width,
         int Height);

@@ -12,7 +12,8 @@ public sealed record ReplayRenderSettings(
     bool StrongGrid = false,
     bool LegendVisible = true,
     bool LegendCollapsed = true,
-    ReplayLegendPosition LegendPosition = ReplayLegendPosition.TopLeft);
+    ReplayLegendPosition LegendPosition = ReplayLegendPosition.TopLeft,
+    bool ShowFrameChrome = false);
 
 public readonly record struct ReplayColor(byte Red, byte Green, byte Blue)
 {

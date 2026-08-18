@@ -103,13 +103,13 @@ public partial class MainWindow : Window
     private object? currentInspectorFrame;
     private ITouchReplaySnapshot? currentInspectorSnapshot;
     private InspectorFramePresentation? currentInspectorPresentation;
-    private double expandedInspectorRailWidth = 380;
+    private double expandedInspectorRailWidth = 286;
     private const double ExpandedReviewRailWidth = 260;
-    private const double DefaultInspectorRailWidth = 380;
-    private const double MinimumInspectorRailWidth = 320;
-    private const double MaximumInspectorRailWidth = 520;
+    private const double DefaultInspectorRailWidth = 286;
+    private const double MinimumInspectorRailWidth = 280;
+    private const double MaximumInspectorRailWidth = 420;
     private const double CollapsedInspectorRailWidth = 58;
-    private const double ReplayTransportHeight = 174;
+    private const double ReplayTransportHeight = 64;
     private static readonly TimeSpan MinimumPlaybackVisualInterval = TimeSpan.FromMilliseconds(16);
     private static readonly TimeSpan PlaybackDetailPresentationInterval = TimeSpan.FromMilliseconds(100);
     private long lastDetailPresentationTimestamp;
@@ -241,9 +241,9 @@ public partial class MainWindow : Window
             SetReviewRailCollapsed(true);
             return;
         }
-        // Keep an empty review queue out of the workspace. Actionable findings open
-        // automatically on wide layouts, and an explicit user choice always wins.
-        SetReviewRailCollapsed(reviewRailUserPreference ?? (reviewRows.Length == 0 || width < 1400));
+        // The review queue is secondary evidence, so it never consumes the first
+        // viewport unless the user explicitly opens it.
+        SetReviewRailCollapsed(reviewRailUserPreference ?? true);
         SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1240);
     }
 
@@ -307,9 +307,11 @@ public partial class MainWindow : Window
     private void SetReviewRailCollapsed(bool collapsed)
     {
         reviewRailCollapsed = collapsed;
-        WorkspaceShellGrid.ColumnDefinitions[0].Width = new GridLength(collapsed ? 42 : ExpandedReviewRailWidth);
+        WorkspaceShellGrid.ColumnDefinitions[0].Width = new GridLength(collapsed ? 0 : ExpandedReviewRailWidth);
+        ReviewRailBorder.IsVisible = !collapsed;
         ReviewRailTitle.IsVisible = !collapsed;
         ReviewRailCountBadge.IsVisible = !collapsed;
+        ClearMarkersButton.IsVisible = !collapsed;
         ReviewRailContent.IsVisible = !collapsed;
         ReviewRailToggleButton.Content = collapsed ? "\uE76C" : "\uE76B";
         ToolTip.SetTip(ReviewRailToggleButton, collapsed ? "Open review queue" : "Collapse review queue");
@@ -2560,9 +2562,9 @@ public partial class MainWindow : Window
         PaintZoomHintBorder.IsVisible = false;
         PaintModeComboBox.SelectedIndex = 0;
         TrailModeComboBox.SelectedIndex = 1;
-        TrailLengthComboBox.SelectedIndex = 2;
-        TrailLengthComboBox.IsVisible = false;
-        TrailLengthLabel.IsVisible = false;
+        TrailLengthComboBox.SelectedIndex = 5;
+        TrailLengthComboBox.IsVisible = true;
+        TrailLengthLabel.IsVisible = true;
         GridStrengthToggleButton.IsChecked = false;
         ReverseXToggleButton.IsChecked = false;
         ReverseYToggleButton.IsChecked = false;
@@ -3192,9 +3194,9 @@ public partial class MainWindow : Window
 
         trailMode = selectedMode;
         if (TrailLengthComboBox is not null)
-            TrailLengthComboBox.IsVisible = selectedMode == ReplayTrailMode.Recent;
+            TrailLengthComboBox.IsVisible = true;
         if (TrailLengthLabel is not null)
-            TrailLengthLabel.IsVisible = false;
+            TrailLengthLabel.IsVisible = true;
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
     }

@@ -63,11 +63,11 @@ public sealed class MainWindowLayoutTests
             var save = Required<Button>(window, "SaveReviewButton");
 
             Assert.Null(window.FindControl<Button>("DecodeButton"));
-            Assert.Equal("Select", version.PlaceholderText);
-            Assert.Equal(34, version.Bounds.Height);
-            Assert.Equal(34, profile.Bounds.Height);
+            Assert.Equal("Version", version.PlaceholderText);
+            Assert.Equal(32, version.Bounds.Height);
+            Assert.Equal(32, profile.Bounds.Height);
             Assert.Equal(34, panelWidth.Height);
-            Assert.Equal(36, load.Bounds.Height);
+            Assert.Equal(32, load.Bounds.Height);
             Assert.Equal(VerticalAlignment.Center, version.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, panelWidth.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, load.VerticalContentAlignment);
@@ -94,10 +94,10 @@ public sealed class MainWindowLayoutTests
             var reviewContent = Required<Grid>(window, "ReviewRailContent");
             var inspectorContent = Required<Grid>(window, "InspectorRailContent");
 
-            Assert.Equal(new GridLength(42), shell.ColumnDefinitions[0].Width);
+            Assert.Equal(new GridLength(0), shell.ColumnDefinitions[0].Width);
             Assert.False(reviewContent.IsVisible);
             Assert.Equal(new GridLength(4), shell.ColumnDefinitions[2].Width);
-            Assert.Equal(new GridLength(380), shell.ColumnDefinitions[3].Width);
+            Assert.Equal(new GridLength(286), shell.ColumnDefinitions[3].Width);
             Assert.True(inspectorContent.IsVisible);
         }
         finally
@@ -310,8 +310,8 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.Contains("inspectorDisclosure", flatBytes.Classes);
             Assert.Contains("inspectorDisclosure", sourceIdentity.Classes);
-            Assert.True(flatBytes.Bounds.Width > 300, $"Flat bytes disclosure width was {flatBytes.Bounds.Width:0.##}.");
-            Assert.True(sourceIdentity.Bounds.Width > 300, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
+            Assert.True(flatBytes.Bounds.Width > 250, $"Flat bytes disclosure width was {flatBytes.Bounds.Width:0.##}.");
+            Assert.True(sourceIdentity.Bounds.Width > 250, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
             sourceIdentity.IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<ItemsControl>(window, "RawByteSectionsItemsControl").ItemCount > 0);
@@ -415,11 +415,11 @@ public sealed class MainWindowLayoutTests
         {
             var shell = Required<Grid>(window, "WorkspaceShellGrid");
             var inspectorColumn = shell.ColumnDefinitions[3];
-            Assert.Equal(320, inspectorColumn.MinWidth);
-            Assert.Equal(520, inspectorColumn.MaxWidth);
+            Assert.Equal(280, inspectorColumn.MinWidth);
+            Assert.Equal(420, inspectorColumn.MaxWidth);
             Assert.True(Required<GridSplitter>(window, "InspectorGridSplitter").IsVisible);
 
-            inspectorColumn.Width = new GridLength(500);
+            inspectorColumn.Width = new GridLength(400);
             Dispatcher.UIThread.RunJobs();
             var toggle = Required<Button>(window, "InspectorRailToggleButton");
             toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -427,7 +427,7 @@ public sealed class MainWindowLayoutTests
             Assert.False(Required<GridSplitter>(window, "InspectorGridSplitter").IsVisible);
 
             toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Assert.Equal(new GridLength(500), inspectorColumn.Width);
+            Assert.Equal(new GridLength(400), inspectorColumn.Width);
             Assert.True(Required<GridSplitter>(window, "InspectorGridSplitter").IsVisible);
         }
         finally
@@ -461,11 +461,11 @@ public sealed class MainWindowLayoutTests
             Assert.Contains(window.GetVisualDescendants().OfType<TouchTypeIcon>(), icon =>
                 icon.ContactId == 10 && icon.TouchType == Nvt.Replay.Core.TouchType.Palm);
 
-            Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width = new GridLength(520);
+            Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width = new GridLength(420);
             Dispatcher.UIThread.RunJobs();
             CaptureHash(window, "22-inspector-ten-contacts-dark.png");
 
-            Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width = new GridLength(320);
+            Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width = new GridLength(280);
             contacts.ScrollIntoView(contacts.SelectedItem!);
             Dispatcher.UIThread.RunJobs();
             var inspectorRail = Required<Grid>(window, "InspectorRailContent");
@@ -633,6 +633,50 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Border>(window, "ReplayTransportBorder").IsVisible);
             Assert.True(Required<Border>(window, "InspectorRailBorder").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Approved_visual_contract_captures_Paint_and_Output_as_separate_pages()
+    {
+        var window = ShowWindow();
+        try
+        {
+            window.Width = 1672;
+            window.Height = 720;
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var frames = Required<ListBox>(window, "DecodedFramesList");
+            frames.SelectedItem = frames.Items.OfType<DecodedFrameRow>().First(row => row.Touches == 3);
+            Dispatcher.UIThread.RunJobs();
+
+            var root = Required<Grid>(window, "RootLayoutGrid");
+            Assert.Equal(44, root.RowDefinitions[0].Height.Value);
+            Assert.Equal(64, root.RowDefinitions[2].Height.Value);
+            Assert.Equal(52, Required<Border>(window, "PaintLiveControlsBar").Bounds.Height);
+            Assert.Equal(286, Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width.Value);
+            CaptureHash(window, "30-contract-paint-1672x720-dark.png");
+
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => Required<TextBlock>(window, "OutputPreviewFrameText").Text != "output 0/0");
+            Dispatcher.UIThread.RunJobs();
+            var outputLayout = Required<Grid>(window, "OutputPageLayout");
+            var settingsRail = Required<Border>(window, "OutputSettingsRailBorder");
+            var railFraction = settingsRail.Bounds.Width / outputLayout.Bounds.Width;
+            Assert.InRange(railFraction, 0.27, 0.32);
+            Assert.False(Required<Border>(window, "ReplayTransportBorder").IsVisible);
+            Assert.False(Required<Border>(window, "InspectorRailBorder").IsVisible);
+            CaptureHash(window, "31-contract-output-1672x720-dark.png");
+
+            window.Width = 1180;
+            window.Height = 720;
+            Dispatcher.UIThread.RunJobs();
+            CaptureHash(window, "32-contract-output-1180x720-dark.png");
         }
         finally
         {
@@ -1010,8 +1054,7 @@ public sealed class MainWindowLayoutTests
             var playback = Required<StackPanel>(window, "TransportPlaybackGroup");
             var timing = Required<Grid>(window, "TransportTimingGroup");
             var annotation = Required<StackPanel>(window, "TransportAnnotationGroup");
-            var view = Required<StackPanel>(window, "TransportViewGroup");
-            var groups = new Control[] { playback, timing, annotation, view };
+            var groups = new Control[] { playback, timing, annotation };
             var bounds = groups.Select(control => BoundsInside(control, bar)).ToArray();
 
             Assert.All(bounds, rect =>
@@ -1022,7 +1065,6 @@ public sealed class MainWindowLayoutTests
             });
             Assert.True(bounds[0].Right < bounds[1].Left);
             Assert.True(bounds[1].Right < bounds[2].Left);
-            Assert.True(bounds[2].Right < bounds[3].Left);
 
             Assert.Equal("38", Required<TextBlock>(window, "TimelinePhysicalCountText").Text);
             Assert.Equal("19", Required<TextBlock>(window, "TimelineLogicalCountText").Text);
@@ -1070,6 +1112,8 @@ public sealed class MainWindowLayoutTests
             mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("1", Required<TextBlock>(window, "DiagnosticCountText").Text);
+            Required<Button>(window, "ReviewRailToggleButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
             var reviewTarget = window.GetVisualDescendants()
                 .OfType<Border>()
                 .Single(border => border.Classes.Contains("reviewGroupHitTarget") &&
