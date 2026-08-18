@@ -54,6 +54,7 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     public IBrush? PlayheadBrush { get => GetValue(PlayheadBrushProperty); set => SetValue(PlayheadBrushProperty, value); }
     public IBrush? LoopBrush { get => GetValue(LoopBrushProperty); set => SetValue(LoopBrushProperty, value); }
     public IBrush? LoopSurfaceBrush { get => GetValue(LoopSurfaceBrushProperty); set => SetValue(LoopSurfaceBrushProperty, value); }
+    public bool Compact { get; set; } = true;
 
     bool ICustomHitTest.HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
 
@@ -98,17 +99,18 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         base.Render(context);
         if (Bounds.Width <= TrackInset * 2 || Bounds.Height <= 1) return;
 
-        var physicalY = Bounds.Height * 0.125;
         var logicalY = Bounds.Height * 0.5;
-        var evidenceY = Bounds.Height * 0.875;
         var trackThickness = IsPointerOver || dragTarget != DragTarget.None ? 2.5 : 1;
         var trackBrush = IsPointerOver ? HoverTrackBrush : TrackBrush;
         var left = TrackInset;
         var right = Bounds.Width - TrackInset;
 
-        DrawTrack(context, physicalY, physicalFraction, PhysicalBrush, trackBrush, trackThickness);
+        if (!Compact)
+        {
+            DrawTrack(context, Bounds.Height * 0.125, physicalFraction, PhysicalBrush, trackBrush, trackThickness);
+            DrawTrack(context, Bounds.Height * 0.875, evidenceFraction, EvidenceBrush, trackBrush, trackThickness);
+        }
         DrawTrack(context, logicalY, maximum == 0 ? 0 : value / (double)maximum, LogicalBrush, trackBrush, trackThickness);
-        DrawTrack(context, evidenceY, evidenceFraction, EvidenceBrush, trackBrush, trackThickness);
 
         if (loopStart is { } start && loopEnd is { } end)
         {

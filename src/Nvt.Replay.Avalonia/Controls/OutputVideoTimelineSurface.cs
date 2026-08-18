@@ -81,24 +81,22 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
         base.Render(context);
         if (Bounds.Width <= TrackInset * 2 || Bounds.Height <= 1) return;
 
-        var trimY = 8d;
-        var y = ShowRange ? Bounds.Height - 9 : Bounds.Height / 2;
+        var y = Bounds.Height / 2;
         var left = TrackInset;
         var right = Bounds.Width - TrackInset;
         var thickness = IsPointerOver || dragTarget != DragTarget.None || IsKeyboardFocusWithin ? 3 : 1.5;
+        context.DrawLine(new Pen(IsPointerOver ? HoverTrackBrush : TrackBrush, thickness), new Point(left, y), new Point(right, y));
         if (ShowRange)
         {
-            context.DrawLine(new Pen(TrackBrush, 1), new Point(left, trimY), new Point(right, trimY));
             if (sourceFrameCount > 0)
             {
                 var rangeStartX = SourcePositionFor(rangeStart);
                 var rangeEndX = SourcePositionFor(rangeEnd);
-                context.DrawLine(new Pen(ProgressBrush, 4), new Point(rangeStartX, trimY), new Point(rangeEndX, trimY));
-                DrawRangeHandle(context, rangeStartX, trimY, pointsRight: true);
-                DrawRangeHandle(context, rangeEndX, trimY, pointsRight: false);
+                context.DrawLine(new Pen(HoverTrackBrush, 3), new Point(rangeStartX, y), new Point(rangeEndX, y));
+                DrawRangeHandle(context, rangeStartX, y, pointsRight: true);
+                DrawRangeHandle(context, rangeEndX, y, pointsRight: false);
             }
         }
-        context.DrawLine(new Pen(IsPointerOver ? HoverTrackBrush : TrackBrush, thickness), new Point(left, y), new Point(right, y));
 
         var playheadX = PositionFor(position);
         context.DrawLine(new Pen(ProgressBrush, thickness), new Point(left, y), new Point(playheadX, y));

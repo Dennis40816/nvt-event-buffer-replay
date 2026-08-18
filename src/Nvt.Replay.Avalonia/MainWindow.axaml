@@ -140,6 +140,37 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
+    <Style Selector="Button.headerAction">
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="Button.headerAction:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    </Style>
+    <Style Selector="Button.headerAction:disabled">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.headerAction:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ComboBox.headerInlineSelect">
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="6,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
     <Style Selector="TextBox.panelSize">
       <Setter Property="Height" Value="34" />
       <Setter Property="Width" Value="76" />
@@ -454,7 +485,7 @@
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Height" Value="44" />
-      <Setter Property="Padding" Value="14,0,14,4" />
+      <Setter Property="Padding" Value="32,0,32,4" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
@@ -528,6 +559,13 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
     </Style>
+    <Style Selector="Border.canvasQuickBar">
+      <Setter Property="Padding" Value="4,2" />
+      <Setter Property="Background" Value="{DynamicResource HeaderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+    </Style>
     <Style Selector="Border.liveSettingGroup">
       <Setter Property="Height" Value="36" />
       <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
@@ -582,6 +620,15 @@
     <Style Selector="ComboBox.outputSetting:focus">
       <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="ComboBox.outputHeaderSelect">
+      <Setter Property="Height" Value="26" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
     <Style Selector="Expander.inspectorDisclosure">
       <Setter Property="MinWidth" Value="0" />
@@ -663,51 +710,59 @@
       <RowDefinition Height="64" />
     </Grid.RowDefinitions>
     <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid Margin="12,0" ColumnDefinitions="Auto,14,Auto,12,Auto,12,Auto,12,Auto,*,6,Auto,2,Auto,2,Auto,8,Auto">
+      <Grid Margin="12,0" ColumnDefinitions="Auto,22,200,10,Auto,10,Auto,*,8,Auto,4,Auto,4,Auto,8,Auto">
         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
           <Border Width="5" Height="26" CornerRadius="3" Background="{DynamicResource AccentBrush}" />
-          <TextBlock Text="NVT EVENT BUFFER" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+          <TextBlock Text="NVT EVENT BUFFER REPLAY" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
         </StackPanel>
 
-        <Grid Grid.Column="2" Width="218" VerticalAlignment="Center">
-          <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" IsVisible="False" AutomationProperties.LiveSetting="Polite" />
-        </Grid>
-
-        <Grid Grid.Column="4" Width="200" VerticalAlignment="Center">
+        <Grid Grid.Column="2" Width="200" VerticalAlignment="Center">
           <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
           <ComboBox x:Name="SourceAdapterComboBox" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
           <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
         </Grid>
 
-        <ComboBox x:Name="EventVersionComboBox" Grid.Column="6" Height="32" MinWidth="76" PlaceholderText="Version" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
+        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+          <TextBlock Text="Common" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+          <ComboBox x:Name="EventVersionComboBox" Classes="headerInlineSelect" MinWidth="72" PlaceholderText="Version" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
               <ComboBoxItem Content="0x82" />
               <ComboBoxItem Content="0x83" />
               <ComboBoxItem Content="0x84" />
               <ComboBoxItem Content="0x85" />
               <ComboBoxItem Content="0x97" />
-        </ComboBox>
-        <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="8" Height="32" MinWidth="132" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
-        <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="8" Height="32" MinWidth="132" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
+          </ComboBox>
+        </StackPanel>
+        <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="6" Classes="headerInlineSelect" MinWidth="132" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
+        <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="6" Classes="headerInlineSelect" MinWidth="132" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
           <ComboBoxItem Content="Standard" />
           <ComboBoxItem Content="Benz Palm" />
         </ComboBox>
 
-        <TextBlock x:Name="ConfigurationHintText" Grid.Column="9" Margin="14,0,0,0" Text="Select a source and explicit Event Buffer version." FontSize="12" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        <Grid Grid.Column="7">
+          <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" IsVisible="False" />
+          <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" IsVisible="False" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock x:Name="ConfigurationHintText" Text="Select a source and explicit Event Buffer version." IsVisible="False" />
+        </Grid>
 
-        <Button x:Name="SaveReviewButton" Grid.Column="11" Classes="headerIcon" Content="&#xE74E;" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review" />
-        <Button x:Name="LoadReviewButton" Grid.Column="13" Classes="headerIcon" Content="&#xE8E5;" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review" />
-        <Button x:Name="ApplySidecarButton" Grid.Column="13" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
-        <Button x:Name="ExportAnalysisButton" Grid.Column="15" Classes="headerIcon" Content="&#xE72D;" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview" />
-        <Button x:Name="SettingsButton" Grid.Column="16" Classes="headerIcon" Content="&#xE713;" Click="SettingsButton_OnClick" ToolTip.Tip="Settings" AutomationProperties.Name="Open settings" />
-        <Button x:Name="CancelButton" Grid.Column="17" Classes="ghost" Height="32" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
-        <Button x:Name="LoadButton" Grid.Column="17" Classes="primary" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
+        <Button x:Name="SaveReviewButton" Grid.Column="9" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
+          <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE74E;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="SaveActionLabel" Text="Save" /></StackPanel>
+        </Button>
+        <Button x:Name="LoadReviewButton" Grid.Column="9" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" AutomationProperties.Name="Open review" />
+        <Button x:Name="ApplySidecarButton" Grid.Column="9" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
+        <Button x:Name="ExportAnalysisButton" Grid.Column="11" Classes="headerAction" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview">
+          <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE72D;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="OutputActionLabel" Text="Output" /></StackPanel>
+        </Button>
+        <Button x:Name="SettingsButton" Grid.Column="13" Classes="headerAction" Click="SettingsButton_OnClick" ToolTip.Tip="Settings" AutomationProperties.Name="Open settings">
+          <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="SettingsActionLabel" Text="Settings" /></StackPanel>
+        </Button>
+        <Button x:Name="CancelButton" Grid.Column="15" Classes="ghost" Height="32" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
+        <Button x:Name="LoadButton" Grid.Column="15" Classes="primary" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <TextBlock Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
-            <TextBlock Text="Load" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock x:Name="LoadActionLabel" Text="Load capture" FontWeight="SemiBold" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-        <ProgressBar x:Name="LoadingProgress" Grid.ColumnSpan="18" Height="2" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Bottom" />
+        <ProgressBar x:Name="LoadingProgress" Grid.ColumnSpan="16" Height="2" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Bottom" />
       </Grid>
     </Border>
 
@@ -872,7 +927,7 @@
             </TabItem.Header>
             <Grid RowDefinitions="52,*">
                 <Border x:Name="PaintLiveControlsBar" Grid.Row="0" Classes="paintSettingsBar">
-                  <StackPanel Margin="12,0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                  <StackPanel Margin="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <Border Classes="liveSettingGroup">
                       <Grid ColumnDefinitions="Auto,1,64,Auto,64">
                         <TextBlock Margin="12,0" Text="Panel" Classes="liveSettingLabel" />
@@ -946,6 +1001,7 @@
                   <controls:ReplayPaintSurface x:Name="PaintSurface" ZoomChanged="PaintSurface_OnZoomChanged" AutomationProperties.Name="Touch replay Paint surface" />
                 </Border>
                 <StackPanel Margin="14" Spacing="7" VerticalAlignment="Top" HorizontalAlignment="Right">
+                  <Border Classes="canvasQuickBar">
                     <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
                       <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
                       <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
@@ -954,6 +1010,7 @@
                       <Button Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE9A6;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
                       <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="16" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
                     </StackPanel>
+                  </Border>
 
                   <Border x:Name="CanvasSettingsPanel" Classes="canvasSettingsPanel" Width="320" IsVisible="False" HorizontalAlignment="Right">
                     <StackPanel Spacing="8">
@@ -1000,7 +1057,7 @@
                 <TextBlock Text="OUTPUT" VerticalAlignment="Center" />
               </StackPanel>
             </TabItem.Header>
-            <Grid Margin="12">
+            <Grid Margin="0">
               <Grid>
                 <Grid x:Name="OutputVideoPanel">
                   <Border Background="{DynamicResource CanvasBrush}" BorderThickness="0" Padding="0">
@@ -1078,17 +1135,7 @@
                             <StackPanel Margin="0,0,10,0" Spacing="10">
                               <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
                                 <StackPanel VerticalAlignment="Center">
-                                  <TextBlock Text="VIDEO SETTINGS" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" LetterSpacing="0.35" />
-                                  <TextBlock x:Name="OutputContentDescriptionText" Text="Preview and export use the same renderer" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" />
-                                </StackPanel>
-                                <Button x:Name="ExportSelectedOutputButton" Grid.Column="1" Classes="primary" Height="34" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
-                              </Grid>
-
-                              <Border Classes="outputSettingRow">
-                                <Grid ColumnDefinitions="30,86,*">
-                                  <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
-                                  <TextBlock Grid.Column="1" Text="Content" Classes="outputSettingLabel" />
-                                  <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Classes="outputSetting" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
+                                  <ComboBox x:Name="OutputContentComboBox" Classes="outputHeaderSelect" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
                                     <ComboBox.ItemTemplate>
                                       <DataTemplate x:DataType="vm:SelectOption">
                                         <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -1103,8 +1150,10 @@
                                       </DataTemplate>
                                     </ComboBox.SelectionBoxItemTemplate>
                                   </ComboBox>
-                                </Grid>
-                              </Border>
+                                  <TextBlock x:Name="OutputContentDescriptionText" Text="Preview and export use the same renderer" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" />
+                                </StackPanel>
+                                <Button x:Name="ExportSelectedOutputButton" Grid.Column="1" Classes="primary" Height="34" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
+                              </Grid>
 
                               <Border Classes="outputSettingRow">
                                 <Grid ColumnDefinitions="30,86,*">
@@ -1176,17 +1225,16 @@
                                 </Grid>
                               </Border>
 
-                              <Border Height="1" Margin="0,3" Background="{DynamicResource BorderBrush}" />
-                              <Grid ColumnDefinitions="*,10,*">
-                                <StackPanel>
-                                  <TextBlock Classes="fieldLabel" Text="RANGE" />
-                                  <TextBlock x:Name="OutputRangeText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                  <TextBlock Classes="fieldLabel" Text="DURATION" />
-                                  <TextBlock x:Name="OutputClockText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                                </StackPanel>
-                              </Grid>
+                              <Border Classes="outputSettingRow">
+                                <Grid ColumnDefinitions="30,86,*">
+                                  <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
+                                  <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
+                                  <Grid Grid.Column="2" ColumnDefinitions="*,12,*">
+                                    <TextBlock x:Name="OutputRangeText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="OutputClockText" Grid.Column="2" Text="-" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                  </Grid>
+                                </Grid>
+                              </Border>
                               <StackPanel>
                                 <TextBlock Classes="fieldLabel" Text="FINDINGS" />
                                 <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
@@ -1519,7 +1567,7 @@
     </Grid>
 
     <Border x:Name="ReplayTransportBorder" Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
-      <Grid x:Name="TimelineControlBar" Margin="14,8" ColumnDefinitions="Auto,12,Auto,12,Auto,18,*,18,Auto" ClipToBounds="True">
+      <Grid x:Name="TimelineControlBar" Margin="22,8" ColumnDefinitions="Auto,12,Auto,12,Auto,18,*,18,Auto" ClipToBounds="True">
         <StackPanel x:Name="TransportPlaybackGroup" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
           <Button x:Name="PreviousFrameButton" Classes="headerIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous logical frame (Left)" AutomationProperties.Name="Previous logical frame" />
           <Button x:Name="PlayPauseButton" Classes="transportPlay" MinWidth="84" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" ToolTip.Tip="Play or pause replay (Space)" AutomationProperties.Name="Play replay" />

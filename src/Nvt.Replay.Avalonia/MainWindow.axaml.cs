@@ -157,7 +157,7 @@ public partial class MainWindow : Window
         RegisterFilterComboBox.SelectedIndex = 0;
         OutputContentComboBox.ItemsSource = new SelectOption[]
         {
-            new("MP4 video", "Preview the exact sampled replay video", "mp4"),
+            new("VIDEO SETTINGS", "Preview the exact sampled replay video", "mp4"),
             new("Heatmap", "Inspect and export coordinate density", "heatmap"),
             new("Data package", "Export linked QA and automation files", "package"),
         };
@@ -236,6 +236,9 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveRails(double width)
     {
+        SaveActionLabel.IsVisible = width >= 1320;
+        OutputActionLabel.IsVisible = width >= 1240;
+        SettingsActionLabel.IsVisible = width >= 1240;
         if (outputWorkspaceActive)
         {
             SetReviewRailCollapsed(true);
