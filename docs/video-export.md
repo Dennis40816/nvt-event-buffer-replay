@@ -12,9 +12,13 @@ only scales that completed frame to its available screen area, so labels,
 legend placement, axes, and contact geometry cannot diverge because of a second
 preview layout. It reuses the RGB, RGBA, and `WriteableBitmap` storage across
 frames; changing dimensions is the only operation that reallocates them.
-While Output is open, the hidden Paint source transport is stopped and disabled;
-the visible Preview button is the only playback action. Clock, speed, and Loop
-range remain available because they define the output plan.
+While Output is open, the unrelated Paint transport and Inspector rail are removed;
+the Preview player supplies play, repeat, full-screen, time, and direct range
+scrubbing. A fixed high-visibility settings rail keeps clock, speed, frame rate,
+resolution, and range summary next to Preview because they define the output plan.
+The default clock is Frame-paced 120 Hz; Recorded follows capture gaps, while
+Frame-paced displays each decoded frame at 120 Hz and retains the original REC
+timestamp in the rendered frame.
 
 `nvt-replay export` accepts a one-based inclusive range, Recorded or Frame
 clock, speed, frame rate, even output dimensions, an optional review sidecar,
@@ -38,7 +42,10 @@ and encoder identity.
 Preview playback is anchored to a monotonic absolute 30 FPS clock and skips a
 late display frame rather than accumulating render time as drift. Main replay
 uses the same absolute-deadline principle at the selected Recorded/Frame clock
-and speed. Alarm and QA pause frames remain mandatory even while catching up.
+and speed. Alarm/QA and optional Break/All Break pause frames remain mandatory
+even while catching up. Paint and raster export also share the same deterministic
+hard-avoidance label placement, so coordinate labels do not overlap at normal
+preview/export sizes.
 
 If no encoder is found or it exits incompatibly, export creates an atomic
 `<name>.mp4.frames` PNG-sequence directory with the same scenes and an

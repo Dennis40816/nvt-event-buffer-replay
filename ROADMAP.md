@@ -13,7 +13,7 @@
 
 - [x] Load and confirmation-driven auto Decode Configuration (no separate Decode action)
 - [x] Reported Frame and Host State Paint
-- [x] Recorded/Frame clocks, absolute-deadline playback, late-frame coalescing, and loop crossfade
+- [x] Explicit Recorded/Frame-paced 120 Hz clocks, absolute-deadline playback, late-frame coalescing, loop crossfade, and indexed Alarm/QA/Break/All Break auto-pause
 - [x] Logical stepping, physical drill-down, range, and sparse checkpoints
 - [x] Multi-track timeline with grouped transport controls, per-track counts, direct seek, loop handles, and frame-aware marker context actions
 
@@ -23,14 +23,15 @@
 - [x] Review Queue and occurrence grouping
 - [x] Structured Inspector with health-first frame state, color-linked Contact selection, Protocol/Raw/Review layers, and on-demand source identity
 - [x] Resizable 320–520 px Inspector rail with useful type/ASIL summary while collapsed
-- [x] Marker and `.nvtreplay.json` round trip, including full-row and timeline-frame Unmark menus
+- [x] Single-frame marker creation, rename/clear, `.nvtreplay.json` round trip, and full-row/timeline-frame Unmark menus
 
 ## M4 — Export Slice
 
 - [x] Shared ReplayScene
 - [x] Single-content Output workspace for MP4 video, heatmap, or data package, without the unrelated replay transport or Inspector rail
 - [x] Exact desktop MP4 preview with its own seek line, draggable export-range handles, reusable frame buffers, and unobstructed full-screen review
-- [x] MP4 settings flyout with independent clock, customized speed, 1–240 FPS (including 180 FPS), and preset/custom resolution
+- [x] High-visibility MP4 settings rail with independent clock, customized speed, 1–240 FPS (including 180 FPS), and Paint/preset/custom resolution
+- [x] Shared hard-avoidance coordinate-label layout for Paint, exact Preview, and exported MP4
 - [x] Selected-range FFmpeg MP4 with PNG fallback
 - [x] Interactive heatmap with all-points/repeated-`N` modes, blue-to-red density scale, color bar, thresholded value labels, coordinate hover, and matching PNG output
 - [x] Parsed/diagnostic JSON and CSV
@@ -39,7 +40,9 @@
 ## M5 — Hardening
 
 - [x] One-GB/one-million-record/eight-hour performance gate
+- [x] Immutable replay-frame cache, one-pass trail/auto-pause indexes, and throttled Inspector presentation during playback
 - [x] Cancellation, recovery journal, and atomic output
+- [x] Dedicated Settings workspace for theme, playback safety, output defaults, shortcuts, and performance preferences
 - [x] Keyboard, command palette, scaling, theme, accessibility, and Skia headless UI checks
 - [x] Windows self-contained portable package and release gates
 

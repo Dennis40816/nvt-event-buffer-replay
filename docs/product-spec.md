@@ -74,10 +74,10 @@ The timeline has three levels:
 - logical events;
 - evidence events.
 
-Recorded Time preserves captured intervals. Frame Time spaces logical events
-uniformly for motion inspection. Unreliable timestamps are explicitly marked
-as a synthetic timeline. Long idle gaps are compressed during normal playback
-but remain represented and can be replayed at real duration.
+Recorded Time preserves captured intervals, including long idle gaps. Frame-paced
+Time spaces every decoded logical event at 120 Hz for motion inspection while the
+displayed REC timestamp remains original. Unreliable timestamps are explicitly
+marked as a synthetic timeline.
 
 The Paint surface renders both the current Reported Frame and persistent Host
 State. Invalid packets leave the prior Host State intact. The capture ending
@@ -154,9 +154,9 @@ sequence remains available.
 
 The desktop preview presents the exact configured MP4 frame plan and raster,
 not a separately laid-out approximation. Its range/time scrubber operates in
-output-frame time. A settings flyout beside Preview controls output clock,
-customized speed, frame rate, and preset or validated custom resolution; the
-same values drive preview and final export. The heatmap preview uses density
+output-frame time. A persistent settings rail beside Preview controls output
+clock, customized speed, frame rate, and Paint/preset/validated custom resolution;
+the same values drive preview and final export. The heatmap preview uses density
 circles whose area represents sample count while the deterministic heatmap PNG
 remains suitable for automation and golden comparison.
 
