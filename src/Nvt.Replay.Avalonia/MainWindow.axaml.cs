@@ -76,6 +76,7 @@ public partial class MainWindow : Window
     private int zoomHintRevision;
     private bool reverseX;
     private bool reverseY;
+    private bool swapAxes;
     private bool maxReplaySpeed;
     private bool synchronizingSelection;
     private bool synchronizingLoopControls;
@@ -945,6 +946,7 @@ public partial class MainWindow : Window
         var exportTrailVisibilityStart = trailVisibilityStart;
         var exportReverseX = reverseX;
         var exportReverseY = reverseY;
+        var exportSwapAxes = swapAxes;
         ReplayScene ExportScene(int logicalIndex) => ReplaySceneFactory.Create(
             exportReplay.Seek(logicalIndex),
             exportReplay.Count,
@@ -953,7 +955,8 @@ public partial class MainWindow : Window
             exportMarkers,
             exportTrailHistory?.Build(logicalIndex, exportTrailMode, exportTrailLength, exportTrailVisibilityStart) ?? [],
             exportReverseX,
-            exportReverseY);
+            exportReverseY,
+            exportSwapAxes);
 
         outputExportCancellation?.Dispose();
         var cancellation = new CancellationTokenSource();
@@ -1277,7 +1280,8 @@ public partial class MainWindow : Window
             markers,
             trailHistory?.Build(logicalIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
             reverseX,
-            reverseY);
+            reverseY,
+            swapAxes);
     }
 
     private CaptureAnalysisReport BuildOutputReport(AnalysisRange range, CancellationToken cancellationToken)
@@ -2455,11 +2459,13 @@ public partial class MainWindow : Window
         GridStrengthToggleButton.IsChecked = false;
         ReverseXToggleButton.IsChecked = false;
         ReverseYToggleButton.IsChecked = false;
+        SwapAxesToggleButton.IsChecked = false;
         LegendPositionComboBox.SelectedIndex = 0;
         LegendVisibleToggleButton.IsChecked = true;
         LegendCompactToggleButton.IsChecked = true;
         reverseX = false;
         reverseY = false;
+        swapAxes = false;
         legendPosition = ReplayLegendPosition.Auto;
         PaintSurface.SetStrongGrid(false);
         PaintSurface.SetLegendPosition(ReplayLegendPosition.TopLeft);
@@ -2579,7 +2585,8 @@ public partial class MainWindow : Window
             markers,
             trailHistory?.Build(clampedIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
             reverseX,
-            reverseY), crossfade);
+            reverseY,
+            swapAxes), crossfade);
         ReplayClockText.Text = FormatClock(SelectedTime(snapshot.Timeline));
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
         ReplayTimelineSurface.SetPosition(clampedIndex);
@@ -2987,7 +2994,7 @@ public partial class MainWindow : Window
         {
             resolved = replaySession is null
                 ? ReplayLegendPosition.TopLeft
-                : ReplayLegendPositioner.Choose(replaySession.AllReportedContacts, replayExtent, reverseX, reverseY);
+                : ReplayLegendPositioner.Choose(replaySession.AllReportedContacts, replayExtent, reverseX, reverseY, swapAxes);
         }
         PaintSurface.SetLegendPosition(resolved);
         RefreshCurrentOutputVideoFrame();
@@ -2997,6 +3004,7 @@ public partial class MainWindow : Window
     {
         reverseX = ReverseXToggleButton.IsChecked == true;
         reverseY = ReverseYToggleButton.IsChecked == true;
+        swapAxes = SwapAxesToggleButton.IsChecked == true;
         RefreshLegendPlacement();
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);

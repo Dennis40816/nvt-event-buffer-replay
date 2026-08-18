@@ -61,6 +61,7 @@ public sealed class ReplayPaintSurface : Control
     public bool LegendVisible => legendVisible;
     public bool LegendCollapsed => legendCollapsed;
     public ReplayLegendPosition LegendPosition => legendPosition;
+    internal ReplayScene? CurrentScene => scene;
     public event EventHandler? ZoomChanged;
     public event EventHandler? LegendCollapsedChanged;
 
@@ -100,7 +101,7 @@ public sealed class ReplayPaintSurface : Control
             loopCrossfadeTimer.Start();
         }
         scene = value;
-        viewportOffset = ClampViewportOffset(viewportOffset, value.Extent, zoomFactor);
+        viewportOffset = ClampViewportOffset(viewportOffset, value.ViewExtent, zoomFactor);
         UpdatePanCursor();
         InvalidateVisual();
     }
@@ -168,7 +169,7 @@ public sealed class ReplayPaintSurface : Control
 
         if (anchor is { } pointer && scene is not null && Bounds.Width > 0 && Bounds.Height > 0)
         {
-            var oldViewport = BuildViewport(new Rect(Bounds.Size), scene.Extent, zoomFactor, viewportOffset);
+            var oldViewport = BuildViewport(new Rect(Bounds.Size), scene.ViewExtent, zoomFactor, viewportOffset);
             var normalizedX = Math.Clamp((pointer.X - oldViewport.Left) / oldViewport.Width, 0, 1);
             var normalizedY = Math.Clamp((pointer.Y - oldViewport.Top) / oldViewport.Height, 0, 1);
             var scale = nextZoom / zoomFactor;
@@ -184,7 +185,7 @@ public sealed class ReplayPaintSurface : Control
 
         zoomFactor = nextZoom;
         if (scene is not null)
-            viewportOffset = ClampViewportOffset(viewportOffset, scene.Extent, zoomFactor);
+            viewportOffset = ClampViewportOffset(viewportOffset, scene.ViewExtent, zoomFactor);
         UpdatePanCursor();
         InvalidateVisual();
         ZoomChanged?.Invoke(this, EventArgs.Empty);
@@ -206,7 +207,7 @@ public sealed class ReplayPaintSurface : Control
         {
             viewportOffset = ClampViewportOffset(
                 panStartOffset + (position - panStart),
-                scene.Extent,
+                scene.ViewExtent,
                 zoomFactor);
             InvalidateVisual();
             e.Handled = true;
@@ -240,7 +241,7 @@ public sealed class ReplayPaintSurface : Control
             return;
         }
 
-        if (scene is null || !CanPan(scene.Extent, zoomFactor)) return;
+        if (scene is null || !CanPan(scene.ViewExtent, zoomFactor)) return;
 
         isPanning = true;
         panStart = position;
@@ -276,8 +277,8 @@ public sealed class ReplayPaintSurface : Control
         if (scene is null) return;
 
         var available = BuildAvailableBounds(bounds);
-        var viewport = BuildViewport(bounds, scene.Extent, zoomFactor, viewportOffset);
-        var legendViewport = BuildViewport(bounds, scene.Extent, 1, default);
+        var viewport = BuildViewport(bounds, scene.ViewExtent, zoomFactor, viewportOffset);
+        var legendViewport = BuildViewport(bounds, scene.ViewExtent, 1, default);
 
         using var clip = context.PushClip(bounds);
         context.DrawRectangle(SurfaceBrush, null, viewport);
@@ -287,7 +288,7 @@ public sealed class ReplayPaintSurface : Control
         var transition = LoopCrossfadeProgress();
         if (outgoingScene is { } previous)
         {
-            var previousViewport = BuildViewport(bounds, previous.Extent, zoomFactor, viewportOffset);
+            var previousViewport = BuildViewport(bounds, previous.ViewExtent, zoomFactor, viewportOffset);
             DrawSceneContacts(context, previousViewport, available, previous, 1 - transition);
         }
         DrawSceneContacts(context, viewport, available, scene, transition);
@@ -398,7 +399,7 @@ public sealed class ReplayPaintSurface : Control
 
     private void UpdatePanCursor()
     {
-        Cursor = isPanning || (scene is not null && CanPan(scene.Extent, zoomFactor))
+        Cursor = isPanning || (scene is not null && CanPan(scene.ViewExtent, zoomFactor))
             ? PanCursor
             : null;
     }
@@ -676,8 +677,9 @@ public sealed class ReplayPaintSurface : Control
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
             14,
             LabelTextBrush);
+        var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
         var coordinateText = new FormattedText(
-            $"X {contact.X}   Y {contact.Y}",
+            $"X {viewCoordinates.X:0}   Y {viewCoordinates.Y:0}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
@@ -735,12 +737,12 @@ public sealed class ReplayPaintSurface : Control
     }
 
     private static Point Project(Rect viewport, ReplayScene scene, ushort x, ushort y) =>
-        Project(viewport, scene.Extent, x, y, scene.ReverseX, scene.ReverseY);
+        Project(viewport, scene, scene.ViewCoordinates(x, y));
 
-    private static Point Project(Rect viewport, ReplayExtent extent, ushort x, ushort y, bool reverseX, bool reverseY) =>
+    private static Point Project(Rect viewport, ReplayScene scene, (double X, double Y) coordinates) =>
         new(
-            viewport.X + ((reverseX ? 1 - (x / extent.MaximumX) : x / extent.MaximumX) * viewport.Width),
-            viewport.Y + ((reverseY ? 1 - (y / extent.MaximumY) : y / extent.MaximumY) * viewport.Height));
+            viewport.X + ((scene.ReverseX ? 1 - (coordinates.X / scene.ViewExtent.MaximumX) : coordinates.X / scene.ViewExtent.MaximumX) * viewport.Width),
+            viewport.Y + ((scene.ReverseY ? 1 - (coordinates.Y / scene.ViewExtent.MaximumY) : coordinates.Y / scene.ViewExtent.MaximumY) * viewport.Height));
 
     private void DrawAxisLabels(DrawingContext context, Rect viewport, ReplayScene scene)
     {
@@ -750,8 +752,8 @@ public sealed class ReplayPaintSurface : Control
             var fraction = tick / 4d;
             var x = viewport.Left + (viewport.Width * fraction);
             var y = viewport.Top + (viewport.Height * fraction);
-            var xValue = scene.Extent.MaximumX * (scene.ReverseX ? 1 - fraction : fraction);
-            var yValue = scene.Extent.MaximumY * (scene.ReverseY ? 1 - fraction : fraction);
+            var xValue = scene.ViewExtent.MaximumX * (scene.ReverseX ? 1 - fraction : fraction);
+            var yValue = scene.ViewExtent.MaximumY * (scene.ReverseY ? 1 - fraction : fraction);
             context.DrawLine(tickPen, new Point(x, viewport.Bottom), new Point(x, viewport.Bottom + 6));
             context.DrawLine(tickPen, new Point(viewport.Left - 6, y), new Point(viewport.Left, y));
             DrawAxisText(context, xValue.ToString("0", CultureInfo.InvariantCulture), new Point(x, viewport.Bottom + 8), centered: true);

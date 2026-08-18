@@ -22,7 +22,8 @@ public static class ReplayLegendPositioner
         IEnumerable<ReplayContact> contacts,
         ReplayExtent extent,
         bool reverseX = false,
-        bool reverseY = false)
+        bool reverseY = false,
+        bool swapAxes = false)
     {
         ArgumentNullException.ThrowIfNull(contacts);
         ArgumentNullException.ThrowIfNull(extent);
@@ -34,8 +35,14 @@ public static class ReplayLegendPositioner
 
         var points = captured.Select(contact =>
         {
-            var x = Math.Clamp(contact.X / extent.MaximumX, 0, 1);
-            var y = Math.Clamp(contact.Y / extent.MaximumY, 0, 1);
+            var x = Math.Clamp(
+                swapAxes ? contact.Y / extent.MaximumY : contact.X / extent.MaximumX,
+                0,
+                1);
+            var y = Math.Clamp(
+                swapAxes ? contact.X / extent.MaximumX : contact.Y / extent.MaximumY,
+                0,
+                1);
             return (X: reverseX ? 1 - x : x, Y: reverseY ? 1 - y : y);
         }).ToArray();
         var rowCount = Math.Min(10, captured.Select(contact => contact.Id).Distinct().Count());

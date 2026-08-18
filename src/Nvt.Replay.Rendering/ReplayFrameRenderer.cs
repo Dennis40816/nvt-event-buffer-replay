@@ -62,7 +62,7 @@ public static class ReplayFrameRenderer
         var top = Math.Max(26, (int)Math.Round(48 * chromeScale));
         var bottom = Math.Max(24, (int)Math.Round(42 * chromeScale));
         var contentBounds = new PixelRect(0, top, width, height - top - bottom);
-        var viewport = BuildViewport(scene.Extent, contentBounds, chromeScale);
+        var viewport = BuildViewport(scene.ViewExtent, contentBounds, chromeScale);
 
         DrawChrome(canvas, scene, settings, palette, top, bottom);
         canvas.FillRectangle(viewport.X, viewport.Y, viewport.Width, viewport.Height, palette.Surface);
@@ -146,8 +146,8 @@ public static class ReplayFrameRenderer
             var fraction = tick / 4d;
             var x = viewport.X + (int)Math.Round(viewport.Width * fraction);
             var y = viewport.Y + (int)Math.Round(viewport.Height * fraction);
-            var xValue = scene.Extent.MaximumX * (scene.ReverseX ? 1 - fraction : fraction);
-            var yValue = scene.Extent.MaximumY * (scene.ReverseY ? 1 - fraction : fraction);
+            var xValue = scene.ViewExtent.MaximumX * (scene.ReverseX ? 1 - fraction : fraction);
+            var yValue = scene.ViewExtent.MaximumY * (scene.ReverseY ? 1 - fraction : fraction);
             canvas.Line(x, viewport.Bottom, x, viewport.Bottom + 5, palette.StrongAxis);
             canvas.Line(viewport.X - 5, y, viewport.X, y, palette.StrongAxis);
             canvas.TextCentered(x, viewport.Bottom + 8, xValue.ToString("0"), palette.AxisLabel, textScale);
@@ -275,7 +275,8 @@ public static class ReplayFrameRenderer
         {
             var center = Project(viewport, scene, contact.X, contact.Y);
             var header = $"ID {contact.Id}  {ContactState(contact)}";
-            var coordinates = $"X {contact.X}  Y {contact.Y}  {TypeLabel(contact.Type)}";
+            var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
+            var coordinates = $"X {viewCoordinates.X:0}  Y {viewCoordinates.Y:0}  {TypeLabel(contact.Type)}";
             var iconReserve = 13 * textScale;
             var padding = 5 * textScale;
             var lineGap = Math.Max(2, textScale);
@@ -466,8 +467,9 @@ public static class ReplayFrameRenderer
 
     private static PixelPoint Project(PixelRect viewport, ReplayScene scene, ushort x, ushort y)
     {
-        var xRatio = x / scene.Extent.MaximumX;
-        var yRatio = y / scene.Extent.MaximumY;
+        var viewCoordinates = scene.ViewCoordinates(x, y);
+        var xRatio = viewCoordinates.X / scene.ViewExtent.MaximumX;
+        var yRatio = viewCoordinates.Y / scene.ViewExtent.MaximumY;
         return new PixelPoint(
             viewport.X + (int)Math.Round((scene.ReverseX ? 1 - xRatio : xRatio) * viewport.Width),
             viewport.Y + (int)Math.Round((scene.ReverseY ? 1 - yRatio : yRatio) * viewport.Height));

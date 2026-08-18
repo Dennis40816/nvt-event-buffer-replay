@@ -17,6 +17,7 @@ using Nvt.Replay.Avalonia.Controls;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Formats.Common;
+using Nvt.Replay.Rendering;
 using Xunit;
 
 namespace Nvt.Replay.Avalonia.Tests;
@@ -624,6 +625,61 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Border>(window, "ReplayTransportBorder").IsVisible);
             Assert.True(Required<Border>(window, "InspectorRailBorder").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Playback_shortcuts_are_mapped_and_disclosed_on_transport_controls()
+    {
+        var window = ShowWindow();
+        try
+        {
+            Assert.Equal(ReplayShortcutAction.TogglePlayback, ReplayShortcutCatalog.Match(Key.Space, KeyModifiers.None)?.Action);
+            Assert.Equal(ReplayShortcutAction.PreviousFrame, ReplayShortcutCatalog.Match(Key.Left, KeyModifiers.None)?.Action);
+            Assert.Equal(ReplayShortcutAction.NextFrame, ReplayShortcutCatalog.Match(Key.Right, KeyModifiers.None)?.Action);
+            Assert.Contains("Space", ToolTip.GetTip(Required<Button>(window, "PlayPauseButton"))?.ToString());
+            Assert.Contains("←", ToolTip.GetTip(Required<Button>(window, "PreviousFrameButton"))?.ToString());
+            Assert.Contains("→", ToolTip.GetTip(Required<Button>(window, "NextFrameButton"))?.ToString());
+            Assert.Contains("Space", ToolTip.GetTip(Required<Button>(window, "OutputPreviewPlayPauseButton"))?.ToString());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Paint_swap_XY_transposes_only_the_view_scene()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var surface = Required<ReplayPaintSurface>(window, "PaintSurface");
+            var original = Assert.IsType<ReplayScene>(surface.CurrentScene);
+            var sourceContact = Assert.Single(original.ReportedContacts);
+            var toggle = Required<ToggleButton>(window, "SwapAxesToggleButton");
+
+            Assert.False(toggle.IsChecked);
+            toggle.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+
+            var swapped = Assert.IsType<ReplayScene>(surface.CurrentScene);
+            var viewCoordinates = swapped.ViewCoordinates(sourceContact.X, sourceContact.Y);
+            Assert.True(swapped.SwapAxes);
+            Assert.Equal(original.Extent, swapped.Extent);
+            Assert.Equal(original.Extent.MaximumY, swapped.ViewExtent.MaximumX);
+            Assert.Equal(sourceContact.Y, viewCoordinates.X);
+            Assert.Equal(sourceContact.X, viewCoordinates.Y);
+            Assert.Equal(sourceContact.X, Assert.Single(swapped.ReportedContacts).X);
+            Assert.Equal(sourceContact.Y, Assert.Single(swapped.ReportedContacts).Y);
         }
         finally
         {

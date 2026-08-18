@@ -46,7 +46,16 @@ public sealed record ReplayScene(
     IReadOnlyList<ReplayDiagnostic> Diagnostics,
     IReadOnlyList<string> MarkerLabels,
     bool ReverseX,
-    bool ReverseY);
+    bool ReverseY,
+    bool SwapAxes)
+{
+    public ReplayExtent ViewExtent { get; } = SwapAxes
+        ? new ReplayExtent(Extent.MaximumY, Extent.MaximumX)
+        : Extent;
+
+    public (double X, double Y) ViewCoordinates(double x, double y) =>
+        SwapAxes ? (y, x) : (x, y);
+}
 
 public sealed record ReplayTrailPoint(ushort X, ushort Y, TouchStatus Status, int LogicalIndex);
 
@@ -62,7 +71,8 @@ public static class ReplaySceneFactory
         IEnumerable<ReplayMarker>? markers = null,
         IReadOnlyList<ReplayContactTrail>? contactTrails = null,
         bool reverseX = false,
-        bool reverseY = false)
+        bool reverseY = false,
+        bool swapAxes = false)
     {
         var sourceIds = snapshot.PhysicalRecords.Append(snapshot.PrimarySource)
             .Select(item => item.StableId)
@@ -80,7 +90,8 @@ public static class ReplaySceneFactory
             markers?.Where(item => item.StartLogicalIndex <= snapshot.LogicalIndex && item.EndLogicalIndex >= snapshot.LogicalIndex)
                 .Select(item => item.Label).ToArray() ?? [],
             reverseX,
-            reverseY);
+            reverseY,
+            swapAxes);
     }
 
     public static IReadOnlyList<ReplayContactTrail> BuildTrails(

@@ -816,6 +816,7 @@
                       <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
                       <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
                       <ToggleButton x:Name="ReverseYToggleButton" Classes="canvasQuick" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
+                      <ToggleButton x:Name="SwapAxesToggleButton" Classes="canvasQuick" Content="Swap XY" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" ToolTip.Tip="Swap the displayed X and Y axes without changing source data" AutomationProperties.Name="Swap X and Y axes" />
                       <Button Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE9A6;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
                       <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="16" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
                     </StackPanel>
@@ -900,7 +901,7 @@
                             </Grid>
                           </Border>
                           <Grid Grid.Row="2" ColumnDefinitions="Auto,8,Auto,14,Auto,*,Auto,10,Auto" VerticalAlignment="Center">
-                            <Button x:Name="OutputPreviewPlayPauseButton" Classes="transportPlay" MinWidth="92" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" AutomationProperties.Name="Play MP4 preview" />
+                            <Button x:Name="OutputPreviewPlayPauseButton" Classes="transportPlay" MinWidth="92" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" ToolTip.Tip="Play or pause MP4 preview (Space)" AutomationProperties.Name="Play MP4 preview" />
                             <ToggleButton x:Name="OutputPreviewRepeatToggleButton" Grid.Column="2" Classes="axisToggle" IsChecked="True" Content="Repeat" ToolTip.Tip="Repeat preview playback" AutomationProperties.Name="Repeat MP4 preview" />
                             <TextBlock x:Name="OutputPreviewClockText" Grid.Column="4" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" VerticalAlignment="Center" />
                             <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="6" Text="output 0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
@@ -1332,7 +1333,7 @@
         <Grid x:Name="TimelineControlBar" Grid.Row="0" ColumnDefinitions="Auto,18,Auto,18,Auto,*,Auto">
           <StackPanel x:Name="TransportPlaybackGroup" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <Button x:Name="PreviousFrameButton" Classes="canvasIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous logical frame (Left)" AutomationProperties.Name="Previous logical frame" />
-            <Button x:Name="PlayPauseButton" Classes="transportPlay" MinWidth="92" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" AutomationProperties.Name="Play replay" />
+            <Button x:Name="PlayPauseButton" Classes="transportPlay" MinWidth="92" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" ToolTip.Tip="Play or pause replay (Space)" AutomationProperties.Name="Play replay" />
             <Button x:Name="NextFrameButton" Classes="canvasIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" ToolTip.Tip="Next logical frame (Right)" AutomationProperties.Name="Next logical frame" />
           </StackPanel>
 

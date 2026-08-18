@@ -243,6 +243,30 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public void Axis_swap_transposes_the_view_without_changing_source_coordinates()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var snapshot = replay.Seek(0);
+        var normal = ReplaySceneFactory.Create(snapshot, replay.Count, extent);
+        var swapped = ReplaySceneFactory.Create(snapshot, replay.Count, extent, swapAxes: true);
+        var contact = Assert.Single(snapshot.ReportedContacts);
+        var viewCoordinates = swapped.ViewCoordinates(contact.X, contact.Y);
+
+        Assert.True(swapped.SwapAxes);
+        Assert.Equal(normal.Extent, swapped.Extent);
+        Assert.Equal(extent.MaximumY, swapped.ViewExtent.MaximumX);
+        Assert.Equal(extent.MaximumX, swapped.ViewExtent.MaximumY);
+        Assert.Equal(contact.Y, viewCoordinates.X);
+        Assert.Equal(contact.X, viewCoordinates.Y);
+        Assert.Equal(contact.X, Assert.Single(swapped.ReportedContacts).X);
+        Assert.Equal(contact.Y, Assert.Single(swapped.ReportedContacts).Y);
+        Assert.NotEqual(
+            SHA256.HashData(ReplayFrameRenderer.RenderRgb(normal, 320, 180)),
+            SHA256.HashData(ReplayFrameRenderer.RenderRgb(swapped, 320, 180)));
+    }
+
+    [Fact]
     public async Task Cancellation_removes_fallback_staging_directory()
     {
         var output = Path.Combine(directory, "cancelled.mp4");
