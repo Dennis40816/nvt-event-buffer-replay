@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private Dictionary<string, DecodedFrameRow> decodedRowsBySourceId = [];
     private DecodedFrameRow[] decodedRows = [];
     private DiagnosticRow[] diagnosticRows = [];
+    private int[] diagnosticLineNumbers = [];
     private ReviewSession? reviewSession;
     private ReviewGroupRow[] reviewRows = [];
     private ReviewQueueFilter reviewFilter = ReviewQueueFilter.All;
@@ -1966,6 +1967,10 @@ public partial class MainWindow : Window
     {
         var previousState = reviewSession?.ExportState() ?? [];
         baseDiagnostics = diagnostics;
+        diagnosticLineNumbers = diagnosticRows
+            .Select(row => row.Diagnostic.Location.LineNumber)
+            .OrderBy(line => line)
+            .ToArray();
         var logicalIndices = decodedRows
             .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, row.LogicalIndex)))
             .GroupBy(item => item.StableId, StringComparer.Ordinal)
@@ -2240,19 +2245,14 @@ public partial class MainWindow : Window
             };
         ApplyInspectorPresentation(currentInspectorPresentation, frame is null && registerReadable is not null);
 
-        var frameAlerts = reviewSession?.Diagnostics
-            .Where(item => item.Severity >= DiagnosticSeverity.Warning &&
-                           (item.SourceRecordId == record.StableId || item.Location.LineNumber == record.Location.LineNumber))
-            .Take(2)
-            .ToArray() ?? [];
+        var frameAlerts = reviewSession?.FrameAlerts(record.StableId, record.Location.LineNumber) ?? [];
         var crcFailed = currentInspectorPresentation.CrcFailed;
         var asilAlarm = currentInspectorPresentation.AsilAlarm;
-        InspectorAlertBorder.IsVisible = frameAlerts.Length > 0 || crcFailed || asilAlarm;
-        InspectorAlertText.Text = frameAlerts.Length > 0
+        InspectorAlertBorder.IsVisible = frameAlerts.Count > 0 || crcFailed || asilAlarm;
+        InspectorAlertText.Text = frameAlerts.Count > 0
             ? string.Join(" · ", frameAlerts.Select(item => item.Code))
             : crcFailed ? "CRC validation failed" : asilAlarm ? "ASIL alarm active" : string.Empty;
-        var hasNavigableFindings = reviewSession?.Groups.Any(group =>
-            group.Occurrences.Any(occurrence => occurrence.LogicalIndex is not null)) == true;
+        var hasNavigableFindings = reviewSession?.HasNavigableFindings == true;
         PreviousFindingButton.IsVisible = hasNavigableFindings;
         NextFindingButton.IsVisible = hasNavigableFindings;
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
@@ -2383,6 +2383,7 @@ public partial class MainWindow : Window
         decodedRowsBySourceId = [];
         decodedRows = [];
         diagnosticRows = [];
+        diagnosticLineNumbers = [];
         reviewSession = null;
         reviewRows = [];
         reviewFilter = ReviewQueueFilter.All;
@@ -2579,7 +2580,7 @@ public partial class MainWindow : Window
         NextFrameButton.IsEnabled = available;
     }
 
-    private void SeekReplay(int logicalIndex, bool crossfade = false)
+    private void SeekReplay(int logicalIndex, bool crossfade = false, bool synchronizeLists = true)
     {
         if (replaySession is null || replaySession.Count == 0)
         {
@@ -2605,12 +2606,37 @@ public partial class MainWindow : Window
         var physicalMaximum = Math.Max(1, session?.Records.Count - 1 ?? 1);
         var physicalValue = Math.Min(physicalMaximum, snapshot.PrimarySource.Index);
         var evidenceMaximum = Math.Max(1, diagnosticRows.Length);
-        var evidenceValue = diagnosticRows.Count(row =>
-            row.Diagnostic.Location.LineNumber <= snapshot.PrimarySource.Location.LineNumber);
+        var evidenceValue = CountDiagnosticsThroughLine(snapshot.PrimarySource.Location.LineNumber);
         ReplayTimelineSurface.SetSupportingProgress(
             physicalValue / (double)physicalMaximum,
             evidenceValue / (double)evidenceMaximum);
 
+        if (synchronizeLists)
+            SynchronizeReplayLists(clampedIndex, snapshot);
+
+        ShowRecord(snapshot.PhysicalRecords[^1], snapshot.DecodedFrame, snapshot);
+    }
+
+    private int CountDiagnosticsThroughLine(int lineNumber)
+    {
+        var low = 0;
+        var high = diagnosticLineNumbers.Length;
+        while (low < high)
+        {
+            var middle = low + (high - low) / 2;
+            if (diagnosticLineNumbers[middle] <= lineNumber) low = middle + 1;
+            else high = middle;
+        }
+        return low;
+    }
+
+    private void SynchronizeReplayLists(int logicalIndex, ITouchReplaySnapshot? snapshot = null)
+    {
+        if (replaySession is null || decodedRows.Length == 0 || logicalIndex < 0)
+            return;
+
+        var clampedIndex = Math.Clamp(logicalIndex, 0, decodedRows.Length - 1);
+        snapshot ??= replaySession.Seek(clampedIndex);
         synchronizingSelection = true;
         try
         {
@@ -2628,8 +2654,6 @@ public partial class MainWindow : Window
         {
             synchronizingSelection = false;
         }
-
-        ShowRecord(snapshot.PhysicalRecords[^1], snapshot.DecodedFrame, snapshot);
     }
 
     private void PreviousFrameButton_OnClick(object? sender, RoutedEventArgs e)
@@ -2702,7 +2726,7 @@ public partial class MainWindow : Window
                                 "Loop needs at least 2 frames · drag either Loop handle to widen the range");
                             return;
                         }
-                        SeekReplay(start, crossfade: true);
+                        SeekReplay(start, crossfade: true, synchronizeLists: false);
                         playbackStarted = Stopwatch.GetTimestamp();
                         scheduledElapsed = TimeSpan.Zero;
                         continue;
@@ -2748,7 +2772,7 @@ public partial class MainWindow : Window
                     scheduledElapsed = position.ScheduledElapsed;
                 }
 
-                SeekReplay(next);
+                SeekReplay(next, synchronizeLists: false);
                 if (pauseIndex == next)
                 {
                     SelectReviewAt(next);
@@ -2759,6 +2783,10 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+        }
+        catch (Exception exception)
+        {
+            StopPlaybackIfCurrent(generation, $"Replay stopped after an error · {exception.Message}");
         }
     }
 
@@ -2861,6 +2889,8 @@ public partial class MainWindow : Window
         playbackRunGeneration++;
         cancellation?.Cancel();
         cancellation?.Dispose();
+        if (cancellation is not null && replaySession is { Count: > 0 } && currentLogicalIndex >= 0)
+            SynchronizeReplayLists(currentLogicalIndex);
         if (PlayPauseButton is not null)
         {
             SetPlaybackVisualState(playing: false);
@@ -2902,7 +2932,6 @@ public partial class MainWindow : Window
             replaySpeed = speed;
         }
         NotifyPlaybackTimingChanged();
-        RefreshOutputPreviewIfVisible();
     }
 
     private void ClockModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -2915,7 +2944,6 @@ public partial class MainWindow : Window
             if (currentInspectorRecord is not null)
                 ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
         }
-        RefreshOutputPreviewIfVisible();
     }
 
     private void ReplayTimingOption_OnChanged(object? sender, RoutedEventArgs e) => NotifyPlaybackTimingChanged();

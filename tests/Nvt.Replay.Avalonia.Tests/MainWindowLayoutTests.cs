@@ -767,6 +767,56 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Rapid_speed_changes_replace_playback_without_leaking_a_stale_runner()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
+            var speedItems = speed.Items.OfType<ComboBoxItem>().ToArray();
+            var cycle = new[] { "0.01", "10", "0.05", "max", "0.5", "5" }
+                .Select(tag => speedItems.Single(item => string.Equals(item.Tag?.ToString(), tag, StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
+            Required<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked = false;
+            Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
+            var play = Required<Button>(window, "PlayPauseButton");
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            for (var index = 0; index < 60; index++)
+            {
+                speed.SelectedItem = cycle[index % cycle.Length];
+                Dispatcher.UIThread.RunJobs();
+            }
+
+            speed.SelectedItem = speedItems.Single(item => item.Tag?.ToString() == "0.5");
+            Assert.True(
+                play.Content?.ToString()?.Contains("Pause", StringComparison.Ordinal) == true,
+                $"Playback stopped during rapid changes: {Required<TextBlock>(window, "TimelineStatusText").Text}");
+            var initialFrame = Required<TextBlock>(window, "InspectorLogicalText").Text;
+            await WaitUntilAsync(
+                () => Required<TextBlock>(window, "InspectorLogicalText").Text != initialFrame,
+                TimeSpan.FromMilliseconds(750));
+
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var stoppedFrame = Required<TextBlock>(window, "InspectorLogicalText").Text;
+            await Task.Delay(100);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Contains("Play", play.Content?.ToString());
+            Assert.Equal(stoppedFrame, Required<TextBlock>(window, "InspectorLogicalText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Paint_swap_XY_transposes_only_the_view_scene()
     {
         var window = ShowWindow();
