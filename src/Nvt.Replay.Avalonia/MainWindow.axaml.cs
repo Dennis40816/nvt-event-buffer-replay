@@ -22,6 +22,7 @@ using Nvt.Replay.Rendering;
 using Nvt.Replay.Sources;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
+using Nvt.Replay.Avalonia.Views;
 
 namespace Nvt.Replay.Avalonia;
 
@@ -169,6 +170,9 @@ public partial class MainWindow : Window
         SyncOutputResolutionWithPanel();
         configuringOutputSettings = false;
         ShortcutModulesItemsControl.ItemsSource = ReplayShortcutCatalog.Modules;
+        SettingsPage.CloseRequested += (_, _) => CloseSettingsPage();
+        SettingsPage.ThemeToggleRequested += (_, _) => ToggleTheme();
+        SettingsPage.PlaybackPreferencesChanged += SettingsPage_OnPlaybackPreferencesChanged;
         ComboBoxAutoSizer.Fit(
             SourceAdapterComboBox,
             EventVersionComboBox,
@@ -404,11 +408,34 @@ public partial class MainWindow : Window
     }
 
     private void ThemeButton_OnClick(object? sender, RoutedEventArgs e)
+        => ToggleTheme();
+
+    private void ToggleTheme()
     {
         themeMode = (themeMode + 1) % 2;
         var variant = themeMode == 0 ? ThemeVariant.Dark : ThemeVariant.Light;
         if (Application.Current is { } application) application.RequestedThemeVariant = variant;
-        ToolTip.SetTip(ThemeButton, themeMode == 0 ? "Switch to light theme" : "Switch to dark theme");
+    }
+
+    private void SettingsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (SettingsPage.IsVisible) CloseSettingsPage();
+        else OpenSettingsPage();
+    }
+
+    private void OpenSettingsPage()
+    {
+        StopPlayback();
+        StopOutputVideoPreviewPlayback();
+        CloseCommandPalette();
+        SettingsPage.IsVisible = true;
+        SettingsPage.Focus();
+    }
+
+    private void CloseSettingsPage()
+    {
+        SettingsPage.IsVisible = false;
+        Focus();
     }
 
     private async void LoadButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1916,11 +1943,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void PauseOnAlarmCheckBox_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    private void SettingsPage_OnPlaybackPreferencesChanged(object? sender, ReplayPlaybackPreferences preferences)
     {
         if (reviewSession is not null)
         {
-            var enabled = PauseOnAlarmCheckBox.IsChecked == true;
+            var enabled = preferences.PauseOnAlarmOrQaFail;
             reviewSession.Options = reviewSession.Options with { PauseOnAlarm = enabled, PauseOnQaFail = enabled };
         }
     }
@@ -1981,7 +2008,9 @@ public partial class MainWindow : Window
         reviewSession = new ReviewSession(
             diagnostics.Concat(markers.Select(MarkerDiagnostic)).ToArray(),
             logicalIndices,
-            new ReviewSessionOptions(PauseOnAlarmCheckBox.IsChecked == true, PauseOnAlarmCheckBox.IsChecked == true));
+            new ReviewSessionOptions(
+                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
+                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail));
         reviewSession.ImportState(previousState);
         RefreshReviewQueue();
     }
@@ -2193,7 +2222,9 @@ public partial class MainWindow : Window
                 reviewSession.ExportState(),
                 new Dictionary<string, bool>
                 {
-                    ["pauseOnAlarm"] = PauseOnAlarmCheckBox.IsChecked == true,
+                    ["pauseOnAlarm"] = SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
+                    ["pauseOnBreak"] = SettingsPage.PlaybackPreferences.PauseOnBreak,
+                    ["pauseOnAllBreak"] = SettingsPage.PlaybackPreferences.PauseOnAllBreak,
                     ["compressIdle"] = CompressIdleCheckBox.IsChecked == true,
                 },
                 DateTimeOffset.UtcNow);
@@ -2252,7 +2283,13 @@ public partial class MainWindow : Window
                 Path = resolvedById.GetValueOrDefault(reference.Id, reference.Path),
             }).ToArray(),
         }));
-        if (loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnAlarm")) PauseOnAlarmCheckBox.IsChecked = true;
+        var currentPreferences = SettingsPage.PlaybackPreferences;
+        SettingsPage.SetPlaybackPreferences(new ReplayPlaybackPreferences(
+            loaded.Document.VisibilityPreferences.TryGetValue("pauseOnAlarm", out var pauseOnAlarm)
+                ? pauseOnAlarm
+                : currentPreferences.PauseOnAlarmOrQaFail,
+            loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnBreak"),
+            loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnAllBreak")));
         if (loaded.Document.VisibilityPreferences.TryGetValue("compressIdle", out var compress)) CompressIdleCheckBox.IsChecked = compress;
         CreateReviewSession(baseDiagnostics);
         var unresolved = reviewSession?.ImportState(loaded.Document.ReviewStates) ?? [];
@@ -3301,6 +3338,11 @@ public partial class MainWindow : Window
         if (outputFullscreenActive && e.Key == Key.Escape)
         {
             ExitOutputFullscreen();
+            e.Handled = true;
+        }
+        else if (SettingsPage.IsVisible)
+        {
+            if (e.Key == Key.Escape) CloseSettingsPage();
             e.Handled = true;
         }
         else if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))

@@ -1,0 +1,156 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nvt.Replay.Avalonia.ViewModels"
+             x:Class="Nvt.Replay.Avalonia.Views.SettingsView"
+             Background="{DynamicResource WorkspaceBrush}">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.settingsSectionTitle">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.settingsSectionDescription">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Border.settingsRow">
+      <Setter Property="MinHeight" Value="54" />
+      <Setter Property="Padding" Value="0,9" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="RadioButton.settingsChoice">
+      <Setter Property="MinHeight" Value="58" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="Margin" Value="0,0,0,6" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource HeaderBrush}" />
+    </Style>
+    <Style Selector="RadioButton.settingsChoice:checked">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="72,*">
+    <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="24,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <StackPanel Spacing="2">
+          <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+          <TextBlock Text="Defaults and low-frequency preferences" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+        </StackPanel>
+        <Button x:Name="CloseSettingsButton" Grid.Column="1" Classes="canvasIcon" Content="&#xE711;" Click="CloseSettingsButton_OnClick" ToolTip.Tip="Close settings (Esc)" AutomationProperties.Name="Close settings" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="220,*">
+      <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+        <StackPanel Margin="24,28" Spacing="18">
+          <TextBlock Text="GENERAL" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock Text="PLAYBACK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+          <TextBlock Text="OUTPUT DEFAULTS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+          <TextBlock Text="SHORTCUTS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+          <TextBlock Text="PERFORMANCE" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+        </StackPanel>
+      </Border>
+
+      <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Width="760" MaxWidth="760" Margin="40,30,40,48" HorizontalAlignment="Left" Spacing="32">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="settingsSectionTitle" Text="General" />
+            <TextBlock Classes="settingsSectionDescription" Text="Appearance and window behavior are global; capture-specific panel settings stay in Paint." />
+            <Border Classes="settingsRow">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="Color theme" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="Switch between the dark and light engineering palettes." Classes="settingsSectionDescription" />
+                </StackPanel>
+                <Button x:Name="ThemeButton" Grid.Column="1" Classes="ghost" Content="Switch theme" Click="ThemeButton_OnClick" AutomationProperties.Name="Change color theme" />
+              </Grid>
+            </Border>
+            <Border Classes="settingsRow">
+              <CheckBox x:Name="StartMaximizedCheckBox" IsChecked="True" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" Content="Open the main window maximized" />
+            </Border>
+          </StackPanel>
+
+          <StackPanel Spacing="10">
+            <TextBlock Classes="settingsSectionTitle" Text="Playback" />
+            <TextBlock Classes="settingsSectionDescription" Text="Auto-pause rules apply during replay without occupying the Review queue." />
+            <Border Classes="settingsRow">
+              <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause on Alarm or QA Fail" IsChecked="True" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
+            </Border>
+            <Border Classes="settingsRow">
+              <CheckBox x:Name="PauseOnBreakCheckBox" Content="Pause on reported contact Break" IsChecked="False" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
+            </Border>
+            <Border Classes="settingsRow">
+              <CheckBox x:Name="PauseOnAllBreakCheckBox" Content="Pause on decoded All Break" IsChecked="False" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
+            </Border>
+          </StackPanel>
+
+          <StackPanel Spacing="10">
+            <TextBlock Classes="settingsSectionTitle" Text="Output defaults" />
+            <TextBlock Classes="settingsSectionDescription" Text="These are startup defaults only. Timing, speed, FPS, resolution and range remain adjustable on Output." />
+            <RadioButton x:Name="DefaultFramePacedRadioButton" Classes="settingsChoice" GroupName="DefaultOutputClock" IsChecked="True">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Frame-paced · 120 Hz" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                <TextBlock Text="Skip missing-record gaps while preserving original timestamps in the rendered frame." Classes="settingsSectionDescription" />
+              </StackPanel>
+            </RadioButton>
+            <RadioButton Classes="settingsChoice" GroupName="DefaultOutputClock">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Recorded timing" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                <TextBlock Text="Reproduce elapsed time between captured transactions." Classes="settingsSectionDescription" />
+              </StackPanel>
+            </RadioButton>
+          </StackPanel>
+
+          <StackPanel Spacing="10">
+            <TextBlock Classes="settingsSectionTitle" Text="Keyboard shortcuts" />
+            <TextBlock Classes="settingsSectionDescription" Text="The workspace keeps only the essential transport actions visible." />
+            <ItemsControl x:Name="SettingsShortcutModulesItemsControl">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ReplayShortcutModule">
+                  <Border Width="360" Margin="0,0,12,16" Padding="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                      <TextBlock Text="{Binding Description}" Classes="settingsSectionDescription" />
+                      <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ReplayShortcutDefinition">
+                            <Grid MinHeight="34" ColumnDefinitions="*,Auto">
+                              <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                              <Border Grid.Column="1" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8,3">
+                                <TextBlock Text="{Binding Gesture}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                              </Border>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <StackPanel Spacing="10">
+            <TextBlock Classes="settingsSectionTitle" Text="Performance" />
+            <TextBlock Classes="settingsSectionDescription" Text="Diagnostics are opt-in so normal replay remains quiet and uncluttered." />
+            <Border Classes="settingsRow">
+              <CheckBox x:Name="PerformanceOverlayCheckBox" Content="Show replay performance overlay" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
+            </Border>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

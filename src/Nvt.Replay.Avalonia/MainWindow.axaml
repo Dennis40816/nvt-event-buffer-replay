@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Nvt.Replay.Avalonia.ViewModels"
         xmlns:controls="using:Nvt.Replay.Avalonia.Controls"
+        xmlns:views="using:Nvt.Replay.Avalonia.Views"
         xmlns:rendering="using:Nvt.Replay.Rendering"
         x:Class="Nvt.Replay.Avalonia.MainWindow"
         Title="NVT Event Buffer Replay"
@@ -625,7 +626,7 @@
           <Button x:Name="LoadReviewButton" Grid.Column="6" Classes="headerIcon" Content="&#xE8E5;" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review" />
           <Button x:Name="ApplySidecarButton" Grid.Column="6" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
           <Button x:Name="ExportAnalysisButton" Grid.Column="8" Classes="headerIcon" Content="&#xE72D;" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview" />
-          <Button x:Name="ThemeButton" Grid.Column="10" Classes="canvasIcon" Content="&#xE706;" Click="ThemeButton_OnClick" ToolTip.Tip="Change color theme · commands remain available with Ctrl+K" AutomationProperties.Name="Change color theme" />
+          <Button x:Name="SettingsButton" Grid.Column="10" Classes="canvasIcon" Content="&#xE713;" Click="SettingsButton_OnClick" ToolTip.Tip="Settings" AutomationProperties.Name="Open settings" />
           <Button x:Name="CancelButton" Grid.Column="12" Classes="ghost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
           <Button x:Name="LoadButton" Grid.Column="12" Classes="primary" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
             <StackPanel Orientation="Horizontal" Spacing="7">
@@ -692,7 +693,6 @@
               <Button Classes="ghost" Content="Alarm" Tag="Alarms" Click="ReviewFilterButton_OnClick" />
               <Button Classes="ghost" Content="ASIL" Tag="Asil" Click="ReviewFilterButton_OnClick" />
             </StackPanel>
-            <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause replay on Alarm / QA Fail" IsChecked="True" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" IsCheckedChanged="PauseOnAlarmCheckBox_OnIsCheckedChanged" />
           </StackPanel>
           <ListBox x:Name="DiagnosticListBox" Grid.Row="2" SelectionChanged="DiagnosticListBox_OnSelectionChanged" AutomationProperties.Name="Review queue findings">
             <ListBox.ItemTemplate>
@@ -811,16 +811,14 @@
           <TabItem x:Name="PaintTab" Header="PAINT" IsEnabled="False">
             <Grid RowDefinitions="52,*">
                 <Border Grid.Row="0" Classes="paintSettingsBar">
-                  <Grid Margin="16,0" ColumnDefinitions="Auto,16,1,16,Auto,9,62,Auto,62,16,1,16,Auto,9,Auto,*" VerticalAlignment="Center">
-                    <TextBlock Text="Paint settings" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
-                    <Border Grid.Column="2" Classes="separator" />
-                    <TextBlock Grid.Column="4" Text="Panel resolution" Classes="fieldLabel" />
-                    <TextBox x:Name="PanelWidthTextBox" Grid.Column="6" Classes="panelSize" Width="62" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
-                    <TextBlock Grid.Column="7" Text="×" Margin="7,0" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                    <TextBox x:Name="PanelHeightTextBox" Grid.Column="8" Classes="panelSize" Width="62" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
-                    <Border Grid.Column="10" Classes="separator" />
-                    <TextBlock Grid.Column="12" Text="Point view" Classes="fieldLabel" />
-                    <ComboBox x:Name="PaintModeComboBox" Grid.Column="14" Classes="semanticSelect" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Choose host, report, or comparison points" AutomationProperties.Name="Point view">
+                  <Grid Margin="16,0" ColumnDefinitions="Auto,8,64,Auto,64,16,1,16,Auto,8,Auto,16,1,16,Auto,8,Auto,8,Auto,*" VerticalAlignment="Center">
+                    <TextBlock Text="Panel" Classes="fieldLabel" />
+                    <TextBox x:Name="PanelWidthTextBox" Grid.Column="2" Classes="panelSize" Width="64" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
+                    <TextBlock Grid.Column="3" Text="×" Margin="7,0" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <TextBox x:Name="PanelHeightTextBox" Grid.Column="4" Classes="panelSize" Width="64" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
+                    <Border Grid.Column="6" Classes="separator" />
+                    <TextBlock Grid.Column="8" Text="Point view" Classes="fieldLabel" />
+                    <ComboBox x:Name="PaintModeComboBox" Grid.Column="10" Classes="semanticSelect" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Choose host, report, or comparison points" AutomationProperties.Name="Point view">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectOption">
                           <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -835,7 +833,34 @@
                         </DataTemplate>
                       </ComboBox.SelectionBoxItemTemplate>
                     </ComboBox>
-                    <TextBlock Grid.Column="15" Text="Persistent replay configuration" Margin="18,0,0,0" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <Border Grid.Column="12" Classes="separator" />
+                    <TextBlock Grid.Column="14" Text="Trail" Classes="fieldLabel" />
+                    <ComboBox x:Name="TrailModeComboBox" Grid.Column="16" Classes="semanticSelect" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <Grid Width="218" Margin="2,4" RowDefinitions="Auto,Auto">
+                            <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12.5" Opacity="0.8" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                      <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DataTemplate>
+                      </ComboBox.SelectionBoxItemTemplate>
+                    </ComboBox>
+                    <StackPanel Grid.Column="18" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                      <TextBlock x:Name="TrailLengthLabel" Text="Length" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" IsVisible="False" VerticalAlignment="Center" />
+                      <ComboBox x:Name="TrailLengthComboBox" Classes="canvasControl" SelectedIndex="2" IsVisible="False" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
+                        <ComboBoxItem Content="2" Tag="2" />
+                        <ComboBoxItem Content="5" Tag="5" />
+                        <ComboBoxItem Content="10" Tag="10" />
+                        <ComboBoxItem Content="30" Tag="30" />
+                        <ComboBoxItem Content="60" Tag="60" />
+                        <ComboBoxItem Content="120" Tag="120" />
+                      </ComboBox>
+                    </StackPanel>
                   </Grid>
                 </Border>
 
@@ -845,34 +870,6 @@
                 </Border>
                 <StackPanel Margin="14" Spacing="7" VerticalAlignment="Top" HorizontalAlignment="Right">
                     <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                      <Grid Height="34">
-                      <ComboBox x:Name="TrailModeComboBox" Classes="canvasSemanticSelect" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
-                        <ComboBox.ItemTemplate>
-                          <DataTemplate x:DataType="vm:SelectOption">
-                            <Grid Width="218" Margin="2,4" RowDefinitions="Auto,Auto">
-                              <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                              <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12.5" Opacity="0.8" TextWrapping="Wrap" />
-                            </Grid>
-                          </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                        <ComboBox.SelectionBoxItemTemplate>
-                          <DataTemplate x:DataType="vm:SelectOption">
-                            <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                          </DataTemplate>
-                        </ComboBox.SelectionBoxItemTemplate>
-                      </ComboBox>
-                      <TextBlock Margin="11,0,0,0" Text="&#xE8AB;" FontFamily="Segoe Fluent Icons" FontSize="14" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False" />
-                      </Grid>
-                      <TextBlock x:Name="TrailLengthLabel" Text="Frames" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" IsVisible="False" VerticalAlignment="Center" />
-                      <ComboBox x:Name="TrailLengthComboBox" Classes="canvasControl" SelectedIndex="2" IsVisible="False" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
-                        <ComboBoxItem Content="2" Tag="2" />
-                        <ComboBoxItem Content="5" Tag="5" />
-                        <ComboBoxItem Content="10" Tag="10" />
-                        <ComboBoxItem Content="30" Tag="30" />
-                        <ComboBoxItem Content="60" Tag="60" />
-                        <ComboBoxItem Content="120" Tag="120" />
-                      </ComboBox>
-                      <Border Width="1" Height="18" Margin="5,0,2,0" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center" />
                       <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
                       <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
                       <ToggleButton x:Name="ReverseYToggleButton" Classes="canvasQuick" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
@@ -1446,7 +1443,6 @@
           </StackPanel>
 
           <StackPanel x:Name="TransportViewGroup" Grid.Column="6" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button x:Name="ShortcutHelpButton" Classes="canvasIcon" Content="&#xE765;" Click="CommandPaletteButton_OnClick" ToolTip.Tip="Keyboard shortcuts (Ctrl+K)" AutomationProperties.Name="Open keyboard shortcuts" />
             <CheckBox x:Name="CompressIdleCheckBox" Content="Compress idle" IsChecked="True" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" IsCheckedChanged="ReplayTimingOption_OnChanged" />
           </StackPanel>
         </Grid>
@@ -1526,6 +1522,8 @@
         </Border>
       </Grid>
     </Border>
+
+    <views:SettingsView x:Name="SettingsPage" Grid.Row="1" Grid.RowSpan="2" IsVisible="False" ZIndex="90" AutomationProperties.Name="Settings page" />
 
     <Border x:Name="CommandPaletteOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="100" Background="{DynamicResource OverlayBrush}" KeyDown="CommandPaletteOverlay_OnKeyDown" AutomationProperties.Name="Command palette">
       <Border Width="720" MaxHeight="680" Padding="24" CornerRadius="8" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">

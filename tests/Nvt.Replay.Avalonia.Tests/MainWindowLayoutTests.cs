@@ -15,6 +15,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nvt.Replay.Avalonia.Controls;
 using Nvt.Replay.Avalonia.ViewModels;
+using Nvt.Replay.Avalonia.Views;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Rendering;
@@ -788,7 +789,7 @@ public sealed class MainWindowLayoutTests
             var cycle = new[] { "0.01", "10", "0.05", "max", "0.5", "5" }
                 .Select(tag => speedItems.Single(item => string.Equals(item.Tag?.ToString(), tag, StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
-            Required<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked = false;
+            SettingsControl<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked = false;
             Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
             var play = Required<Button>(window, "PlayPauseButton");
             play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -1195,6 +1196,38 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public void Settings_page_owns_low_frequency_preferences_without_removing_live_page_controls()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var settings = Required<Control>(window, "SettingsPage");
+            Assert.False(settings.IsVisible);
+            Required<Button>(window, "SettingsButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(settings.IsVisible);
+            Assert.True(SettingsControl<ItemsControl>(window, "SettingsShortcutModulesItemsControl").ItemCount > 0);
+            Assert.True(SettingsControl<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked);
+            Assert.True(SettingsControl<RadioButton>(window, "DefaultFramePacedRadioButton").IsChecked);
+            Assert.NotNull(Required<ComboBox>(window, "PaintModeComboBox"));
+            Assert.NotNull(Required<ComboBox>(window, "TrailModeComboBox"));
+            Assert.NotNull(Required<ComboBox>(window, "OutputClockComboBox"));
+            Assert.NotNull(Required<ComboBox>(window, "OutputFrameRateComboBox"));
+            Assert.Null(window.FindControl<Button>("ShortcutHelpButton"));
+
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.None, null);
+            window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.None, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(settings.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Theme_toggle_preserves_the_capture_status_summary()
     {
         var window = ShowWindow();
@@ -1206,7 +1239,8 @@ public sealed class MainWindowLayoutTests
             var status = Required<TextBlock>(window, "SessionStatusText");
             var expected = status.Text;
 
-            Required<Button>(window, "ThemeButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Required<Button>(window, "SettingsButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            SettingsControl<Button>(window, "ThemeButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
             Assert.Equal(expected, status.Text);
         }
@@ -1306,6 +1340,10 @@ public sealed class MainWindowLayoutTests
 
     private static T Required<T>(Control root, string name) where T : Control =>
         root.FindControl<T>(name) ?? throw new InvalidOperationException($"Missing control '{name}'.");
+
+    private static T SettingsControl<T>(MainWindow window, string name) where T : Control =>
+        Required<SettingsView>(window, "SettingsPage").FindControl<T>(name) ??
+        throw new InvalidOperationException($"Missing Settings control '{name}'.");
 
     private static async Task WaitUntilAsync(Func<bool> predicate, TimeSpan? waitTimeout = null)
     {
