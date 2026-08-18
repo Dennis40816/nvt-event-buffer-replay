@@ -66,6 +66,16 @@ public sealed record ReplayExportResult(
     TimeSpan Duration,
     string? Warning);
 
+public sealed record ReplayExportProgress(
+    int CompletedFrames,
+    int TotalFrames,
+    string Stage)
+{
+    public double Percent => TotalFrames == 0
+        ? 0
+        : Math.Clamp(CompletedFrames * 100d / TotalFrames, 0, 100);
+}
+
 public static class ReplayFramePlan
 {
     public static IReadOnlyList<ReplayFramePlanEntry> Build(ITouchReplaySession replay, ReplayExportOptions options)
@@ -158,10 +168,13 @@ public sealed class ReplayRangeExporter
         ITouchReplaySession replay,
         Func<int, ReplayScene> sceneFactory,
         ReplayExportOptions options,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<ReplayExportProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(sceneFactory);
         var plan = ReplayFramePlan.Build(replay, options);
+        var totalFrames = ReplayFramePlan.OutputFrameCount(plan);
+        progress?.Report(new ReplayExportProgress(0, totalFrames, "Preparing encoder"));
         var fullOutputPath = Path.GetFullPath(options.OutputPath);
         var outputDirectory = Path.GetDirectoryName(fullOutputPath) ?? throw new InvalidOperationException("Output path has no parent directory.");
         Directory.CreateDirectory(outputDirectory);
@@ -175,7 +188,7 @@ public sealed class ReplayRangeExporter
             if (File.Exists(manifestPath)) throw new IOException($"Output manifest already exists and will not be overwritten: {manifestPath}");
             try
             {
-                return await EncodeMp4Async(replay, sceneFactory, options, plan, encoder, fullOutputPath, manifestPath, cancellationToken);
+                return await EncodeMp4Async(replay, sceneFactory, options, plan, encoder, fullOutputPath, manifestPath, cancellationToken, progress);
             }
             catch (OperationCanceledException)
             {
@@ -190,7 +203,7 @@ public sealed class ReplayRangeExporter
         {
             warning = "No reviewed FFmpeg executable was found; exported PNG sequence instead.";
         }
-        return await ExportPngSequenceAsync(replay, sceneFactory, options, plan, fullOutputPath + ".frames", warning, cancellationToken);
+        return await ExportPngSequenceAsync(replay, sceneFactory, options, plan, fullOutputPath + ".frames", warning, cancellationToken, progress);
     }
 
     private static async Task<ReplayExportResult> EncodeMp4Async(
@@ -201,7 +214,8 @@ public sealed class ReplayRangeExporter
         string encoder,
         string outputPath,
         string manifestPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<ReplayExportProgress>? progress)
     {
         var temporaryPath = Path.Combine(Path.GetDirectoryName(outputPath)!, $".{Path.GetFileName(outputPath)}.{Guid.NewGuid():N}.tmp.mp4");
         using var process = new Process
@@ -229,15 +243,25 @@ public sealed class ReplayRangeExporter
             if (!process.Start()) throw new InvalidOperationException("FFmpeg did not start.");
             started = true;
             var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+            var totalFrames = ReplayFramePlan.OutputFrameCount(plan);
+            var completedFrames = 0;
+            var progressStep = Math.Max(1, totalFrames / 200);
+            progress?.Report(new ReplayExportProgress(0, totalFrames, "Encoding MP4"));
             foreach (var entry in plan)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var rgb = ReplayFrameRenderer.RenderRgb(sceneFactory(entry.LogicalIndex), options.Width, options.Height, options.ResolvedRenderSettings);
                 for (var repeat = 0; repeat < entry.RepeatCount; repeat++)
+                {
                     await process.StandardInput.BaseStream.WriteAsync(rgb, cancellationToken);
+                    completedFrames++;
+                    if (completedFrames == totalFrames || completedFrames % progressStep == 0)
+                        progress?.Report(new ReplayExportProgress(completedFrames, totalFrames, "Encoding MP4"));
+                }
             }
             await process.StandardInput.BaseStream.FlushAsync(cancellationToken);
             process.StandardInput.Close();
+            progress?.Report(new ReplayExportProgress(totalFrames, totalFrames, "Finalizing MP4"));
             await process.WaitForExitAsync(cancellationToken);
             var error = await stderr;
             if (process.ExitCode != 0 || !File.Exists(temporaryPath))
@@ -267,7 +291,8 @@ public sealed class ReplayRangeExporter
         IReadOnlyList<ReplayFramePlanEntry> plan,
         string outputDirectory,
         string warning,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<ReplayExportProgress>? progress)
     {
         if (Directory.Exists(outputDirectory) || File.Exists(outputDirectory))
             throw new IOException($"Fallback output already exists and will not be overwritten: {outputDirectory}");
@@ -275,6 +300,9 @@ public sealed class ReplayRangeExporter
         var temporaryDirectory = Path.Combine(parent, $".{Path.GetFileName(outputDirectory)}.{Guid.NewGuid():N}.tmp");
         Directory.CreateDirectory(temporaryDirectory);
         var outputIndex = 0;
+        var totalFrames = ReplayFramePlan.OutputFrameCount(plan);
+        var progressStep = Math.Max(1, totalFrames / 200);
+        progress?.Report(new ReplayExportProgress(0, totalFrames, "Writing PNG fallback"));
         try
         {
             foreach (var entry in plan)
@@ -285,6 +313,8 @@ public sealed class ReplayRangeExporter
                 {
                     var path = Path.Combine(temporaryDirectory, $"frame-{outputIndex++:D8}.png");
                     await AtomicOutput.WriteAsync(path, (stream, token) => DeterministicPng.WriteRgbAsync(stream, rgb, options.Width, options.Height, token), cancellationToken);
+                    if (outputIndex == totalFrames || outputIndex % progressStep == 0)
+                        progress?.Report(new ReplayExportProgress(outputIndex, totalFrames, "Writing PNG fallback"));
                 }
             }
             var temporaryManifest = Path.Combine(temporaryDirectory, "export-manifest.json");

@@ -95,6 +95,28 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public async Task Export_reports_frame_progress_through_fallback_completion()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var updates = new List<ReplayExportProgress>();
+        var output = Path.Combine(directory, "progress.mp4");
+
+        var result = await new ReplayRangeExporter().ExportAsync(
+            replay,
+            index => ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent),
+            Options(output, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe")),
+            progress: new InlineProgress<ReplayExportProgress>(updates.Add));
+
+        Assert.Equal(ReplayExportKind.PngSequence, result.Kind);
+        Assert.NotEmpty(updates);
+        Assert.Equal("Preparing encoder", updates[0].Stage);
+        Assert.Contains(updates, item => item.Stage == "Writing PNG fallback");
+        Assert.Equal(updates[^1].TotalFrames, updates[^1].CompletedFrames);
+        Assert.Equal(100, updates[^1].Percent);
+    }
+
+    [Fact]
     public void Render_settings_apply_theme_grid_and_legend_to_the_same_export_renderer()
     {
         var replay = Replay(TimeSpan.FromMilliseconds(10));
@@ -289,6 +311,11 @@ public sealed class ReplayExportTests : IDisposable
         new FakeSnapshot(index, source, new ReplayTimelineEntry(index, time, TimeSpan.FromMilliseconds(index * 10), time, index == 0 ? TimeSpan.Zero : time, false, false), [contact]);
 
     private static string Hash(string path) => Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(path)));
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
+    }
 
     private sealed record FakeSnapshot(
         int LogicalIndex,

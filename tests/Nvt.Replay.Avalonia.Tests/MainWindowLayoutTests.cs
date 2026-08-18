@@ -163,6 +163,9 @@ public sealed class MainWindowLayoutTests
             Assert.Contains(expectedPaintResolution, Required<ComboBoxItem>(window, "OutputPanelResolutionItem").Content?.ToString());
             Assert.False(Required<Button>(window, "PlayPauseButton").IsEnabled);
             Assert.True(Required<Button>(window, "OutputPreviewPlayPauseButton").IsEnabled);
+            Assert.True(Required<ToggleButton>(window, "OutputPreviewRepeatToggleButton").IsChecked);
+            Assert.False(Required<Border>(window, "OutputExportWarningPanel").IsVisible);
+            Assert.False(Required<Border>(window, "OutputExportActivityPanel").IsVisible);
             var sourceLines = Required<TextBlock>(window, "OutputSourceText").Text!.Split('\n');
             Assert.Equal(32, sourceLines[^2].Length);
             Assert.Equal(32, sourceLines[^1].Length);
@@ -225,6 +228,14 @@ public sealed class MainWindowLayoutTests
         {
             window.Close();
         }
+    }
+
+    [Fact]
+    public void Long_MP4_export_gate_uses_frame_count_or_video_duration()
+    {
+        Assert.False(MainWindow.RequiresLongVideoExport(9_999, TimeSpan.FromSeconds(119)));
+        Assert.True(MainWindow.RequiresLongVideoExport(10_000, TimeSpan.FromSeconds(10)));
+        Assert.True(MainWindow.RequiresLongVideoExport(100, TimeSpan.FromMinutes(2)));
     }
 
     [AvaloniaFact]
@@ -540,6 +551,18 @@ public sealed class MainWindowLayoutTests
             Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
             Assert.False(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
             Assert.False(Required<Border>(window, "OutputPackagePanel").IsVisible);
+            Assert.True(Required<ToggleButton>(window, "OutputPreviewRepeatToggleButton").IsChecked);
+
+            var videoPanel = Required<Grid>(window, "OutputVideoPanel");
+            var settingsRail = Required<Border>(window, "OutputSettingsRailBorder");
+            var settingsScroller = Required<ScrollViewer>(window, "OutputSettingsScrollViewer");
+            var settingsLeft = BoundsInside(settingsRail, videoPanel).Left;
+            Assert.True(BoundsInside(Required<Button>(window, "OutputPreviewPlayPauseButton"), videoPanel).Right < settingsLeft);
+            Assert.True(BoundsInside(Required<Button>(window, "OutputPreviewFullscreenButton"), videoPanel).Right < settingsLeft);
+            var clockBounds = BoundsInside(Required<ComboBox>(window, "OutputClockComboBox"), settingsScroller);
+            Assert.True(
+                clockBounds.Right <= settingsScroller.Bounds.Width - 12,
+                $"Clock selector right edge {clockBounds.Right:0.##} should leave a scrollbar gutter inside {settingsScroller.Bounds.Width:0.##} px.");
 
             outputContent.SelectedIndex = 1;
             Assert.False(Required<Grid>(window, "OutputVideoPanel").IsVisible);
