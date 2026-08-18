@@ -540,7 +540,12 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="104,*,160">
+  <Grid x:Name="RootLayoutGrid">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="104" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="160" />
+    </Grid.RowDefinitions>
     <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid RowDefinitions="56,47,1">
         <Grid Grid.Row="0" Margin="16,0" ColumnDefinitions="Auto,18,300,*,Auto,4,Auto,4,Auto,8,Auto,8,Auto">
@@ -891,9 +896,23 @@
                       <Border Grid.Row="2" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
                         <Grid MinHeight="300">
                           <controls:ReplayVideoPreviewSurface x:Name="OutputVideoPreview" AutomationProperties.Name="MP4 replay preview" />
+                          <Button x:Name="OutputPreviewFullscreenButton"
+                                  Classes="canvasIcon"
+                                  Width="36"
+                                  Height="36"
+                                  Margin="12"
+                                  Padding="0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Bottom"
+                                  Content="&#xE740;"
+                                  FontFamily="Segoe Fluent Icons"
+                                  FontSize="17"
+                                  Click="OutputPreviewFullscreenButton_OnClick"
+                                  ToolTip.Tip="Preview MP4 full screen"
+                                  AutomationProperties.Name="Preview MP4 full screen" />
                         </Grid>
                       </Border>
-                      <Grid Grid.Row="4" RowDefinitions="Auto,7,36" ColumnDefinitions="Auto,14,*,Auto">
+                      <Grid Grid.Row="4" RowDefinitions="Auto,7,48" ColumnDefinitions="Auto,14,*,Auto">
                         <Button x:Name="OutputPreviewPlayPauseButton" Grid.RowSpan="3" Classes="transportPlay" MinWidth="92" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" AutomationProperties.Name="Play MP4 preview" />
                         <TextBlock x:Name="OutputPreviewClockText" Grid.Column="2" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" VerticalAlignment="Center" />
                         <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="3" Text="output 0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
@@ -901,7 +920,7 @@
                                                              Grid.Row="2"
                                                              Grid.Column="2"
                                                              Grid.ColumnSpan="2"
-                                                             Height="36"
+                                                             Height="48"
                                                              TrackBrush="{DynamicResource CanvasTextBrush}"
                                                              HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
                                                              ProgressBrush="{DynamicResource AccentBrush}"
@@ -909,6 +928,7 @@
                                                              LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
                                                              LabelTextBrush="{DynamicResource PrimaryTextBrush}"
                                                              SeekRequested="OutputVideoTimeline_OnSeekRequested"
+                                                             RangeChanged="OutputVideoTimeline_OnRangeChanged"
                                                              AutomationProperties.Name="Scrub MP4 preview time" />
                       </Grid>
                       <Grid Grid.Row="6" ColumnDefinitions="*,12,*,12,*">
@@ -950,12 +970,16 @@
                           <TextBox x:Name="OutputCustomSpeedTextBox" Grid.Column="2" Classes="panelSize" Width="86" Text="1.00" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Speed from 0.01× to 100×" AutomationProperties.Name="Customized MP4 speed" />
                         </Grid>
                         <TextBlock Grid.Row="4" Text="Frame rate" Classes="fieldLabel" />
-                        <ComboBox x:Name="OutputFrameRateComboBox" Grid.Row="4" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 frame rate">
-                          <ComboBoxItem Content="24 FPS" Tag="24" />
-                          <ComboBoxItem Content="30 FPS" Tag="30" />
-                          <ComboBoxItem Content="60 FPS" Tag="60" />
-                          <ComboBoxItem Content="120 FPS" Tag="120" />
-                        </ComboBox>
+                        <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="Auto,8,*">
+                          <ComboBox x:Name="OutputFrameRateComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 frame rate">
+                            <ComboBoxItem Content="24 FPS" Tag="24" />
+                            <ComboBoxItem Content="30 FPS" Tag="30" />
+                            <ComboBoxItem Content="60 FPS" Tag="60" />
+                            <ComboBoxItem Content="120 FPS" Tag="120" />
+                            <ComboBoxItem Content="Customized" Tag="custom" />
+                          </ComboBox>
+                          <TextBox x:Name="OutputCustomFrameRateTextBox" Grid.Column="2" Classes="panelSize" Width="86" Text="180" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Output frame rate from 1 to 240 FPS" AutomationProperties.Name="Customized MP4 frame rate" />
+                        </Grid>
                         <TextBlock Grid.Row="6" Text="Resolution" Classes="fieldLabel" />
                         <ComboBox x:Name="OutputResolutionComboBox" Grid.Row="6" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
                           <ComboBoxItem Content="1280 × 720" Tag="1280x720" />
@@ -976,24 +1000,51 @@
                 </Grid>
 
                 <Border x:Name="OutputHeatmapPanel" IsVisible="False" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
-                  <Grid RowDefinitions="Auto,14,*,14,Auto">
+                  <Grid RowDefinitions="Auto,10,36,12,*,12,Auto">
                     <Grid ColumnDefinitions="*,Auto">
                       <StackPanel Spacing="4">
                         <TextBlock Text="Touch density" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                        <TextBlock Text="Circle area represents samples; opacity represents density relative to the peak." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
+                        <TextBlock Text="Circle area represents samples; color moves from low-density blue to peak red." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
                       </StackPanel>
                       <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
                     </Grid>
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,8,Auto,18,Auto,8,Auto,4,Auto,*" VerticalAlignment="Center">
+                      <TextBlock Text="Show" Classes="fieldLabel" />
+                      <ComboBox x:Name="HeatmapModeComboBox" Grid.Column="2" Classes="canvasControl" SelectionChanged="HeatmapSetting_OnSelectionChanged" AutomationProperties.Name="Heatmap density mode">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate x:DataType="vm:SelectOption">
+                            <Grid Width="250" Margin="2,4" RowDefinitions="Auto,Auto">
+                              <TextBlock Text="{Binding Label}" FontSize="13.5" FontWeight="SemiBold" />
+                              <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12" Opacity="0.78" TextWrapping="Wrap" />
+                            </Grid>
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <ComboBox.SelectionBoxItemTemplate>
+                          <DataTemplate x:DataType="vm:SelectOption">
+                            <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                          </DataTemplate>
+                        </ComboBox.SelectionBoxItemTemplate>
+                      </ComboBox>
+                      <Grid x:Name="HeatmapRepeatedThresholdPanel" Grid.Column="4" ColumnDefinitions="Auto,6,72" IsVisible="False">
+                        <TextBlock Text="Minimum N" Classes="fieldLabel" />
+                        <TextBox x:Name="HeatmapRepeatedThresholdTextBox" Grid.Column="2" Classes="panelSize" Width="72" Text="5" KeyDown="HeatmapSetting_OnKeyDown" LostFocus="HeatmapSetting_OnLostFocus" ToolTip.Tip="Only show grid cells containing at least N samples" AutomationProperties.Name="Repeated hotspot minimum count" />
+                      </Grid>
+                      <TextBlock Grid.Column="6" Text="Show values ≥" Classes="fieldLabel" />
+                      <TextBox x:Name="HeatmapLabelThresholdTextBox" Grid.Column="8" Classes="panelSize" Width="64" Text="65" KeyDown="HeatmapSetting_OnKeyDown" LostFocus="HeatmapSetting_OnLostFocus" ToolTip.Tip="Show a count when a cell reaches this percentage of the visible peak" AutomationProperties.Name="Heatmap value label threshold percent" />
+                      <TextBlock Grid.Column="9" Margin="6,0,0,0" Text="% of peak" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                    </Grid>
                     <controls:AnalysisHeatmapSurface x:Name="AnalysisHeatmapPreview"
-                                                     Grid.Row="2"
+                                                     Grid.Row="4"
                                                      MinHeight="190"
                                                      AccentBrush="{DynamicResource AccentBrush}"
                                                      GridBrush="{DynamicResource StrongBorderBrush}"
                                                      TextBrush="{DynamicResource CanvasMutedTextBrush}"
+                                                     ToolTipSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
+                                                     ToolTipBorderBrush="{DynamicResource AccentBorderBrush}"
                                                      AutomationProperties.Name="Output hotspot preview" />
-                    <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
+                    <Grid Grid.Row="6" ColumnDefinitions="*,Auto">
                       <TextBlock x:Name="HeatmapRangeText" Text="Selected replay range" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
-                      <TextBlock Grid.Column="1" Text="Origin top-left · active reported contacts only" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" />
+                      <TextBlock Grid.Column="1" Text="Hover a hotspot for coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" />
                     </Grid>
                   </Grid>
                 </Border>
@@ -1032,7 +1083,7 @@
 
       <GridSplitter x:Name="InspectorGridSplitter" Grid.Column="2" Classes="inspectorSplitter" Width="4" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
 
-      <Border Grid.Column="3" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
+      <Border x:Name="InspectorRailBorder" Grid.Column="3" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
         <Grid RowDefinitions="46,*">
           <Grid Grid.Row="0" Margin="8,0,8,0" ColumnDefinitions="Auto,8,*,Auto">
             <Button x:Name="InspectorRailToggleButton" Classes="canvasIcon" Content="&#xE76C;" Click="InspectorRailToggleButton_OnClick" AutomationProperties.Name="Collapse inspector" />
@@ -1249,7 +1300,7 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
+    <Border x:Name="ReplayTransportBorder" Grid.Row="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
       <Grid Margin="16,8" RowDefinitions="40,62,24">
         <Grid x:Name="TimelineControlBar" Grid.Row="0" ColumnDefinitions="Auto,18,Auto,18,Auto,*,Auto">
           <StackPanel x:Name="TransportPlaybackGroup" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
@@ -1329,6 +1380,26 @@
           <TextBlock x:Name="LoopRangeText" Grid.Column="2" Text="Loop: off" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Bottom" />
           <TextBlock x:Name="ReplayEndClockText" Grid.Column="4" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Bottom" />
         </Grid>
+      </Grid>
+    </Border>
+
+    <Border x:Name="OutputFullscreenOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="90" Background="#FF000000" KeyDown="OutputFullscreenOverlay_OnKeyDown" AutomationProperties.Name="Full-screen MP4 output preview">
+      <Grid>
+        <controls:ReplayVideoPreviewSurface x:Name="OutputFullscreenVideoPreview" Margin="18" AutomationProperties.Name="Full-screen MP4 replay preview" />
+        <Button x:Name="OutputFullscreenExitButton"
+                Classes="canvasIcon"
+                Width="42"
+                Height="42"
+                Margin="22"
+                Padding="0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Content="&#xE73F;"
+                FontFamily="Segoe Fluent Icons"
+                FontSize="19"
+                Click="OutputFullscreenExitButton_OnClick"
+                ToolTip.Tip="Exit full-screen preview (Esc)"
+                AutomationProperties.Name="Exit full-screen MP4 preview" />
       </Grid>
     </Border>
 

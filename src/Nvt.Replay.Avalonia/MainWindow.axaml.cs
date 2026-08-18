@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -56,6 +57,11 @@ public partial class MainWindow : Window
     private int outputVideoFrameRate = 30;
     private double outputVideoSpeed = 1;
     private ReplayExportClock outputVideoClock = ReplayExportClock.Frame;
+    private CaptureAnalysisReport? currentOutputReport;
+    private int heatmapMinimumCount = 5;
+    private double heatmapLabelThresholdRatio = 0.65;
+    private bool outputFullscreenActive;
+    private WindowState outputFullscreenPreviousWindowState = WindowState.Normal;
     private int currentLogicalIndex = -1;
     private int? loopIn;
     private int? loopOut;
@@ -142,8 +148,14 @@ public partial class MainWindow : Window
             new("Heatmap", "Inspect and export coordinate density", "heatmap"),
             new("Data package", "Export linked QA and automation files", "package"),
         };
+        HeatmapModeComboBox.ItemsSource = new SelectOption[]
+        {
+            new("All recorded points", "Show every occupied cell in the selected frame range", "all"),
+            new("Repeated hotspots ≥ N", "Only show cells whose sample count reaches the chosen minimum", "repeated"),
+        };
         configuringOutputSettings = true;
         OutputContentComboBox.SelectedIndex = 0;
+        HeatmapModeComboBox.SelectedIndex = 0;
         OutputClockComboBox.SelectedIndex = 1;
         OutputSpeedComboBox.SelectedIndex = 2;
         OutputFrameRateComboBox.SelectedIndex = 1;
@@ -167,7 +179,8 @@ public partial class MainWindow : Window
             OutputClockComboBox,
             OutputSpeedComboBox,
             OutputFrameRateComboBox,
-            OutputResolutionComboBox);
+            OutputResolutionComboBox,
+            HeatmapModeComboBox);
         ApplyShortcutToolTips();
         PaintSurface.LegendCollapsedChanged += PaintSurface_OnLegendCollapsedChanged;
         RegisterActivitySurface.ActivitySelected += RegisterActivitySurface_OnActivitySelected;
@@ -197,7 +210,6 @@ public partial class MainWindow : Window
         if (outputWorkspaceActive)
         {
             SetReviewRailCollapsed(true);
-            SetInspectorRailCollapsed(true);
             return;
         }
         // Keep an empty review queue out of the workspace. Actionable findings open
@@ -305,6 +317,27 @@ public partial class MainWindow : Window
         InspectorCollapsedSummary.IsVisible = collapsed;
         InspectorRailToggleButton.Content = collapsed ? "\uE76B" : "\uE76C";
         ToolTip.SetTip(InspectorRailToggleButton, collapsed ? "Open inspector" : "Collapse inspector");
+    }
+
+    private void SetOutputWorkspaceChrome(bool active)
+    {
+        ReplayTransportBorder.IsVisible = !active;
+        RootLayoutGrid.RowDefinitions[2].Height = active ? new GridLength(0) : new GridLength(160);
+        InspectorRailBorder.IsVisible = !active;
+        InspectorGridSplitter.IsVisible = !active && !inspectorRailCollapsed;
+        var inspectorColumn = WorkspaceShellGrid.ColumnDefinitions[3];
+        if (active)
+        {
+            if (inspectorColumn.ActualWidth >= MinimumInspectorRailWidth)
+                expandedInspectorRailWidth = Math.Clamp(inspectorColumn.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
+            inspectorColumn.MinWidth = 0;
+            inspectorColumn.MaxWidth = 0;
+            inspectorColumn.Width = new GridLength(0);
+        }
+        else
+        {
+            SetInspectorRailCollapsed(inspectorRailUserPreference ?? Bounds.Width < 1240);
+        }
     }
 
     private void Application_OnActualThemeVariantChanged(object? sender, EventArgs e)
@@ -691,7 +724,46 @@ public partial class MainWindow : Window
         OutputContentDescriptionText.Text = option.Description;
         AutomationProperties.SetName(ExportSelectedOutputButton, ExportSelectedOutputButton.Content?.ToString());
         if (!mp4) StopOutputVideoPreviewPlayback();
+        if (heatmap) RefreshHeatmapPresentation();
     }
+
+    private void HeatmapSetting_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (HeatmapRepeatedThresholdPanel is null) return;
+        HeatmapRepeatedThresholdPanel.IsVisible = SelectedHeatmapMode() == "repeated";
+        ApplyHeatmapSettings();
+    }
+
+    private void HeatmapSetting_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        ApplyHeatmapSettings();
+        e.Handled = true;
+    }
+
+    private void HeatmapSetting_OnLostFocus(object? sender, RoutedEventArgs e) => ApplyHeatmapSettings();
+
+    private void ApplyHeatmapSettings()
+    {
+        if (!int.TryParse(HeatmapRepeatedThresholdTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var minimumCount) ||
+            minimumCount is < 1 or > 1_000_000)
+        {
+            SessionStatusText.Text = "Repeated hotspot minimum N must be between 1 and 1,000,000.";
+            return;
+        }
+        if (!double.TryParse(HeatmapLabelThresholdTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var labelPercent) ||
+            labelPercent is < 0 or > 100)
+        {
+            SessionStatusText.Text = "Heatmap value label threshold must be between 0% and 100%.";
+            return;
+        }
+        heatmapMinimumCount = minimumCount;
+        heatmapLabelThresholdRatio = labelPercent / 100d;
+        RefreshHeatmapPresentation();
+    }
+
+    private string SelectedHeatmapMode() =>
+        (HeatmapModeComboBox.SelectedItem as SelectOption)?.Value ?? "all";
 
     private void ExportSelectedOutputButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -727,8 +799,11 @@ public partial class MainWindow : Window
             var report = await Task.Run(
                 () => BuildOutputReport(SelectedOutputRange(), cancellationToken),
                 cancellationToken);
-            await new HeatmapPngWriter().WriteAsync(path, report, cancellationToken);
-            AnalysisOutputText.Text = $"Heatmap PNG · {path}\n{report.Hotspot.SampleCount:N0} samples · range {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0}";
+            currentOutputReport = report;
+            RefreshHeatmapPresentation();
+            await WriteCurrentHeatmapPreviewAsync(path, cancellationToken);
+            var mode = SelectedHeatmapMode() == "repeated" ? $"repeated N≥{heatmapMinimumCount:N0}" : "all recorded points";
+            AnalysisOutputText.Text = $"Heatmap PNG · {path}\n{AnalysisHeatmapPreview.VisibleSampleCount:N0} visible samples · {mode} · range {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0}";
             SessionStatusText.Text = "Heatmap PNG exported";
         }
         catch (OperationCanceledException)
@@ -743,6 +818,24 @@ public partial class MainWindow : Window
         {
             SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
+    }
+
+    private async Task WriteCurrentHeatmapPreviewAsync(string path, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        AnalysisHeatmapPreview.ClearHover();
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+        var width = Math.Max(640, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Width));
+        var height = Math.Max(360, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Height));
+        using var bitmap = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96, 96));
+        bitmap.Render(AnalysisHeatmapPreview);
+        await using var memory = new MemoryStream();
+        bitmap.Save(memory, PngBitmapEncoderOptions.Default);
+        var png = memory.ToArray();
+        await AtomicOutput.WriteAsync(
+            path,
+            (stream, token) => stream.WriteAsync(png, token).AsTask(),
+            cancellationToken);
     }
 
     private async void ExportAnalysisButton_OnClick(object? sender, RoutedEventArgs e)
@@ -893,8 +986,14 @@ public partial class MainWindow : Window
         if (speedTag != "custom" && double.TryParse(speedTag, NumberStyles.Float, CultureInfo.InvariantCulture, out var speed))
             outputVideoSpeed = speed;
 
-        if (int.TryParse(SelectedTag(OutputFrameRateComboBox), NumberStyles.Integer, CultureInfo.InvariantCulture, out var frameRate))
+        var frameRateTag = SelectedTag(OutputFrameRateComboBox);
+        OutputCustomFrameRateTextBox.IsVisible = frameRateTag == "custom";
+        if (int.TryParse(frameRateTag, NumberStyles.Integer, CultureInfo.InvariantCulture, out var frameRate))
             outputVideoFrameRate = frameRate;
+        else if (frameRateTag == "custom" &&
+                 int.TryParse(OutputCustomFrameRateTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var customFrameRate) &&
+                 customFrameRate is >= 1 and <= 240)
+            outputVideoFrameRate = customFrameRate;
 
         var resolutionTag = SelectedTag(OutputResolutionComboBox);
         var customResolution = resolutionTag == "custom";
@@ -933,6 +1032,18 @@ public partial class MainWindow : Window
                 return;
             }
             outputVideoSpeed = speed;
+        }
+
+        if (OutputFrameRateComboBox.SelectedItem is ComboBoxItem frameRateItem &&
+            string.Equals(frameRateItem.Tag?.ToString(), "custom", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!int.TryParse(OutputCustomFrameRateTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var frameRate) ||
+                frameRate is < 1 or > 240)
+            {
+                SessionStatusText.Text = "MP4 frame rate must be between 1 and 240 FPS.";
+                return;
+            }
+            outputVideoFrameRate = frameRate;
         }
 
         if (OutputResolutionComboBox.SelectedItem is ComboBoxItem resolutionItem &&
@@ -981,14 +1092,15 @@ public partial class MainWindow : Window
         {
             StopPlayback();
             SetSourceTransportEnabled(false);
-            TimelineStatusText.Text = "Output preview active · use Preview above · drag Loop handles to change the export range";
+            SetOutputWorkspaceChrome(true);
             SetReviewRailCollapsed(true);
-            SetInspectorRailCollapsed(true);
             await RefreshOutputPreviewAsync();
         }
         else
         {
+            ExitOutputFullscreen();
             StopOutputVideoPreviewPlayback();
+            SetOutputWorkspaceChrome(false);
             SetSourceTransportEnabled(true);
             if (replaySession is { Count: > 0 })
                 TimelineStatusText.Text = "Paused · Space play/pause · ←/→ step · drag Loop handles to set range";
@@ -1091,6 +1203,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
+            currentOutputReport = null;
             AnalysisSummaryText.Text = "Output preview unavailable";
             OutputHotspotText.Text = exception.Message;
             AnalysisHeatmapPreview.Show(null);
@@ -1101,10 +1214,10 @@ public partial class MainWindow : Window
     private void ApplyOutputPreview(CaptureAnalysisReport report)
     {
         if (session is null || decodeConfiguration is null) return;
+        currentOutputReport = report;
         var range = report.Manifest.Range;
         var clockIsFrame = outputVideoClock == ReplayExportClock.Frame;
         var clockName = clockIsFrame ? "TP Frame 120 Hz" : "Recorded";
-        var peak = report.Hotspot.Counts.Count == 0 ? 0 : report.Hotspot.Counts.Max();
         var profile = string.IsNullOrWhiteSpace(decodeConfiguration.Desay97Profile)
             ? string.Empty
             : $" / {decodeConfiguration.Desay97Profile}";
@@ -1113,8 +1226,6 @@ public partial class MainWindow : Window
         AnalysisSummaryText.Text = $"Previewing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
         OutputRangeText.Text = $"{report.Events.Count:N0} frames\n{range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
         OutputFindingsText.Text = $"{report.DiagnosticAggregates.Count:N0} groups\n{report.Asil.UnresolvedAlarmGroups:N0} alarms";
-        OutputHotspotText.Text = $"{report.Hotspot.SampleCount:N0} samples, peak {peak:N0}";
-        HeatmapRangeText.Text = $"Frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0} · {report.Hotspot.Columns} × {report.Hotspot.Rows} density grid";
         OutputConfigurationText.Text =
             $"decoder  {decodeConfiguration.EventBufferVersion}{profile}\n" +
             $"source   {session.Probe.DisplayName}\n" +
@@ -1123,8 +1234,29 @@ public partial class MainWindow : Window
             $"replay   {clockName} at {speed}";
         OutputSourceText.Text =
             $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{FormatSha256(session.SourceSha256)}";
-        AnalysisHeatmapPreview.Show(report.Hotspot);
+        RefreshHeatmapPresentation();
         PrepareOutputVideoPreview(range, clockName, speed);
+    }
+
+    private void RefreshHeatmapPresentation()
+    {
+        if (currentOutputReport is not { } report)
+        {
+            AnalysisHeatmapPreview.Show(null);
+            return;
+        }
+
+        var repeated = SelectedHeatmapMode() == "repeated";
+        var minimum = repeated ? heatmapMinimumCount : 1;
+        AnalysisHeatmapPreview.Show(report.Hotspot, minimum, heatmapLabelThresholdRatio);
+        var hiddenSamples = Math.Max(0, report.Hotspot.SampleCount - AnalysisHeatmapPreview.VisibleSampleCount);
+        OutputHotspotText.Text = repeated
+            ? $"N≥{minimum:N0} · {AnalysisHeatmapPreview.VisibleSampleCount:N0}/{report.Hotspot.SampleCount:N0} samples · peak {AnalysisHeatmapPreview.PeakCount:N0}"
+            : $"{AnalysisHeatmapPreview.VisibleSampleCount:N0} samples · {AnalysisHeatmapPreview.VisibleCellCount:N0} cells · peak {AnalysisHeatmapPreview.PeakCount:N0}";
+        HeatmapRangeText.Text =
+            $"Frames {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0} · " +
+            $"{report.Hotspot.Columns} × {report.Hotspot.Rows} grid" +
+            (hiddenSamples > 0 ? $" · {hiddenSamples:N0} samples below N" : string.Empty);
     }
 
     private void PrepareOutputVideoPreview(AnalysisRange range, string clockName, string speed)
@@ -1138,7 +1270,9 @@ public partial class MainWindow : Window
         OutputClockText.Text = $"{FormatClock(duration)}\n{outputVideoFrameCount:N0} frames at {outputVideoFrameRate} FPS";
         OutputVideoBadgeText.Text = OutputVideoSettingsLabel();
         OutputVideoTimeline.SetFrameCount(outputVideoFrameCount, outputVideoFrameRate);
+        OutputVideoTimeline.SetSourceRange(replaySession.Count, range.StartLogicalIndex, range.EndLogicalIndex);
         OutputPreviewPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
+        OutputPreviewFullscreenButton.IsEnabled = outputVideoFrameCount > 0;
         ShowOutputVideoFrame(0);
         OutputConfigurationText.Text += $"\nvideo    {clockName} / {outputVideoFrameRate} FPS / {speed}";
     }
@@ -1148,11 +1282,11 @@ public partial class MainWindow : Window
         if (replaySession is null || outputVideoFrameCount == 0 || outputVideoPlan.Count == 0) return;
         outputVideoFrameIndex = Math.Clamp(outputFrameIndex, 0, outputVideoFrameCount - 1);
         var logicalIndex = ReplayFramePlan.LogicalIndexAt(outputVideoPlan, outputVideoFrameIndex);
-        OutputVideoPreview.Show(
-            CreateReplayScene(logicalIndex),
-            CurrentReplayRenderSettings(),
-            outputVideoWidth,
-            outputVideoHeight);
+        var scene = CreateReplayScene(logicalIndex);
+        var settings = CurrentReplayRenderSettings();
+        OutputVideoPreview.Show(scene, settings, outputVideoWidth, outputVideoHeight);
+        if (outputFullscreenActive)
+            OutputFullscreenVideoPreview.Show(scene, settings, outputVideoWidth, outputVideoHeight);
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
         var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)outputVideoFrameRate);
         var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)outputVideoFrameRate);
@@ -1164,6 +1298,44 @@ public partial class MainWindow : Window
     {
         StopOutputVideoPreviewPlayback();
         ShowOutputVideoFrame(e.OutputFrameIndex);
+    }
+
+    private void OutputVideoTimeline_OnRangeChanged(object? sender, OutputVideoRangeEventArgs e)
+    {
+        loopIn = e.StartLogicalIndex;
+        loopOut = e.EndLogicalIndex;
+        UpdateLoopText();
+    }
+
+    private void OutputPreviewFullscreenButton_OnClick(object? sender, RoutedEventArgs e) => EnterOutputFullscreen();
+
+    private void OutputFullscreenExitButton_OnClick(object? sender, RoutedEventArgs e) => ExitOutputFullscreen();
+
+    private void OutputFullscreenOverlay_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        ExitOutputFullscreen();
+        e.Handled = true;
+    }
+
+    private void EnterOutputFullscreen()
+    {
+        if (outputVideoFrameCount == 0 || outputFullscreenActive) return;
+        outputFullscreenActive = true;
+        outputFullscreenPreviousWindowState = WindowState;
+        OutputFullscreenOverlay.IsVisible = true;
+        WindowState = WindowState.FullScreen;
+        ShowOutputVideoFrame(outputVideoFrameIndex);
+        OutputFullscreenOverlay.Focus();
+    }
+
+    private void ExitOutputFullscreen()
+    {
+        if (!outputFullscreenActive) return;
+        outputFullscreenActive = false;
+        OutputFullscreenOverlay.IsVisible = false;
+        OutputFullscreenVideoPreview.Clear();
+        WindowState = outputFullscreenPreviousWindowState;
     }
 
     private async void OutputPreviewPlayPauseButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1232,13 +1404,16 @@ public partial class MainWindow : Window
 
     private void ClearOutputVideoPreview()
     {
+        ExitOutputFullscreen();
         StopOutputVideoPreviewPlayback();
         outputVideoPlan = [];
         outputVideoFrameCount = 0;
         outputVideoFrameIndex = 0;
         OutputVideoPreview.Clear();
+        OutputFullscreenVideoPreview.Clear();
         OutputVideoTimeline.SetFrameCount(0, outputVideoFrameRate);
         OutputPreviewPlayPauseButton.IsEnabled = false;
+        OutputPreviewFullscreenButton.IsEnabled = false;
         OutputPreviewClockText.Text = "00:00.000 / 00:00.000";
         OutputPreviewFrameText.Text = "output 0/0";
     }
@@ -2110,6 +2285,7 @@ public partial class MainWindow : Window
         outputPreviewCancellation?.Cancel();
         outputPreviewCancellation?.Dispose();
         outputPreviewCancellation = null;
+        currentOutputReport = null;
         ClearOutputVideoPreview();
         AnalysisHeatmapPreview.Show(null);
         AnalysisSummaryText.Text = "Decode a capture to prepare output preview.";
@@ -2826,7 +3002,12 @@ public partial class MainWindow : Window
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (outputFullscreenActive && e.Key == Key.Escape)
+        {
+            ExitOutputFullscreen();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             ToggleCommandPalette();
             e.Handled = true;
@@ -2857,24 +3038,51 @@ public partial class MainWindow : Window
             case ReplayShortcutAction.ExportAnalysis when ExportAnalysisButton.IsEnabled:
                 OpenOutputPreviewButton_OnClick(this, new RoutedEventArgs());
                 return true;
+            case ReplayShortcutAction.TogglePlayback when outputWorkspaceActive && OutputPreviewPlayPauseButton.IsEnabled:
+                OutputPreviewPlayPauseButton_OnClick(this, new RoutedEventArgs());
+                return true;
             case ReplayShortcutAction.TogglePlayback when PlayPauseButton.IsEnabled:
                 PlayPauseButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.PreviousFrame when outputWorkspaceActive && outputVideoFrameCount > 0:
+                StopOutputVideoPreviewPlayback();
+                ShowOutputVideoFrame(outputVideoFrameIndex - 1);
                 return true;
             case ReplayShortcutAction.PreviousFrame when PreviousFrameButton.IsEnabled:
                 PreviousFrameButton_OnClick(this, new RoutedEventArgs());
                 return true;
+            case ReplayShortcutAction.NextFrame when outputWorkspaceActive && outputVideoFrameCount > 0:
+                StopOutputVideoPreviewPlayback();
+                ShowOutputVideoFrame(outputVideoFrameIndex + 1);
+                return true;
             case ReplayShortcutAction.NextFrame when NextFrameButton.IsEnabled:
                 NextFrameButton_OnClick(this, new RoutedEventArgs());
+                return true;
+            case ReplayShortcutAction.JumpBackTenFrames when outputWorkspaceActive && outputVideoFrameCount > 0:
+                StopOutputVideoPreviewPlayback();
+                ShowOutputVideoFrame(outputVideoFrameIndex - 10);
                 return true;
             case ReplayShortcutAction.JumpBackTenFrames when replaySession is { Count: > 0 }:
                 JumpFrames(-10);
                 return true;
+            case ReplayShortcutAction.JumpForwardTenFrames when outputWorkspaceActive && outputVideoFrameCount > 0:
+                StopOutputVideoPreviewPlayback();
+                ShowOutputVideoFrame(outputVideoFrameIndex + 10);
+                return true;
             case ReplayShortcutAction.JumpForwardTenFrames when replaySession is { Count: > 0 }:
                 JumpFrames(10);
+                return true;
+            case ReplayShortcutAction.FirstFrame when outputWorkspaceActive && outputVideoFrameCount > 0:
+                StopOutputVideoPreviewPlayback();
+                ShowOutputVideoFrame(0);
                 return true;
             case ReplayShortcutAction.FirstFrame when replaySession is { Count: > 0 }:
                 StopPlayback();
                 SeekReplay(0);
+                return true;
+            case ReplayShortcutAction.LastFrame when outputWorkspaceActive && outputVideoFrameCount > 0:
+                StopOutputVideoPreviewPlayback();
+                ShowOutputVideoFrame(outputVideoFrameCount - 1);
                 return true;
             case ReplayShortcutAction.LastFrame when replaySession is { Count: > 0 }:
                 StopPlayback();
@@ -2942,7 +3150,9 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        ExitOutputFullscreen();
         StopPlayback();
+        StopOutputVideoPreviewPlayback();
         outputPreviewCancellation?.Cancel();
         outputPreviewCancellation?.Dispose();
         operationCancellation?.Cancel();

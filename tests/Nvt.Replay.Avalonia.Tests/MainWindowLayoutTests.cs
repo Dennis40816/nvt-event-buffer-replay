@@ -15,6 +15,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nvt.Replay.Avalonia.Controls;
 using Nvt.Replay.Avalonia.ViewModels;
+using Nvt.Replay.Analysis;
 using Nvt.Replay.Formats.Common;
 using Xunit;
 
@@ -169,11 +170,22 @@ public sealed class MainWindowLayoutTests
             application.RequestedThemeVariant = ThemeVariant.Dark;
             Dispatcher.UIThread.RunJobs();
             var outputDark = CaptureHash(window, "06-golden-output-dark.png");
+            Required<Button>(window, "OutputPreviewFullscreenButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            CaptureHash(window, "27-golden-output-fullscreen-dark.png");
+            Required<Button>(window, "OutputFullscreenExitButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
 
             var outputContent = Required<ComboBox>(window, "OutputContentComboBox");
             outputContent.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
             var heatmapDark = CaptureHash(window, "09-golden-heatmap-dark.png");
+            Required<ComboBox>(window, "HeatmapModeComboBox").SelectedIndex = 1;
+            Required<TextBox>(window, "HeatmapRepeatedThresholdTextBox").Text = "2";
+            Required<TextBox>(window, "HeatmapRepeatedThresholdTextBox").RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Dispatcher.UIThread.RunJobs();
+            CaptureHash(window, "28-golden-heatmap-repeated-dark.png");
+            Required<ComboBox>(window, "HeatmapModeComboBox").SelectedIndex = 0;
             outputContent.SelectedIndex = 2;
             Dispatcher.UIThread.RunJobs();
             var packageDark = CaptureHash(window, "10-golden-package-dark.png");
@@ -519,6 +531,11 @@ public sealed class MainWindowLayoutTests
             Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
             await WaitUntilAsync(() => Required<TextBlock>(window, "OutputPreviewFrameText").Text != "output 0/0");
 
+            Assert.False(Required<Border>(window, "ReplayTransportBorder").IsVisible);
+            Assert.False(Required<Border>(window, "InspectorRailBorder").IsVisible);
+            Assert.Equal(0, Required<Grid>(window, "RootLayoutGrid").RowDefinitions[2].Height.Value);
+            Assert.Equal(0, Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width.Value);
+
             var outputContent = Required<ComboBox>(window, "OutputContentComboBox");
             Assert.Equal(3, outputContent.ItemCount);
             Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
@@ -529,6 +546,23 @@ public sealed class MainWindowLayoutTests
             Assert.False(Required<Grid>(window, "OutputVideoPanel").IsVisible);
             Assert.True(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
             Assert.Equal("Export PNG", Required<Button>(window, "ExportSelectedOutputButton").Content);
+            var heatmapMode = Required<ComboBox>(window, "HeatmapModeComboBox");
+            Assert.Equal(2, heatmapMode.ItemCount);
+            Assert.Equal("All recorded points", Assert.IsType<SelectOption>(heatmapMode.SelectedItem).Label);
+            heatmapMode.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Grid>(window, "HeatmapRepeatedThresholdPanel").IsVisible);
+            var repeatedMinimum = Required<TextBox>(window, "HeatmapRepeatedThresholdTextBox");
+            repeatedMinimum.Text = "2";
+            repeatedMinimum.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            var labelMinimum = Required<TextBox>(window, "HeatmapLabelThresholdTextBox");
+            labelMinimum.Text = "80";
+            labelMinimum.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            var heatmap = Required<AnalysisHeatmapSurface>(window, "AnalysisHeatmapPreview");
+            Assert.Equal(2, heatmap.MinimumCount);
+            Assert.Equal(0.8, heatmap.LabelThresholdRatio, 3);
+            Assert.True(heatmap.VisibleCellCount > 0);
+            Assert.True(heatmap.VisibleCellCount < 35);
 
             outputContent.SelectedIndex = 0;
             var settings = Required<ToggleButton>(window, "OutputSettingsToggleButton");
@@ -544,6 +578,67 @@ public sealed class MainWindowLayoutTests
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 3;
             await WaitUntilAsync(() => Required<TextBlock>(window, "OutputVideoBadgeText").Text?.Contains("2×", StringComparison.Ordinal) == true);
             Assert.Contains("2×", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
+
+            var frameRate = Required<ComboBox>(window, "OutputFrameRateComboBox");
+            frameRate.SelectedIndex = 4;
+            var customFrameRate = Required<TextBox>(window, "OutputCustomFrameRateTextBox");
+            Assert.True(customFrameRate.IsVisible);
+            customFrameRate.Text = "180";
+            customFrameRate.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            await WaitUntilAsync(() => Required<TextBlock>(window, "OutputVideoBadgeText").Text?.Contains("180 FPS", StringComparison.Ordinal) == true);
+
+            var fullscreen = Required<Button>(window, "OutputPreviewFullscreenButton");
+            Assert.True(fullscreen.IsEnabled);
+            fullscreen.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Border>(window, "OutputFullscreenOverlay").IsVisible);
+            Assert.Equal(WindowState.FullScreen, window.WindowState);
+            Required<Button>(window, "OutputFullscreenExitButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(Required<Border>(window, "OutputFullscreenOverlay").IsVisible);
+
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "PaintTab");
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Border>(window, "ReplayTransportBorder").IsVisible);
+            Assert.True(Required<Border>(window, "InspectorRailBorder").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Heatmap_surface_filters_cells_uses_a_thermal_scale_and_exposes_hover_details()
+    {
+        var surface = new AnalysisHeatmapSurface();
+        var window = new Window { Width = 640, Height = 360, Content = surface };
+        window.Show();
+        try
+        {
+            surface.Show(
+                new AnalysisHotspot(
+                    4,
+                    2,
+                    [0, 1, 2, 4, 3, 0, 8, 1],
+                    19,
+                    new AnalysisCoordinateTransform("panel", 0, 2048, 0, 1280)),
+                minimumCount: 3,
+                labelThresholdRatio: 0.5);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(3, surface.MinimumCount);
+            Assert.Equal(15, surface.VisibleSampleCount);
+            Assert.Equal(3, surface.VisibleCellCount);
+            Assert.Equal(8, surface.PeakCount);
+            Assert.NotEqual(AnalysisHeatmapSurface.ColorAt(0), AnalysisHeatmapSurface.ColorAt(1));
+
+            var point = surface.TranslatePoint(new Point(352, 242), window) ??
+                throw new InvalidOperationException("Heatmap could not translate its hover point.");
+            window.MouseMove(point);
+            Dispatcher.UIThread.RunJobs();
+            Assert.NotNull(surface.HoveredCell);
+            Assert.True(surface.HoveredCell!.Count >= 3);
         }
         finally
         {

@@ -4,6 +4,7 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Rendering;
 using Avalonia.Threading;
 using Nvt.Replay.Avalonia.Controls;
 using Xunit;
@@ -116,6 +117,21 @@ public sealed class ReplayTimelineSurfaceTests
         {
             window.Close();
         }
+    }
+
+    [AvaloniaFact]
+    public void Output_timeline_exposes_a_full_hit_area_and_independent_range_state()
+    {
+        var timeline = new OutputVideoTimelineSurface();
+        timeline.SetFrameCount(21, 180);
+        timeline.SetSourceRange(11, 3, 10);
+        timeline.Measure(new Size(500, 100));
+        timeline.Arrange(new Rect(0, 0, 500, 100));
+
+        Assert.Equal(3, timeline.RangeStart);
+        Assert.Equal(10, timeline.RangeEnd);
+        Assert.True(((ICustomHitTest)timeline).HitTest(new Point(250, 50)));
+        Assert.False(((ICustomHitTest)timeline).HitTest(new Point(501, 50)));
     }
 
     private static Window Show(ReplayTimelineSurface timeline)

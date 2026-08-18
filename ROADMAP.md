@@ -28,11 +28,11 @@
 ## M4 — Export Slice
 
 - [x] Shared ReplayScene
-- [x] Single-content Output workspace for MP4 video, heatmap, or data package
-- [x] Exact desktop MP4 preview with scrubber and reusable frame buffers
-- [x] MP4 settings flyout with independent clock, customized speed, 24–120 FPS, and preset/custom resolution
+- [x] Single-content Output workspace for MP4 video, heatmap, or data package, without the unrelated replay transport or Inspector rail
+- [x] Exact desktop MP4 preview with its own seek line, draggable export-range handles, reusable frame buffers, and unobstructed full-screen review
+- [x] MP4 settings flyout with independent clock, customized speed, 1–240 FPS (including 180 FPS), and preset/custom resolution
 - [x] Selected-range FFmpeg MP4 with PNG fallback
-- [x] Heatmap PNG plus responsive density-circle preview whose area represents sample count
+- [x] Interactive heatmap with all-points/repeated-`N` modes, blue-to-red density scale, color bar, thresholded value labels, coordinate hover, and matching PNG output
 - [x] Parsed/diagnostic JSON and CSV
 - [x] Source/config/hash manifest
 

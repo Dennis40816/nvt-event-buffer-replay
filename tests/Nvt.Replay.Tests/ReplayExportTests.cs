@@ -48,6 +48,25 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public void Frame_plan_supports_custom_180_fps_and_rejects_rates_above_240()
+    {
+        var replay = UniformReplay(120, TimeSpan.FromSeconds(1d / 120));
+        var options = new ReplayExportOptions(
+            Path.Combine(directory, "180fps.mp4"),
+            new AnalysisRange(0, replay.Count - 1),
+            320,
+            180,
+            180,
+            1,
+            ReplayExportClock.Frame);
+
+        Assert.Equal(180, ReplayFramePlan.OutputFrameCount(ReplayFramePlan.Build(replay, options)));
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ReplayFramePlan.Build(replay, options with { FrameRate = 241 }));
+        Assert.Contains("1-240", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Missing_encoder_atomically_exports_a_headless_PNG_sequence_and_manifest()
     {
         var replay = Replay(TimeSpan.FromMilliseconds(10));

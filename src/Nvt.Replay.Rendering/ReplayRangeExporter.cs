@@ -140,8 +140,8 @@ public static class ReplayFramePlan
             throw new ArgumentOutOfRangeException(nameof(options), "Export range must be within a non-empty replay.");
         if (options.Width < 320 || options.Height < 180 || options.Width % 2 != 0 || options.Height % 2 != 0)
             throw new ArgumentOutOfRangeException(nameof(options), "Export dimensions must be even and at least 320x180.");
-        if (options.FrameRate is < 1 or > 120 || options.Speed is <= 0 or > 100)
-            throw new ArgumentOutOfRangeException(nameof(options), "Frame rate must be 1-120 and speed must be >0 and <=100.");
+        if (options.FrameRate is < 1 or > 240 || options.Speed is <= 0 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(options), "Frame rate must be 1-240 and speed must be >0 and <=100.");
     }
 }
 
