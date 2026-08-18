@@ -528,6 +528,40 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
     </Style>
+    <Style Selector="Border.outputSettingRow">
+      <Setter Property="MinHeight" Value="58" />
+      <Setter Property="Padding" Value="12,7" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Background" Value="{DynamicResource FieldBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="TextBlock.outputSettingLabel">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+      <Setter Property="LetterSpacing" Value="0.35" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBox.outputSetting">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="MinWidth" Value="168" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="FontSize" Value="14.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="ComboBox.outputSetting:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="ComboBox.outputSetting:focus">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
     <Style Selector="Expander.inspectorDisclosure">
       <Setter Property="MinWidth" Value="0" />
       <Setter Property="MinHeight" Value="44" />
@@ -1012,57 +1046,84 @@
                           </Grid>
                         </Grid>
 
-                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="16">
+                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="14">
                           <ScrollViewer x:Name="OutputSettingsScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="0,0,14,0" Spacing="12">
-                              <TextBlock Text="TIMING &amp; QUALITY" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" LetterSpacing="0.4" />
-                              <Grid ColumnDefinitions="96,*" RowDefinitions="34,Auto,8,34,8,34,8,34,Auto">
-                                <TextBlock Text="Clock" Classes="fieldLabel" />
-                                <ComboBox x:Name="OutputClockComboBox" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output clock">
-                                  <ComboBoxItem Content="Recorded gaps" Tag="recorded" />
-                                  <ComboBoxItem Content="Frame-paced · 120 Hz" Tag="frame" />
-                                </ComboBox>
-                                <TextBlock x:Name="OutputClockDescriptionText" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" Text="Skips missing-record gaps; each frame still displays its original REC timestamp." FontSize="12" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                                <TextBlock Grid.Row="3" Text="Speed" Classes="fieldLabel" />
-                                <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="Auto,8,*">
-                                  <ComboBox x:Name="OutputSpeedComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output speed">
+                            <StackPanel Margin="0,0,12,0" Spacing="9">
+                              <Grid ColumnDefinitions="4,10,*" Margin="0,0,0,4">
+                                <Border Width="4" Height="34" Background="{DynamicResource AccentBrush}" CornerRadius="2" />
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                  <TextBlock Text="VIDEO SETTINGS" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" LetterSpacing="0.35" />
+                                  <TextBlock Text="Preview and MP4 use the same settings" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" />
+                                </StackPanel>
+                              </Grid>
+
+                              <Border Classes="outputSettingRow">
+                                <Grid ColumnDefinitions="96,*">
+                                  <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="CLOCK" Classes="outputSettingLabel" />
+                                    <TextBlock Text="time gaps" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" />
+                                  </StackPanel>
+                                  <ComboBox x:Name="OutputClockComboBox" Grid.Column="1" Classes="outputSetting" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output clock">
+                                    <ComboBoxItem Content="Recorded timing" Tag="recorded" />
+                                    <ComboBoxItem Content="Frame-paced · 120 Hz" Tag="frame" />
+                                  </ComboBox>
+                                </Grid>
+                              </Border>
+                              <TextBlock x:Name="OutputClockDescriptionText" Margin="4,-2,4,2" Text="Frame-paced skips long idle gaps while REC timestamps stay original." FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+
+                              <Border Classes="outputSettingRow">
+                                <Grid ColumnDefinitions="96,*">
+                                  <TextBlock Text="SPEED" Classes="outputSettingLabel" />
+                                  <Grid Grid.Column="1" ColumnDefinitions="*,8,Auto">
+                                    <ComboBox x:Name="OutputSpeedComboBox" Classes="outputSetting" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output speed">
                                     <ComboBoxItem Content="0.25×" Tag="0.25" />
                                     <ComboBoxItem Content="0.5×" Tag="0.5" />
                                     <ComboBoxItem Content="1×" Tag="1" />
                                     <ComboBoxItem Content="2×" Tag="2" />
                                     <ComboBoxItem Content="4×" Tag="4" />
                                     <ComboBoxItem Content="Customized" Tag="custom" />
-                                  </ComboBox>
-                                  <TextBox x:Name="OutputCustomSpeedTextBox" Grid.Column="2" Classes="panelSize" Width="78" Text="1.00" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Speed from 0.01× to 100×" AutomationProperties.Name="Customized MP4 speed" />
+                                    </ComboBox>
+                                    <TextBox x:Name="OutputCustomSpeedTextBox" Grid.Column="2" Classes="panelSize" Width="72" Text="1.00" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Speed from 0.01× to 100×" AutomationProperties.Name="Customized MP4 speed" />
+                                  </Grid>
                                 </Grid>
-                                <TextBlock Grid.Row="5" Text="Frame rate" Classes="fieldLabel" />
-                                <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="Auto,8,*">
-                                  <ComboBox x:Name="OutputFrameRateComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 frame rate">
+                              </Border>
+
+                              <Border Classes="outputSettingRow">
+                                <Grid ColumnDefinitions="96,*">
+                                  <TextBlock Text="FRAME RATE" Classes="outputSettingLabel" />
+                                  <Grid Grid.Column="1" ColumnDefinitions="*,8,Auto">
+                                    <ComboBox x:Name="OutputFrameRateComboBox" Classes="outputSetting" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 frame rate">
                                     <ComboBoxItem Content="24 FPS" Tag="24" />
                                     <ComboBoxItem Content="30 FPS" Tag="30" />
                                     <ComboBoxItem Content="60 FPS" Tag="60" />
                                     <ComboBoxItem Content="120 FPS" Tag="120" />
                                     <ComboBoxItem Content="Customized" Tag="custom" />
-                                  </ComboBox>
-                                  <TextBox x:Name="OutputCustomFrameRateTextBox" Grid.Column="2" Classes="panelSize" Width="78" Text="180" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Output frame rate from 1 to 240 FPS" AutomationProperties.Name="Customized MP4 frame rate" />
+                                    </ComboBox>
+                                    <TextBox x:Name="OutputCustomFrameRateTextBox" Grid.Column="2" Classes="panelSize" Width="72" Text="180" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Output frame rate from 1 to 240 FPS" AutomationProperties.Name="Customized MP4 frame rate" />
+                                  </Grid>
                                 </Grid>
-                                <TextBlock Grid.Row="7" Text="Resolution" Classes="fieldLabel" />
-                                <ComboBox x:Name="OutputResolutionComboBox" Grid.Row="7" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
-                                  <ComboBoxItem x:Name="OutputPanelResolutionItem" Content="Paint · 2304 × 1280" Tag="panel" />
-                                  <ComboBoxItem Content="1280 × 720" Tag="1280x720" />
-                                  <ComboBoxItem Content="1920 × 1080" Tag="1920x1080" />
-                                  <ComboBoxItem Content="2560 × 1440" Tag="2560x1440" />
-                                  <ComboBoxItem Content="Customized" Tag="custom" />
-                                </ComboBox>
-                                <Grid x:Name="OutputCustomResolutionPanel" Grid.Row="8" Grid.ColumnSpan="2" Margin="0,8,0,0" ColumnDefinitions="82,Auto,82" IsVisible="False" HorizontalAlignment="Right">
-                                  <TextBox x:Name="OutputWidthTextBox" Classes="panelSize" Width="82" Text="2304" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 width" />
-                                  <TextBlock Grid.Column="1" Text="×" Margin="8,0" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                                  <TextBox x:Name="OutputHeightTextBox" Grid.Column="2" Classes="panelSize" Width="82" Text="1280" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 height" />
-                                </Grid>
-                                <TextBlock x:Name="OutputCustomResolutionLabel" IsVisible="False" />
-                              </Grid>
+                              </Border>
 
-                              <Border Height="1" Background="{DynamicResource BorderBrush}" />
+                              <Border Classes="outputSettingRow">
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="96,*">
+                                  <TextBlock Text="RESOLUTION" Classes="outputSettingLabel" />
+                                  <ComboBox x:Name="OutputResolutionComboBox" Grid.Column="1" Classes="outputSetting" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
+                                    <ComboBoxItem x:Name="OutputPanelResolutionItem" Content="Paint · 2304 × 1280" Tag="panel" />
+                                    <ComboBoxItem Content="1280 × 720" Tag="1280x720" />
+                                    <ComboBoxItem Content="1920 × 1080" Tag="1920x1080" />
+                                    <ComboBoxItem Content="2560 × 1440" Tag="2560x1440" />
+                                    <ComboBoxItem Content="Customized" Tag="custom" />
+                                  </ComboBox>
+                                  <Grid x:Name="OutputCustomResolutionPanel" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,7,0,0" ColumnDefinitions="82,Auto,82" IsVisible="False" HorizontalAlignment="Right">
+                                    <TextBox x:Name="OutputWidthTextBox" Classes="panelSize" Width="82" Text="2304" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 width" />
+                                    <TextBlock Grid.Column="1" Text="×" Margin="8,0" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                                    <TextBox x:Name="OutputHeightTextBox" Grid.Column="2" Classes="panelSize" Width="82" Text="1280" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 height" />
+                                  </Grid>
+                                  <TextBlock x:Name="OutputCustomResolutionLabel" IsVisible="False" />
+                                </Grid>
+                              </Border>
+
+                              <Border Height="1" Margin="0,3" Background="{DynamicResource BorderBrush}" />
                               <Grid ColumnDefinitions="*,10,*">
                                 <StackPanel>
                                   <TextBlock Classes="fieldLabel" Text="RANGE" />

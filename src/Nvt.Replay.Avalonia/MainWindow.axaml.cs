@@ -1126,8 +1126,8 @@ public partial class MainWindow : Window
             ? ReplayExportClock.Recorded
             : ReplayExportClock.Frame;
         OutputClockDescriptionText.Text = outputVideoClock == ReplayExportClock.Recorded
-            ? "Preserves source timestamps, including long capture gaps."
-            : "Skips missing-record gaps; each frame still displays its original REC timestamp.";
+            ? "Follows source timestamps, including long idle gaps with no touch."
+            : "Plays every decoded frame at 120 Hz; REC labels keep their original timestamps.";
 
         var speedTag = SelectedTag(OutputSpeedComboBox);
         OutputCustomSpeedTextBox.IsVisible = speedTag == "custom";
