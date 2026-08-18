@@ -84,7 +84,7 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
         var y = Bounds.Height / 2;
         var left = TrackInset;
         var right = Bounds.Width - TrackInset;
-        var thickness = IsPointerOver || dragTarget != DragTarget.None || IsKeyboardFocusWithin ? 3 : 1.5;
+        var thickness = IsPointerOver || dragTarget != DragTarget.None || IsKeyboardFocusWithin ? 6 : 4;
         context.DrawLine(new Pen(IsPointerOver ? HoverTrackBrush : TrackBrush, thickness), new Point(left, y), new Point(right, y));
         if (ShowRange)
         {
@@ -92,7 +92,7 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
             {
                 var rangeStartX = SourcePositionFor(rangeStart);
                 var rangeEndX = SourcePositionFor(rangeEnd);
-                context.DrawLine(new Pen(HoverTrackBrush, 3), new Point(rangeStartX, y), new Point(rangeEndX, y));
+                context.DrawLine(new Pen(HoverTrackBrush, 4), new Point(rangeStartX, y), new Point(rangeEndX, y));
                 DrawRangeHandle(context, rangeStartX, y, pointsRight: true);
                 DrawRangeHandle(context, rangeEndX, y, pointsRight: false);
             }
@@ -100,8 +100,7 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
 
         var playheadX = PositionFor(position);
         context.DrawLine(new Pen(ProgressBrush, thickness), new Point(left, y), new Point(playheadX, y));
-        context.DrawLine(new Pen(PlayheadBrush, 2), new Point(playheadX, y - 9), new Point(playheadX, y + 8));
-        context.DrawRectangle(PlayheadBrush, null, new Rect(playheadX - 3, y - 10, 6, 3), 1, 1);
+        context.DrawEllipse(ProgressBrush, new Pen(PlayheadBrush, 1), new Point(playheadX, y), 7, 7);
 
         if (hoverPosition is { } hover && IsPointerOver)
             DrawHoverLabel(context, hover, PositionFor(hover));

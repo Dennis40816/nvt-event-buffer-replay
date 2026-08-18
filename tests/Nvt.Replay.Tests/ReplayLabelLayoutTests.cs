@@ -47,4 +47,28 @@ public sealed class ReplayLabelLayoutTests
             Assert.False(placement.Bounds.Intersects(protectedPoint));
         }
     }
+
+    [Fact]
+    public void Dense_trail_obstacles_push_labels_into_clear_readable_slots()
+    {
+        var bounds = new ReplayLabelBounds(0, 0, 640, 400);
+        var requests = new[]
+        {
+            new ReplayLabelRequest(1, 320, 200, 126, 42),
+            new ReplayLabelRequest(2, 334, 208, 126, 42),
+        };
+        var obstacles = new List<ReplayLabelBounds>();
+        for (var x = 180; x <= 480; x += 8)
+        for (var y = 120; y <= 280; y += 8)
+            obstacles.Add(new ReplayLabelBounds(x - 3, y - 3, 6, 6));
+
+        var placements = ReplayLabelLayout.Place(bounds, requests, obstacles: obstacles);
+
+        Assert.Equal(2, placements.Count);
+        Assert.False(placements[0].Bounds.Intersects(placements[1].Bounds));
+        Assert.All(placements, placement =>
+            Assert.DoesNotContain(obstacles, obstacle => placement.Bounds.Intersects(obstacle, 1)));
+        Assert.All(placements, placement =>
+            Assert.True(placement.Bounds.Right <= 180 || placement.Bounds.X >= 480));
+    }
 }

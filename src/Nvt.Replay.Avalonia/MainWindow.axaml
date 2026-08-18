@@ -237,6 +237,34 @@
       <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
       <Setter Property="Opacity" Value="1" />
     </Style>
+    <Style Selector="Button.outputPreviewPlay">
+      <Setter Property="Width" Value="46" />
+      <Setter Property="Height" Value="42" />
+      <Setter Property="MinWidth" Value="46" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons" />
+      <Setter Property="FontSize" Value="20" />
+    </Style>
+    <Style Selector="Button.outputPreviewPlay:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.outputPreviewPlay.playing">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Border.outputPreviewTransport">
+      <Setter Property="Height" Value="60" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Background" Value="{DynamicResource HeaderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
     <Style Selector="Button.shortcutRow">
       <Setter Property="Height" Value="40" />
       <Setter Property="Padding" Value="8,0" />
@@ -489,6 +517,13 @@
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
+    <Style Selector="TabItem:selected">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
     <Style Selector="Border.separator">
       <Setter Property="Width" Value="1" />
       <Setter Property="Height" Value="24" />
@@ -581,18 +616,17 @@
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style Selector="Border.outputSettingRow">
-      <Setter Property="MinHeight" Value="48" />
-      <Setter Property="Padding" Value="10,5" />
+      <Setter Property="MinHeight" Value="62" />
+      <Setter Property="Padding" Value="12,7" />
       <Setter Property="CornerRadius" Value="2" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style Selector="TextBlock.outputSettingLabel">
-      <Setter Property="FontSize" Value="11.5" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
-      <Setter Property="LetterSpacing" Value="0.35" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style Selector="ComboBox.outputSetting">
@@ -602,7 +636,7 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="FontSize" Value="14.5" />
+      <Setter Property="FontSize" Value="14" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
@@ -716,9 +750,10 @@
           <TextBlock Text="NVT EVENT BUFFER REPLAY" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
         </StackPanel>
 
-        <Grid Grid.Column="2" Width="200" VerticalAlignment="Center">
-          <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-          <ComboBox x:Name="SourceAdapterComboBox" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
+        <Grid Grid.Column="2" Width="200" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+          <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+          <ComboBox x:Name="SourceAdapterComboBox" Grid.ColumnSpan="2" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
           <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
         </Grid>
 
@@ -1070,43 +1105,52 @@
                         <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Text="2304 × 1280  /  30 FPS  /  1×" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
                       </Grid>
                       <Grid x:Name="OutputPageLayout" Grid.Row="2" ColumnDefinitions="7*,12,3*">
-                        <Grid RowDefinitions="*,8,36,6,50,8,Auto">
+                        <Grid RowDefinitions="*,8,60,8,Auto">
                           <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
                             <Grid MinHeight="360">
                               <controls:ReplayVideoPreviewSurface x:Name="OutputVideoPreview" AutomationProperties.Name="MP4 replay preview" />
                             </Grid>
                           </Border>
-                          <Grid Grid.Row="2" ColumnDefinitions="Auto,8,Auto,14,Auto,*,Auto,10,Auto" VerticalAlignment="Center">
-                            <Button x:Name="OutputPreviewPlayPauseButton" Classes="transportPlay" MinWidth="92" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" ToolTip.Tip="Play or pause MP4 preview (Space)" AutomationProperties.Name="Play MP4 preview" />
-                            <ToggleButton x:Name="OutputPreviewRepeatToggleButton" Grid.Column="2" Classes="axisToggle" Width="36" MinWidth="36" Padding="0" IsChecked="True" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="16" ToolTip.Tip="Repeat preview playback" AutomationProperties.Name="Repeat MP4 preview" />
-                            <TextBlock x:Name="OutputPreviewClockText" Grid.Column="4" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" VerticalAlignment="Center" />
-                            <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="6" Text="output 0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
-                            <Button x:Name="OutputPreviewFullscreenButton"
-                                    Grid.Column="8"
-                                    Classes="canvasIcon"
-                                    Width="38"
-                                    Height="34"
-                                    Padding="0"
-                                    Content="&#xE740;"
-                                    FontFamily="Segoe Fluent Icons"
-                                    FontSize="17"
-                                    Click="OutputPreviewFullscreenButton_OnClick"
-                                    ToolTip.Tip="Preview MP4 full screen"
-                                    AutomationProperties.Name="Preview MP4 full screen" />
-                          </Grid>
-                          <controls:OutputVideoTimelineSurface x:Name="OutputVideoTimeline"
-                                                               Grid.Row="4"
-                                                               Height="50"
-                                                               TrackBrush="{DynamicResource CanvasTextBrush}"
-                                                               HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
-                                                               ProgressBrush="{DynamicResource AccentBrush}"
-                                                               PlayheadBrush="{DynamicResource PrimaryTextBrush}"
-                                                               LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
-                                                               LabelTextBrush="{DynamicResource PrimaryTextBrush}"
-                                                               SeekRequested="OutputVideoTimeline_OnSeekRequested"
-                                                               RangeChanged="OutputVideoTimeline_OnRangeChanged"
-                                                               AutomationProperties.Name="Scrub MP4 preview time" />
-                          <Grid Grid.Row="6">
+                          <Border Grid.Row="2" Classes="outputPreviewTransport">
+                            <Grid ColumnDefinitions="46,1,14,Auto,18,*,18,42,1,8,42" VerticalAlignment="Center">
+                              <Button x:Name="OutputPreviewPlayPauseButton"
+                                      Classes="outputPreviewPlay"
+                                      Content="&#xE768;"
+                                      Click="OutputPreviewPlayPauseButton_OnClick"
+                                      ToolTip.Tip="Play or pause MP4 preview (Space)"
+                                      AutomationProperties.Name="Play MP4 preview" />
+                              <Border Grid.Column="1" Classes="separator" Height="28" />
+                              <TextBlock x:Name="OutputPreviewClockText" Grid.Column="3" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" />
+                              <controls:OutputVideoTimelineSurface x:Name="OutputVideoTimeline"
+                                                                   Grid.Column="5"
+                                                                   Height="42"
+                                                                   TrackBrush="{DynamicResource CanvasTextBrush}"
+                                                                   HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
+                                                                   ProgressBrush="{DynamicResource AccentBrush}"
+                                                                   PlayheadBrush="{DynamicResource PrimaryTextBrush}"
+                                                                   LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
+                                                                   LabelTextBrush="{DynamicResource PrimaryTextBrush}"
+                                                                   SeekRequested="OutputVideoTimeline_OnSeekRequested"
+                                                                   RangeChanged="OutputVideoTimeline_OnRangeChanged"
+                                                                   AutomationProperties.Name="Scrub MP4 preview time" />
+                              <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="7" Text="output 0 / 0" IsVisible="False" />
+                              <Border Grid.Column="8" Classes="separator" Height="28" />
+                              <ToggleButton x:Name="OutputPreviewRepeatToggleButton" Grid.Column="7" Classes="axisToggle" Width="42" Height="42" MinWidth="42" Padding="0" IsChecked="True" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="18" ToolTip.Tip="Repeat preview playback" AutomationProperties.Name="Repeat MP4 preview" />
+                              <Button x:Name="OutputPreviewFullscreenButton"
+                                      Grid.Column="10"
+                                      Classes="canvasIcon"
+                                      Width="42"
+                                      Height="42"
+                                      Padding="0"
+                                      Content="&#xE740;"
+                                      FontFamily="Segoe Fluent Icons"
+                                      FontSize="18"
+                                      Click="OutputPreviewFullscreenButton_OnClick"
+                                      ToolTip.Tip="Preview MP4 full screen"
+                                      AutomationProperties.Name="Preview MP4 full screen" />
+                            </Grid>
+                          </Border>
+                          <Grid Grid.Row="4">
                             <Border x:Name="OutputExportWarningPanel" IsVisible="False" Padding="12" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="4">
                               <Grid ColumnDefinitions="*,12,Auto,8,Auto">
                                 <StackPanel>
@@ -1130,9 +1174,9 @@
                           </Grid>
                         </Grid>
 
-                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="16,0,0,0">
+                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,0,10,0">
                           <ScrollViewer x:Name="OutputSettingsScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Margin="0,0,10,0" Spacing="10">
+                            <StackPanel Spacing="8">
                               <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
                                 <StackPanel VerticalAlignment="Center">
                                   <ComboBox x:Name="OutputContentComboBox" Classes="outputHeaderSelect" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
@@ -1150,28 +1194,25 @@
                                       </DataTemplate>
                                     </ComboBox.SelectionBoxItemTemplate>
                                   </ComboBox>
-                                  <TextBlock x:Name="OutputContentDescriptionText" Text="Preview and export use the same renderer" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" />
+                                  <TextBlock x:Name="OutputContentDescriptionText" Text="Preview and export use the same renderer" IsVisible="False" />
                                 </StackPanel>
                                 <Button x:Name="ExportSelectedOutputButton" Grid.Column="1" Classes="primary" Height="34" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
                               </Grid>
 
-                              <Border Classes="outputSettingRow">
-                                <Grid ColumnDefinitions="30,86,*">
+                              <Border Classes="outputSettingRow" MinHeight="76">
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="34,92,*">
                                   <TextBlock Text="&#xE823;" Classes="outputSettingIcon" />
-                                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                    <TextBlock Text="Timing" Classes="outputSettingLabel" />
-                                    <TextBlock Text="time gaps" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" />
-                                  </StackPanel>
+                                  <TextBlock Grid.Column="1" Text="Timing" Classes="outputSettingLabel" />
                                   <ComboBox x:Name="OutputClockComboBox" Grid.Column="2" Classes="outputSetting" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output clock">
                                     <ComboBoxItem Content="Recorded timing" Tag="recorded" />
                                     <ComboBoxItem Content="Frame-paced · 120 Hz" Tag="frame" />
                                   </ComboBox>
+                                  <TextBlock x:Name="OutputClockDescriptionText" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3,8,0" Text="Frame-paced skips long idle gaps while REC timestamps stay original." FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                                 </Grid>
                               </Border>
-                              <TextBlock x:Name="OutputClockDescriptionText" Margin="4,-2,4,2" Text="Frame-paced skips long idle gaps while REC timestamps stay original." FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
 
                               <Border Classes="outputSettingRow">
-                                <Grid ColumnDefinitions="30,86,*">
+                                <Grid ColumnDefinitions="34,92,*">
                                   <TextBlock Text="&#xE7AD;" Classes="outputSettingIcon" />
                                   <TextBlock Grid.Column="1" Text="Speed" Classes="outputSettingLabel" />
                                   <Grid Grid.Column="2" ColumnDefinitions="*,8,Auto">
@@ -1189,7 +1230,7 @@
                               </Border>
 
                               <Border Classes="outputSettingRow">
-                                <Grid ColumnDefinitions="30,86,*">
+                                <Grid ColumnDefinitions="34,92,*">
                                   <TextBlock Text="&#xE714;" Classes="outputSettingIcon" />
                                   <TextBlock Grid.Column="1" Text="Frame rate" Classes="outputSettingLabel" />
                                   <Grid Grid.Column="2" ColumnDefinitions="*,8,Auto">
@@ -1206,7 +1247,7 @@
                               </Border>
 
                               <Border Classes="outputSettingRow">
-                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="30,86,*">
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="34,92,*">
                                   <TextBlock Text="&#xE7F4;" Classes="outputSettingIcon" />
                                   <TextBlock Grid.Column="1" Text="Resolution" Classes="outputSettingLabel" />
                                   <ComboBox x:Name="OutputResolutionComboBox" Grid.Column="2" Classes="outputSetting" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
@@ -1226,7 +1267,7 @@
                               </Border>
 
                               <Border Classes="outputSettingRow">
-                                <Grid ColumnDefinitions="30,86,*">
+                                <Grid ColumnDefinitions="34,92,*">
                                   <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
                                   <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
                                   <Grid Grid.Column="2" ColumnDefinitions="*,12,*">
@@ -1235,7 +1276,7 @@
                                   </Grid>
                                 </Grid>
                               </Border>
-                              <StackPanel>
+                              <StackPanel IsVisible="False">
                                 <TextBlock Classes="fieldLabel" Text="FINDINGS" />
                                 <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
                               </StackPanel>

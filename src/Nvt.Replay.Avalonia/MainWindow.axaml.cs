@@ -1588,7 +1588,7 @@ public partial class MainWindow : Window
     {
         OutputPreviewPlayPauseButton.Classes.Set("playing", playing);
         OutputFullscreenPlayPauseButton.Classes.Set("playing", playing);
-        OutputPreviewPlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Preview";
+        OutputPreviewPlayPauseButton.Content = playing ? "\uE769" : "\uE768";
         OutputFullscreenPlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Play";
         AutomationProperties.SetName(OutputPreviewPlayPauseButton, playing ? "Pause MP4 preview" : "Play MP4 preview");
         AutomationProperties.SetName(OutputFullscreenPlayPauseButton, playing ? "Pause full-screen MP4 preview" : "Play full-screen MP4 preview");

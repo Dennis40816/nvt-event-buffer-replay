@@ -292,7 +292,8 @@ public static class ReplayFrameRenderer
                 requests,
                 pointRadius,
                 Math.Max(20, (int)Math.Round(27 * chromeScale)),
-                Math.Max(4, (int)Math.Round(5 * chromeScale)));
+                Math.Max(4, (int)Math.Round(5 * chromeScale)),
+                BuildTrailObstacles(viewport, scene, Math.Max(3, (int)Math.Round(4 * chromeScale))));
 
         for (var index = 0; index < labelData.Length; index++)
         {
@@ -317,6 +318,43 @@ public static class ReplayFrameRenderer
             canvas.Text(label.X + data.IconReserve, headerY, data.Header, color, textScale);
             canvas.Text(label.X + data.IconReserve, headerY + canvas.TextHeight(textScale) + data.LineGap, data.Coordinates, color, textScale);
         }
+    }
+
+    private static IReadOnlyList<ReplayLabelBounds> BuildTrailObstacles(
+        PixelRect viewport,
+        ReplayScene scene,
+        int radius)
+    {
+        if (scene.ContactTrails.Count == 0) return [];
+        var obstacles = new List<ReplayLabelBounds>();
+        foreach (var trail in scene.ContactTrails)
+        {
+            for (var start = 0; start < trail.Points.Count; start += 4)
+            {
+                var end = Math.Min(trail.Points.Count - 1, start + 4);
+                var first = trail.Points[start];
+                var projected = Project(viewport, scene, first.X, first.Y);
+                var minX = projected.X;
+                var maxX = projected.X;
+                var minY = projected.Y;
+                var maxY = projected.Y;
+                for (var index = start + 1; index <= end; index++)
+                {
+                    var point = trail.Points[index];
+                    projected = Project(viewport, scene, point.X, point.Y);
+                    minX = Math.Min(minX, projected.X);
+                    maxX = Math.Max(maxX, projected.X);
+                    minY = Math.Min(minY, projected.Y);
+                    maxY = Math.Max(maxY, projected.Y);
+                }
+                obstacles.Add(new ReplayLabelBounds(
+                    minX - radius,
+                    minY - radius,
+                    maxX - minX + (radius * 2),
+                    maxY - minY + (radius * 2)));
+            }
+        }
+        return obstacles;
     }
 
     private static void DrawLegend(
