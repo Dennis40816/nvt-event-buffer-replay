@@ -825,6 +825,42 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Auto_pause_stops_on_explicit_break_and_all_break_frames()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            SettingsControl<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked = false;
+            SettingsControl<CheckBox>(window, "PauseOnBreakCheckBox").IsChecked = true;
+            SettingsControl<CheckBox>(window, "PauseOnAllBreakCheckBox").IsChecked = false;
+            var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
+            speed.SelectedItem = speed.Items.OfType<ComboBoxItem>().Single(item => item.Tag?.ToString() == "max");
+            var play = Required<Button>(window, "PlayPauseButton");
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(
+                () => Required<TextBlock>(window, "TimelineStatusText").Text?.Contains("reported Break", StringComparison.Ordinal) == true,
+                TimeSpan.FromSeconds(2));
+            Assert.Equal(13, Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).LogicalIndex);
+
+            SettingsControl<CheckBox>(window, "PauseOnBreakCheckBox").IsChecked = false;
+            SettingsControl<CheckBox>(window, "PauseOnAllBreakCheckBox").IsChecked = true;
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(
+                () => Required<TextBlock>(window, "TimelineStatusText").Text?.Contains("All Break", StringComparison.Ordinal) == true,
+                TimeSpan.FromSeconds(2));
+            Assert.Equal(18, Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).LogicalIndex);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Paint_swap_XY_transposes_only_the_view_scene()
     {
         var window = ShowWindow();
@@ -1215,6 +1251,7 @@ public sealed class MainWindowLayoutTests
             Assert.NotNull(Required<ComboBox>(window, "OutputClockComboBox"));
             Assert.NotNull(Required<ComboBox>(window, "OutputFrameRateComboBox"));
             Assert.Null(window.FindControl<Button>("ShortcutHelpButton"));
+            CaptureHash(window, "29-settings-dark.png");
 
             window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.None, null);
             window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.None, null);

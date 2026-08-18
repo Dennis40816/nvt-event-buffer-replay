@@ -60,6 +60,7 @@ public interface ITouchReplaySnapshot
     ReplayTimelineEntry Timeline { get; }
     IReadOnlyList<ReplayContact> ReportedContacts { get; }
     IReadOnlyList<ReplayContact> HostContacts { get; }
+    bool AllBreak => false;
     bool GlobalPalm { get; }
     bool HostStateUpdated { get; }
 }
@@ -77,6 +78,7 @@ public sealed record TouchReplaySnapshot<TFrame>(
     public object DecodedFrame => Frame!;
     public SourceRecord PrimarySource => Projection.PrimarySource;
     public IReadOnlyList<SourceRecord> PhysicalRecords => Projection.PhysicalRecords;
+    public bool AllBreak => Projection.AllBreak;
 }
 
 public interface ITouchReplaySession

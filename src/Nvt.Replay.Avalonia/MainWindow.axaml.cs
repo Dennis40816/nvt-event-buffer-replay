@@ -74,6 +74,7 @@ public partial class MainWindow : Window
     private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
     private ReplayLegendPosition legendPosition = ReplayLegendPosition.Auto;
     private ReplayTrailHistory? trailHistory;
+    private ReplayAutoPauseIndex? autoPauseIndex;
     private int trailVisibilityStart;
     private int zoomHintRevision;
     private bool reverseX;
@@ -107,6 +108,7 @@ public partial class MainWindow : Window
     private const double MinimumInspectorRailWidth = 320;
     private const double MaximumInspectorRailWidth = 520;
     private const double CollapsedInspectorRailWidth = 58;
+    private const double ReplayTransportHeight = 174;
     private static readonly TimeSpan MinimumPlaybackVisualInterval = TimeSpan.FromMilliseconds(16);
     public MainWindow()
     {
@@ -173,6 +175,8 @@ public partial class MainWindow : Window
         SettingsPage.CloseRequested += (_, _) => CloseSettingsPage();
         SettingsPage.ThemeToggleRequested += (_, _) => ToggleTheme();
         SettingsPage.PlaybackPreferencesChanged += SettingsPage_OnPlaybackPreferencesChanged;
+        UpdateAutoPauseIndicator(SettingsPage.PlaybackPreferences);
+        CompressIdleCheckBox.IsVisible = ClockModeComboBox.SelectedIndex == 0;
         ComboBoxAutoSizer.Fit(
             SourceAdapterComboBox,
             EventVersionComboBox,
@@ -343,7 +347,7 @@ public partial class MainWindow : Window
     private void SetOutputWorkspaceChrome(bool active)
     {
         ReplayTransportBorder.IsVisible = !active;
-        RootLayoutGrid.RowDefinitions[2].Height = active ? new GridLength(0) : new GridLength(160);
+        RootLayoutGrid.RowDefinitions[2].Height = active ? new GridLength(0) : new GridLength(ReplayTransportHeight);
         InspectorRailBorder.IsVisible = !active;
         InspectorGridSplitter.IsVisible = !active && !inspectorRailCollapsed;
         var inspectorColumn = WorkspaceShellGrid.ColumnDefinitions[3];
@@ -1945,6 +1949,7 @@ public partial class MainWindow : Window
 
     private void SettingsPage_OnPlaybackPreferencesChanged(object? sender, ReplayPlaybackPreferences preferences)
     {
+        UpdateAutoPauseIndicator(preferences);
         if (reviewSession is not null)
         {
             var enabled = preferences.PauseOnAlarmOrQaFail;
@@ -2456,6 +2461,7 @@ public partial class MainWindow : Window
         session = null;
         replaySession = null;
         trailHistory = null;
+        autoPauseIndex = null;
         trailVisibilityStart = 0;
         allRawRows = [];
         registerActivities = [];
@@ -2642,6 +2648,7 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.SetMaximum(maximum);
         replayExtent = ReplayExtent.Measure(replaySession.AllReportedContacts);
         trailHistory = ReplayTrailHistory.Create(replaySession);
+        autoPauseIndex = ReplayAutoPauseIndex.Create(replaySession);
         trailVisibilityStart = 0;
         RefreshLegendPlacement();
         PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
@@ -2736,6 +2743,17 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateAutoPauseIndicator(ReplayPlaybackPreferences preferences)
+    {
+        var enabled = new List<string>();
+        if (preferences.PauseOnAlarmOrQaFail) enabled.Add("Alarm / QA Fail");
+        if (preferences.PauseOnBreak) enabled.Add("Break");
+        if (preferences.PauseOnAllBreak) enabled.Add("All Break");
+        AutoPauseSettingsButton.IsVisible = enabled.Count > 0;
+        ToolTip.SetTip(AutoPauseSettingsButton,
+            enabled.Count == 0 ? "Auto-pause is disabled" : $"Auto-pause · {string.Join(" · ", enabled)}");
+    }
+
     private void PreviousFrameButton_OnClick(object? sender, RoutedEventArgs e)
     {
         StopPlayback();
@@ -2816,7 +2834,7 @@ public partial class MainWindow : Window
                 }
 
                 int next;
-                int? pauseIndex;
+                PlaybackPauseDecision? pauseDecision;
                 if (maxReplaySpeed)
                 {
                     var interval = TimeSpan.FromMilliseconds(16);
@@ -2829,8 +2847,8 @@ public partial class MainWindow : Window
                     var steps = Math.Min(dueSteps, availableSteps);
                     var frameAdvance = Math.Min((long)end - currentLogicalIndex, steps * 50L);
                     next = currentLogicalIndex + (int)frameAdvance;
-                    pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, next);
-                    if (pauseIndex is { } alarmIndex) next = alarmIndex;
+                    pauseDecision = FirstPlaybackPause(currentLogicalIndex, next);
+                    if (pauseDecision is { } decision) next = decision.LogicalIndex;
                     scheduledElapsed += TimeSpan.FromTicks(interval.Ticks * steps);
                 }
                 else
@@ -2840,23 +2858,23 @@ public partial class MainWindow : Window
                         DelayBetween(currentLogicalIndex, currentLogicalIndex + 1),
                         MinimumPlaybackVisualInterval);
                     await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
-                    pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, end);
+                    pauseDecision = FirstPlaybackPause(currentLogicalIndex, end);
                     var position = ReplayPlaybackSchedule.CatchUp(
                         currentLogicalIndex,
                         end,
                         scheduledElapsed,
                         Stopwatch.GetElapsedTime(playbackStarted),
                         DelayBetween,
-                        pauseIndex);
+                        pauseDecision?.LogicalIndex);
                     next = position.LogicalIndex;
                     scheduledElapsed = position.ScheduledElapsed;
                 }
 
                 SeekReplay(next, synchronizeLists: false);
-                if (pauseIndex == next)
+                if (pauseDecision?.LogicalIndex == next)
                 {
-                    SelectReviewAt(next);
-                    StopPlaybackIfCurrent(generation, "Paused on Alarm / QA Fail · acknowledge or continue when ready");
+                    if (pauseDecision.SelectReview) SelectReviewAt(next);
+                    StopPlaybackIfCurrent(generation, $"Paused on {pauseDecision.Reason} · continue when ready");
                     return;
                 }
             }
@@ -2911,6 +2929,27 @@ public partial class MainWindow : Window
         DiagnosticListBox.SelectedItem = row;
         DiagnosticListBox.ScrollIntoView(row);
     }
+
+    private PlaybackPauseDecision? FirstPlaybackPause(int exclusiveStart, int inclusiveEnd)
+    {
+        var reviewIndex = reviewSession?.FirstPauseIndex(exclusiveStart, inclusiveEnd);
+        var preferences = SettingsPage.PlaybackPreferences;
+        var automatic = autoPauseIndex?.FirstAfter(
+            exclusiveStart,
+            inclusiveEnd,
+            preferences.PauseOnBreak,
+            preferences.PauseOnAllBreak);
+        if (reviewIndex is { } review && (automatic is null || review <= automatic.LogicalIndex))
+            return new PlaybackPauseDecision(review, "Alarm / QA Fail", SelectReview: true);
+        return automatic is null
+            ? null
+            : new PlaybackPauseDecision(
+                automatic.LogicalIndex,
+                automatic.Kind == ReplayAutomaticPauseKind.AllBreak ? "All Break" : "reported Break",
+                SelectReview: false);
+    }
+
+    private sealed record PlaybackPauseDecision(int LogicalIndex, string Reason, bool SelectReview);
 
     private TimeSpan DelayBetween(int current, int next)
     {
@@ -3016,6 +3055,8 @@ public partial class MainWindow : Window
 
     private void ClockModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (CompressIdleCheckBox is not null)
+            CompressIdleCheckBox.IsVisible = ClockModeComboBox.SelectedIndex == 0;
         NotifyPlaybackTimingChanged();
         if (replaySession is not null && currentLogicalIndex >= 0)
         {

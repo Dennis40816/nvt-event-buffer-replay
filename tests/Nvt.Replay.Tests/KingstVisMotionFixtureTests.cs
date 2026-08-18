@@ -49,5 +49,14 @@ public sealed class KingstVisMotionFixtureTests
         Assert.Empty(allBreak.HostContacts);
         Assert.Empty(ReplaySceneFactory.BuildTrails(replay, 18));
         Assert.DoesNotContain(replay.Diagnostics, diagnostic => diagnostic.Code == "CAPTURE_END_ACTIVE_CONTACTS");
+
+        var autoPause = ReplayAutoPauseIndex.Create(replay);
+        Assert.Equal(
+            new ReplayAutomaticPause(13, ReplayAutomaticPauseKind.Break),
+            autoPause.FirstAfter(0, replay.Count - 1, pauseOnBreak: true, pauseOnAllBreak: false));
+        Assert.Equal(
+            new ReplayAutomaticPause(18, ReplayAutomaticPauseKind.AllBreak),
+            autoPause.FirstAfter(13, replay.Count - 1, pauseOnBreak: false, pauseOnAllBreak: true));
+        Assert.Null(autoPause.FirstAfter(18, replay.Count - 1, pauseOnBreak: true, pauseOnAllBreak: true));
     }
 }
