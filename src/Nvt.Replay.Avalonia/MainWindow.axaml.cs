@@ -1810,6 +1810,9 @@ public partial class MainWindow : Window
         var details = row.Group.Occurrences.FirstOrDefault()?.Diagnostic.Details;
         selectedMarkerId = details?.GetValueOrDefault("marker_id");
         AnnotationMetadataPanel.IsVisible = selectedMarkerId is not null;
+        MarkerNameTextBox.Text = selectedMarkerId is null
+            ? string.Empty
+            : markers.FirstOrDefault(marker => marker.Id == selectedMarkerId)?.Label ?? string.Empty;
         MarkerQaCaseTextBox.Text = selectedMarkerId is null
             ? string.Empty
             : string.Join(", ", markers.FirstOrDefault(marker => marker.Id == selectedMarkerId)?.QaCaseIds ?? []);
@@ -2010,6 +2013,7 @@ public partial class MainWindow : Window
             .Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
         DiagnosticListBox.ItemsSource = reviewRows;
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
+        ClearMarkersButton.IsEnabled = markers.Count > 0;
         var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
         if (selected is not null) DiagnosticListBox.SelectedItem = selected;
         if (Bounds.Width > 0) ApplyResponsiveRails(Bounds.Width);
@@ -2018,21 +2022,16 @@ public partial class MainWindow : Window
     private void AddMarkerButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (currentLogicalIndex < 0) return;
-        var start = loopIn ?? currentLogicalIndex;
-        var end = loopOut ?? currentLogicalIndex;
-        if (end < start) (start, end) = (end, start);
         var marker = new ReplayMarker(
             $"marker-{Guid.NewGuid():N}",
             NextMarkerLabel(),
-            start,
-            end,
+            currentLogicalIndex,
+            currentLogicalIndex,
             DateTimeOffset.UtcNow);
         markers.Add(marker);
         CreateReviewSession(baseDiagnostics);
         RefreshReviewQueue($"ANNOTATION_MARKER:{marker.Id}");
-        SessionStatusText.Text = marker.IsRange
-            ? $"Added range marker · frames {start + 1}-{end + 1}"
-            : $"Added marker · frame {start + 1}";
+        SessionStatusText.Text = $"Added marker · frame {currentLogicalIndex + 1}";
     }
 
     private string NextMarkerLabel()
@@ -2060,6 +2059,7 @@ public partial class MainWindow : Window
         ReviewActionsPanel.IsVisible = false;
         ReviewEmptyText.IsVisible = true;
         AnnotationMetadataPanel.IsVisible = false;
+        MarkerNameTextBox.Text = string.Empty;
         MarkerQaCaseTextBox.Text = string.Empty;
         if (replaySession is { Count: > 0 } && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
@@ -2067,6 +2067,49 @@ public partial class MainWindow : Window
         SessionStatusText.Text = removed.IsRange
             ? $"Removed range marker · frames {removed.StartLogicalIndex + 1}-{removed.EndLogicalIndex + 1}"
             : $"Removed marker · frame {removed.StartLogicalIndex + 1}";
+    }
+
+    private void RenameMarkerButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedMarker(out var marker, out var index)) return;
+        var label = (MarkerNameTextBox.Text ?? string.Empty).Trim();
+        if (label.Length == 0)
+        {
+            SessionStatusText.Text = "Marker name cannot be empty";
+            MarkerNameTextBox.Text = marker.Label;
+            return;
+        }
+        if (markers.Any(item => item.Id != marker.Id && item.Label.Equals(label, StringComparison.OrdinalIgnoreCase)))
+        {
+            SessionStatusText.Text = $"Marker name already exists · {label}";
+            MarkerNameTextBox.Text = marker.Label;
+            return;
+        }
+
+        markers[index] = marker with { Label = label };
+        RefreshMarkerReview(marker.Id, $"Renamed marker · {label}");
+    }
+
+    private void ClearMarkersButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (markers.Count == 0) return;
+        var count = markers.Count;
+        markers.Clear();
+        selectedMarkerId = null;
+        selectedReviewGroupId = null;
+        ReplayTimelineSurface.ContextMenu = null;
+        CreateReviewSession(baseDiagnostics);
+        DiagnosticListBox.SelectedItem = null;
+        ReviewActionsPanel.IsVisible = false;
+        ReviewEmptyText.IsVisible = true;
+        AnnotationMetadataPanel.IsVisible = false;
+        MarkerNameTextBox.Text = string.Empty;
+        MarkerQaCaseTextBox.Text = string.Empty;
+        RefreshReviewQueue();
+        if (replaySession is { Count: > 0 } && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
+        RefreshOutputPreviewIfVisible();
+        SessionStatusText.Text = $"Cleared {count} marker{(count == 1 ? string.Empty : "s")}";
     }
 
     private void ApplyMarkerQaButton_OnClick(object? sender, RoutedEventArgs e)

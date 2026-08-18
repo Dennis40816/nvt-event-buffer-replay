@@ -676,12 +676,13 @@
       </Grid.ColumnDefinitions>
       <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
         <Grid RowDefinitions="46,*">
-          <Grid Grid.Row="0" Margin="14,0,8,0" ColumnDefinitions="*,Auto,6,Auto">
+          <Grid Grid.Row="0" Margin="14,0,8,0" ColumnDefinitions="*,Auto,6,Auto,6,Auto">
             <TextBlock x:Name="ReviewRailTitle" Text="Review" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
             <Border x:Name="ReviewRailCountBadge" Grid.Column="1" Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="7,2" VerticalAlignment="Center">
               <TextBlock x:Name="DiagnosticCountText" Text="0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
             </Border>
-            <Button x:Name="ReviewRailToggleButton" Grid.Column="3" Classes="canvasIcon" Content="&#xE76B;" Click="ReviewRailToggleButton_OnClick" AutomationProperties.Name="Collapse review queue" />
+            <Button x:Name="ClearMarkersButton" Grid.Column="3" Classes="canvasIcon" Content="&#xE74D;" IsEnabled="False" Click="ClearMarkersButton_OnClick" ToolTip.Tip="Clear all marks" AutomationProperties.Name="Clear all marks" />
+            <Button x:Name="ReviewRailToggleButton" Grid.Column="5" Classes="canvasIcon" Content="&#xE76B;" Click="ReviewRailToggleButton_OnClick" AutomationProperties.Name="Collapse review queue" />
           </Grid>
           <Grid x:Name="ReviewRailContent" Grid.Row="1" Margin="14,4,14,14" RowDefinitions="Auto,10,*">
           <StackPanel Grid.Row="0" Spacing="8">
@@ -1377,6 +1378,10 @@
                         <Button Classes="ghost" Content="False positive" Margin="0,0,5,5" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
                       </WrapPanel>
                       <StackPanel x:Name="AnnotationMetadataPanel" Spacing="5" IsVisible="False">
+                        <Grid ColumnDefinitions="*,8,Auto">
+                          <TextBox x:Name="MarkerNameTextBox" PlaceholderText="Marker name" FontSize="13" AutomationProperties.Name="Selected marker name" />
+                          <Button x:Name="RenameMarkerButton" Grid.Column="2" Classes="ghost" Content="Rename" Click="RenameMarkerButton_OnClick" AutomationProperties.Name="Rename selected marker" />
+                        </Grid>
                         <TextBox x:Name="MarkerQaCaseTextBox" PlaceholderText="QA case IDs (comma separated)" FontSize="13" />
                         <WrapPanel>
                           <Button Classes="ghost" Content="Apply QA refs" Margin="0,0,5,5" Click="ApplyMarkerQaButton_OnClick" />

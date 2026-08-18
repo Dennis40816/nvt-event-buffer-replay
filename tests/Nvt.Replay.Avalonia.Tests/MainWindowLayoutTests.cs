@@ -1052,7 +1052,7 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
-    public async Task Timeline_marker_menu_removes_only_the_chosen_marker_when_ranges_overlap()
+    public async Task Timeline_marker_menu_removes_only_the_chosen_marker_when_points_overlap()
     {
         var window = ShowWindow();
         try
@@ -1079,9 +1079,9 @@ public sealed class MainWindowLayoutTests
             var overlapMenu = Assert.IsType<ContextMenu>(timeline.ContextMenu);
             var overlapItems = overlapMenu.Items.OfType<MenuItem>().ToArray();
             Assert.Equal(2, overlapItems.Length);
-            var rangeItem = Assert.Single(overlapItems, item =>
-                item.Header?.ToString()?.StartsWith("Unmark Marker 2 · frames", StringComparison.Ordinal) == true);
-            rangeItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            var secondMarker = Assert.Single(overlapItems, item =>
+                item.Header?.ToString()?.StartsWith("Unmark Marker 2 · frame 1", StringComparison.Ordinal) == true);
+            secondMarker.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("1", Required<TextBlock>(window, "DiagnosticCountText").Text);
             Assert.Null(timeline.ContextMenu);
@@ -1091,6 +1091,50 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             var remainingItem = Assert.Single(Assert.IsType<ContextMenu>(timeline.ContextMenu).Items.OfType<MenuItem>());
             Assert.StartsWith("Unmark Marker 1 · frame 1", remainingItem.Header?.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Mark_is_always_one_frame_and_can_be_renamed_or_cleared()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
+            var mark = Required<Button>(window, "AddMarkerButton");
+            mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            var markerRow = Assert.Single(Required<ListBox>(window, "DiagnosticListBox").Items.OfType<ReviewGroupRow>());
+            Assert.Contains("frame 1", markerRow.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("frames 1-", markerRow.Message, StringComparison.OrdinalIgnoreCase);
+
+            var name = Required<TextBox>(window, "MarkerNameTextBox");
+            name.Text = "Startup touch";
+            Required<Button>(window, "RenameMarkerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            markerRow = Assert.Single(Required<ListBox>(window, "DiagnosticListBox").Items.OfType<ReviewGroupRow>());
+            Assert.Contains("Startup touch", markerRow.Message, StringComparison.Ordinal);
+            Assert.Equal("Renamed marker · Startup touch", Required<TextBlock>(window, "SessionStatusText").Text);
+
+            mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("2", Required<TextBlock>(window, "DiagnosticCountText").Text);
+            var clear = Required<Button>(window, "ClearMarkersButton");
+            Assert.True(clear.IsEnabled);
+            clear.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("0", Required<TextBlock>(window, "DiagnosticCountText").Text);
+            Assert.False(clear.IsEnabled);
+            Assert.Equal("Cleared 2 markers", Required<TextBlock>(window, "SessionStatusText").Text);
         }
         finally
         {
