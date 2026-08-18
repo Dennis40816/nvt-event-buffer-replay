@@ -645,6 +645,11 @@ public sealed class MainWindowLayoutTests
             Assert.Contains("←", ToolTip.GetTip(Required<Button>(window, "PreviousFrameButton"))?.ToString());
             Assert.Contains("→", ToolTip.GetTip(Required<Button>(window, "NextFrameButton"))?.ToString());
             Assert.Contains("Space", ToolTip.GetTip(Required<Button>(window, "OutputPreviewPlayPauseButton"))?.ToString());
+            Assert.False(MainWindow.IsShortcutEditingContext(new Button()));
+            Assert.False(MainWindow.IsShortcutEditingContext(new ToggleButton()));
+            Assert.True(MainWindow.IsShortcutEditingContext(new TextBox()));
+            Assert.True(MainWindow.IsShortcutEditingContext(new ComboBox()));
+            Assert.True(MainWindow.IsShortcutEditingContext(new Slider()));
         }
         finally
         {

@@ -3265,15 +3265,14 @@ public partial class MainWindow : Window
         TimelineStatusText.Text = "Replay speed · 1×";
     }
 
-    private static bool IsShortcutEditingContext(object? source)
+    internal static bool IsShortcutEditingContext(object? source)
     {
         if (source is not Visual visual) return false;
-        return visual is TextBox or ComboBox or ComboBoxItem or Slider or Button ||
+        return visual is TextBox or ComboBox or ComboBoxItem or Slider ||
                visual.FindAncestorOfType<TextBox>() is not null ||
                visual.FindAncestorOfType<ComboBox>() is not null ||
                visual.FindAncestorOfType<ComboBoxItem>() is not null ||
-               visual.FindAncestorOfType<Slider>() is not null ||
-               visual.FindAncestorOfType<Button>() is not null;
+               visual.FindAncestorOfType<Slider>() is not null;
     }
 
     protected override void OnClosed(EventArgs e)
