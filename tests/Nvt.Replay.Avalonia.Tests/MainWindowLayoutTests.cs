@@ -301,9 +301,16 @@ public sealed class MainWindowLayoutTests
             var details = Required<TabControl>(window, "InspectorDetailsTabs");
             Assert.Equal(["Protocol", "Raw", "Review"], details.Items.OfType<TabItem>().Select(tab => tab.Header?.ToString()));
             Assert.True(Required<ItemsControl>(window, "ProtocolFieldsItemsControl").ItemCount > 0);
+            var flatBytes = Required<Expander>(window, "FlatBytesExpander");
             var sourceIdentity = Required<Expander>(window, "SourceIdentityExpander");
+            Assert.False(flatBytes.IsExpanded);
             Assert.False(sourceIdentity.IsExpanded);
             details.SelectedItem = Required<TabItem>(window, "InspectorRawTab");
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("inspectorDisclosure", flatBytes.Classes);
+            Assert.Contains("inspectorDisclosure", sourceIdentity.Classes);
+            Assert.True(flatBytes.Bounds.Width > 300, $"Flat bytes disclosure width was {flatBytes.Bounds.Width:0.##}.");
+            Assert.True(sourceIdentity.Bounds.Width > 300, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
             sourceIdentity.IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<ItemsControl>(window, "RawByteSectionsItemsControl").ItemCount > 0);

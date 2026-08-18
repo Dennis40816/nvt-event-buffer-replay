@@ -526,6 +526,65 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
     </Style>
+    <Style Selector="Expander.inspectorDisclosure">
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="14,0,0,0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ToggleButtonBackground">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader:pressed /template/ Border#ToggleButtonBackground">
+      <Setter Property="Background" Value="{DynamicResource PressedSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader /template/ Border#ExpandCollapseChevronBorder">
+      <Setter Property="Width" Value="36" />
+      <Setter Property="Height" Value="44" />
+      <Setter Property="Margin" Value="0,0,7,0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ExpandCollapseChevronBorder">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader /template/ Path#ExpandCollapseChevron">
+      <Setter Property="Stroke" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="StrokeThickness" Value="1.5" />
+    </Style>
+    <Style Selector="Expander.inspectorDisclosure /template/ Border#ExpanderContent">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
     <Style Selector="TextBlock.healthTextAlarm">
       <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
     </Style>
@@ -1254,32 +1313,40 @@
 
               <TabItem x:Name="InspectorRawTab" Header="Raw">
                 <ScrollViewer>
-                  <StackPanel Margin="14,10,14,16" Spacing="14">
-                    <StackPanel Spacing="3">
-                      <TextBlock x:Name="RawLayoutTitleText" Text="Raw transaction" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
-                      <TextBlock x:Name="RawLayoutSummaryText" Text="Select a decoded frame to inspect its byte layout." FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                  <StackPanel Margin="0,10,0,16">
+                    <StackPanel Margin="14,0,14,10" Spacing="14">
+                      <StackPanel Spacing="3">
+                        <TextBlock x:Name="RawLayoutTitleText" Text="Raw transaction" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="RawLayoutSummaryText" Text="Select a decoded frame to inspect its byte layout." FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <ItemsControl x:Name="RawByteSectionsItemsControl">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="rendering:RawByteSection">
+                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,7,0,8">
+                              <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,4,Auto,3,Auto">
+                                <TextBlock Text="{Binding Offset}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Bytes}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Detail}" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                              </Grid>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
                     </StackPanel>
-                    <ItemsControl x:Name="RawByteSectionsItemsControl">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="rendering:RawByteSection">
-                          <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,7,0,8">
-                            <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,4,Auto,3,Auto">
-                              <TextBlock Text="{Binding Offset}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
-                              <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Bytes}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Detail}" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                            </Grid>
-                          </Border>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Expander Header="Flat bytes" FontSize="13" FontWeight="SemiBold">
-                      <Border Margin="0,8,0,0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
+                    <Expander x:Name="FlatBytesExpander" Classes="inspectorDisclosure">
+                      <Expander.Header>
+                        <TextBlock Text="Flat bytes" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                      </Expander.Header>
+                      <Border Margin="14,2,14,14" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
                         <TextBlock x:Name="RawBytesText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
                       </Border>
                     </Expander>
-                    <Expander x:Name="SourceIdentityExpander" Header="Source identity" FontSize="13" FontWeight="SemiBold">
-                      <StackPanel Margin="0,8,0,0" Spacing="7">
+                    <Expander x:Name="SourceIdentityExpander" Classes="inspectorDisclosure">
+                      <Expander.Header>
+                        <TextBlock Text="Source identity" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                      </Expander.Header>
+                      <StackPanel Margin="14,2,14,14" Spacing="7">
                         <Grid ColumnDefinitions="86,*" RowDefinitions="Auto,7,Auto,7,Auto">
                           <TextBlock Classes="fieldLabel" Text="Source line" />
                           <TextBlock x:Name="SourceLineText" Grid.Column="1" Classes="monoValue" Text="-" />
