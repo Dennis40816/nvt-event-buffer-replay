@@ -662,6 +662,17 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(286, Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width.Value);
             CaptureHash(window, "30-contract-paint-1672x720-dark.png");
 
+            var application = Assert.IsType<App>(Application.Current);
+            window.Width = 1920;
+            window.Height = 1080;
+            Dispatcher.UIThread.RunJobs();
+            CaptureHash(window, "33-contract-paint-1920x1080-dark.png");
+            application.RequestedThemeVariant = ThemeVariant.Light;
+            Dispatcher.UIThread.RunJobs();
+            CaptureHash(window, "34-contract-paint-1920x1080-light.png");
+            application.RequestedThemeVariant = ThemeVariant.Dark;
+            Dispatcher.UIThread.RunJobs();
+
             Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
             await WaitUntilAsync(() => Required<TextBlock>(window, "OutputPreviewFrameText").Text != "output 0/0");
             Dispatcher.UIThread.RunJobs();
@@ -671,6 +682,16 @@ public sealed class MainWindowLayoutTests
             Assert.InRange(railFraction, 0.27, 0.32);
             Assert.False(Required<Border>(window, "ReplayTransportBorder").IsVisible);
             Assert.False(Required<Border>(window, "InspectorRailBorder").IsVisible);
+            CaptureHash(window, "35-contract-output-1920x1080-dark.png");
+            application.RequestedThemeVariant = ThemeVariant.Light;
+            Dispatcher.UIThread.RunJobs();
+            CaptureHash(window, "36-contract-output-1920x1080-light.png");
+            application.RequestedThemeVariant = ThemeVariant.Dark;
+            Dispatcher.UIThread.RunJobs();
+
+            window.Width = 1672;
+            window.Height = 720;
+            Dispatcher.UIThread.RunJobs();
             CaptureHash(window, "31-contract-output-1672x720-dark.png");
 
             window.Width = 1180;

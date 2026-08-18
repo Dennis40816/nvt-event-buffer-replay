@@ -524,6 +524,12 @@
       <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
+    <Style Selector="TabControl.inspectorDetails TabItem">
+      <Setter Property="Height" Value="38" />
+      <Setter Property="Padding" Value="14,0,14,3" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
     <Style Selector="Border.separator">
       <Setter Property="Width" Value="1" />
       <Setter Property="Height" Value="24" />
@@ -745,13 +751,12 @@
     </Grid.RowDefinitions>
     <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <Grid Margin="12,0" ColumnDefinitions="Auto,22,200,10,Auto,10,Auto,*,8,Auto,4,Auto,4,Auto,8,Auto">
-        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-          <Border Width="5" Height="26" CornerRadius="3" Background="{DynamicResource AccentBrush}" />
+        <StackPanel Grid.Column="0" Width="237" Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="NVT EVENT BUFFER REPLAY" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
         </StackPanel>
 
         <Grid Grid.Column="2" Width="200" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-          <TextBlock x:Name="SourceAdapterText" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          <TextBlock x:Name="SourceAdapterText" Margin="22,0,0,0" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
           <ComboBox x:Name="SourceAdapterComboBox" Grid.ColumnSpan="2" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
           <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
@@ -767,29 +772,38 @@
               <ComboBoxItem Content="0x97" />
           </ComboBox>
         </StackPanel>
-        <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="6" Classes="headerInlineSelect" MinWidth="132" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
-        <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="6" Classes="headerInlineSelect" MinWidth="132" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
-          <ComboBoxItem Content="Standard" />
-          <ComboBoxItem Content="Benz Palm" />
-        </ComboBox>
+        <Grid Grid.Column="6" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+          <TextBlock Margin="0,0,3,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+          <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="1" Classes="headerInlineSelect" MinWidth="132" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
+          <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="1" Classes="headerInlineSelect" MinWidth="132" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
+            <ComboBoxItem Content="Standard" />
+            <ComboBoxItem Content="Benz Palm" />
+          </ComboBox>
+        </Grid>
 
         <Grid Grid.Column="7">
           <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" IsVisible="False" />
           <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" IsVisible="False" AutomationProperties.LiveSetting="Polite" />
           <TextBlock x:Name="ConfigurationHintText" Text="Select a source and explicit Event Buffer version." IsVisible="False" />
         </Grid>
+        <Button x:Name="EditConfigurationButton" Grid.Column="7" Classes="headerAction" Margin="8,0,0,0" HorizontalAlignment="Left" IsEnabled="False" Click="EditConfigurationButton_OnClick" ToolTip.Tip="Edit Event Buffer configuration" AutomationProperties.Name="Edit Event Buffer configuration">
+          <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE70F;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="EditActionLabel" Text="Edit" /></StackPanel>
+        </Button>
 
         <Button x:Name="SaveReviewButton" Grid.Column="9" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE74E;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="SaveActionLabel" Text="Save" /></StackPanel>
         </Button>
+        <Border Grid.Column="10" Classes="separator" />
         <Button x:Name="LoadReviewButton" Grid.Column="9" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" AutomationProperties.Name="Open review" />
         <Button x:Name="ApplySidecarButton" Grid.Column="9" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
         <Button x:Name="ExportAnalysisButton" Grid.Column="11" Classes="headerAction" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview">
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE72D;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="OutputActionLabel" Text="Output" /></StackPanel>
         </Button>
+        <Border Grid.Column="12" Classes="separator" />
         <Button x:Name="SettingsButton" Grid.Column="13" Classes="headerAction" Click="SettingsButton_OnClick" ToolTip.Tip="Settings" AutomationProperties.Name="Open settings">
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="SettingsActionLabel" Text="Settings" /></StackPanel>
         </Button>
+        <Border Grid.Column="14" Classes="separator" />
         <Button x:Name="CancelButton" Grid.Column="15" Classes="ghost" Height="32" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
         <Button x:Name="LoadButton" Grid.Column="15" Classes="primary" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -1135,10 +1149,10 @@
                                                                    AutomationProperties.Name="Scrub MP4 preview time" />
                               <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="7" Text="output 0 / 0" IsVisible="False" />
                               <Border Grid.Column="8" Classes="separator" Height="28" />
-                              <ToggleButton x:Name="OutputPreviewRepeatToggleButton" Grid.Column="7" Classes="axisToggle" Width="42" Height="42" MinWidth="42" Padding="0" IsChecked="True" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="18" ToolTip.Tip="Repeat preview playback" AutomationProperties.Name="Repeat MP4 preview" />
+                              <ToggleButton x:Name="OutputPreviewRepeatToggleButton" Grid.Column="7" Classes="canvasQuick" Width="42" Height="42" MinWidth="42" Padding="0" IsChecked="True" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="18" ToolTip.Tip="Repeat preview playback" AutomationProperties.Name="Repeat MP4 preview" />
                               <Button x:Name="OutputPreviewFullscreenButton"
                                       Grid.Column="10"
-                                      Classes="canvasIcon"
+                                      Classes="headerIcon"
                                       Width="42"
                                       Height="42"
                                       Padding="0"
@@ -1373,11 +1387,11 @@
       <GridSplitter x:Name="InspectorGridSplitter" Grid.Column="2" Margin="0,44,0,0" Classes="inspectorSplitter" Width="4" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
 
       <Border x:Name="InspectorRailBorder" Grid.Column="3" Margin="0,44,0,0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
-        <Grid RowDefinitions="46,*">
-          <Grid Grid.Row="0" Margin="8,0,8,0" ColumnDefinitions="Auto,8,*,Auto">
-            <Button x:Name="InspectorRailToggleButton" Classes="canvasIcon" Content="&#xE76C;" Click="InspectorRailToggleButton_OnClick" AutomationProperties.Name="Collapse inspector" />
-            <TextBlock x:Name="InspectorRailTitle" Grid.Column="2" Text="Inspector" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
-            <Button x:Name="CopyInspectorButton" Grid.Column="3" Classes="inspectorIcon" Content="&#xE8C8;" Click="CopyInspectorButton_OnClick" ToolTip.Tip="Copy current frame summary" AutomationProperties.Name="Copy current frame summary" />
+        <Grid RowDefinitions="38,*">
+          <Grid Grid.Row="0" Margin="12,0,8,0" ColumnDefinitions="*,Auto,4,Auto">
+            <TextBlock x:Name="InspectorRailTitle" Text="INSPECTOR" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+            <Button x:Name="CopyInspectorButton" Grid.Column="1" Classes="inspectorIcon" Content="&#xE8C8;" Click="CopyInspectorButton_OnClick" ToolTip.Tip="Copy current frame summary" AutomationProperties.Name="Copy current frame summary" />
+            <Button x:Name="InspectorRailToggleButton" Grid.Column="3" Classes="canvasIcon" Content="&#xE76C;" Click="InspectorRailToggleButton_OnClick" AutomationProperties.Name="Collapse inspector" />
           </Grid>
           <Grid x:Name="InspectorCollapsedSummary" Grid.Row="1" IsVisible="False" Margin="0,8,0,12" RowDefinitions="Auto,10,Auto,6,Auto,6,Auto,12,Auto">
             <TextBlock Text="LIVE" Classes="section" HorizontalAlignment="Center" />
@@ -1479,7 +1493,7 @@
               </StackPanel>
             </Border>
 
-            <TabControl x:Name="InspectorDetailsTabs" Grid.Row="2" Margin="0">
+            <TabControl x:Name="InspectorDetailsTabs" Grid.Row="2" Classes="inspectorDetails" Margin="0">
               <TabItem x:Name="InspectorProtocolTab" Header="Protocol">
                 <ScrollViewer>
                   <StackPanel Margin="14,10,14,16" Spacing="14">
@@ -1636,7 +1650,7 @@
         </Grid>
 
         <StackPanel x:Name="TransportAnnotationGroup" Grid.Column="4" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-          <ToggleButton x:Name="LoopToggleButton" Classes="axisToggle" Width="36" MinWidth="36" Padding="0" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="16" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" ToolTip.Tip="Loop selected range" AutomationProperties.Name="Enable loop range" />
+          <ToggleButton x:Name="LoopToggleButton" Classes="canvasQuick" Width="36" MinWidth="36" Padding="0" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="16" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" ToolTip.Tip="Loop selected range" AutomationProperties.Name="Enable loop range" />
           <Button x:Name="AddMarkerButton" Classes="ghost" IsEnabled="False" Click="AddMarkerButton_OnClick" AutomationProperties.Name="Mark special event">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />

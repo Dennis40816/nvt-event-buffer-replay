@@ -236,6 +236,7 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveRails(double width)
     {
+        EditActionLabel.IsVisible = width >= 1320;
         SaveActionLabel.IsVisible = width >= 1320;
         OutputActionLabel.IsVisible = width >= 1240;
         SettingsActionLabel.IsVisible = width >= 1240;
@@ -436,6 +437,13 @@ public partial class MainWindow : Window
         else OpenSettingsPage();
     }
 
+    private void EditConfigurationButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (!EventVersionComboBox.IsEnabled) return;
+        EventVersionComboBox.Focus();
+        EventVersionComboBox.IsDropDownOpen = true;
+    }
+
     private void OpenSettingsPage()
     {
         StopPlayback();
@@ -507,6 +515,7 @@ public partial class MainWindow : Window
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
             RegisterProfileComboBox.IsEnabled = true;
+            EditConfigurationButton.IsEnabled = true;
             ExportReadableLogButton.IsEnabled = true;
             configuringRegisterProfile = true;
             RegisterProfileComboBox.SelectedIndex = 0;
@@ -2521,6 +2530,7 @@ public partial class MainWindow : Window
         MarkerQaCaseTextBox.Text = string.Empty;
         EventVersionComboBox.SelectedIndex = -1;
         EventVersionComboBox.IsEnabled = false;
+        EditConfigurationButton.IsEnabled = false;
         Desay97ProfileComboBox.SelectedIndex = -1;
         Desay97ProfileComboBox.IsVisible = false;
         PaintTab.IsEnabled = false;
@@ -2635,6 +2645,7 @@ public partial class MainWindow : Window
         LoadButton.IsEnabled = !busy && !outputExportInProgress;
         CancelButton.IsVisible = busy;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
+        EditConfigurationButton.IsEnabled = !busy && session is not null;
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
         RegisterProfileComboBox.IsEnabled = !busy && session is not null;
         ExportReadableLogButton.IsEnabled = !busy && session is not null;
