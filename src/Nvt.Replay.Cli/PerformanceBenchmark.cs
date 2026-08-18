@@ -42,6 +42,8 @@ internal static class PerformanceBenchmark
         stopwatch.Restart();
         var decoded = capture.DecodeCommon(version);
         var replay = new CommonReplaySession(decoded.Frames);
+        var cache = ReplayFrameCache.Create(replay);
+        var trails = ReplayTrailHistory.Create(cache.Snapshots);
         var decodeMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
 
         var actualSeeks = replay.Count == 0 ? 0 : seekSamples;
@@ -50,7 +52,7 @@ internal static class PerformanceBenchmark
         {
             cancellationToken.ThrowIfCancellationRequested();
             var index = (int)((long)sample * 104_729 % replay.Count);
-            _ = replay.Seek(index);
+            _ = cache[index];
         }
         var seekMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
 
@@ -61,7 +63,11 @@ internal static class PerformanceBenchmark
         {
             cancellationToken.ThrowIfCancellationRequested();
             var index = actualRenders == 1 ? 0 : sample * (replay.Count - 1) / (actualRenders - 1);
-            var scene = ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent);
+            var scene = ReplaySceneFactory.Create(
+                cache[index],
+                replay.Count,
+                extent,
+                contactTrails: trails.Build(index, ReplayTrailMode.UntilBreak));
             _ = ReplayFrameRenderer.RenderRgb(scene, 640, 360);
         }
         var renderMilliseconds = stopwatch.Elapsed.TotalMilliseconds;

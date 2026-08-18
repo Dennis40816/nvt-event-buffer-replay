@@ -116,7 +116,8 @@ public sealed class CaptureAnalyzer
         int heatmapRows = 36,
         int heatmapPixelWidth = 640,
         int heatmapPixelHeight = 360,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyList<ITouchReplaySnapshot>? snapshots = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceSha256);
@@ -124,6 +125,8 @@ public sealed class CaptureAnalyzer
         ArgumentNullException.ThrowIfNull(replay);
         ArgumentNullException.ThrowIfNull(diagnostics);
         if (replay.Count == 0) throw new InvalidOperationException("Analysis requires at least one decoded frame.");
+        if (snapshots is not null && snapshots.Count != replay.Count)
+            throw new ArgumentException("Cached snapshot count must match the replay session.", nameof(snapshots));
         if (heatmapColumns <= 0 || heatmapRows <= 0 || heatmapPixelWidth <= 0 || heatmapPixelHeight <= 0)
             throw new ArgumentOutOfRangeException(nameof(heatmapColumns), "Heatmap dimensions must be positive.");
 
@@ -137,7 +140,7 @@ public sealed class CaptureAnalyzer
         for (var index = 0; index < replay.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var snapshot = replay.Seek(index);
+            var snapshot = snapshots?[index] ?? replay.Seek(index);
             foreach (var sourceId in snapshot.PhysicalRecords.Append(snapshot.PrimarySource).Select(item => item.StableId))
                 allReplaySourceIds.Add(sourceId);
             if (index < selected.StartLogicalIndex || index > selected.EndLogicalIndex) continue;

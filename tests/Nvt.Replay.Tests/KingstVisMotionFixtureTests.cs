@@ -19,12 +19,15 @@ public sealed class KingstVisMotionFixtureTests
         var capture = await CaptureSession.LoadAsync(fixture);
         var report = capture.DecodeCommon(CommonEventBufferVersion.V83);
         var replay = new CommonReplaySession(report.Frames);
+        var cache = ReplayFrameCache.Create(replay);
 
         Assert.Equal("kingstvis-decoded-i2c", capture.Probe.AdapterId);
         Assert.Equal(38, capture.Records.Count);
         Assert.Equal(19, report.Frames.Count);
         Assert.All(report.Frames, frame => Assert.True(frame.CrcValid));
         Assert.Equal(TouchReplayOptions.NominalTpFrameInterval, replay.FrameInterval);
+        Assert.Equal(replay.Count, cache.Count);
+        Assert.Same(cache[13], cache.Snapshots[13]);
 
         var first = replay.Seek(0);
         Assert.Equal(TouchStatus.Enter, Assert.Single(first.ReportedContacts).Status);
@@ -50,7 +53,7 @@ public sealed class KingstVisMotionFixtureTests
         Assert.Empty(ReplaySceneFactory.BuildTrails(replay, 18));
         Assert.DoesNotContain(replay.Diagnostics, diagnostic => diagnostic.Code == "CAPTURE_END_ACTIVE_CONTACTS");
 
-        var autoPause = ReplayAutoPauseIndex.Create(replay);
+        var autoPause = ReplayAutoPauseIndex.Create(cache.Snapshots);
         Assert.Equal(
             new ReplayAutomaticPause(13, ReplayAutomaticPauseKind.Break),
             autoPause.FirstAfter(0, replay.Count - 1, pauseOnBreak: true, pauseOnAllBreak: false));

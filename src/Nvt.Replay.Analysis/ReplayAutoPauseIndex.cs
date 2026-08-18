@@ -24,11 +24,17 @@ public sealed class ReplayAutoPauseIndex
     public static ReplayAutoPauseIndex Create(ITouchReplaySession replay)
     {
         ArgumentNullException.ThrowIfNull(replay);
+        return Create(Enumerable.Range(0, replay.Count).Select(replay.Seek).ToArray());
+    }
+
+    public static ReplayAutoPauseIndex Create(IReadOnlyList<ITouchReplaySnapshot> snapshots)
+    {
+        ArgumentNullException.ThrowIfNull(snapshots);
         var breaks = new List<int>();
         var allBreaks = new List<int>();
-        for (var index = 0; index < replay.Count; index++)
+        for (var index = 0; index < snapshots.Count; index++)
         {
-            var snapshot = replay.Seek(index);
+            var snapshot = snapshots[index];
             if (snapshot.AllBreak) allBreaks.Add(index);
             if (snapshot.ReportedContacts.Any(contact => !contact.Invalid && contact.Status == TouchStatus.Break))
                 breaks.Add(index);

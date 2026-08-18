@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? operationCancellation;
     private CaptureSession? session;
     private ITouchReplaySession? replaySession;
+    private ReplayFrameCache? replayFrames;
     private RawRecordRow[] allRawRows = [];
     private RegisterActivityEntry[] registerActivities = [];
     private Dictionary<string, RawRecordRow> rawRowsById = [];
@@ -110,6 +111,9 @@ public partial class MainWindow : Window
     private const double CollapsedInspectorRailWidth = 58;
     private const double ReplayTransportHeight = 174;
     private static readonly TimeSpan MinimumPlaybackVisualInterval = TimeSpan.FromMilliseconds(16);
+    private static readonly TimeSpan PlaybackDetailPresentationInterval = TimeSpan.FromMilliseconds(100);
+    private long lastDetailPresentationTimestamp;
+    internal int DetailPresentationCount { get; private set; }
     public MainWindow()
     {
         InitializeComponent();
@@ -1315,9 +1319,9 @@ public partial class MainWindow : Window
 
     private ReplayScene CreateReplayScene(int logicalIndex)
     {
-        if (replaySession is null) throw new InvalidOperationException("A decoded replay is required.");
+        if (replaySession is null || replayFrames is null) throw new InvalidOperationException("A decoded replay is required.");
         return ReplaySceneFactory.Create(
-            replaySession.Seek(logicalIndex),
+            replayFrames[logicalIndex],
             replaySession.Count,
             replayExtent,
             reviewSession?.Diagnostics,
@@ -1344,7 +1348,8 @@ public partial class MainWindow : Window
             reviewSession.Diagnostics,
             reviewSession,
             range,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken,
+            snapshots: replayFrames?.Snapshots);
     }
 
     private async Task RefreshOutputPreviewAsync()
@@ -2460,6 +2465,7 @@ public partial class MainWindow : Window
         StopPlayback();
         session = null;
         replaySession = null;
+        replayFrames = null;
         trailHistory = null;
         autoPauseIndex = null;
         trailVisibilityStart = 0;
@@ -2484,6 +2490,8 @@ public partial class MainWindow : Window
         currentInspectorFrame = null;
         currentInspectorSnapshot = null;
         currentInspectorPresentation = null;
+        lastDetailPresentationTimestamp = 0;
+        DetailPresentationCount = 0;
         loopIn = null;
         loopOut = null;
         loopEnabled = false;
@@ -2647,8 +2655,9 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.IsEnabled = replaySession.Count > 0;
         ReplayTimelineSurface.SetMaximum(maximum);
         replayExtent = ReplayExtent.Measure(replaySession.AllReportedContacts);
-        trailHistory = ReplayTrailHistory.Create(replaySession);
-        autoPauseIndex = ReplayAutoPauseIndex.Create(replaySession);
+        replayFrames = ReplayFrameCache.Create(replaySession);
+        trailHistory = ReplayTrailHistory.Create(replayFrames.Snapshots);
+        autoPauseIndex = ReplayAutoPauseIndex.Create(replayFrames.Snapshots);
         trailVisibilityStart = 0;
         RefreshLegendPlacement();
         PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
@@ -2675,32 +2684,62 @@ public partial class MainWindow : Window
         }
 
         var clampedIndex = Math.Clamp(logicalIndex, 0, replaySession.Count - 1);
-        var snapshot = replaySession.Seek(clampedIndex);
+        var snapshot = replayFrames?[clampedIndex] ?? replaySession.Seek(clampedIndex);
         currentLogicalIndex = clampedIndex;
+        RenderReplayFrame(snapshot, crossfade);
+        UpdateReplayProgress(snapshot);
+
+        if (synchronizeLists)
+            SynchronizeReplayLists(clampedIndex, snapshot);
+
+        if (synchronizeLists || ShouldPresentPlaybackDetails())
+            PresentReplayDetails(snapshot);
+    }
+
+    private void RenderReplayFrame(ITouchReplaySnapshot snapshot, bool crossfade)
+    {
+        if (replaySession is null) return;
         PaintSurface.Show(ReplaySceneFactory.Create(
             snapshot,
             replaySession.Count,
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            trailHistory?.Build(clampedIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
+            trailHistory?.Build(snapshot.LogicalIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
             reverseX,
             reverseY,
             swapAxes), crossfade);
+    }
+
+    private void UpdateReplayProgress(ITouchReplaySnapshot snapshot)
+    {
         ReplayClockText.Text = FormatClock(SelectedTime(snapshot.Timeline));
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
-        ReplayTimelineSurface.SetPosition(clampedIndex);
         var physicalMaximum = Math.Max(1, session?.Records.Count - 1 ?? 1);
         var physicalValue = Math.Min(physicalMaximum, snapshot.PrimarySource.Index);
         var evidenceMaximum = Math.Max(1, diagnosticRows.Length);
         var evidenceValue = CountDiagnosticsThroughLine(snapshot.PrimarySource.Location.LineNumber);
-        ReplayTimelineSurface.SetSupportingProgress(
+        ReplayTimelineSurface.SetFrameState(
+            snapshot.LogicalIndex,
             physicalValue / (double)physicalMaximum,
             evidenceValue / (double)evidenceMaximum);
+    }
 
-        if (synchronizeLists)
-            SynchronizeReplayLists(clampedIndex, snapshot);
+    private bool ShouldPresentPlaybackDetails()
+    {
+        if (!InspectorRailBorder.IsVisible || inspectorRailCollapsed) return false;
+        var now = Stopwatch.GetTimestamp();
+        if (lastDetailPresentationTimestamp != 0 &&
+            Stopwatch.GetElapsedTime(lastDetailPresentationTimestamp, now) < PlaybackDetailPresentationInterval)
+            return false;
+        lastDetailPresentationTimestamp = now;
+        return true;
+    }
 
+    private void PresentReplayDetails(ITouchReplaySnapshot snapshot)
+    {
+        lastDetailPresentationTimestamp = Stopwatch.GetTimestamp();
+        DetailPresentationCount++;
         ShowRecord(snapshot.PhysicalRecords[^1], snapshot.DecodedFrame, snapshot);
     }
 
@@ -2723,7 +2762,7 @@ public partial class MainWindow : Window
             return;
 
         var clampedIndex = Math.Clamp(logicalIndex, 0, decodedRows.Length - 1);
-        snapshot ??= replaySession.Seek(clampedIndex);
+        snapshot ??= replayFrames?[clampedIndex] ?? replaySession.Seek(clampedIndex);
         synchronizingSelection = true;
         try
         {
@@ -3009,7 +3048,10 @@ public partial class MainWindow : Window
         cancellation?.Cancel();
         cancellation?.Dispose();
         if (cancellation is not null && replaySession is { Count: > 0 } && currentLogicalIndex >= 0)
+        {
             SynchronizeReplayLists(currentLogicalIndex);
+            if (replayFrames is { } frames) PresentReplayDetails(frames[currentLogicalIndex]);
+        }
         if (PlayPauseButton is not null)
         {
             SetPlaybackVisualState(playing: false);

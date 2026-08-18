@@ -861,6 +861,39 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Playback_fast_path_throttles_expensive_inspector_presentations()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            SettingsControl<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked = false;
+            Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
+            var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
+            speed.SelectedItem = speed.Items.OfType<ComboBoxItem>().Single(item => item.Tag?.ToString() == "max");
+            var play = Required<Button>(window, "PlayPauseButton");
+            var before = window.DetailPresentationCount;
+
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Task.Delay(280);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Pause", play.Content?.ToString());
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            var presentations = window.DetailPresentationCount - before;
+            Assert.InRange(presentations, 2, 6);
+            Assert.Contains("Play", play.Content?.ToString());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Paint_swap_XY_transposes_only_the_view_scene()
     {
         var window = ShowWindow();

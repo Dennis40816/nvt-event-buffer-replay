@@ -77,6 +77,14 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         InvalidateVisual();
     }
 
+    public void SetFrameState(int logicalIndex, double physical, double evidence)
+    {
+        value = Math.Clamp(logicalIndex, 0, maximum);
+        physicalFraction = Math.Clamp(physical, 0, 1);
+        evidenceFraction = Math.Clamp(evidence, 0, 1);
+        InvalidateVisual();
+    }
+
     public void SetLoopRange(int? start, int? end, bool enabled)
     {
         loopStart = start is null ? null : Math.Clamp(start.Value, 0, maximum);

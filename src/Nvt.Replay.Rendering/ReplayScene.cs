@@ -152,14 +152,20 @@ public sealed class ReplayTrailHistory
     public static ReplayTrailHistory Create(ITouchReplaySession replay)
     {
         ArgumentNullException.ThrowIfNull(replay);
+        return Create(Enumerable.Range(0, replay.Count).Select(replay.Seek).ToArray());
+    }
+
+    public static ReplayTrailHistory Create(IReadOnlyList<ITouchReplaySnapshot> snapshots)
+    {
+        ArgumentNullException.ThrowIfNull(snapshots);
         var completed = new Dictionary<byte, List<Gesture>>();
         var open = new Dictionary<byte, GestureBuilder>();
-        var reportedIds = new IReadOnlySet<byte>[replay.Count];
-        var activeIds = new IReadOnlySet<byte>[replay.Count];
+        var reportedIds = new IReadOnlySet<byte>[snapshots.Count];
+        var activeIds = new IReadOnlySet<byte>[snapshots.Count];
 
-        for (var logicalIndex = 0; logicalIndex < replay.Count; logicalIndex++)
+        for (var logicalIndex = 0; logicalIndex < snapshots.Count; logicalIndex++)
         {
-            var snapshot = replay.Seek(logicalIndex);
+            var snapshot = snapshots[logicalIndex];
             var reported = snapshot.ReportedContacts.Where(IsTrackable).OrderBy(contact => contact.Id).ToArray();
             reportedIds[logicalIndex] = reported.Select(contact => contact.Id).ToHashSet();
             activeIds[logicalIndex] = snapshot.HostContacts
@@ -201,7 +207,7 @@ public sealed class ReplayTrailHistory
         }
 
         foreach (var builder in open.Values)
-            Finish(builder, Math.Max(builder.StartLogicalIndex, replay.Count - 1), completed);
+            Finish(builder, Math.Max(builder.StartLogicalIndex, snapshots.Count - 1), completed);
 
         return new ReplayTrailHistory(
             completed.ToDictionary(
