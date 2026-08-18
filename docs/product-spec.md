@@ -108,7 +108,7 @@ one workspace, not separate applications. Dark is the default; light mode is
 supported. Color is never the only severity or touch-type signal.
 
 Logical events are the default step unit. Physical transactions are available
-through drill-down. Playback supports 0.1x through 10x and Max, event/frame
+through drill-down. Playback supports 0.01x through 10x and Max, event/frame
 navigation, looped In/Out ranges, keyboard operation, and a command palette.
 Normal playback uses monotonic absolute deadlines and may coalesce late visual
 updates without skipping Alarm/QA pause frames. Loop wrap is visually blended

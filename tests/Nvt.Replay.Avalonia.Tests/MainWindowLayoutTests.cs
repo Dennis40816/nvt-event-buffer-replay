@@ -658,6 +658,115 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Space_preempts_a_focused_toolbar_button_and_toggles_playback()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
+            speed.SelectedItem = speed.Items.OfType<ComboBoxItem>().Single(item => item.Tag?.ToString() == "0.01");
+            var mark = Required<Button>(window, "AddMarkerButton");
+            mark.Focus();
+            window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.None, null);
+            window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.None, null);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("0", Required<TextBlock>(window, "DiagnosticCountText").Text);
+            Assert.Contains("Pause", Required<Button>(window, "PlayPauseButton").Content?.ToString());
+
+            window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.None, null);
+            window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.None, null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Play", Required<Button>(window, "PlayPauseButton").Content?.ToString());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Changing_speed_interrupts_the_old_delay_and_one_frame_loop_is_rejected()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
+            var speedItems = speed.Items.OfType<ComboBoxItem>().ToArray();
+            Assert.Equal(["0.01", "0.02", "0.05"], speedItems.Take(3).Select(item => item.Tag?.ToString() ?? string.Empty).ToArray());
+            speed.SelectedItem = speedItems.Single(item => item.Tag?.ToString() == "0.01");
+            Required<Button>(window, "PlayPauseButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var initialFrame = Required<TextBlock>(window, "InspectorLogicalText").Text;
+
+            speed.SelectedItem = speedItems.Single(item => item.Tag?.ToString() == "10");
+            await WaitUntilAsync(
+                () => Required<TextBlock>(window, "InspectorLogicalText").Text != initialFrame,
+                TimeSpan.FromMilliseconds(500));
+
+            if (Required<Button>(window, "PlayPauseButton").Content?.ToString()?.Contains("Pause", StringComparison.Ordinal) == true)
+                Required<Button>(window, "PlayPauseButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            window.KeyPress(Key.Home, RawInputModifiers.None, PhysicalKey.None, null);
+            window.KeyRelease(Key.Home, RawInputModifiers.None, PhysicalKey.None, null);
+            window.KeyPress(Key.I, RawInputModifiers.None, PhysicalKey.None, "i");
+            window.KeyRelease(Key.I, RawInputModifiers.None, PhysicalKey.None, "i");
+            window.KeyPress(Key.O, RawInputModifiers.None, PhysicalKey.None, "o");
+            window.KeyRelease(Key.O, RawInputModifiers.None, PhysicalKey.None, "o");
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("1-1", Required<TextBlock>(window, "LoopRangeText").Text);
+
+            Required<Button>(window, "PlayPauseButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Play", Required<Button>(window, "PlayPauseButton").Content?.ToString());
+            Assert.Contains("at least 2 frames", Required<TextBlock>(window, "TimelineStatusText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Ten_x_loop_yields_to_the_UI_and_remains_stoppable()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
+            speed.SelectedItem = speed.Items.OfType<ComboBoxItem>().Single(item => item.Tag?.ToString() == "10");
+            Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
+            var play = Required<Button>(window, "PlayPauseButton");
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            await Task.Delay(250);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Pause", play.Content?.ToString());
+            Assert.StartsWith("Loop: on", Required<TextBlock>(window, "LoopRangeText").Text, StringComparison.OrdinalIgnoreCase);
+
+            play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Play", play.Content?.ToString());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Paint_swap_XY_transposes_only_the_view_scene()
     {
         var window = ShowWindow();
@@ -1097,9 +1206,9 @@ public sealed class MainWindowLayoutTests
     private static T Required<T>(Control root, string name) where T : Control =>
         root.FindControl<T>(name) ?? throw new InvalidOperationException($"Missing control '{name}'.");
 
-    private static async Task WaitUntilAsync(Func<bool> predicate)
+    private static async Task WaitUntilAsync(Func<bool> predicate, TimeSpan? waitTimeout = null)
     {
-        var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        var timeout = DateTime.UtcNow + (waitTimeout ?? TimeSpan.FromSeconds(5));
         while (!predicate() && DateTime.UtcNow < timeout)
         {
             Dispatcher.UIThread.RunJobs();

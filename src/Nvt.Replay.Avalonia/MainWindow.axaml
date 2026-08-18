@@ -1346,7 +1346,10 @@
               <ComboBoxItem Content="TP Frame · 120 Hz" />
             </ComboBox>
             <TextBlock Grid.Column="4" Classes="fieldLabel" Text="Speed" />
-            <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="6" SelectedIndex="3" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
+            <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="6" SelectedIndex="6" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
+              <ComboBoxItem Content="0.01×" Tag="0.01" />
+              <ComboBoxItem Content="0.02×" Tag="0.02" />
+              <ComboBoxItem Content="0.05×" Tag="0.05" />
               <ComboBoxItem Content="0.1×" Tag="0.1" />
               <ComboBoxItem Content="0.25×" Tag="0.25" />
               <ComboBoxItem Content="0.5×" Tag="0.5" />

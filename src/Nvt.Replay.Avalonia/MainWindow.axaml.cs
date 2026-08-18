@@ -88,6 +88,7 @@ public partial class MainWindow : Window
     private bool operationInProgress;
     private bool outputExportInProgress;
     private int playbackTimingRevision;
+    private int playbackRunGeneration;
     private bool outputWorkspaceActive;
     private int themeMode;
     private bool reviewRailCollapsed;
@@ -104,6 +105,7 @@ public partial class MainWindow : Window
     private const double MinimumInspectorRailWidth = 320;
     private const double MaximumInspectorRailWidth = 520;
     private const double CollapsedInspectorRailWidth = 58;
+    private static readonly TimeSpan MinimumPlaybackVisualInterval = TimeSpan.FromMilliseconds(16);
     public MainWindow()
     {
         InitializeComponent();
@@ -186,6 +188,16 @@ public partial class MainWindow : Window
             OutputResolutionComboBox,
             HeatmapModeComboBox);
         ApplyShortcutToolTips();
+        AddHandler(
+            InputElement.KeyDownEvent,
+            MainWindow_OnPreviewKeyDown,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        AddHandler(
+            InputElement.KeyUpEvent,
+            MainWindow_OnPreviewKeyUp,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
         PaintSurface.LegendCollapsedChanged += PaintSurface_OnLegendCollapsedChanged;
         RegisterActivitySurface.ActivitySelected += RegisterActivitySurface_OnActivitySelected;
         Opened += (_, _) =>
@@ -2644,21 +2656,24 @@ public partial class MainWindow : Window
         {
             return;
         }
+        if (loopEnabled && loopIn is { } loopStart && loopOut is { } loopEnd && loopStart >= loopEnd)
+        {
+            TimelineStatusText.Text = "Loop needs at least 2 frames · drag either Loop handle to widen the range";
+            return;
+        }
         if (currentLogicalIndex >= replaySession.Count - 1)
         {
             SeekReplay(loopEnabled ? loopIn ?? 0 : 0);
         }
-        playbackCancellation = new CancellationTokenSource();
+        var cancellation = new CancellationTokenSource();
+        playbackCancellation = cancellation;
+        var generation = ++playbackRunGeneration;
         SetPlaybackVisualState(playing: true);
-        var nextIndex = Math.Min(currentLogicalIndex + 1, replaySession.Count - 1);
-        TimelineStatusText.Text =
-            $"Playing {(maxReplaySpeed ? "MAX" : $"{replaySpeed:0.##}×")} · " +
-            $"next {DelayBetween(currentLogicalIndex, nextIndex).TotalMilliseconds:0.###} ms · " +
-            $"frame interval {replaySession.FrameInterval.TotalMilliseconds:0.###} ms";
-        _ = RunPlaybackAsync(playbackCancellation.Token);
+        UpdatePlaybackStatus();
+        _ = RunPlaybackAsync(cancellation.Token, generation);
     }
 
-    private async Task RunPlaybackAsync(CancellationToken cancellationToken)
+    private async Task RunPlaybackAsync(CancellationToken cancellationToken, int generation)
     {
         var playbackStarted = Stopwatch.GetTimestamp();
         var scheduledElapsed = TimeSpan.Zero;
@@ -2680,12 +2695,19 @@ public partial class MainWindow : Window
                 {
                     if (loopEnabled && loopIn is { } start && start <= end)
                     {
+                        if (start >= end)
+                        {
+                            StopPlaybackIfCurrent(
+                                generation,
+                                "Loop needs at least 2 frames · drag either Loop handle to widen the range");
+                            return;
+                        }
                         SeekReplay(start, crossfade: true);
                         playbackStarted = Stopwatch.GetTimestamp();
                         scheduledElapsed = TimeSpan.Zero;
                         continue;
                     }
-                    StopPlayback("Replay complete · use Home, seek, or Play to restart");
+                    StopPlaybackIfCurrent(generation, "Replay complete · use Home, seek, or Play to restart");
                     return;
                 }
 
@@ -2709,7 +2731,10 @@ public partial class MainWindow : Window
                 }
                 else
                 {
-                    var firstDue = scheduledElapsed + DelayBetween(currentLogicalIndex, currentLogicalIndex + 1);
+                    var firstDue = ReplayPlaybackSchedule.NextVisualDue(
+                        scheduledElapsed,
+                        DelayBetween(currentLogicalIndex, currentLogicalIndex + 1),
+                        MinimumPlaybackVisualInterval);
                     await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
                     pauseIndex = reviewSession?.FirstPauseIndex(currentLogicalIndex, end);
                     var position = ReplayPlaybackSchedule.CatchUp(
@@ -2727,7 +2752,7 @@ public partial class MainWindow : Window
                 if (pauseIndex == next)
                 {
                     SelectReviewAt(next);
-                    StopPlayback("Paused on Alarm / QA Fail · acknowledge or continue when ready");
+                    StopPlaybackIfCurrent(generation, "Paused on Alarm / QA Fail · acknowledge or continue when ready");
                     return;
                 }
             }
@@ -2737,15 +2762,31 @@ public partial class MainWindow : Window
         }
     }
 
+    private void StopPlaybackIfCurrent(int generation, string status)
+    {
+        if (generation == playbackRunGeneration)
+            StopPlayback(status);
+    }
+
     private static async Task DelayUntilAsync(
         long startedTimestamp,
         TimeSpan scheduledElapsed,
         CancellationToken cancellationToken)
     {
-        var remaining = scheduledElapsed - Stopwatch.GetElapsedTime(startedTimestamp);
-        if (remaining > TimeSpan.Zero)
-            await Task.Delay(remaining, cancellationToken);
-        else
+        var waited = false;
+        while (true)
+        {
+            var remaining = scheduledElapsed - Stopwatch.GetElapsedTime(startedTimestamp);
+            if (remaining <= TimeSpan.Zero) break;
+            var slice = remaining > TimeSpan.FromSeconds(1)
+                ? TimeSpan.FromSeconds(1)
+                : remaining < TimeSpan.FromMilliseconds(1)
+                    ? TimeSpan.FromMilliseconds(1)
+                    : remaining;
+            await Task.Delay(slice, cancellationToken);
+            waited = true;
+        }
+        if (!waited)
             await Task.Yield();
         cancellationToken.ThrowIfCancellationRequested();
     }
@@ -2787,10 +2828,37 @@ public partial class MainWindow : Window
         return TimeSpan.FromTicks(Math.Max(0, (long)(delay.Ticks / replaySpeed)));
     }
 
+    private void UpdatePlaybackStatus()
+    {
+        if (replaySession is null || replaySession.Count == 0 || currentLogicalIndex < 0)
+            return;
+        var nextIndex = Math.Min(currentLogicalIndex + 1, replaySession.Count - 1);
+        TimelineStatusText.Text =
+            $"Playing {(maxReplaySpeed ? "MAX" : $"{replaySpeed:0.###}×")} · " +
+            $"next {DelayBetween(currentLogicalIndex, nextIndex).TotalMilliseconds:0.###} ms · " +
+            $"frame interval {replaySession.FrameInterval.TotalMilliseconds:0.###} ms";
+    }
+
+    private void RestartPlaybackTimingIfActive()
+    {
+        var previous = playbackCancellation;
+        if (previous is null || replaySession is null || replaySession.Count == 0)
+            return;
+
+        var replacement = new CancellationTokenSource();
+        playbackCancellation = replacement;
+        var generation = ++playbackRunGeneration;
+        previous.Cancel();
+        previous.Dispose();
+        UpdatePlaybackStatus();
+        _ = RunPlaybackAsync(replacement.Token, generation);
+    }
+
     private void StopPlayback(string? status = null)
     {
         var cancellation = playbackCancellation;
         playbackCancellation = null;
+        playbackRunGeneration++;
         cancellation?.Cancel();
         cancellation?.Dispose();
         if (PlayPauseButton is not null)
@@ -2833,13 +2901,13 @@ public partial class MainWindow : Window
         {
             replaySpeed = speed;
         }
-        playbackTimingRevision++;
+        NotifyPlaybackTimingChanged();
         RefreshOutputPreviewIfVisible();
     }
 
     private void ClockModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        playbackTimingRevision++;
+        NotifyPlaybackTimingChanged();
         if (replaySession is not null && currentLogicalIndex >= 0)
         {
             ReplayClockText.Text = FormatClock(SelectedTime(replaySession.Timeline[currentLogicalIndex]));
@@ -2850,7 +2918,13 @@ public partial class MainWindow : Window
         RefreshOutputPreviewIfVisible();
     }
 
-    private void ReplayTimingOption_OnChanged(object? sender, RoutedEventArgs e) => playbackTimingRevision++;
+    private void ReplayTimingOption_OnChanged(object? sender, RoutedEventArgs e) => NotifyPlaybackTimingChanged();
+
+    private void NotifyPlaybackTimingChanged()
+    {
+        playbackTimingRevision++;
+        RestartPlaybackTimingIfActive();
+    }
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -3064,6 +3138,7 @@ public partial class MainWindow : Window
                 loopOut = range.EndLogicalIndex;
             }
         }
+        NotifyPlaybackTimingChanged();
         UpdateLoopText();
     }
 
@@ -3072,6 +3147,7 @@ public partial class MainWindow : Window
         loopIn = e.StartLogicalIndex;
         loopOut = e.EndLogicalIndex;
         loopEnabled = true;
+        NotifyPlaybackTimingChanged();
         UpdateLoopText();
     }
 
@@ -3088,6 +3164,7 @@ public partial class MainWindow : Window
         {
             synchronizingLoopControls = false;
         }
+        NotifyPlaybackTimingChanged();
     }
 
     private void UpdateLoopText()
@@ -3127,9 +3204,29 @@ public partial class MainWindow : Window
         ? $"{value[..32]}\n{value[32..]}"
         : value;
 
+    private void MainWindow_OnPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        HandleWindowKeyDown(e);
+    }
+
+    private void MainWindow_OnPreviewKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (ReplayShortcutCatalog.Match(e.Key, e.KeyModifiers) is { } shortcut &&
+            (!IsShortcutEditingContext(e.Source) || shortcut.AllowWhileEditing))
+        {
+            e.Handled = true;
+        }
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (!e.Handled)
+            HandleWindowKeyDown(e);
         base.OnKeyDown(e);
+    }
+
+    private void HandleWindowKeyDown(KeyEventArgs e)
+    {
         if (outputFullscreenActive && e.Key == Key.Escape)
         {
             ExitOutputFullscreen();

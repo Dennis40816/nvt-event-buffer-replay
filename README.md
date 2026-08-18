@@ -56,8 +56,10 @@ the [Desay Event Buffer contract](docs/desay97-event-buffer.md).
 
 The Common replay slice reduces each logical frame into separate Reported
 Frame and Host State views. Paint supports deterministic forward/backward
-seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.1×–10×
+seeking, sparse checkpoints, Recorded and synthetic Frame clocks, 0.01×–10×
 and MAX playback, idle-gap compression, and a draggable two-handle loop range.
+Changing clock or speed while playing immediately reschedules the run; catch-up
+work is bounded per UI tick and a one-frame Loop is rejected instead of busy-looping.
 Playback is scheduled against an absolute clock: a busy UI may skip obsolete
 intermediate drawings to stay on time, but never skips an Alarm or QA pause.
 Loop wrap uses a short crossfade instead of a hard visual cut.
