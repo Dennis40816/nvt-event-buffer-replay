@@ -41,6 +41,7 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
     public IBrush? PlayheadBrush { get => GetValue(PlayheadBrushProperty); set => SetValue(PlayheadBrushProperty, value); }
     public IBrush? LabelSurfaceBrush { get => GetValue(LabelSurfaceBrushProperty); set => SetValue(LabelSurfaceBrushProperty, value); }
     public IBrush? LabelTextBrush { get => GetValue(LabelTextBrushProperty); set => SetValue(LabelTextBrushProperty, value); }
+    public bool ShowRange { get; set; } = true;
     public int RangeStart => rangeStart;
     public int RangeEnd => rangeEnd;
 
@@ -81,18 +82,21 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
         if (Bounds.Width <= TrackInset * 2 || Bounds.Height <= 1) return;
 
         var trimY = 8d;
-        var y = Bounds.Height - 9;
+        var y = ShowRange ? Bounds.Height - 9 : Bounds.Height / 2;
         var left = TrackInset;
         var right = Bounds.Width - TrackInset;
         var thickness = IsPointerOver || dragTarget != DragTarget.None || IsKeyboardFocusWithin ? 3 : 1.5;
-        context.DrawLine(new Pen(TrackBrush, 1), new Point(left, trimY), new Point(right, trimY));
-        if (sourceFrameCount > 0)
+        if (ShowRange)
         {
-            var rangeStartX = SourcePositionFor(rangeStart);
-            var rangeEndX = SourcePositionFor(rangeEnd);
-            context.DrawLine(new Pen(ProgressBrush, 4), new Point(rangeStartX, trimY), new Point(rangeEndX, trimY));
-            DrawRangeHandle(context, rangeStartX, trimY, pointsRight: true);
-            DrawRangeHandle(context, rangeEndX, trimY, pointsRight: false);
+            context.DrawLine(new Pen(TrackBrush, 1), new Point(left, trimY), new Point(right, trimY));
+            if (sourceFrameCount > 0)
+            {
+                var rangeStartX = SourcePositionFor(rangeStart);
+                var rangeEndX = SourcePositionFor(rangeEnd);
+                context.DrawLine(new Pen(ProgressBrush, 4), new Point(rangeStartX, trimY), new Point(rangeEndX, trimY));
+                DrawRangeHandle(context, rangeStartX, trimY, pointsRight: true);
+                DrawRangeHandle(context, rangeEndX, trimY, pointsRight: false);
+            }
         }
         context.DrawLine(new Pen(IsPointerOver ? HoverTrackBrush : TrackBrush, thickness), new Point(left, y), new Point(right, y));
 
@@ -211,7 +215,7 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
 
     private DragTarget RangeTargetFor(double x)
     {
-        if (sourceFrameCount == 0) return DragTarget.None;
+        if (!ShowRange || sourceFrameCount == 0) return DragTarget.None;
         var startDistance = Math.Abs(x - SourcePositionFor(rangeStart));
         var endDistance = Math.Abs(x - SourcePositionFor(rangeEnd));
         const double hitRadius = 11;

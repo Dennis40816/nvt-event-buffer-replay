@@ -158,7 +158,9 @@ public sealed class MainWindowLayoutTests
             tabs.SelectedItem = Required<TabItem>(window, "AnalysisTab");
             var previewFrame = Required<TextBlock>(window, "OutputPreviewFrameText");
             await WaitUntilAsync(() => !string.Equals(previewFrame.Text, "output 0/0", StringComparison.Ordinal));
-            Assert.Contains("1280 × 720", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
+            var expectedPaintResolution = $"{Required<TextBox>(window, "PanelWidthTextBox").Text} × {Required<TextBox>(window, "PanelHeightTextBox").Text}";
+            Assert.Contains(expectedPaintResolution, Required<TextBlock>(window, "OutputVideoBadgeText").Text);
+            Assert.Contains(expectedPaintResolution, Required<ComboBoxItem>(window, "OutputPanelResolutionItem").Content?.ToString());
             Assert.False(Required<Button>(window, "PlayPauseButton").IsEnabled);
             Assert.True(Required<Button>(window, "OutputPreviewPlayPauseButton").IsEnabled);
             var sourceLines = Required<TextBlock>(window, "OutputSourceText").Text!.Split('\n');
@@ -190,16 +192,14 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             var packageDark = CaptureHash(window, "10-golden-package-dark.png");
             outputContent.SelectedIndex = 0;
-            Required<ToggleButton>(window, "OutputSettingsToggleButton").IsChecked = true;
             Dispatcher.UIThread.RunJobs();
             var settingsDark = CaptureHash(window, "11-golden-output-settings-dark.png");
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 5;
-            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 3;
+            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 4;
             Dispatcher.UIThread.RunJobs();
             var customSettingsDark = CaptureHash(window, "15-golden-output-custom-settings-dark.png");
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 2;
             Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 0;
-            Required<ToggleButton>(window, "OutputSettingsToggleButton").IsChecked = false;
             window.Width = 1180;
             window.Height = 720;
             Dispatcher.UIThread.RunJobs();
@@ -217,7 +217,6 @@ public sealed class MainWindowLayoutTests
             Assert.NotEqual(paintDark, outputDark);
             Assert.NotEqual(outputDark, heatmapDark);
             Assert.NotEqual(heatmapDark, packageDark);
-            Assert.NotEqual(outputDark, settingsDark);
             Assert.NotEqual(settingsDark, customSettingsDark);
             Assert.NotEqual(outputDark, compactOutputDark);
             Assert.NotEqual(compactHeatmapDark, compactHeatmapLight);
@@ -565,9 +564,8 @@ public sealed class MainWindowLayoutTests
             Assert.True(heatmap.VisibleCellCount < 35);
 
             outputContent.SelectedIndex = 0;
-            var settings = Required<ToggleButton>(window, "OutputSettingsToggleButton");
-            settings.IsChecked = true;
-            Assert.True(Required<Border>(window, "OutputVideoSettingsPanel").IsVisible);
+            Assert.Null(window.FindControl<ToggleButton>("OutputSettingsToggleButton"));
+            Assert.True(Required<ComboBox>(window, "OutputClockComboBox").IsVisible);
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 5;
             var customSpeed = Required<TextBox>(window, "OutputCustomSpeedTextBox");
             Assert.True(customSpeed.IsVisible);
@@ -592,6 +590,8 @@ public sealed class MainWindowLayoutTests
             fullscreen.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Border>(window, "OutputFullscreenOverlay").IsVisible);
+            Assert.True(Required<Button>(window, "OutputFullscreenPlayPauseButton").IsEnabled);
+            Assert.True(Required<OutputVideoTimelineSurface>(window, "OutputFullscreenTimeline").IsEnabled);
             Assert.Equal(WindowState.FullScreen, window.WindowState);
             Required<Button>(window, "OutputFullscreenExitButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
@@ -708,7 +708,7 @@ public sealed class MainWindowLayoutTests
             Assert.Equal("19", Required<TextBlock>(window, "TimelineLogicalCountText").Text);
             Assert.Equal("0", Required<TextBlock>(window, "TimelineEvidenceCountText").Text);
             Assert.Null(window.FindControl<TextBlock>("TimelineSummaryText"));
-            Assert.False(Required<Button>(window, "ClearLoopButton").IsVisible);
+            Assert.Null(window.FindControl<Button>("ClearLoopButton"));
 
             var application = Assert.IsType<App>(Application.Current);
             application.RequestedThemeVariant = ThemeVariant.Dark;
@@ -723,14 +723,11 @@ public sealed class MainWindowLayoutTests
             var loop = Required<ToggleButton>(window, "LoopToggleButton");
             loop.IsChecked = true;
             Dispatcher.UIThread.RunJobs();
-            var clearLoop = Required<Button>(window, "ClearLoopButton");
-            Assert.True(clearLoop.IsVisible);
-            Assert.DoesNotContain("off", Required<TextBlock>(window, "LoopRangeText").Text, StringComparison.OrdinalIgnoreCase);
+            Assert.StartsWith("Loop: on", Required<TextBlock>(window, "LoopRangeText").Text, StringComparison.OrdinalIgnoreCase);
             CaptureHash(window, "25-timeline-loop-range-dark.png");
 
-            clearLoop.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            loop.IsChecked = false;
             Dispatcher.UIThread.RunJobs();
-            Assert.False(clearLoop.IsVisible);
             Assert.Equal("Loop: off", Required<TextBlock>(window, "LoopRangeText").Text);
         }
         finally

@@ -16,6 +16,11 @@ public sealed class ReplayVideoPreviewSurface : Control
     private byte[]? rgbBuffer;
     private byte[]? rgbaBuffer;
 
+    public ReplayVideoPreviewSurface()
+    {
+        RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.HighQuality);
+    }
+
     public void Show(ReplayScene scene, ReplayRenderSettings settings, int width, int height)
     {
         EnsureBitmap(width, height);

@@ -248,7 +248,8 @@
         "dependencies": {
           "Nvt.Replay.Analysis": "[1.0.0, )",
           "Nvt.Replay.Core": "[1.0.0, )",
-          "Nvt.Replay.Formats": "[1.0.0, )"
+          "Nvt.Replay.Formats": "[1.0.0, )",
+          "SkiaSharp": "[3.119.4, )"
         }
       },
       "nvt.replay.sources": {

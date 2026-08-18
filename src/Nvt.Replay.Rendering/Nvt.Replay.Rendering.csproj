@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Nvt.Replay.Core\Nvt.Replay.Core.csproj" />
     <ProjectReference Include="..\Nvt.Replay.Formats\Nvt.Replay.Formats.csproj" />
     <ProjectReference Include="..\Nvt.Replay.Analysis\Nvt.Replay.Analysis.csproj" />

@@ -1,5 +1,6 @@
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
+using SkiaSharp;
 
 namespace Nvt.Replay.Rendering;
 
@@ -56,7 +57,7 @@ public static class ReplayFrameRenderer
         byte[] pixels)
     {
         var palette = ReplayVisualStyle.For(settings.Theme);
-        var canvas = new RasterCanvas(width, height, pixels, palette.Stage);
+        using var canvas = new RasterCanvas(width, height, palette.Stage);
         var chromeScale = Math.Min(width / 1280d, height / 720d);
         var top = Math.Max(26, (int)Math.Round(48 * chromeScale));
         var bottom = Math.Max(24, (int)Math.Round(42 * chromeScale));
@@ -69,6 +70,7 @@ public static class ReplayFrameRenderer
         DrawAxisLabels(canvas, viewport, scene, palette, TextScale(height));
         DrawScene(canvas, viewport, contentBounds, scene, settings.Mode, palette, chromeScale);
         DrawLegend(canvas, viewport, scene, settings, palette);
+        canvas.CopyTo(pixels);
     }
 
     private static PixelRect BuildViewport(ReplayExtent extent, PixelRect bounds, double chromeScale)
@@ -496,171 +498,100 @@ public static class ReplayFrameRenderer
         public int Bottom => Y + Height;
     }
 
-    private sealed class RasterCanvas
+    private sealed class RasterCanvas : IDisposable
     {
-        private static readonly IReadOnlyDictionary<char, string> Font = new Dictionary<char, string>
-        {
-            [' '] = "000000000000000",
-            ['-'] = "000000111000000",
-            ['.'] = "000000000000010",
-            [':'] = "000010000010000",
-            ['/'] = "001001010100100",
-            ['#'] = "010111010111010",
-            ['='] = "000111000111000",
-            ['0'] = "111101101101111",
-            ['1'] = "010110010010111",
-            ['2'] = "110001111100111",
-            ['3'] = "110001110001110",
-            ['4'] = "101101111001001",
-            ['5'] = "111100110001110",
-            ['6'] = "011100111101111",
-            ['7'] = "111001010010010",
-            ['8'] = "111101111101111",
-            ['9'] = "111101111001110",
-            ['A'] = "010101111101101",
-            ['B'] = "110101110101110",
-            ['C'] = "011100100100011",
-            ['D'] = "110101101101110",
-            ['E'] = "111100110100111",
-            ['F'] = "111100110100100",
-            ['G'] = "011100101101011",
-            ['H'] = "101101111101101",
-            ['I'] = "111010010010111",
-            ['J'] = "001001001101010",
-            ['K'] = "101101110101101",
-            ['L'] = "100100100100111",
-            ['M'] = "101111111101101",
-            ['N'] = "101111111111101",
-            ['O'] = "010101101101010",
-            ['P'] = "110101110100100",
-            ['Q'] = "010101101111011",
-            ['R'] = "110101110101101",
-            ['S'] = "011100010001110",
-            ['T'] = "111010010010010",
-            ['U'] = "101101101101111",
-            ['V'] = "101101101101010",
-            ['W'] = "101101111111101",
-            ['X'] = "101101010101101",
-            ['Y'] = "101101010010010",
-            ['Z'] = "111001010100111",
-        };
+        private static readonly SKTypeface Typeface =
+            SKTypeface.FromFamilyName("Cascadia Mono", SKFontStyle.Bold) ?? SKTypeface.Default;
+        private readonly SKBitmap bitmap;
+        private readonly SKCanvas canvas;
 
-        public RasterCanvas(int width, int height, byte[] pixels, ReplayColor background)
+        public RasterCanvas(int width, int height, ReplayColor background)
         {
             Width = width;
             Height = height;
-            Pixels = pixels;
-            FillRectangle(0, 0, width, height, background);
+            bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Opaque));
+            canvas = new SKCanvas(bitmap);
+            canvas.Clear(ToSkColor(background));
         }
 
         public int Width { get; }
         public int Height { get; }
-        public byte[] Pixels { get; }
 
-        public int TextWidth(string value, int scale) => Math.Max(0, (value.Length * 4 * scale) - scale);
-        public int TextHeight(int scale) => 5 * scale;
+        public int TextWidth(string value, int scale)
+        {
+            using var font = CreateFont(scale);
+            using var paint = CreatePaint(default, SKPaintStyle.Fill);
+            return Math.Max(0, (int)Math.Ceiling(font.MeasureText(value, paint)));
+        }
+
+        public int TextHeight(int scale)
+        {
+            using var font = CreateFont(scale);
+            var metrics = font.Metrics;
+            return Math.Max(1, (int)Math.Ceiling(metrics.Descent - metrics.Ascent));
+        }
 
         public void FillRectangle(int x, int y, int width, int height, ReplayColor color)
         {
-            for (var py = Math.Max(0, y); py < Math.Min(Height, y + height); py++)
-                for (var px = Math.Max(0, x); px < Math.Min(Width, x + width); px++) Set(px, py, color);
+            using var paint = CreatePaint(color, SKPaintStyle.Fill);
+            canvas.DrawRect(x, y, width, height, paint);
         }
 
         public void FillRoundedRectangle(PixelRect rectangle, int radius, ReplayColor color)
         {
             radius = Math.Clamp(radius, 0, Math.Min(rectangle.Width, rectangle.Height) / 2);
-            FillRectangle(rectangle.X + radius, rectangle.Y, rectangle.Width - (radius * 2), rectangle.Height, color);
-            FillRectangle(rectangle.X, rectangle.Y + radius, radius, rectangle.Height - (radius * 2), color);
-            FillRectangle(rectangle.Right - radius, rectangle.Y + radius, radius, rectangle.Height - (radius * 2), color);
-            FillCircle(rectangle.X + radius, rectangle.Y + radius, radius, color);
-            FillCircle(rectangle.Right - radius, rectangle.Y + radius, radius, color);
-            FillCircle(rectangle.X + radius, rectangle.Bottom - radius, radius, color);
-            FillCircle(rectangle.Right - radius, rectangle.Bottom - radius, radius, color);
+            using var paint = CreatePaint(color, SKPaintStyle.Fill);
+            canvas.DrawRoundRect(ToSkRect(rectangle), radius, radius, paint);
         }
 
         public void Rectangle(PixelRect rectangle, ReplayColor color, int thickness)
         {
-            for (var offset = 0; offset < thickness; offset++)
-            {
-                Line(rectangle.X + offset, rectangle.Y + offset, rectangle.Right - offset, rectangle.Y + offset, color);
-                Line(rectangle.X + offset, rectangle.Bottom - offset, rectangle.Right - offset, rectangle.Bottom - offset, color);
-                Line(rectangle.X + offset, rectangle.Y + offset, rectangle.X + offset, rectangle.Bottom - offset, color);
-                Line(rectangle.Right - offset, rectangle.Y + offset, rectangle.Right - offset, rectangle.Bottom - offset, color);
-            }
+            using var paint = CreatePaint(color, SKPaintStyle.Stroke, thickness);
+            canvas.DrawRect(ToSkRect(rectangle), paint);
         }
 
-        public void RoundedRectangle(PixelRect rectangle, int radius, ReplayColor color, int thickness) =>
-            Rectangle(rectangle, color, thickness);
+        public void RoundedRectangle(PixelRect rectangle, int radius, ReplayColor color, int thickness)
+        {
+            using var paint = CreatePaint(color, SKPaintStyle.Stroke, thickness);
+            canvas.DrawRoundRect(ToSkRect(rectangle), radius, radius, paint);
+        }
 
         public void Line(int x0, int y0, int x1, int y1, ReplayColor color, int thickness = 1)
         {
-            var dx = Math.Abs(x1 - x0);
-            var sx = x0 < x1 ? 1 : -1;
-            var dy = -Math.Abs(y1 - y0);
-            var sy = y0 < y1 ? 1 : -1;
-            var error = dx + dy;
-            while (true)
-            {
-                FillRectangle(x0 - (thickness / 2), y0 - (thickness / 2), thickness, thickness, color);
-                if (x0 == x1 && y0 == y1) break;
-                var twice = 2 * error;
-                if (twice >= dy) { error += dy; x0 += sx; }
-                if (twice <= dx) { error += dx; y0 += sy; }
-            }
+            using var paint = CreatePaint(color, SKPaintStyle.Stroke, thickness);
+            paint.StrokeCap = SKStrokeCap.Round;
+            canvas.DrawLine(x0, y0, x1, y1, paint);
         }
 
         public void FillCircle(int centerX, int centerY, int radius, ReplayColor color)
         {
-            for (var y = -radius; y <= radius; y++)
-                for (var x = -radius; x <= radius; x++)
-                    if ((x * x) + (y * y) <= radius * radius) Set(centerX + x, centerY + y, color);
+            using var paint = CreatePaint(color, SKPaintStyle.Fill);
+            canvas.DrawCircle(centerX, centerY, radius, paint);
         }
 
         public void Circle(int centerX, int centerY, int radius, ReplayColor color, int thickness)
         {
-            var outer = radius * radius;
-            var innerRadius = Math.Max(0, radius - thickness);
-            var inner = innerRadius * innerRadius;
-            for (var y = -radius; y <= radius; y++)
-                for (var x = -radius; x <= radius; x++)
-                {
-                    var distance = (x * x) + (y * y);
-                    if (distance <= outer && distance >= inner) Set(centerX + x, centerY + y, color);
-                }
+            using var paint = CreatePaint(color, SKPaintStyle.Stroke, thickness);
+            canvas.DrawCircle(centerX, centerY, radius, paint);
         }
 
         public void FillPolygon(ReplayColor color, params PixelPoint[] points)
         {
             if (points.Length < 3) return;
-            var minimumY = points.Min(point => point.Y);
-            var maximumY = points.Max(point => point.Y);
-            for (var y = minimumY; y <= maximumY; y++)
-            {
-                var intersections = new List<int>();
-                for (var index = 0; index < points.Length; index++)
-                {
-                    var first = points[index];
-                    var second = points[(index + 1) % points.Length];
-                    if ((first.Y <= y && second.Y > y) || (second.Y <= y && first.Y > y))
-                        intersections.Add(first.X + (int)Math.Round((y - first.Y) * (second.X - first.X) / (double)(second.Y - first.Y)));
-                }
-                intersections.Sort();
-                for (var index = 0; index + 1 < intersections.Count; index += 2)
-                    Line(intersections[index], y, intersections[index + 1], y, color);
-            }
+            using var path = new SKPath();
+            path.MoveTo(points[0].X, points[0].Y);
+            foreach (var point in points.Skip(1)) path.LineTo(point.X, point.Y);
+            path.Close();
+            using var paint = CreatePaint(color, SKPaintStyle.Fill);
+            canvas.DrawPath(path, paint);
         }
 
         public void Text(int x, int y, string value, ReplayColor color, int scale)
         {
-            foreach (var character in value.ToUpperInvariant())
-            {
-                var glyph = Font.GetValueOrDefault(character, Font[' ']);
-                for (var row = 0; row < 5; row++)
-                    for (var column = 0; column < 3; column++)
-                        if (glyph[(row * 3) + column] == '1')
-                            FillRectangle(x + (column * scale), y + (row * scale), scale, scale, color);
-                x += 4 * scale;
-            }
+            using var font = CreateFont(scale);
+            using var paint = CreatePaint(color, SKPaintStyle.Fill);
+            var metrics = font.Metrics;
+            canvas.DrawText(value, x, y - metrics.Ascent, font, paint);
         }
 
         public void TextCentered(int centerX, int y, string value, ReplayColor color, int scale) =>
@@ -669,13 +600,41 @@ public static class ReplayFrameRenderer
         public void TextRight(int right, int y, string value, ReplayColor color, int scale) =>
             Text(right - TextWidth(value, scale), y, value, color, scale);
 
-        private void Set(int x, int y, ReplayColor color)
+        public void CopyTo(byte[] destination)
         {
-            if (x < 0 || x >= Width || y < 0 || y >= Height) return;
-            var offset = ((y * Width) + x) * 3;
-            Pixels[offset] = color.Red;
-            Pixels[offset + 1] = color.Green;
-            Pixels[offset + 2] = color.Blue;
+            canvas.Flush();
+            var source = bitmap.GetPixelSpan();
+            for (int sourceOffset = 0, destinationOffset = 0;
+                 destinationOffset < destination.Length;
+                 sourceOffset += 4, destinationOffset += 3)
+            {
+                destination[destinationOffset] = source[sourceOffset];
+                destination[destinationOffset + 1] = source[sourceOffset + 1];
+                destination[destinationOffset + 2] = source[sourceOffset + 2];
+            }
         }
+
+        public void Dispose()
+        {
+            canvas.Dispose();
+            bitmap.Dispose();
+        }
+
+        private static SKFont CreateFont(int scale) => new(Typeface, Math.Max(8, 6f * scale));
+
+        private static SKPaint CreatePaint(ReplayColor color, SKPaintStyle style, float strokeWidth = 1) => new()
+        {
+            Color = ToSkColor(color),
+            IsAntialias = true,
+            Style = style,
+            StrokeWidth = strokeWidth,
+            StrokeJoin = SKStrokeJoin.Round,
+        };
+
+        private static SKRect ToSkRect(PixelRect rectangle) =>
+            new(rectangle.X, rectangle.Y, rectangle.Right, rectangle.Bottom);
+
+        private static SKColor ToSkColor(ReplayColor color) =>
+            new(color.Red, color.Green, color.Blue, byte.MaxValue);
     }
 }

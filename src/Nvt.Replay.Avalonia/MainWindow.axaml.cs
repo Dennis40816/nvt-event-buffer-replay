@@ -52,8 +52,8 @@ public partial class MainWindow : Window
     private IReadOnlyList<ReplayFramePlanEntry> outputVideoPlan = [];
     private int outputVideoFrameCount;
     private int outputVideoFrameIndex;
-    private int outputVideoWidth = 1280;
-    private int outputVideoHeight = 720;
+    private int outputVideoWidth = 2304;
+    private int outputVideoHeight = 1280;
     private int outputVideoFrameRate = 30;
     private double outputVideoSpeed = 1;
     private ReplayExportClock outputVideoClock = ReplayExportClock.Frame;
@@ -160,6 +160,7 @@ public partial class MainWindow : Window
         OutputSpeedComboBox.SelectedIndex = 2;
         OutputFrameRateComboBox.SelectedIndex = 1;
         OutputResolutionComboBox.SelectedIndex = 0;
+        SyncOutputResolutionWithPanel();
         configuringOutputSettings = false;
         ShortcutModulesItemsControl.ItemsSource = ReplayShortcutCatalog.Modules;
         ComboBoxAutoSizer.Fit(
@@ -713,8 +714,6 @@ public partial class MainWindow : Window
         OutputVideoPanel.IsVisible = mp4;
         OutputHeatmapPanel.IsVisible = heatmap;
         OutputPackagePanel.IsVisible = option.Value == "package";
-        OutputSettingsToggleButton.IsChecked = mp4 && OutputSettingsToggleButton.IsChecked == true;
-        OutputSettingsToggleButton.IsVisible = mp4;
         ExportSelectedOutputButton.Content = option.Value switch
         {
             "heatmap" => "Export PNG",
@@ -965,12 +964,6 @@ public partial class MainWindow : Window
             WorkspaceTabs.SelectedItem = AnalysisTab;
     }
 
-    private void OutputSettingsToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
-    {
-        if (OutputVideoSettingsPanel is not null)
-            OutputVideoSettingsPanel.IsVisible = OutputSettingsToggleButton.IsChecked == true;
-    }
-
     private void OutputVideoSetting_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (configuringOutputSettings || OutputClockComboBox is null || OutputSpeedComboBox is null ||
@@ -980,6 +973,9 @@ public partial class MainWindow : Window
         outputVideoClock = SelectedTag(OutputClockComboBox) == "recorded"
             ? ReplayExportClock.Recorded
             : ReplayExportClock.Frame;
+        OutputClockDescriptionText.Text = outputVideoClock == ReplayExportClock.Recorded
+            ? "Preserves source timestamps, including long capture gaps."
+            : "Uses 1/120 s per logical frame; missing-record gaps collapse.";
 
         var speedTag = SelectedTag(OutputSpeedComboBox);
         OutputCustomSpeedTextBox.IsVisible = speedTag == "custom";
@@ -999,7 +995,11 @@ public partial class MainWindow : Window
         var customResolution = resolutionTag == "custom";
         OutputCustomResolutionLabel.IsVisible = customResolution;
         OutputCustomResolutionPanel.IsVisible = customResolution;
-        if (!customResolution && TryParseOutputResolution(resolutionTag, out var width, out var height))
+        if (resolutionTag == "panel")
+        {
+            SyncOutputResolutionWithPanel();
+        }
+        else if (!customResolution && TryParseOutputResolution(resolutionTag, out var width, out var height))
         {
             outputVideoWidth = width;
             outputVideoHeight = height;
@@ -1076,6 +1076,25 @@ public partial class MainWindow : Window
         return parts is { Length: 2 } &&
                int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out width) &&
                int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out height);
+    }
+
+    private void SyncOutputResolutionWithPanel()
+    {
+        var width = NormalizeVideoDimension(replayExtent.MaximumX, 320, 7680);
+        var height = NormalizeVideoDimension(replayExtent.MaximumY, 180, 4320);
+        OutputPanelResolutionItem.Content = $"Paint · {width} × {height}";
+        if (OutputResolutionComboBox.SelectedItem is not ComboBoxItem item || item.Tag?.ToString() != "panel")
+            return;
+        outputVideoWidth = width;
+        outputVideoHeight = height;
+        OutputWidthTextBox.Text = width.ToString(CultureInfo.InvariantCulture);
+        OutputHeightTextBox.Text = height.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static int NormalizeVideoDimension(double value, int minimum, int maximum)
+    {
+        var result = (int)Math.Clamp(Math.Round(value), minimum, maximum);
+        return result % 2 == 0 ? result : Math.Min(maximum, result + 1);
     }
 
     private string OutputVideoSettingsLabel() =>
@@ -1271,7 +1290,9 @@ public partial class MainWindow : Window
         OutputVideoBadgeText.Text = OutputVideoSettingsLabel();
         OutputVideoTimeline.SetFrameCount(outputVideoFrameCount, outputVideoFrameRate);
         OutputVideoTimeline.SetSourceRange(replaySession.Count, range.StartLogicalIndex, range.EndLogicalIndex);
+        OutputFullscreenTimeline.SetFrameCount(outputVideoFrameCount, outputVideoFrameRate);
         OutputPreviewPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
+        OutputFullscreenPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputPreviewFullscreenButton.IsEnabled = outputVideoFrameCount > 0;
         ShowOutputVideoFrame(0);
         OutputConfigurationText.Text += $"\nvideo    {clockName} / {outputVideoFrameRate} FPS / {speed}";
@@ -1288,10 +1309,13 @@ public partial class MainWindow : Window
         if (outputFullscreenActive)
             OutputFullscreenVideoPreview.Show(scene, settings, outputVideoWidth, outputVideoHeight);
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
+        OutputFullscreenTimeline.SetPosition(outputVideoFrameIndex);
         var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)outputVideoFrameRate);
         var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)outputVideoFrameRate);
         OutputPreviewClockText.Text = $"{FormatClock(currentTime)} / {FormatClock(duration)}";
         OutputPreviewFrameText.Text = $"output {outputVideoFrameIndex + 1:N0}/{outputVideoFrameCount:N0}  source {logicalIndex + 1:N0}/{replaySession.Count:N0}";
+        OutputFullscreenClockText.Text = OutputPreviewClockText.Text;
+        OutputFullscreenFrameText.Text = $"{outputVideoFrameIndex + 1:N0} / {outputVideoFrameCount:N0}";
     }
 
     private void OutputVideoTimeline_OnSeekRequested(object? sender, OutputVideoSeekEventArgs e)
@@ -1398,8 +1422,11 @@ public partial class MainWindow : Window
     private void SetOutputVideoPlaybackVisualState(bool playing)
     {
         OutputPreviewPlayPauseButton.Classes.Set("playing", playing);
+        OutputFullscreenPlayPauseButton.Classes.Set("playing", playing);
         OutputPreviewPlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Preview";
+        OutputFullscreenPlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Play";
         AutomationProperties.SetName(OutputPreviewPlayPauseButton, playing ? "Pause MP4 preview" : "Play MP4 preview");
+        AutomationProperties.SetName(OutputFullscreenPlayPauseButton, playing ? "Pause full-screen MP4 preview" : "Play full-screen MP4 preview");
     }
 
     private void ClearOutputVideoPreview()
@@ -1412,10 +1439,14 @@ public partial class MainWindow : Window
         OutputVideoPreview.Clear();
         OutputFullscreenVideoPreview.Clear();
         OutputVideoTimeline.SetFrameCount(0, outputVideoFrameRate);
+        OutputFullscreenTimeline.SetFrameCount(0, outputVideoFrameRate);
         OutputPreviewPlayPauseButton.IsEnabled = false;
+        OutputFullscreenPlayPauseButton.IsEnabled = false;
         OutputPreviewFullscreenButton.IsEnabled = false;
         OutputPreviewClockText.Text = "00:00.000 / 00:00.000";
         OutputPreviewFrameText.Text = "output 0/0";
+        OutputFullscreenClockText.Text = "00:00.000 / 00:00.000";
+        OutputFullscreenFrameText.Text = "0 / 0";
     }
 
     private void RefreshCurrentOutputVideoFrame()
@@ -2275,7 +2306,6 @@ public partial class MainWindow : Window
         NextFrameButton.IsEnabled = false;
         LoopToggleButton.IsEnabled = false;
         LoopToggleButton.IsChecked = false;
-        ClearLoopButton.IsEnabled = false;
         AddMarkerButton.IsEnabled = false;
         SaveReviewButton.IsEnabled = false;
         LoadReviewButton.IsEnabled = false;
@@ -2297,7 +2327,6 @@ public partial class MainWindow : Window
         OutputSourceText.Text = "Source identity will appear here.";
         AnalysisOutputText.Text = "Nothing exported in this session.";
         OutputContentComboBox.SelectedIndex = 0;
-        OutputSettingsToggleButton.IsChecked = false;
         LoadReviewButton.IsVisible = true;
         ApplySidecarButton.IsVisible = false;
         ReplayTimelineSurface.IsEnabled = false;
@@ -2308,7 +2337,6 @@ public partial class MainWindow : Window
         ReplayClockText.Text = "00:00.000";
         ReplayEndClockText.Text = "00:00.000";
         LoopRangeText.Text = "Loop: off";
-        ClearLoopButton.IsVisible = false;
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
         PaintZoomHintBorder.IsVisible = false;
@@ -2411,6 +2439,7 @@ public partial class MainWindow : Window
         RefreshLegendPlacement();
         PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
         PanelHeightTextBox.Text = replayExtent.MaximumY.ToString("0", CultureInfo.InvariantCulture);
+        SyncOutputResolutionWithPanel();
         PaintSurface.Fit();
         UpdatePaintZoomText();
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
@@ -2739,11 +2768,14 @@ public partial class MainWindow : Window
         }
 
         replayExtent = new ReplayExtent(width, height);
+        SyncOutputResolutionWithPanel();
         PaintSurface.Fit();
         RefreshLegendPlacement();
         UpdatePaintZoomText();
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
+        StopOutputVideoPreviewPlayback();
+        RefreshOutputPreviewIfVisible();
         SessionStatusText.Text = $"Panel coordinate space · {width:0} × {height:0} · fit to canvas";
     }
 
@@ -2919,24 +2951,6 @@ public partial class MainWindow : Window
         UpdateLoopText();
     }
 
-    private void ClearLoopButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        loopIn = null;
-        loopOut = null;
-        loopEnabled = false;
-        synchronizingLoopControls = true;
-        try
-        {
-            LoopToggleButton.IsChecked = false;
-        }
-        finally
-        {
-            synchronizingLoopControls = false;
-        }
-        UpdateLoopText();
-        TimelineStatusText.Text = "Loop range cleared · replay position unchanged";
-    }
-
     private void ReplayTimelineSurface_OnLoopRangeChanged(object? sender, ReplayTimelineLoopEventArgs e)
     {
         loopIn = e.StartLogicalIndex;
@@ -2963,11 +2977,9 @@ public partial class MainWindow : Window
     private void UpdateLoopText()
     {
         var hasRange = loopIn is not null && loopOut is not null;
-        LoopRangeText.Text = !hasRange
-            ? "Loop: off"
-            : $"Loop: {loopIn!.Value + 1:N0}-{loopOut!.Value + 1:N0}{(loopEnabled ? string.Empty : " (off)")}";
-        ClearLoopButton.IsVisible = hasRange;
-        ClearLoopButton.IsEnabled = hasRange;
+        LoopRangeText.Text = loopEnabled && hasRange
+            ? $"Loop: on · {loopIn!.Value + 1:N0}-{loopOut!.Value + 1:N0}"
+            : "Loop: off";
         ReplayTimelineSurface.SetLoopRange(loopIn, loopOut, loopEnabled);
         RefreshOutputPreviewIfVisible();
     }

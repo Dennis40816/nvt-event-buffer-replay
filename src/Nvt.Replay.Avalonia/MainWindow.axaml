@@ -884,118 +884,125 @@
               <Grid Grid.Row="2">
                 <Grid x:Name="OutputVideoPanel">
                   <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
-                    <Grid RowDefinitions="Auto,12,*,12,Auto,12,Auto">
-                      <Grid ColumnDefinitions="*,Auto,8,Auto">
+                    <Grid RowDefinitions="Auto,14,*">
+                      <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="4">
                           <TextBlock x:Name="AnalysisSummaryText" Text="Open Output to prepare a preview." FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
                           <TextBlock Text="Preview and export share the same sampler, renderer, range, and video settings." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Text="1280 × 720  /  30 FPS  /  1×" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
-                        <ToggleButton x:Name="OutputSettingsToggleButton" Grid.Column="3" Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="16" IsCheckedChanged="OutputSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="MP4 export settings" AutomationProperties.Name="Show MP4 export settings" />
+                        <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Text="2304 × 1280  /  30 FPS  /  1×" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
                       </Grid>
-                      <Border Grid.Row="2" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
-                        <Grid MinHeight="300">
-                          <controls:ReplayVideoPreviewSurface x:Name="OutputVideoPreview" AutomationProperties.Name="MP4 replay preview" />
-                          <Button x:Name="OutputPreviewFullscreenButton"
-                                  Classes="canvasIcon"
-                                  Width="36"
-                                  Height="36"
-                                  Margin="12"
-                                  Padding="0"
-                                  HorizontalAlignment="Right"
-                                  VerticalAlignment="Bottom"
-                                  Content="&#xE740;"
-                                  FontFamily="Segoe Fluent Icons"
-                                  FontSize="17"
-                                  Click="OutputPreviewFullscreenButton_OnClick"
-                                  ToolTip.Tip="Preview MP4 full screen"
-                                  AutomationProperties.Name="Preview MP4 full screen" />
+                      <Grid Grid.Row="2" ColumnDefinitions="*,16,310">
+                        <Grid RowDefinitions="*,10,50">
+                          <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                            <Grid MinHeight="360">
+                              <controls:ReplayVideoPreviewSurface x:Name="OutputVideoPreview" AutomationProperties.Name="MP4 replay preview" />
+                            </Grid>
+                          </Border>
+                          <controls:OutputVideoTimelineSurface x:Name="OutputVideoTimeline"
+                                                               Grid.Row="2"
+                                                               Height="50"
+                                                               TrackBrush="{DynamicResource CanvasTextBrush}"
+                                                               HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
+                                                               ProgressBrush="{DynamicResource AccentBrush}"
+                                                               PlayheadBrush="{DynamicResource PrimaryTextBrush}"
+                                                               LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
+                                                               LabelTextBrush="{DynamicResource PrimaryTextBrush}"
+                                                               SeekRequested="OutputVideoTimeline_OnSeekRequested"
+                                                               RangeChanged="OutputVideoTimeline_OnRangeChanged"
+                                                               AutomationProperties.Name="Scrub MP4 preview time" />
                         </Grid>
-                      </Border>
-                      <Grid Grid.Row="4" RowDefinitions="Auto,7,48" ColumnDefinitions="Auto,14,*,Auto">
-                        <Button x:Name="OutputPreviewPlayPauseButton" Grid.RowSpan="3" Classes="transportPlay" MinWidth="92" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" AutomationProperties.Name="Play MP4 preview" />
-                        <TextBlock x:Name="OutputPreviewClockText" Grid.Column="2" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" VerticalAlignment="Center" />
-                        <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="3" Text="output 0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
-                        <controls:OutputVideoTimelineSurface x:Name="OutputVideoTimeline"
-                                                             Grid.Row="2"
-                                                             Grid.Column="2"
-                                                             Grid.ColumnSpan="2"
-                                                             Height="48"
-                                                             TrackBrush="{DynamicResource CanvasTextBrush}"
-                                                             HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
-                                                             ProgressBrush="{DynamicResource AccentBrush}"
-                                                             PlayheadBrush="{DynamicResource PrimaryTextBrush}"
-                                                             LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
-                                                             LabelTextBrush="{DynamicResource PrimaryTextBrush}"
-                                                             SeekRequested="OutputVideoTimeline_OnSeekRequested"
-                                                             RangeChanged="OutputVideoTimeline_OnRangeChanged"
-                                                             AutomationProperties.Name="Scrub MP4 preview time" />
-                      </Grid>
-                      <Grid Grid.Row="6" ColumnDefinitions="*,12,*,12,*">
-                        <StackPanel>
-                          <TextBlock Classes="fieldLabel" Text="RANGE" />
-                          <TextBlock x:Name="OutputRangeText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                          <TextBlock Classes="fieldLabel" Text="VIDEO DURATION" />
-                          <TextBlock x:Name="OutputClockText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="4">
-                          <TextBlock Classes="fieldLabel" Text="FINDINGS" />
-                          <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                        </StackPanel>
+
+                        <Border Grid.Column="2" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="16">
+                          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="12">
+                              <TextBlock Text="PREVIEW" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" LetterSpacing="0.4" />
+                              <Grid ColumnDefinitions="*,8,38">
+                                <Button x:Name="OutputPreviewPlayPauseButton" Classes="transportPlay" MinWidth="0" Content="▶  Preview" Click="OutputPreviewPlayPauseButton_OnClick" AutomationProperties.Name="Play MP4 preview" />
+                                <Button x:Name="OutputPreviewFullscreenButton"
+                                        Grid.Column="2"
+                                        Classes="canvasIcon"
+                                        Width="38"
+                                        Height="34"
+                                        Padding="0"
+                                        Content="&#xE740;"
+                                        FontFamily="Segoe Fluent Icons"
+                                        FontSize="17"
+                                        Click="OutputPreviewFullscreenButton_OnClick"
+                                        ToolTip.Tip="Preview MP4 full screen"
+                                        AutomationProperties.Name="Preview MP4 full screen" />
+                              </Grid>
+                              <TextBlock x:Name="OutputPreviewClockText" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                              <TextBlock x:Name="OutputPreviewFrameText" Text="output 0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+
+                              <Border Height="1" Background="{DynamicResource BorderBrush}" />
+                              <TextBlock Text="TIMING &amp; QUALITY" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" LetterSpacing="0.4" />
+                              <Grid ColumnDefinitions="96,*" RowDefinitions="34,Auto,8,34,8,34,8,34,Auto">
+                                <TextBlock Text="Clock" Classes="fieldLabel" />
+                                <ComboBox x:Name="OutputClockComboBox" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output clock">
+                                  <ComboBoxItem Content="Recorded gaps" Tag="recorded" />
+                                  <ComboBoxItem Content="TP Frame · 120 Hz" Tag="frame" />
+                                </ComboBox>
+                                <TextBlock x:Name="OutputClockDescriptionText" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,6,0,0" Text="Uses 1/120 s per logical frame; missing-record gaps collapse." FontSize="12" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="3" Text="Speed" Classes="fieldLabel" />
+                                <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="Auto,8,*">
+                                  <ComboBox x:Name="OutputSpeedComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output speed">
+                                    <ComboBoxItem Content="0.25×" Tag="0.25" />
+                                    <ComboBoxItem Content="0.5×" Tag="0.5" />
+                                    <ComboBoxItem Content="1×" Tag="1" />
+                                    <ComboBoxItem Content="2×" Tag="2" />
+                                    <ComboBoxItem Content="4×" Tag="4" />
+                                    <ComboBoxItem Content="Customized" Tag="custom" />
+                                  </ComboBox>
+                                  <TextBox x:Name="OutputCustomSpeedTextBox" Grid.Column="2" Classes="panelSize" Width="78" Text="1.00" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Speed from 0.01× to 100×" AutomationProperties.Name="Customized MP4 speed" />
+                                </Grid>
+                                <TextBlock Grid.Row="5" Text="Frame rate" Classes="fieldLabel" />
+                                <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="Auto,8,*">
+                                  <ComboBox x:Name="OutputFrameRateComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 frame rate">
+                                    <ComboBoxItem Content="24 FPS" Tag="24" />
+                                    <ComboBoxItem Content="30 FPS" Tag="30" />
+                                    <ComboBoxItem Content="60 FPS" Tag="60" />
+                                    <ComboBoxItem Content="120 FPS" Tag="120" />
+                                    <ComboBoxItem Content="Customized" Tag="custom" />
+                                  </ComboBox>
+                                  <TextBox x:Name="OutputCustomFrameRateTextBox" Grid.Column="2" Classes="panelSize" Width="78" Text="180" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Output frame rate from 1 to 240 FPS" AutomationProperties.Name="Customized MP4 frame rate" />
+                                </Grid>
+                                <TextBlock Grid.Row="7" Text="Resolution" Classes="fieldLabel" />
+                                <ComboBox x:Name="OutputResolutionComboBox" Grid.Row="7" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
+                                  <ComboBoxItem x:Name="OutputPanelResolutionItem" Content="Paint · 2304 × 1280" Tag="panel" />
+                                  <ComboBoxItem Content="1280 × 720" Tag="1280x720" />
+                                  <ComboBoxItem Content="1920 × 1080" Tag="1920x1080" />
+                                  <ComboBoxItem Content="2560 × 1440" Tag="2560x1440" />
+                                  <ComboBoxItem Content="Customized" Tag="custom" />
+                                </ComboBox>
+                                <Grid x:Name="OutputCustomResolutionPanel" Grid.Row="8" Grid.ColumnSpan="2" Margin="0,8,0,0" ColumnDefinitions="82,Auto,82" IsVisible="False" HorizontalAlignment="Right">
+                                  <TextBox x:Name="OutputWidthTextBox" Classes="panelSize" Width="82" Text="2304" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 width" />
+                                  <TextBlock Grid.Column="1" Text="×" Margin="8,0" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                                  <TextBox x:Name="OutputHeightTextBox" Grid.Column="2" Classes="panelSize" Width="82" Text="1280" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 height" />
+                                </Grid>
+                                <TextBlock x:Name="OutputCustomResolutionLabel" IsVisible="False" />
+                              </Grid>
+
+                              <Border Height="1" Background="{DynamicResource BorderBrush}" />
+                              <Grid ColumnDefinitions="*,10,*">
+                                <StackPanel>
+                                  <TextBlock Classes="fieldLabel" Text="RANGE" />
+                                  <TextBlock x:Name="OutputRangeText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                  <TextBlock Classes="fieldLabel" Text="DURATION" />
+                                  <TextBlock x:Name="OutputClockText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                              </Grid>
+                              <StackPanel>
+                                <TextBlock Classes="fieldLabel" Text="FINDINGS" />
+                                <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                              </StackPanel>
+                            </StackPanel>
+                          </ScrollViewer>
+                        </Border>
                       </Grid>
                     </Grid>
-                  </Border>
-
-                  <Border x:Name="OutputVideoSettingsPanel" Classes="canvasSettingsPanel" Width="390" Margin="0,48,18,0" IsVisible="False" HorizontalAlignment="Right" VerticalAlignment="Top" ZIndex="20">
-                    <StackPanel Spacing="10">
-                      <TextBlock Text="MP4 SETTINGS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" LetterSpacing="0.4" />
-                      <Grid ColumnDefinitions="112,*" RowDefinitions="34,8,34,8,34,8,34,8,Auto">
-                        <TextBlock Text="Clock" Classes="fieldLabel" />
-                        <ComboBox x:Name="OutputClockComboBox" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output clock">
-                          <ComboBoxItem Content="Recorded time" Tag="recorded" />
-                          <ComboBoxItem Content="TP Frame 120 Hz" Tag="frame" />
-                        </ComboBox>
-                        <TextBlock Grid.Row="2" Text="Speed" Classes="fieldLabel" />
-                        <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,8,*">
-                          <ComboBox x:Name="OutputSpeedComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 output speed">
-                            <ComboBoxItem Content="0.25×" Tag="0.25" />
-                            <ComboBoxItem Content="0.5×" Tag="0.5" />
-                            <ComboBoxItem Content="1×" Tag="1" />
-                            <ComboBoxItem Content="2×" Tag="2" />
-                            <ComboBoxItem Content="4×" Tag="4" />
-                            <ComboBoxItem Content="Customized" Tag="custom" />
-                          </ComboBox>
-                          <TextBox x:Name="OutputCustomSpeedTextBox" Grid.Column="2" Classes="panelSize" Width="86" Text="1.00" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Speed from 0.01× to 100×" AutomationProperties.Name="Customized MP4 speed" />
-                        </Grid>
-                        <TextBlock Grid.Row="4" Text="Frame rate" Classes="fieldLabel" />
-                        <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="Auto,8,*">
-                          <ComboBox x:Name="OutputFrameRateComboBox" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 frame rate">
-                            <ComboBoxItem Content="24 FPS" Tag="24" />
-                            <ComboBoxItem Content="30 FPS" Tag="30" />
-                            <ComboBoxItem Content="60 FPS" Tag="60" />
-                            <ComboBoxItem Content="120 FPS" Tag="120" />
-                            <ComboBoxItem Content="Customized" Tag="custom" />
-                          </ComboBox>
-                          <TextBox x:Name="OutputCustomFrameRateTextBox" Grid.Column="2" Classes="panelSize" Width="86" Text="180" IsVisible="False" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" ToolTip.Tip="Output frame rate from 1 to 240 FPS" AutomationProperties.Name="Customized MP4 frame rate" />
-                        </Grid>
-                        <TextBlock Grid.Row="6" Text="Resolution" Classes="fieldLabel" />
-                        <ComboBox x:Name="OutputResolutionComboBox" Grid.Row="6" Grid.Column="1" Classes="canvasControl" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
-                          <ComboBoxItem Content="1280 × 720" Tag="1280x720" />
-                          <ComboBoxItem Content="1920 × 1080" Tag="1920x1080" />
-                          <ComboBoxItem Content="2560 × 1440" Tag="2560x1440" />
-                          <ComboBoxItem Content="Customized" Tag="custom" />
-                        </ComboBox>
-                        <TextBlock x:Name="OutputCustomResolutionLabel" Grid.Row="8" Text="Custom size" Classes="fieldLabel" IsVisible="False" />
-                        <Grid x:Name="OutputCustomResolutionPanel" Grid.Row="8" Grid.Column="1" ColumnDefinitions="82,Auto,82" IsVisible="False">
-                          <TextBox x:Name="OutputWidthTextBox" Classes="panelSize" Width="82" Text="1280" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 width" />
-                          <TextBlock Grid.Column="1" Text="×" Margin="8,0" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                          <TextBox x:Name="OutputHeightTextBox" Grid.Column="2" Classes="panelSize" Width="82" Text="720" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 height" />
-                        </Grid>
-                      </Grid>
-                      <TextBlock Text="These settings drive both preview sampling and the final file." FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                    </StackPanel>
                   </Border>
                 </Grid>
 
@@ -1334,7 +1341,6 @@
 
           <StackPanel x:Name="TransportAnnotationGroup" Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <ToggleButton x:Name="LoopToggleButton" Classes="axisToggle" Width="58" MinWidth="58" Content="Loop" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Enable loop range" />
-            <Button x:Name="ClearLoopButton" Classes="canvasIcon" Content="&#xE894;" IsVisible="False" IsEnabled="False" Click="ClearLoopButton_OnClick" ToolTip.Tip="Clear loop range" AutomationProperties.Name="Clear loop range" />
             <Button x:Name="AddMarkerButton" Classes="ghost" Margin="8,0,0,0" IsEnabled="False" Click="AddMarkerButton_OnClick" AutomationProperties.Name="Mark special event">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
@@ -1384,22 +1390,44 @@
     </Border>
 
     <Border x:Name="OutputFullscreenOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="90" Background="#FF000000" KeyDown="OutputFullscreenOverlay_OnKeyDown" AutomationProperties.Name="Full-screen MP4 output preview">
-      <Grid>
-        <controls:ReplayVideoPreviewSurface x:Name="OutputFullscreenVideoPreview" Margin="18" AutomationProperties.Name="Full-screen MP4 replay preview" />
-        <Button x:Name="OutputFullscreenExitButton"
-                Classes="canvasIcon"
-                Width="42"
-                Height="42"
-                Margin="22"
-                Padding="0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                Content="&#xE73F;"
-                FontFamily="Segoe Fluent Icons"
-                FontSize="19"
-                Click="OutputFullscreenExitButton_OnClick"
-                ToolTip.Tip="Exit full-screen preview (Esc)"
-                AutomationProperties.Name="Exit full-screen MP4 preview" />
+      <Grid RowDefinitions="*,76">
+        <controls:ReplayVideoPreviewSurface x:Name="OutputFullscreenVideoPreview" Margin="18,18,18,0" AutomationProperties.Name="Full-screen MP4 replay preview" />
+        <Border Grid.Row="1" Margin="18,8,18,14" Padding="12,8" Background="#E6161C20" BorderBrush="#FF35434B" BorderThickness="1" CornerRadius="5">
+          <Grid ColumnDefinitions="Auto,12,Auto,14,*,14,Auto,12,Auto">
+            <Button x:Name="OutputFullscreenPlayPauseButton"
+                    Classes="transportPlay"
+                    MinWidth="88"
+                    Content="▶  Play"
+                    Click="OutputPreviewPlayPauseButton_OnClick"
+                    AutomationProperties.Name="Play full-screen MP4 preview" />
+            <TextBlock x:Name="OutputFullscreenClockText" Grid.Column="2" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="#FFF2F6F8" VerticalAlignment="Center" />
+            <controls:OutputVideoTimelineSurface x:Name="OutputFullscreenTimeline"
+                                                  Grid.Column="4"
+                                                  Height="42"
+                                                  ShowRange="False"
+                                                  TrackBrush="#FF54636C"
+                                                  HoverTrackBrush="#FFF2F6F8"
+                                                  ProgressBrush="#FFB8EE46"
+                                                  PlayheadBrush="#FFF2F6F8"
+                                                  LabelSurfaceBrush="#FF161C20"
+                                                  LabelTextBrush="#FFF2F6F8"
+                                                  SeekRequested="OutputVideoTimeline_OnSeekRequested"
+                                                  AutomationProperties.Name="Scrub full-screen MP4 preview time" />
+            <TextBlock x:Name="OutputFullscreenFrameText" Grid.Column="6" Text="0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="#FFAFC0C9" VerticalAlignment="Center" />
+            <Button x:Name="OutputFullscreenExitButton"
+                    Grid.Column="8"
+                    Classes="canvasIcon"
+                    Width="40"
+                    Height="36"
+                    Padding="0"
+                    Content="&#xE73F;"
+                    FontFamily="Segoe Fluent Icons"
+                    FontSize="18"
+                    Click="OutputFullscreenExitButton_OnClick"
+                    ToolTip.Tip="Exit full-screen preview (Esc)"
+                    AutomationProperties.Name="Exit full-screen MP4 preview" />
+          </Grid>
+        </Border>
       </Grid>
     </Border>
 
