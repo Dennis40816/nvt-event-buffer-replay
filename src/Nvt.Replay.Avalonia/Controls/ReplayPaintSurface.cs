@@ -317,13 +317,20 @@ public sealed class ReplayPaintSurface : Control
             : value.ReportedContacts.Concat(value.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First()))
             .OrderBy(contact => contact.Id)
             .ToArray();
-        var protectedPoints = labels
-            .Select(contact => Project(viewport, value, contact.X, contact.Y))
-            .Select(center => new Rect(center.X - 23, center.Y - 23, 46, 46))
+        var labelData = labels
+            .Select(contact => CreateContactLabelData(viewport, contact, value))
             .ToArray();
-        var occupiedLabels = new List<Rect>();
-        foreach (var contact in labels)
-            DrawContactLabel(context, viewport, available, contact, value, protectedPoints, occupiedLabels);
+        var placements = ReplayLabelLayout.Place(
+                new ReplayLabelBounds(available.X + 4, available.Y + 4, available.Width - 8, available.Height - 8),
+                labelData.Select(data => new ReplayLabelRequest(
+                    data.Contact.Id,
+                    data.Center.X,
+                    data.Center.Y,
+                    data.Width,
+                    data.Height)).ToArray())
+            .ToDictionary(placement => placement.Key);
+        foreach (var data in labelData)
+            DrawContactLabel(context, data, placements[data.Contact.Id]);
 
         if (value.GlobalPalm)
             context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
@@ -653,14 +660,10 @@ public sealed class ReplayPaintSurface : Control
         }
     }
 
-    private void DrawContactLabel(
-        DrawingContext context,
+    private ContactLabelData CreateContactLabelData(
         Rect viewport,
-        Rect labelBounds,
         ReplayContact contact,
-        ReplayScene scene,
-        IReadOnlyList<Rect> protectedPoints,
-        ICollection<Rect> occupiedLabels)
+        ReplayScene scene)
     {
         var center = Project(viewport, scene, contact.X, contact.Y);
         var state = contact.Status switch
@@ -687,40 +690,22 @@ public sealed class ReplayPaintSurface : Control
             AxisLabelBrush);
         var width = Math.Max(headerText.Width + 17, coordinateText.Width) + 14;
         var height = headerText.Height + coordinateText.Height + 8;
-        const double pointClearance = 27;
-        var candidateOrigins = new[]
-        {
-            new Point(center.X + pointClearance, center.Y - (height / 2)),
-            new Point(center.X - width - pointClearance, center.Y - (height / 2)),
-            new Point(center.X - (width / 2), center.Y - height - pointClearance),
-            new Point(center.X - (width / 2), center.Y + pointClearance),
-            new Point(center.X + 19, center.Y - height - 19),
-            new Point(center.X - width - 19, center.Y - height - 19),
-            new Point(center.X + 19, center.Y + 19),
-            new Point(center.X - width - 19, center.Y + 19),
-        };
-        var labelRect = candidateOrigins
-            .Select((origin, priority) =>
-            {
-                var candidate = new Rect(
-                    Math.Clamp(origin.X, labelBounds.Left + 4, labelBounds.Right - width - 4),
-                    Math.Clamp(origin.Y, labelBounds.Top + 4, labelBounds.Bottom - height - 4),
-                    width,
-                    height);
-                var score = priority;
-                score += protectedPoints.Sum(point => OverlapPenalty(point, candidate, 100_000));
-                score += occupiedLabels.Sum(existing => OverlapPenalty(existing, candidate, 10_000));
-                score += (int)(Math.Abs(candidate.X - origin.X) + Math.Abs(candidate.Y - origin.Y)) * 100;
-                return (candidate, score);
-            })
-            .OrderBy(result => result.score)
-            .First().candidate;
-        occupiedLabels.Add(labelRect);
+        return new ContactLabelData(contact, center, headerText, coordinateText, width, height);
+    }
+
+    private void DrawContactLabel(
+        DrawingContext context,
+        ContactLabelData data,
+        ReplayLabelPlacement placement)
+    {
+        var contact = data.Contact;
+        var labelRect = new Rect(
+            placement.Bounds.X,
+            placement.Bounds.Y,
+            placement.Bounds.Width,
+            placement.Bounds.Height);
         var idBrush = new SolidColorBrush(ContactColor(contact.Id));
-        var leaderEnd = new Point(
-            Math.Clamp(center.X, labelRect.Left, labelRect.Right),
-            Math.Clamp(center.Y, labelRect.Top, labelRect.Bottom));
-        context.DrawLine(new Pen(idBrush, 1), center, leaderEnd);
+        context.DrawLine(new Pen(idBrush, 1), data.Center, new Point(placement.LeaderX, placement.LeaderY));
         var selected = highlightedContactId == contact.Id;
         context.DrawRectangle(
             selected ? HoverLabelSurfaceBrush : LabelSurfaceBrush,
@@ -729,11 +714,11 @@ public sealed class ReplayPaintSurface : Control
         DrawTypeIcon(
             context,
             contact.Type,
-            new Point(labelRect.X + 11, labelRect.Y + 3 + (headerText.Height / 2)),
+            new Point(labelRect.X + 11, labelRect.Y + 3 + (data.HeaderText.Height / 2)),
             idBrush,
             4);
-        context.DrawText(headerText, new Point(labelRect.X + 21, labelRect.Y + 3));
-        context.DrawText(coordinateText, new Point(labelRect.X + 7, labelRect.Y + 3 + headerText.Height));
+        context.DrawText(data.HeaderText, new Point(labelRect.X + 21, labelRect.Y + 3));
+        context.DrawText(data.CoordinateText, new Point(labelRect.X + 7, labelRect.Y + 3 + data.HeaderText.Height));
     }
 
     private static Point Project(Rect viewport, ReplayScene scene, ushort x, ushort y) =>
@@ -780,18 +765,6 @@ public sealed class ReplayPaintSurface : Control
         var x = centered ? origin.X - (text.Width / 2) : rightAligned ? origin.X - text.Width : origin.X;
         var y = rightAligned ? origin.Y - (text.Height / 2) : origin.Y;
         context.DrawText(text, new Point(x, y));
-    }
-
-    private static bool Overlaps(Rect first, Rect second) =>
-        first.Left < second.Right && first.Right > second.Left &&
-        first.Top < second.Bottom && first.Bottom > second.Top;
-
-    private static int OverlapPenalty(Rect first, Rect second, int basePenalty)
-    {
-        if (!Overlaps(first, second)) return 0;
-        var width = Math.Min(first.Right, second.Right) - Math.Max(first.Left, second.Left);
-        var height = Math.Min(first.Bottom, second.Bottom) - Math.Max(first.Top, second.Top);
-        return basePenalty + (int)Math.Ceiling(width * height);
     }
 
     private static void DrawTypeIcon(
@@ -847,6 +820,14 @@ public sealed class ReplayPaintSurface : Control
     private Color ContactColor(byte id) => Palette.ContactColors[(Math.Max(1, (int)id) - 1) % Palette.ContactColors.Count];
 
     private static IBrush Brush(string value) => new SolidColorBrush(Color.Parse(value));
+
+    private sealed record ContactLabelData(
+        ReplayContact Contact,
+        Point Center,
+        FormattedText HeaderText,
+        FormattedText CoordinateText,
+        double Width,
+        double Height);
 
     private sealed record PaintPalette(
         IBrush Stage,

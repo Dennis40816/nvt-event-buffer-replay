@@ -266,12 +266,7 @@ public static class ReplayFrameRenderer
     {
         var textScale = TextScale(canvas.Height);
         var pointRadius = Math.Max(20, (int)Math.Round(23 * chromeScale));
-        var protectedPoints = contacts
-            .Select(contact => Project(viewport, scene, contact.X, contact.Y))
-            .Select(point => new PixelRect(point.X - pointRadius, point.Y - pointRadius, pointRadius * 2, pointRadius * 2))
-            .ToArray();
-        var occupied = new List<PixelRect>();
-        foreach (var contact in contacts)
+        var labelData = contacts.Select(contact =>
         {
             var center = Project(viewport, scene, contact.X, contact.Y);
             var header = $"ID {contact.Id}  {ContactState(contact)}";
@@ -282,47 +277,45 @@ public static class ReplayFrameRenderer
             var lineGap = Math.Max(2, textScale);
             var width = Math.Max(canvas.TextWidth(header, textScale) + iconReserve, canvas.TextWidth(coordinates, textScale)) + (padding * 2);
             var height = (canvas.TextHeight(textScale) * 2) + lineGap + (padding * 2);
-            var clearance = Math.Max(20, (int)Math.Round(27 * chromeScale));
-            var origins = new[]
-            {
-                new PixelPoint(center.X + clearance, center.Y - (height / 2)),
-                new PixelPoint(center.X - width - clearance, center.Y - (height / 2)),
-                new PixelPoint(center.X - (width / 2), center.Y - height - clearance),
-                new PixelPoint(center.X - (width / 2), center.Y + clearance),
-                new PixelPoint(center.X + 16, center.Y - height - 16),
-                new PixelPoint(center.X - width - 16, center.Y - height - 16),
-                new PixelPoint(center.X + 16, center.Y + 16),
-                new PixelPoint(center.X - width - 16, center.Y + 16),
-            };
-            var label = origins
-                .Select((origin, priority) =>
-                {
-                    var candidate = new PixelRect(
-                        Math.Clamp(origin.X, labelBounds.X + 4, labelBounds.Right - width - 4),
-                        Math.Clamp(origin.Y, labelBounds.Y + 4, labelBounds.Bottom - height - 4),
-                        width,
-                        height);
-                    var score = priority;
-                    score += protectedPoints.Sum(point => OverlapPenalty(point, candidate, 100_000));
-                    score += occupied.Sum(existing => OverlapPenalty(existing, candidate, 10_000));
-                    score += (Math.Abs(candidate.X - origin.X) + Math.Abs(candidate.Y - origin.Y)) * 100;
-                    return (candidate, score);
-                })
-                .OrderBy(result => result.score)
-                .First().candidate;
-            occupied.Add(label);
+            return new RasterLabelData(contact, center, header, coordinates, iconReserve, padding, lineGap, width, height);
+        }).ToArray();
+
+        var placements = ReplayLabelLayout.Place(
+                new ReplayLabelBounds(labelBounds.X + 4, labelBounds.Y + 4, labelBounds.Width - 8, labelBounds.Height - 8),
+                labelData.Select(data => new ReplayLabelRequest(
+                    data.Contact.Id,
+                    data.Center.X,
+                    data.Center.Y,
+                    data.Width,
+                    data.Height)).ToArray(),
+                pointRadius,
+                Math.Max(20, (int)Math.Round(27 * chromeScale)),
+                Math.Max(4, (int)Math.Round(5 * chromeScale)))
+            .ToDictionary(placement => placement.Key);
+
+        foreach (var data in labelData)
+        {
+            var contact = data.Contact;
+            var placement = placements[contact.Id];
+            var label = new PixelRect(
+                (int)Math.Round(placement.Bounds.X),
+                (int)Math.Round(placement.Bounds.Y),
+                (int)Math.Round(placement.Bounds.Width),
+                (int)Math.Round(placement.Bounds.Height));
 
             var color = ReplayVisualStyle.ContactColor(palette, contact.Id);
-            var leaderEnd = new PixelPoint(
-                Math.Clamp(center.X, label.X, label.Right),
-                Math.Clamp(center.Y, label.Y, label.Bottom));
-            canvas.Line(center.X, center.Y, leaderEnd.X, leaderEnd.Y, color);
+            canvas.Line(
+                data.Center.X,
+                data.Center.Y,
+                (int)Math.Round(placement.LeaderX),
+                (int)Math.Round(placement.LeaderY),
+                color);
             canvas.FillRectangle(label.X, label.Y, label.Width, label.Height, palette.LabelSurface);
             canvas.Rectangle(label, color, 1);
-            var headerY = label.Y + padding;
-            DrawTypeIcon(canvas, contact.Type, new PixelPoint(label.X + padding + (4 * textScale), headerY + (canvas.TextHeight(textScale) / 2)), color, Math.Max(3, 3 * textScale));
-            canvas.Text(label.X + padding + iconReserve, headerY, header, palette.LabelText, textScale);
-            canvas.Text(label.X + padding, headerY + canvas.TextHeight(textScale) + lineGap, coordinates, palette.AxisLabel, textScale);
+            var headerY = label.Y + data.Padding;
+            DrawTypeIcon(canvas, contact.Type, new PixelPoint(label.X + data.Padding + (4 * textScale), headerY + (canvas.TextHeight(textScale) / 2)), color, Math.Max(3, 3 * textScale));
+            canvas.Text(label.X + data.Padding + data.IconReserve, headerY, data.Header, palette.LabelText, textScale);
+            canvas.Text(label.X + data.Padding, headerY + canvas.TextHeight(textScale) + data.LineGap, data.Coordinates, palette.AxisLabel, textScale);
         }
     }
 
@@ -475,15 +468,6 @@ public static class ReplayFrameRenderer
             viewport.Y + (int)Math.Round((scene.ReverseY ? 1 - yRatio : yRatio) * viewport.Height));
     }
 
-    private static int OverlapPenalty(PixelRect first, PixelRect second, int basePenalty)
-    {
-        if (first.X >= second.Right || first.Right <= second.X || first.Y >= second.Bottom || first.Bottom <= second.Y)
-            return 0;
-        var width = Math.Min(first.Right, second.Right) - Math.Max(first.X, second.X);
-        var height = Math.Min(first.Bottom, second.Bottom) - Math.Max(first.Y, second.Y);
-        return basePenalty + (width * height);
-    }
-
     private static ReplayColor Fade(ReplayColor color) =>
         new((byte)(color.Red / 2), (byte)(color.Green / 2), (byte)(color.Blue / 2));
 
@@ -494,6 +478,16 @@ public static class ReplayFrameRenderer
 
     private readonly record struct PixelPoint(int X, int Y);
     private readonly record struct PixelSize(int Width, int Height);
+    private readonly record struct RasterLabelData(
+        ReplayContact Contact,
+        PixelPoint Center,
+        string Header,
+        string Coordinates,
+        int IconReserve,
+        int Padding,
+        int LineGap,
+        int Width,
+        int Height);
     private readonly record struct PixelRect(int X, int Y, int Width, int Height)
     {
         public int Right => X + Width;
