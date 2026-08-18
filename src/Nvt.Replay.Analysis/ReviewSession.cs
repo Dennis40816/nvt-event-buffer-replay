@@ -87,7 +87,11 @@ public sealed record ReviewStateSnapshot(
 public sealed class ReviewSession
 {
     private readonly IReadOnlyList<ReplayDiagnostic> diagnostics;
-    private readonly IReadOnlyDictionary<string, int> logicalIndexBySourceId;
+    private readonly IReadOnlyList<ReviewOccurrence> occurrences;
+    private readonly int[] alarmPauseIndices;
+    private readonly int[] qaFailPauseIndices;
+    private readonly IReadOnlyDictionary<string, ReplayDiagnostic[]> alertsBySourceId;
+    private readonly IReadOnlyDictionary<int, ReplayDiagnostic[]> alertsByLineNumber;
     private readonly Dictionary<string, HumanReviewState> humanState = new(StringComparer.Ordinal);
 
     public ReviewSession(
@@ -96,13 +100,51 @@ public sealed class ReviewSession
         ReviewSessionOptions? options = null)
     {
         this.diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
-        this.logicalIndexBySourceId = logicalIndexBySourceId ?? new Dictionary<string, int>();
+        var sourceIndices = logicalIndexBySourceId ?? new Dictionary<string, int>();
         Options = options ?? ReviewSessionOptions.Default;
+        occurrences = diagnostics.Select((diagnostic, index) =>
+            new ReviewOccurrence(
+                $"{diagnostic.Code}@{diagnostic.SourceRecordId}#{index}",
+                diagnostic,
+                Category(diagnostic),
+                CapturedState(diagnostic),
+                sourceIndices.GetValueOrDefault(diagnostic.SourceRecordId, -1) is var logicalIndex && logicalIndex >= 0
+                    ? logicalIndex
+                    : null))
+            .ToArray();
+        alarmPauseIndices = PauseIndices(item => item.Diagnostic.Severity == DiagnosticSeverity.Alarm);
+        qaFailPauseIndices = PauseIndices(item => item.Category == ReviewEventCategory.QaResult && IsQaFail(item.Diagnostic));
+        HasNavigableFindings = occurrences.Any(item => item.LogicalIndex is not null);
+        var alerts = diagnostics.Where(item => item.Severity >= DiagnosticSeverity.Warning).ToArray();
+        alertsBySourceId = alerts
+            .GroupBy(item => item.SourceRecordId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
+        alertsByLineNumber = alerts
+            .GroupBy(item => item.Location.LineNumber)
+            .ToDictionary(group => group.Key, group => group.ToArray());
     }
 
     public ReviewSessionOptions Options { get; set; }
 
     public IReadOnlyList<ReplayDiagnostic> Diagnostics => diagnostics;
+
+    public bool HasNavigableFindings { get; }
+
+    public IReadOnlyList<ReplayDiagnostic> FrameAlerts(string sourceRecordId, int lineNumber, int maximum = 2)
+    {
+        if (maximum <= 0) return [];
+        var bySource = alertsBySourceId.TryGetValue(sourceRecordId, out var sourceAlerts)
+            ? sourceAlerts
+            : Array.Empty<ReplayDiagnostic>();
+        var byLine = alertsByLineNumber.TryGetValue(lineNumber, out var lineAlerts)
+            ? lineAlerts
+            : Array.Empty<ReplayDiagnostic>();
+        return bySource
+            .Concat(byLine)
+            .Distinct()
+            .Take(maximum)
+            .ToArray();
+    }
 
     public IReadOnlyList<ReviewEventGroup> Groups => BuildGroups(ReviewQueueFilter.All);
 
@@ -130,18 +172,16 @@ public sealed class ReviewSession
         return unresolved;
     }
 
-    public bool ShouldPauseAt(int logicalIndex) => BuildOccurrences().Any(item =>
-        item.LogicalIndex == logicalIndex &&
-        (Options.PauseOnAlarm && item.Diagnostic.Severity == DiagnosticSeverity.Alarm ||
-         Options.PauseOnQaFail && item.Category == ReviewEventCategory.QaResult && IsQaFail(item.Diagnostic)));
+    public bool ShouldPauseAt(int logicalIndex) =>
+        Options.PauseOnAlarm && Array.BinarySearch(alarmPauseIndices, logicalIndex) >= 0 ||
+        Options.PauseOnQaFail && Array.BinarySearch(qaFailPauseIndices, logicalIndex) >= 0;
 
-    public int? FirstPauseIndex(int exclusiveStart, int inclusiveEnd) => BuildOccurrences()
-        .Where(item => item.LogicalIndex is { } index && index > exclusiveStart && index <= inclusiveEnd)
-        .Where(item => Options.PauseOnAlarm && item.Diagnostic.Severity == DiagnosticSeverity.Alarm ||
-                       Options.PauseOnQaFail && item.Category == ReviewEventCategory.QaResult && IsQaFail(item.Diagnostic))
-        .Select(item => item.LogicalIndex!.Value)
-        .DefaultIfEmpty(-1)
-        .Min() is var result && result >= 0 ? result : null;
+    public int? FirstPauseIndex(int exclusiveStart, int inclusiveEnd)
+    {
+        var alarm = Options.PauseOnAlarm ? FirstIndexInRange(alarmPauseIndices, exclusiveStart, inclusiveEnd) : null;
+        var qaFail = Options.PauseOnQaFail ? FirstIndexInRange(qaFailPauseIndices, exclusiveStart, inclusiveEnd) : null;
+        return alarm is null ? qaFail : qaFail is null ? alarm : Math.Min(alarm.Value, qaFail.Value);
+    }
 
     public ReviewEventGroup Acknowledge(string groupId)
     {
@@ -184,14 +224,25 @@ public sealed class ReviewSession
             .ToArray();
     }
 
-    private IReadOnlyList<ReviewOccurrence> BuildOccurrences() => diagnostics.Select((diagnostic, index) =>
-        new ReviewOccurrence(
-            $"{diagnostic.Code}@{diagnostic.SourceRecordId}#{index}",
-            diagnostic,
-            Category(diagnostic),
-            CapturedState(diagnostic),
-            logicalIndexBySourceId.GetValueOrDefault(diagnostic.SourceRecordId, -1) is var logicalIndex && logicalIndex >= 0 ? logicalIndex : null))
+    private IReadOnlyList<ReviewOccurrence> BuildOccurrences() => occurrences;
+
+    private int[] PauseIndices(Func<ReviewOccurrence, bool> predicate) => occurrences
+        .Where(predicate)
+        .Select(item => item.LogicalIndex)
+        .Where(item => item is not null)
+        .Select(item => item!.Value)
+        .Distinct()
+        .OrderBy(item => item)
         .ToArray();
+
+    private static int? FirstIndexInRange(int[] sortedIndices, int exclusiveStart, int inclusiveEnd)
+    {
+        var position = Array.BinarySearch(sortedIndices, exclusiveStart + 1);
+        if (position < 0) position = ~position;
+        return position < sortedIndices.Length && sortedIndices[position] <= inclusiveEnd
+            ? sortedIndices[position]
+            : null;
+    }
 
     private ReviewEventGroup ToGroup(IGrouping<string, ReviewOccurrence> grouped)
     {

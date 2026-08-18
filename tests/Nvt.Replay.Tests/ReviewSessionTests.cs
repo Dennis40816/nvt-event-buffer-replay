@@ -80,6 +80,45 @@ public sealed class ReviewSessionTests
     }
 
     [Fact]
+    public void Pause_index_lookup_honors_runtime_options_and_range_boundaries()
+    {
+        var warning = Diagnostic(DiagnosticSeverity.Warning, "COMMON_CRC_MISMATCH", "crc", 1);
+        var firstFail = Diagnostic(DiagnosticSeverity.Error, "QA_CASE_FAIL", "fail", 2, ("result", "fail"));
+        var alarm = Diagnostic(DiagnosticSeverity.Alarm, "COMMON_ASIL_ALARM", "asil", 3);
+        var secondFail = Diagnostic(DiagnosticSeverity.Error, "QA_CASE_FAIL", "fail", 4, ("result", "fail"));
+        var session = Session([warning, firstFail, alarm, secondFail]);
+
+        Assert.Equal(1, session.FirstPauseIndex(0, 3));
+
+        session.Options = new ReviewSessionOptions(PauseOnAlarm: true, PauseOnQaFail: false);
+        Assert.Equal(2, session.FirstPauseIndex(0, 3));
+        Assert.True(session.ShouldPauseAt(2));
+        Assert.False(session.ShouldPauseAt(1));
+
+        session.Options = new ReviewSessionOptions(PauseOnAlarm: false, PauseOnQaFail: true);
+        Assert.Equal(3, session.FirstPauseIndex(1, 3));
+
+        session.Options = new ReviewSessionOptions(PauseOnAlarm: false, PauseOnQaFail: false);
+        Assert.Null(session.FirstPauseIndex(-1, 3));
+    }
+
+    [Fact]
+    public void Frame_alert_lookup_is_indexed_by_source_or_line_and_deduplicates_matches()
+    {
+        var sourceAlert = Diagnostic(DiagnosticSeverity.Warning, "SOURCE_WARNING", "source", 1);
+        var lineAlert = Diagnostic(DiagnosticSeverity.Alarm, "LINE_ALARM", "line", 2);
+        var info = Diagnostic(DiagnosticSeverity.Info, "INFO", "ignored", 3);
+        var session = Session([sourceAlert, lineAlert, info]);
+
+        Assert.True(session.HasNavigableFindings);
+        Assert.Equal(
+            [sourceAlert, lineAlert],
+            session.FrameAlerts(sourceAlert.SourceRecordId, lineAlert.Location.LineNumber));
+        Assert.Equal([sourceAlert], session.FrameAlerts(sourceAlert.SourceRecordId, sourceAlert.Location.LineNumber));
+        Assert.Empty(session.FrameAlerts(info.SourceRecordId, info.Location.LineNumber));
+    }
+
+    [Fact]
     public void Reserved_Asil_error_code_remains_raw_evidence()
     {
         var diagnostic = Diagnostic(DiagnosticSeverity.Alarm, "COMMON_ASIL_ALARM", "reserved", 1,
