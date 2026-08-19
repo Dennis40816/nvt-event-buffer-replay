@@ -143,6 +143,7 @@
     <Style Selector="Button.headerAction">
       <Setter Property="Height" Value="32" />
       <Setter Property="Padding" Value="10,0" />
+      <Setter Property="Focusable" Value="False" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -830,8 +831,22 @@
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE70F;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="EditActionLabel" Text="Edit" /></StackPanel>
         </Button>
 
-        <Button x:Name="SaveReviewButton" Grid.Column="9" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
-          <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE74E;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="SaveActionLabel" Text="Save" /></StackPanel>
+        <Button x:Name="SaveReviewButton" Grid.Column="9" Classes="headerAction" Theme="{x:Null}" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
+          <Button.Template>
+            <ControlTemplate>
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="0"
+                                Padding="{TemplateBinding Padding}"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center" />
+            </ControlTemplate>
+          </Button.Template>
+          <Button.Content>
+            <TextBlock x:Name="SaveActionLabel" Text="Save" />
+          </Button.Content>
         </Button>
         <Border Grid.Column="10" Classes="separator" />
         <Button x:Name="LoadReviewButton" Grid.Column="9" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" AutomationProperties.Name="Open review" />
