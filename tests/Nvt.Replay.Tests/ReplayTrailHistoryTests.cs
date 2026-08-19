@@ -37,6 +37,25 @@ public sealed class ReplayTrailHistoryTests
         Assert.Throws<ArgumentOutOfRangeException>(() => history.Build(4, ReplayTrailMode.Recent, 121));
     }
 
+    [Fact]
+    public void Persistent_preserves_every_reported_point_for_the_evidence_layer()
+    {
+        const int reportCount = 700;
+        var replay = new FakeReplay(Enumerable.Range(0, reportCount)
+            .Select(index => Snapshot(
+                index,
+                Contact(
+                    index,
+                    index == 0 ? TouchStatus.Enter : TouchStatus.Move,
+                    (ushort)(10 + index))))
+            .ToArray());
+
+        var trail = Assert.Single(ReplayTrailHistory.Create(replay).Build(reportCount - 1, ReplayTrailMode.Persistent));
+
+        Assert.Equal(reportCount, trail.Points.Count);
+        Assert.Equal(Enumerable.Range(0, reportCount), trail.Points.Select(point => point.LogicalIndex));
+    }
+
     private static FakeReplay Replay()
     {
         var contacts = new[]

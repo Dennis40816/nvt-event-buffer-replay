@@ -1108,6 +1108,7 @@
                   <Border Classes="canvasQuickBar">
                     <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
                       <ToggleButton x:Name="TraceToggleButton" Classes="canvasQuick" Content="Trace" IsChecked="True" IsCheckedChanged="TraceToggleButton_OnIsCheckedChanged" ToolTip.Tip="Show or hide touch trajectories" AutomationProperties.Name="Show touch traces" />
+                      <ToggleButton x:Name="TrailPointsToggleButton" Classes="canvasQuick" Content="Points" IsChecked="True" IsCheckedChanged="TrailPointsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Show every reported touch sample independently of the trajectory line" AutomationProperties.Name="Show reported trail points" />
                       <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
                       <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
                       <ToggleButton x:Name="ReverseYToggleButton" Classes="canvasQuick" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />

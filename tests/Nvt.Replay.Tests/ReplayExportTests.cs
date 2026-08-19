@@ -140,6 +140,39 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public void Trail_line_and_every_reported_point_are_independent_render_layers()
+    {
+        var replay = UniformReplay(20, TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var trail = new ReplayContactTrail(
+            1,
+            TouchType.Finger,
+            [
+                new ReplayTrailPoint(600, 300, TouchStatus.Enter, 0),
+                new ReplayTrailPoint(850, 520, TouchStatus.Move, 6),
+                new ReplayTrailPoint(1100, 260, TouchStatus.Move, 12),
+                new ReplayTrailPoint(1350, 520, TouchStatus.Move, 19),
+            ]);
+        var scene = ReplaySceneFactory.Create(
+            replay.Seek(replay.Count - 1),
+            replay.Count,
+            extent,
+            contactTrails: [trail]);
+        var both = new ReplayRenderSettings(ReplayRenderMode.HostState);
+        var lineOnly = both with { ShowTrailPoints = false };
+        var pointsOnly = both with { ShowTrailLines = false };
+        var neither = both with { ShowTrailLines = false, ShowTrailPoints = false };
+
+        var hashes = new[] { both, lineOnly, pointsOnly, neither }
+            .Select(settings => Convert.ToHexString(SHA256.HashData(
+                ReplayFrameRenderer.RenderRgb(scene, 640, 360, settings))))
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal(4, hashes.Count);
+        Assert.Equal(4, Assert.Single(scene.ContactTrails).Points.Count);
+    }
+
+    [Fact]
     public void Reusable_render_buffer_is_pixel_identical_to_allocating_renderer()
     {
         var replay = Replay(TimeSpan.FromMilliseconds(10));
@@ -207,6 +240,8 @@ public sealed class ReplayExportTests : IDisposable
         Assert.Contains("\"strongGrid\": true", manifest);
         Assert.Contains("\"legendVisible\": false", manifest);
         Assert.Contains("\"legendPosition\": \"bottomRight\"", manifest);
+        Assert.Contains("\"showTrailLines\": true", manifest);
+        Assert.Contains("\"showTrailPoints\": true", manifest);
     }
 
     [Fact]

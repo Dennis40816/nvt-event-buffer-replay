@@ -47,6 +47,8 @@ public sealed class ReplayPaintSurface : Control
     private bool legendVisible = true;
     private bool legendCollapsed = true;
     private bool legendHovered;
+    private bool trailLinesVisible = true;
+    private bool trailPointsVisible = true;
     private Rect? legendBounds;
     private bool isPanning;
     private byte? highlightedContactId;
@@ -61,6 +63,8 @@ public sealed class ReplayPaintSurface : Control
     public bool LegendVisible => legendVisible;
     public bool LegendCollapsed => legendCollapsed;
     public ReplayLegendPosition LegendPosition => legendPosition;
+    public bool TrailLinesVisible => trailLinesVisible;
+    public bool TrailPointsVisible => trailPointsVisible;
     internal ReplayScene? CurrentScene => scene;
     public event EventHandler? ZoomChanged;
     public event EventHandler? LegendCollapsedChanged;
@@ -89,6 +93,14 @@ public sealed class ReplayPaintSurface : Control
     public void SetMode(ReplayRenderMode mode)
     {
         Mode = mode;
+        InvalidateVisual();
+    }
+
+    public void SetTrailVisibility(bool showLines, bool showPoints)
+    {
+        if (trailLinesVisible == showLines && trailPointsVisible == showPoints) return;
+        trailLinesVisible = showLines;
+        trailPointsVisible = showPoints;
         InvalidateVisual();
     }
 
@@ -431,45 +443,44 @@ public sealed class ReplayPaintSurface : Control
 
     private void DrawTrails(DrawingContext context, Rect viewport, ReplayScene scene)
     {
+        if (!trailLinesVisible && !trailPointsVisible) return;
+
         foreach (var trail in scene.ContactTrails)
         {
             if (trail.Points.Count < 2) continue;
             var color = ContactColor(trail.Id);
             var brush = new SolidColorBrush(color);
-            var pen = new Pen(brush, 2.5);
-            var geometry = new StreamGeometry();
-            var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
-            using (var path = geometry.Open())
+            if (trailLinesVisible)
             {
-                var first = trail.Points[0];
-                path.BeginFigure(Project(viewport, scene, first.X, first.Y), isFilled: false);
-                for (var index = lineStep; index < trail.Points.Count; index += lineStep)
+                var lineBrush = new SolidColorBrush(Color.FromArgb(150, color.R, color.G, color.B));
+                var pen = new Pen(lineBrush, 1.6);
+                var geometry = new StreamGeometry();
+                var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
+                using (var path = geometry.Open())
                 {
-                    var point = trail.Points[index];
-                    path.LineTo(Project(viewport, scene, point.X, point.Y));
+                    var first = trail.Points[0];
+                    path.BeginFigure(Project(viewport, scene, first.X, first.Y), isFilled: false);
+                    for (var index = lineStep; index < trail.Points.Count; index += lineStep)
+                    {
+                        var point = trail.Points[index];
+                        path.LineTo(Project(viewport, scene, point.X, point.Y));
+                    }
+                    if ((trail.Points.Count - 1) % lineStep != 0)
+                    {
+                        var last = trail.Points[^1];
+                        path.LineTo(Project(viewport, scene, last.X, last.Y));
+                    }
+                    path.EndFigure(isClosed: false);
                 }
-                if ((trail.Points.Count - 1) % lineStep != 0)
-                {
-                    var last = trail.Points[^1];
-                    path.LineTo(Project(viewport, scene, last.X, last.Y));
-                }
-                path.EndFigure(isClosed: false);
+                context.DrawGeometry(null, pen, geometry);
             }
-            context.DrawGeometry(null, pen, geometry);
 
-            // Dense gestures can contain hundreds of points. The continuous
-            // path preserves the exact trace; markers are sampled to avoid
-            // hundreds of redundant ellipse draw calls per frame.
-            var markerStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 180d));
-            for (var index = 0; index < trail.Points.Count; index += markerStep)
+            if (trailPointsVisible)
             {
-                var point = trail.Points[index];
-                context.DrawEllipse(brush, null, Project(viewport, scene, point.X, point.Y), 2.8, 2.8);
-            }
-            if ((trail.Points.Count - 1) % markerStep != 0)
-            {
-                var last = trail.Points[^1];
-                context.DrawEllipse(brush, null, Project(viewport, scene, last.X, last.Y), 2.8, 2.8);
+                // Report markers are evidence, not decoration: draw every
+                // decoded report even when the background line is sampled.
+                foreach (var point in trail.Points)
+                    context.DrawEllipse(brush, null, Project(viewport, scene, point.X, point.Y), 2.35, 2.35);
             }
         }
     }

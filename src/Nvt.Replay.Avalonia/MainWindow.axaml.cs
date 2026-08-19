@@ -75,6 +75,7 @@ public partial class MainWindow : Window
     private int trailLength = 10;
     private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
     private bool traceVisible = true;
+    private bool trailPointsVisible = true;
     private ReplayLegendPosition legendPosition = ReplayLegendPosition.Auto;
     private ReplayTrailHistory? trailHistory;
     private ReplayAutoPauseIndex? autoPauseIndex;
@@ -1030,6 +1031,7 @@ public partial class MainWindow : Window
         var exportTrailMode = trailMode;
         var exportTrailLength = trailLength;
         var exportTrailVisibilityStart = trailVisibilityStart;
+        var exportTrailVisible = traceVisible || trailPointsVisible;
         var exportReverseX = reverseX;
         var exportReverseY = reverseY;
         var exportSwapAxes = swapAxes;
@@ -1039,7 +1041,9 @@ public partial class MainWindow : Window
             exportExtent,
             exportDiagnostics,
             exportMarkers,
-            exportTrailHistory?.Build(logicalIndex, exportTrailMode, exportTrailLength, exportTrailVisibilityStart) ?? [],
+            exportTrailVisible
+                ? exportTrailHistory?.Build(logicalIndex, exportTrailMode, exportTrailLength, exportTrailVisibilityStart) ?? []
+                : [],
             exportReverseX,
             exportReverseY,
             exportSwapAxes);
@@ -1367,7 +1371,9 @@ public partial class MainWindow : Window
         PaintSurface.StrongGrid,
         PaintSurface.LegendVisible,
         PaintSurface.LegendCollapsed,
-        PaintSurface.LegendPosition);
+        PaintSurface.LegendPosition,
+        ShowTrailLines: traceVisible,
+        ShowTrailPoints: trailPointsVisible);
 
     private ReplayScene CreateReplayScene(int logicalIndex)
     {
@@ -1378,7 +1384,7 @@ public partial class MainWindow : Window
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            traceVisible
+            traceVisible || trailPointsVisible
                 ? trailHistory?.Build(logicalIndex, trailMode, trailLength, trailVisibilityStart) ?? []
                 : [],
             reverseX,
@@ -2595,7 +2601,10 @@ public partial class MainWindow : Window
         autoPauseIndex = null;
         trailVisibilityStart = 0;
         traceVisible = true;
+        trailPointsVisible = true;
         TraceToggleButton.IsChecked = true;
+        TrailPointsToggleButton.IsChecked = true;
+        PaintSurface.SetTrailVisibility(showLines: true, showPoints: true);
         allRawRows = [];
         registerActivities = [];
         rawRowsById = [];
@@ -2790,7 +2799,10 @@ public partial class MainWindow : Window
         autoPauseIndex = ReplayAutoPauseIndex.Create(replayFrames.Snapshots);
         trailVisibilityStart = 0;
         traceVisible = true;
+        trailPointsVisible = true;
         TraceToggleButton.IsChecked = true;
+        TrailPointsToggleButton.IsChecked = true;
+        PaintSurface.SetTrailVisibility(showLines: true, showPoints: true);
         RefreshLegendPlacement();
         PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
         PanelHeightTextBox.Text = replayExtent.MaximumY.ToString("0", CultureInfo.InvariantCulture);
@@ -2837,7 +2849,7 @@ public partial class MainWindow : Window
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            traceVisible
+            traceVisible || trailPointsVisible
                 ? trailHistory?.Build(snapshot.LogicalIndex, trailMode, trailLength, trailVisibilityStart) ?? []
                 : [],
             reverseX,
@@ -3360,11 +3372,23 @@ public partial class MainWindow : Window
     private void TraceToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         traceVisible = TraceToggleButton.IsChecked == true;
+        PaintSurface.SetTrailVisibility(traceVisible, trailPointsVisible);
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
         SessionStatusText.Text = traceVisible
             ? "Touch traces visible"
             : "Touch traces hidden · source data unchanged";
+    }
+
+    private void TrailPointsToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        trailPointsVisible = TrailPointsToggleButton.IsChecked == true;
+        PaintSurface.SetTrailVisibility(traceVisible, trailPointsVisible);
+        if (replaySession is not null && currentLogicalIndex >= 0)
+            SeekReplay(currentLogicalIndex);
+        SessionStatusText.Text = trailPointsVisible
+            ? "Every reported trail point is visible"
+            : "Reported trail points hidden · trajectory line unchanged";
     }
 
     private void CanvasSettingsToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)

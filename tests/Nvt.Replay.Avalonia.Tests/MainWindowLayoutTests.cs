@@ -645,7 +645,7 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
-    public async Task Paint_owns_the_replay_transport_and_Trace_hides_without_clearing_source_history()
+    public async Task Paint_owns_transport_and_independently_toggles_trace_lines_and_report_points()
     {
         var window = ShowWindow();
         try
@@ -673,12 +673,29 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             var paint = Required<ReplayPaintSurface>(window, "PaintSurface");
             Assert.NotEmpty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+            Assert.True(paint.TrailLinesVisible);
+            Assert.True(paint.TrailPointsVisible);
 
             var trace = Required<ToggleButton>(window, "TraceToggleButton");
+            var points = Required<ToggleButton>(window, "TrailPointsToggleButton");
             Assert.True(trace.IsChecked);
+            Assert.True(points.IsChecked);
             trace.IsChecked = false;
+            Assert.False(paint.TrailLinesVisible);
+            Assert.True(paint.TrailPointsVisible);
+            Assert.NotEmpty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+
+            points.IsChecked = false;
+            Assert.False(paint.TrailPointsVisible);
             Assert.Empty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+
             trace.IsChecked = true;
+            Assert.True(paint.TrailLinesVisible);
+            Assert.False(paint.TrailPointsVisible);
+            Assert.NotEmpty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+
+            points.IsChecked = true;
+            Assert.True(paint.TrailPointsVisible);
             Assert.NotEmpty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
         }
         finally

@@ -132,7 +132,6 @@ public static class ReplaySceneFactory
 
 public sealed class ReplayTrailHistory
 {
-    private const int MaximumPersistentPointsPerGesture = 512;
     private readonly IReadOnlyDictionary<byte, IReadOnlyList<Gesture>> gesturesById;
     private readonly IReadOnlyList<IReadOnlySet<byte>> reportedIdsByFrame;
     private readonly IReadOnlyList<IReadOnlySet<byte>> activeIdsByFrame;
@@ -252,8 +251,6 @@ public sealed class ReplayTrailHistory
                     logicalIndex);
                 if (mode == ReplayTrailMode.Recent && points.Count > recentPointCount)
                     points = SliceRange(points, points.Count - recentPointCount, recentPointCount);
-                else if (mode == ReplayTrailMode.Persistent)
-                    points = Downsample(points, MaximumPersistentPointsPerGesture);
                 if (points.Count > 1)
                     result.Add(new ReplayContactTrail(gesture.Id, gesture.Type, points));
             }
@@ -308,18 +305,6 @@ public sealed class ReplayTrailHistory
             else high = middle;
         }
         return low;
-    }
-
-    private static IReadOnlyList<ReplayTrailPoint> Downsample(IReadOnlyList<ReplayTrailPoint> points, int maximumPoints)
-    {
-        if (points.Count <= maximumPoints) return points;
-        var result = new ReplayTrailPoint[maximumPoints];
-        for (var index = 0; index < maximumPoints; index++)
-        {
-            var sourceIndex = (int)Math.Round(index * (points.Count - 1d) / (maximumPoints - 1d));
-            result[index] = points[sourceIndex];
-        }
-        return result;
     }
 
     private static void Finish(

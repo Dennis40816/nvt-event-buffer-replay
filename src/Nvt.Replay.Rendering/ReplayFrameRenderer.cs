@@ -69,7 +69,7 @@ public static class ReplayFrameRenderer
         canvas.FillRectangle(viewport.X, viewport.Y, viewport.Width, viewport.Height, palette.Surface);
         DrawGrid(canvas, viewport, settings.StrongGrid, palette);
         DrawAxisLabels(canvas, viewport, scene, palette, TextScale(height));
-        DrawScene(canvas, viewport, contentBounds, scene, settings.Mode, palette, chromeScale);
+        DrawScene(canvas, viewport, contentBounds, scene, settings, palette, chromeScale);
         DrawLegend(canvas, viewport, scene, settings, palette);
         canvas.CopyTo(pixels);
     }
@@ -163,21 +163,30 @@ public static class ReplayFrameRenderer
         PixelRect viewport,
         PixelRect contentBounds,
         ReplayScene scene,
-        ReplayRenderMode mode,
+        ReplayRenderSettings settings,
         ReplayVisualPalette palette,
         double chromeScale)
     {
         foreach (var trail in scene.ContactTrails)
-            DrawTrail(canvas, viewport, scene, trail, palette, Math.Max(2, (int)Math.Round(2.5 * chromeScale)));
+            DrawTrail(
+                canvas,
+                viewport,
+                scene,
+                trail,
+                palette,
+                Math.Max(1, (int)Math.Round(1.6 * chromeScale)),
+                Math.Max(2, (int)Math.Round(2.35 * chromeScale)),
+                settings.ShowTrailLines,
+                settings.ShowTrailPoints);
 
-        if (mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
+        if (settings.Mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
             foreach (var contact in scene.ReportedContacts)
                 DrawContact(canvas, viewport, scene, contact, reported: true, palette, chromeScale);
-        if (mode is ReplayRenderMode.HostState or ReplayRenderMode.Compare)
+        if (settings.Mode is ReplayRenderMode.HostState or ReplayRenderMode.Compare)
             foreach (var contact in scene.HostContacts)
                 DrawContact(canvas, viewport, scene, contact, reported: false, palette, chromeScale);
 
-        var labels = (mode == ReplayRenderMode.HostState
+        var labels = (settings.Mode == ReplayRenderMode.HostState
                 ? scene.HostContacts
                 : scene.ReportedContacts.Concat(scene.HostContacts)
                     .GroupBy(contact => contact.Id)
@@ -244,32 +253,38 @@ public static class ReplayFrameRenderer
         ReplayScene scene,
         ReplayContactTrail trail,
         ReplayVisualPalette palette,
-        int thickness)
+        int lineThickness,
+        int pointRadius,
+        bool showLines,
+        bool showPoints)
     {
+        if (!showLines && !showPoints) return;
         var color = ReplayVisualStyle.ContactColor(palette, trail.Id);
-        var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
-        var markerStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 180d));
-        var prior = Project(viewport, scene, trail.Points[0].X, trail.Points[0].Y);
-        for (var index = lineStep; index < trail.Points.Count; index += lineStep)
+        if (showLines)
         {
-            var current = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
-            canvas.Line(prior.X, prior.Y, current.X, current.Y, color, thickness);
-            prior = current;
+            var lineColor = Fade(color);
+            var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
+            var prior = Project(viewport, scene, trail.Points[0].X, trail.Points[0].Y);
+            for (var index = lineStep; index < trail.Points.Count; index += lineStep)
+            {
+                var current = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
+                canvas.Line(prior.X, prior.Y, current.X, current.Y, lineColor, lineThickness);
+                prior = current;
+            }
+            if ((trail.Points.Count - 1) % lineStep != 0)
+            {
+                var last = Project(viewport, scene, trail.Points[^1].X, trail.Points[^1].Y);
+                canvas.Line(prior.X, prior.Y, last.X, last.Y, lineColor, lineThickness);
+            }
         }
-        if ((trail.Points.Count - 1) % lineStep != 0)
+
+        if (showPoints)
         {
-            var last = Project(viewport, scene, trail.Points[^1].X, trail.Points[^1].Y);
-            canvas.Line(prior.X, prior.Y, last.X, last.Y, color, thickness);
-        }
-        for (var index = 0; index < trail.Points.Count; index += markerStep)
-        {
-            var marker = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
-            canvas.FillCircle(marker.X, marker.Y, Math.Max(2, thickness), color);
-        }
-        if ((trail.Points.Count - 1) % markerStep != 0)
-        {
-            var last = Project(viewport, scene, trail.Points[^1].X, trail.Points[^1].Y);
-            canvas.FillCircle(last.X, last.Y, Math.Max(2, thickness), color);
+            foreach (var point in trail.Points)
+            {
+                var marker = Project(viewport, scene, point.X, point.Y);
+                canvas.FillCircle(marker.X, marker.Y, pointRadius, color);
+            }
         }
     }
 

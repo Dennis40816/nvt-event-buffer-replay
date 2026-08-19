@@ -22,6 +22,7 @@
 | UI-12 | 修正 Unmark ContextMenu 關閉後的透明 overlay 攔截 | 已實作，測試通過 | menu 一律先 Close 再解除；刪除 marker 後 timeline 空白區仍可 seek，右鍵不留下 stale menu |
 | UI-13 | 修正啟動時假滿版與底部 transport 落到螢幕外 | 已修正；冷啟動實機通過 | 不再用 `MaxHeight` 手動扣除 non-client 高度；由 Windows working area 管理 Maximized，視窗左上角與工作區對齊，Paint transport 完整可見 |
 | UI-14 | 逐張與核准參考圖重新比對所有細小差異 | 進行中 | Paint、Output、Settings、Heatmap 逐張核對位置、padding、字級、顏色、focus、圖示、label、timeline 與窄視窗狀態；差異不得只以「大致相近」結案 |
+| UI-15 | 軌跡線與真實 report points 分層顯示 | 已實作；長 golden dark 實機通過 | `Trace` 只控制取樣後的背景線；`Points` 預設開啟並顯示每一筆 report point；兩者可獨立切換且不重新 decode，Paint／MP4 語義一致 |
 
 ## 參考圖逐張對照
 
@@ -55,6 +56,7 @@
 - [ ] Paint toolbar：Panel、Point view、Trail、Length 等 row 高度與文字垂直置中一致；選單關閉後不可保留亮框。
 - [ ] Paint canvas：boxed label 維持 baseline 的雙行格式、leader 長度與點距；1／5／10 點均不得遮點或漂到遠端。
 - [ ] Floating tools：Trace、Grid、Flip X、Flip Y、Swap XY、Fit、Settings 對齊同一基線，不使用多餘的大外框。
+- [x] Trail evidence：Trace line 採取樣降低成本，但 Points 數量與目前 retention 範圍內的真實 report 數一致；Lines only、Points only、Both、Neither 均有測試，並以長 golden 實機驗收前三種可視狀態。
 - [ ] Transport：Play、clock、speed、Loop、Mark、Auto-pause、marker 旗標、Loop bracket 與時間文字的 padding、層級和點擊熱區逐項比對參考圖。
 - [ ] Inspector：Frame／time／contact／CRC／ASIL hierarchy 在 320、380、520 px 寬度都不裁切；selected contact 與畫布 highlight 同色。
 - [ ] Output：共用 content selector、MP4 preview controls、右側設定 rail、Heatmap color bar 與輸出 action 使用一致 spacing；頁面不可出現 Paint transport。
