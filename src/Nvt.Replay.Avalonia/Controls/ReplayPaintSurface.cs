@@ -331,9 +331,8 @@ public sealed class ReplayPaintSurface : Control
                 data.Height);
         }
         var placements = ReplayLabelLayout.Place(
-                new ReplayLabelBounds(available.X + 4, available.Y + 4, available.Width - 8, available.Height - 8),
-                requests,
-                obstacles: BuildTrailObstacles(viewport, value));
+            new ReplayLabelBounds(available.X + 4, available.Y + 4, available.Width - 8, available.Height - 8),
+            requests);
         for (var index = 0; index < labelData.Length; index++)
             DrawContactLabel(context, labelData[index], placements[index]);
 
@@ -434,19 +433,43 @@ public sealed class ReplayPaintSurface : Control
     {
         foreach (var trail in scene.ContactTrails)
         {
+            if (trail.Points.Count < 2) continue;
             var color = ContactColor(trail.Id);
             var brush = new SolidColorBrush(color);
-            for (var index = 1; index < trail.Points.Count; index++)
+            var pen = new Pen(brush, 2.5);
+            var geometry = new StreamGeometry();
+            var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
+            using (var path = geometry.Open())
             {
-                var prior = Project(viewport, scene, trail.Points[index - 1].X, trail.Points[index - 1].Y);
-                var current = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
-                context.DrawLine(
-                    new Pen(brush, 2.5),
-                    prior,
-                    current);
-                if (index == 1)
-                    context.DrawEllipse(brush, null, prior, 2.8, 2.8);
-                context.DrawEllipse(brush, null, current, 2.8, 2.8);
+                var first = trail.Points[0];
+                path.BeginFigure(Project(viewport, scene, first.X, first.Y), isFilled: false);
+                for (var index = lineStep; index < trail.Points.Count; index += lineStep)
+                {
+                    var point = trail.Points[index];
+                    path.LineTo(Project(viewport, scene, point.X, point.Y));
+                }
+                if ((trail.Points.Count - 1) % lineStep != 0)
+                {
+                    var last = trail.Points[^1];
+                    path.LineTo(Project(viewport, scene, last.X, last.Y));
+                }
+                path.EndFigure(isClosed: false);
+            }
+            context.DrawGeometry(null, pen, geometry);
+
+            // Dense gestures can contain hundreds of points. The continuous
+            // path preserves the exact trace; markers are sampled to avoid
+            // hundreds of redundant ellipse draw calls per frame.
+            var markerStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 180d));
+            for (var index = 0; index < trail.Points.Count; index += markerStep)
+            {
+                var point = trail.Points[index];
+                context.DrawEllipse(brush, null, Project(viewport, scene, point.X, point.Y), 2.8, 2.8);
+            }
+            if ((trail.Points.Count - 1) % markerStep != 0)
+            {
+                var last = trail.Points[^1];
+                context.DrawEllipse(brush, null, Project(viewport, scene, last.X, last.Y), 2.8, 2.8);
             }
         }
     }
@@ -676,27 +699,30 @@ public sealed class ReplayPaintSurface : Control
         ReplayScene scene)
     {
         var center = Project(viewport, scene, contact.X, contact.Y);
-        var idBrush = new SolidColorBrush(ContactColor(contact.Id));
+        var state = contact.Status switch
+        {
+            TouchStatus.Enter => "ENTER",
+            TouchStatus.Move => "MOVE",
+            TouchStatus.Break => "BREAK",
+            _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
+        };
         var headerText = new FormattedText(
-            $"{TypeLabel(contact.Type)} {contact.Id}",
+            $"ID {contact.Id}  {state}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            14,
-            idBrush);
+            13,
+            LabelTextBrush);
         var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
         var coordinateText = new FormattedText(
-            $"({viewCoordinates.X:0}, {viewCoordinates.Y:0})",
+            $"X {viewCoordinates.X:0}  Y {viewCoordinates.Y:0}  {TypeLabel(contact.Type).ToUpperInvariant()}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
-            13,
-            idBrush);
-        // Both lines start after the solid type glyph. Account for that inset
-        // in the coordinate line as well, otherwise the layout engine can
-        // place adjacent labels about ten pixels too close together.
-        var width = Math.Max(headerText.Width + 15, coordinateText.Width + 14) + 4;
-        var height = headerText.Height + coordinateText.Height + 2;
+            12,
+            AxisLabelBrush);
+        var width = Math.Max(headerText.Width + 17, coordinateText.Width) + 14;
+        var height = headerText.Height + coordinateText.Height + 8;
         return new ContactLabelData(contact, center, headerText, coordinateText, width, height);
     }
 
@@ -713,54 +739,16 @@ public sealed class ReplayPaintSurface : Control
             placement.Bounds.Height);
         var idBrush = new SolidColorBrush(ContactColor(contact.Id));
         var leader = new Point(placement.LeaderX, placement.LeaderY);
-        var leaderDx = leader.X - data.Center.X;
-        var leaderDy = leader.Y - data.Center.Y;
-        if ((leaderDx * leaderDx) + (leaderDy * leaderDy) > 44 * 44)
-        {
-            var color = ContactColor(contact.Id);
-            context.DrawLine(
-                new Pen(new SolidColorBrush(Color.FromArgb(150, color.R, color.G, color.B)), 1.25),
-                data.Center,
-                leader);
-        }
+        context.DrawLine(new Pen(idBrush, 1), data.Center, leader);
+        context.DrawRectangle(LabelSurfaceBrush, new Pen(idBrush, 1), labelRect, 2, 2);
         DrawTypeIcon(
             context,
             contact.Type,
-            new Point(labelRect.X + 5, labelRect.Y + (data.HeaderText.Height / 2)),
+            new Point(labelRect.X + 11, labelRect.Y + 3 + (data.HeaderText.Height / 2)),
             idBrush,
-            3.5);
-        context.DrawText(data.HeaderText, new Point(labelRect.X + 14, labelRect.Y));
-        context.DrawText(data.CoordinateText, new Point(labelRect.X + 14, labelRect.Y + data.HeaderText.Height));
-    }
-
-    private static IReadOnlyList<ReplayLabelBounds> BuildTrailObstacles(Rect viewport, ReplayScene scene)
-    {
-        if (scene.ContactTrails.Count == 0) return [];
-        var obstacles = new List<ReplayLabelBounds>();
-        foreach (var trail in scene.ContactTrails)
-        {
-            for (var start = 0; start < trail.Points.Count; start += 4)
-            {
-                var end = Math.Min(trail.Points.Count - 1, start + 4);
-                var first = trail.Points[start];
-                var projected = Project(viewport, scene, first.X, first.Y);
-                var minX = projected.X;
-                var maxX = projected.X;
-                var minY = projected.Y;
-                var maxY = projected.Y;
-                for (var index = start + 1; index <= end; index++)
-                {
-                    var point = trail.Points[index];
-                    projected = Project(viewport, scene, point.X, point.Y);
-                    minX = Math.Min(minX, projected.X);
-                    maxX = Math.Max(maxX, projected.X);
-                    minY = Math.Min(minY, projected.Y);
-                    maxY = Math.Max(maxY, projected.Y);
-                }
-                obstacles.Add(new ReplayLabelBounds(minX - 4, minY - 4, maxX - minX + 8, maxY - minY + 8));
-            }
-        }
-        return obstacles;
+            4);
+        context.DrawText(data.HeaderText, new Point(labelRect.X + 21, labelRect.Y + 3));
+        context.DrawText(data.CoordinateText, new Point(labelRect.X + 7, labelRect.Y + 3 + data.HeaderText.Height));
     }
 
     private static Point Project(Rect viewport, ReplayScene scene, ushort x, ushort y) =>

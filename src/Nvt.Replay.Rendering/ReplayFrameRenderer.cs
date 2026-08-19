@@ -247,14 +247,29 @@ public static class ReplayFrameRenderer
         int thickness)
     {
         var color = ReplayVisualStyle.ContactColor(palette, trail.Id);
-        for (var index = 1; index < trail.Points.Count; index++)
+        var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
+        var markerStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 180d));
+        var prior = Project(viewport, scene, trail.Points[0].X, trail.Points[0].Y);
+        for (var index = lineStep; index < trail.Points.Count; index += lineStep)
         {
-            var prior = Project(viewport, scene, trail.Points[index - 1].X, trail.Points[index - 1].Y);
             var current = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
             canvas.Line(prior.X, prior.Y, current.X, current.Y, color, thickness);
-            if (index == 1)
-                canvas.FillCircle(prior.X, prior.Y, Math.Max(2, thickness), color);
-            canvas.FillCircle(current.X, current.Y, Math.Max(2, thickness), color);
+            prior = current;
+        }
+        if ((trail.Points.Count - 1) % lineStep != 0)
+        {
+            var last = Project(viewport, scene, trail.Points[^1].X, trail.Points[^1].Y);
+            canvas.Line(prior.X, prior.Y, last.X, last.Y, color, thickness);
+        }
+        for (var index = 0; index < trail.Points.Count; index += markerStep)
+        {
+            var marker = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
+            canvas.FillCircle(marker.X, marker.Y, Math.Max(2, thickness), color);
+        }
+        if ((trail.Points.Count - 1) % markerStep != 0)
+        {
+            var last = Project(viewport, scene, trail.Points[^1].X, trail.Points[^1].Y);
+            canvas.FillCircle(last.X, last.Y, Math.Max(2, thickness), color);
         }
     }
 
@@ -275,25 +290,31 @@ public static class ReplayFrameRenderer
         {
             var contact = contacts[index];
             var center = Project(viewport, scene, contact.X, contact.Y);
-            var header = $"{TypeLabel(contact.Type)} {contact.Id}";
+            var state = contact.Status switch
+            {
+                TouchStatus.Enter => "ENTER",
+                TouchStatus.Move => "MOVE",
+                TouchStatus.Break => "BREAK",
+                _ => contact.Type == TouchType.Palm ? "PALM" : "IDLE",
+            };
+            var header = $"ID {contact.Id}  {state}";
             var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
-            var coordinates = $"({viewCoordinates.X:0}, {viewCoordinates.Y:0})";
-            var iconReserve = 13 * textScale;
-            var padding = 2 * textScale;
+            var coordinates = $"X {viewCoordinates.X:0}  Y {viewCoordinates.Y:0}  {TypeLabel(contact.Type).ToUpperInvariant()}";
+            var iconReserve = 21 * textScale;
+            var padding = 14 * textScale;
             var lineGap = Math.Max(1, textScale);
-            var width = Math.Max(canvas.TextWidth(header, textScale) + iconReserve, canvas.TextWidth(coordinates, textScale) + iconReserve) + padding;
-            var height = (canvas.TextHeight(textScale) * 2) + lineGap;
+            var width = Math.Max(canvas.TextWidth(header, textScale) + (17 * textScale), canvas.TextWidth(coordinates, textScale)) + padding;
+            var height = (canvas.TextHeight(textScale) * 2) + lineGap + (8 * textScale);
             labelData[index] = new RasterLabelData(contact, center, header, coordinates, iconReserve, lineGap, width, height);
             requests[index] = new ReplayLabelRequest(contact.Id, center.X, center.Y, width, height);
         }
 
         var placements = ReplayLabelLayout.Place(
-                new ReplayLabelBounds(labelBounds.X + 4, labelBounds.Y + 4, labelBounds.Width - 8, labelBounds.Height - 8),
-                requests,
-                pointRadius,
-                Math.Max(20, (int)Math.Round(27 * chromeScale)),
-                Math.Max(4, (int)Math.Round(5 * chromeScale)),
-                BuildTrailObstacles(viewport, scene, Math.Max(3, (int)Math.Round(4 * chromeScale))));
+            new ReplayLabelBounds(labelBounds.X + 4, labelBounds.Y + 4, labelBounds.Width - 8, labelBounds.Height - 8),
+            requests,
+            pointRadius,
+            Math.Max(20, (int)Math.Round(27 * chromeScale)),
+            Math.Max(4, (int)Math.Round(5 * chromeScale)));
 
         for (var index = 0; index < labelData.Length; index++)
         {
@@ -313,48 +334,13 @@ public static class ReplayFrameRenderer
                 (int)Math.Round(placement.LeaderX),
                 (int)Math.Round(placement.LeaderY),
                 color);
-            var headerY = label.Y;
-            DrawTypeIcon(canvas, contact.Type, new PixelPoint(label.X + (4 * textScale), headerY + (canvas.TextHeight(textScale) / 2)), color, Math.Max(3, 3 * textScale));
-            canvas.Text(label.X + data.IconReserve, headerY, data.Header, color, textScale);
-            canvas.Text(label.X + data.IconReserve, headerY + canvas.TextHeight(textScale) + data.LineGap, data.Coordinates, color, textScale);
+            canvas.FillRoundedRectangle(label, Math.Max(2, 2 * textScale), palette.LabelSurface);
+            canvas.RoundedRectangle(label, Math.Max(2, 2 * textScale), color, Math.Max(1, textScale));
+            var headerY = label.Y + (3 * textScale);
+            DrawTypeIcon(canvas, contact.Type, new PixelPoint(label.X + (11 * textScale), headerY + (canvas.TextHeight(textScale) / 2)), color, Math.Max(3, 4 * textScale));
+            canvas.Text(label.X + data.IconReserve, headerY, data.Header, palette.LabelText, textScale);
+            canvas.Text(label.X + (7 * textScale), headerY + canvas.TextHeight(textScale) + data.LineGap, data.Coordinates, palette.AxisLabel, textScale);
         }
-    }
-
-    private static IReadOnlyList<ReplayLabelBounds> BuildTrailObstacles(
-        PixelRect viewport,
-        ReplayScene scene,
-        int radius)
-    {
-        if (scene.ContactTrails.Count == 0) return [];
-        var obstacles = new List<ReplayLabelBounds>();
-        foreach (var trail in scene.ContactTrails)
-        {
-            for (var start = 0; start < trail.Points.Count; start += 4)
-            {
-                var end = Math.Min(trail.Points.Count - 1, start + 4);
-                var first = trail.Points[start];
-                var projected = Project(viewport, scene, first.X, first.Y);
-                var minX = projected.X;
-                var maxX = projected.X;
-                var minY = projected.Y;
-                var maxY = projected.Y;
-                for (var index = start + 1; index <= end; index++)
-                {
-                    var point = trail.Points[index];
-                    projected = Project(viewport, scene, point.X, point.Y);
-                    minX = Math.Min(minX, projected.X);
-                    maxX = Math.Max(maxX, projected.X);
-                    minY = Math.Min(minY, projected.Y);
-                    maxY = Math.Max(maxY, projected.Y);
-                }
-                obstacles.Add(new ReplayLabelBounds(
-                    minX - radius,
-                    minY - radius,
-                    maxX - minX + (radius * 2),
-                    maxY - minY + (radius * 2)));
-            }
-        }
-        return obstacles;
     }
 
     private static void DrawLegend(

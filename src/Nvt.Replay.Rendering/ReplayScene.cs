@@ -246,27 +246,77 @@ public sealed class ReplayTrailHistory
 
             foreach (var gesture in candidates)
             {
-                var points = gesture.Points
-                    .Where(point => point.LogicalIndex <= logicalIndex && point.LogicalIndex >= minimumLogicalIndex)
-                    .ToArray();
-                if (mode == ReplayTrailMode.Recent && points.Length > recentPointCount)
-                    points = points[^recentPointCount..];
+                IReadOnlyList<ReplayTrailPoint> points = Slice(
+                    gesture.Points,
+                    minimumLogicalIndex,
+                    logicalIndex);
+                if (mode == ReplayTrailMode.Recent && points.Count > recentPointCount)
+                    points = SliceRange(points, points.Count - recentPointCount, recentPointCount);
                 else if (mode == ReplayTrailMode.Persistent)
                     points = Downsample(points, MaximumPersistentPointsPerGesture);
-                if (points.Length > 1)
+                if (points.Count > 1)
                     result.Add(new ReplayContactTrail(gesture.Id, gesture.Type, points));
             }
         }
         return result;
     }
 
-    private static ReplayTrailPoint[] Downsample(ReplayTrailPoint[] points, int maximumPoints)
+    private static IReadOnlyList<ReplayTrailPoint> Slice(
+        IReadOnlyList<ReplayTrailPoint> points,
+        int minimumLogicalIndex,
+        int maximumLogicalIndex)
     {
-        if (points.Length <= maximumPoints) return points;
+        var start = LowerBound(points, minimumLogicalIndex);
+        var end = UpperBound(points, maximumLogicalIndex);
+        return SliceRange(points, start, Math.Max(0, end - start));
+    }
+
+    private static IReadOnlyList<ReplayTrailPoint> SliceRange(
+        IReadOnlyList<ReplayTrailPoint> points,
+        int start,
+        int count)
+    {
+        if (count == 0) return [];
+        if (start == 0 && count == points.Count) return points;
+        if (points is ReplayTrailPoint[] array) return new ArraySegment<ReplayTrailPoint>(array, start, count);
+        var result = new ReplayTrailPoint[count];
+        for (var index = 0; index < count; index++) result[index] = points[start + index];
+        return result;
+    }
+
+    private static int LowerBound(IReadOnlyList<ReplayTrailPoint> points, int logicalIndex)
+    {
+        var low = 0;
+        var high = points.Count;
+        while (low < high)
+        {
+            var middle = low + ((high - low) / 2);
+            if (points[middle].LogicalIndex < logicalIndex) low = middle + 1;
+            else high = middle;
+        }
+        return low;
+    }
+
+    private static int UpperBound(IReadOnlyList<ReplayTrailPoint> points, int logicalIndex)
+    {
+        var low = 0;
+        var high = points.Count;
+        while (low < high)
+        {
+            var middle = low + ((high - low) / 2);
+            if (points[middle].LogicalIndex <= logicalIndex) low = middle + 1;
+            else high = middle;
+        }
+        return low;
+    }
+
+    private static IReadOnlyList<ReplayTrailPoint> Downsample(IReadOnlyList<ReplayTrailPoint> points, int maximumPoints)
+    {
+        if (points.Count <= maximumPoints) return points;
         var result = new ReplayTrailPoint[maximumPoints];
         for (var index = 0; index < maximumPoints; index++)
         {
-            var sourceIndex = (int)Math.Round(index * (points.Length - 1d) / (maximumPoints - 1d));
+            var sourceIndex = (int)Math.Round(index * (points.Count - 1d) / (maximumPoints - 1d));
             result[index] = points[sourceIndex];
         }
         return result;
