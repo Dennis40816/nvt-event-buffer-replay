@@ -164,7 +164,7 @@ public partial class MainWindow : Window
         RegisterFilterComboBox.SelectedIndex = 0;
         OutputContentComboBox.ItemsSource = new SelectOption[]
         {
-            new("VIDEO SETTINGS", "Preview the exact sampled replay video", "mp4"),
+            new("MP4 video", "Preview the exact sampled replay video", "mp4"),
             new("Heatmap", "Inspect and export coordinate density", "heatmap"),
             new("Data package", "Export linked QA and automation files", "package"),
         };

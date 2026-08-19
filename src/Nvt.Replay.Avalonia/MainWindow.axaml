@@ -1162,25 +1162,29 @@
             </TabItem.Header>
             <Grid Margin="0" RowDefinitions="44,*">
               <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="14,0" ColumnDefinitions="Auto,10,260,*,Auto" VerticalAlignment="Center">
-                  <TextBlock Text="Content" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                  <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Classes="semanticSelect" Height="34" MinWidth="240" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate x:DataType="vm:SelectOption">
-                        <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
-                          <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                          <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12.5" Opacity="0.8" TextWrapping="Wrap" />
-                        </Grid>
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                    <ComboBox.SelectionBoxItemTemplate>
-                      <DataTemplate x:DataType="vm:SelectOption">
-                        <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                      </DataTemplate>
-                    </ComboBox.SelectionBoxItemTemplate>
-                  </ComboBox>
-                  <TextBlock x:Name="OutputContentDescriptionText" Grid.Column="3" Margin="14,0" Text="Preview and export use the same renderer" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                  <Button x:Name="ExportSelectedOutputButton" Grid.Column="4" Classes="primary" Height="34" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
+                <Grid Margin="14,0,10,0" ColumnDefinitions="7*,12,3*" VerticalAlignment="Center">
+                  <Grid Grid.Column="0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <TextBlock x:Name="OutputContentDescriptionText" Text="Preview and export use the same renderer" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Button x:Name="ExportSelectedOutputButton" Grid.Column="1" Classes="primary" Height="34" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
+                  </Grid>
+                  <Grid Grid.Column="2" ColumnDefinitions="84,*" VerticalAlignment="Center">
+                    <TextBlock Text="Output type" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <ComboBox x:Name="OutputContentComboBox" Grid.Column="1" Classes="semanticSelect" Height="34" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
+                            <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12.5" Opacity="0.8" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                      <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DataTemplate>
+                      </ComboBox.SelectionBoxItemTemplate>
+                    </ComboBox>
+                  </Grid>
                 </Grid>
               </Border>
               <Grid Grid.Row="1">
@@ -1358,55 +1362,87 @@
                   </Border>
                 </Grid>
 
-                <Border x:Name="OutputHeatmapPanel" IsVisible="False" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
-                  <Grid RowDefinitions="Auto,10,36,12,*,12,Auto">
-                    <Grid ColumnDefinitions="*,Auto">
-                      <StackPanel Spacing="4">
-                        <TextBlock Text="Touch density" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                        <TextBlock Text="Circle area represents samples; color moves from low-density blue to peak red." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
-                      </StackPanel>
-                      <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
-                    </Grid>
-                    <Grid Grid.Row="2" ColumnDefinitions="Auto,8,Auto,18,Auto,8,Auto,4,Auto,*" VerticalAlignment="Center">
-                      <TextBlock Text="Show" Classes="fieldLabel" />
-                      <ComboBox x:Name="HeatmapModeComboBox" Grid.Column="2" Classes="canvasControl" SelectionChanged="HeatmapSetting_OnSelectionChanged" AutomationProperties.Name="Heatmap density mode">
-                        <ComboBox.ItemTemplate>
-                          <DataTemplate x:DataType="vm:SelectOption">
-                            <Grid Width="250" Margin="2,4" RowDefinitions="Auto,Auto">
-                              <TextBlock Text="{Binding Label}" FontSize="13.5" FontWeight="SemiBold" />
-                              <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12" Opacity="0.78" TextWrapping="Wrap" />
-                            </Grid>
-                          </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                        <ComboBox.SelectionBoxItemTemplate>
-                          <DataTemplate x:DataType="vm:SelectOption">
-                            <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                          </DataTemplate>
-                        </ComboBox.SelectionBoxItemTemplate>
-                      </ComboBox>
-                      <Grid x:Name="HeatmapRepeatedThresholdPanel" Grid.Column="4" ColumnDefinitions="Auto,6,72" IsVisible="False">
-                        <TextBlock Text="Minimum N" Classes="fieldLabel" />
-                        <TextBox x:Name="HeatmapRepeatedThresholdTextBox" Grid.Column="2" Classes="panelSize" Width="72" Text="5" KeyDown="HeatmapSetting_OnKeyDown" LostFocus="HeatmapSetting_OnLostFocus" ToolTip.Tip="Only show grid cells containing at least N samples" AutomationProperties.Name="Repeated hotspot minimum count" />
+                <Grid x:Name="OutputHeatmapPanel" IsVisible="False" ColumnDefinitions="7*,12,3*">
+                  <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
+                    <Grid RowDefinitions="Auto,14,*,12,Auto">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="Touch density" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                          <TextBlock Text="Circle area represents samples; color moves from low-density blue to peak red." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
+                        </StackPanel>
+                        <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
                       </Grid>
-                      <TextBlock Grid.Column="6" Text="Show values ≥" Classes="fieldLabel" />
-                      <TextBox x:Name="HeatmapLabelThresholdTextBox" Grid.Column="8" Classes="panelSize" Width="64" Text="65" KeyDown="HeatmapSetting_OnKeyDown" LostFocus="HeatmapSetting_OnLostFocus" ToolTip.Tip="Show a count when a cell reaches this percentage of the visible peak" AutomationProperties.Name="Heatmap value label threshold percent" />
-                      <TextBlock Grid.Column="9" Margin="6,0,0,0" Text="% of peak" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                      <controls:AnalysisHeatmapSurface x:Name="AnalysisHeatmapPreview"
+                                                       Grid.Row="2"
+                                                       MinHeight="190"
+                                                       AccentBrush="{DynamicResource AccentBrush}"
+                                                       GridBrush="{DynamicResource StrongBorderBrush}"
+                                                       TextBrush="{DynamicResource CanvasMutedTextBrush}"
+                                                       ToolTipSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
+                                                       ToolTipBorderBrush="{DynamicResource AccentBorderBrush}"
+                                                       AutomationProperties.Name="Output hotspot preview" />
+                      <TextBlock Grid.Row="4" Text="Hover a hotspot for coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" HorizontalAlignment="Right" />
                     </Grid>
-                    <controls:AnalysisHeatmapSurface x:Name="AnalysisHeatmapPreview"
-                                                     Grid.Row="4"
-                                                     MinHeight="190"
-                                                     AccentBrush="{DynamicResource AccentBrush}"
-                                                     GridBrush="{DynamicResource StrongBorderBrush}"
-                                                     TextBrush="{DynamicResource CanvasMutedTextBrush}"
-                                                     ToolTipSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
-                                                     ToolTipBorderBrush="{DynamicResource AccentBorderBrush}"
-                                                     AutomationProperties.Name="Output hotspot preview" />
-                    <Grid Grid.Row="6" ColumnDefinitions="*,Auto">
-                      <TextBlock x:Name="HeatmapRangeText" Text="Selected replay range" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
-                      <TextBlock Grid.Column="1" Text="Hover a hotspot for coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" />
-                    </Grid>
-                  </Grid>
-                </Border>
+                  </Border>
+
+                  <Border x:Name="HeatmapSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,0,10,0">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                      <StackPanel Spacing="8">
+                        <TextBlock Margin="0,0,0,2" Text="HEATMAP SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
+
+                        <Border Classes="outputSettingRow" MinHeight="76">
+                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="34,92,*">
+                            <TextBlock Text="&#xE9D2;" Classes="outputSettingIcon" />
+                            <TextBlock Grid.Column="1" Text="Show" Classes="outputSettingLabel" />
+                            <ComboBox x:Name="HeatmapModeComboBox" Grid.Column="2" Classes="outputSetting" SelectionChanged="HeatmapSetting_OnSelectionChanged" AutomationProperties.Name="Heatmap density mode">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectOption">
+                                  <Grid Width="250" Margin="2,4" RowDefinitions="Auto,Auto">
+                                    <TextBlock Text="{Binding Label}" FontSize="13.5" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12" Opacity="0.78" TextWrapping="Wrap" />
+                                  </Grid>
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                              <ComboBox.SelectionBoxItemTemplate>
+                                <DataTemplate x:DataType="vm:SelectOption">
+                                  <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </DataTemplate>
+                              </ComboBox.SelectionBoxItemTemplate>
+                            </ComboBox>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3,8,0" Text="Display every reported point or only repeatedly occupied cells." FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                          </Grid>
+                        </Border>
+
+                        <Border x:Name="HeatmapRepeatedThresholdPanel" Classes="outputSettingRow" IsVisible="False">
+                          <Grid ColumnDefinitions="34,92,*">
+                            <TextBlock Text="&#xE8FD;" Classes="outputSettingIcon" />
+                            <TextBlock Grid.Column="1" Text="Minimum N" Classes="outputSettingLabel" />
+                            <TextBox x:Name="HeatmapRepeatedThresholdTextBox" Grid.Column="2" Classes="panelSize" Width="72" HorizontalAlignment="Right" Text="5" KeyDown="HeatmapSetting_OnKeyDown" LostFocus="HeatmapSetting_OnLostFocus" ToolTip.Tip="Only show grid cells containing at least N samples" AutomationProperties.Name="Repeated hotspot minimum count" />
+                          </Grid>
+                        </Border>
+
+                        <Border Classes="outputSettingRow">
+                          <Grid ColumnDefinitions="34,92,*">
+                            <TextBlock Text="&#xE790;" Classes="outputSettingIcon" />
+                            <TextBlock Grid.Column="1" Text="Value labels" Classes="outputSettingLabel" />
+                            <Grid Grid.Column="2" ColumnDefinitions="*,Auto">
+                              <TextBox x:Name="HeatmapLabelThresholdTextBox" Classes="panelSize" Width="64" HorizontalAlignment="Right" Text="65" KeyDown="HeatmapSetting_OnKeyDown" LostFocus="HeatmapSetting_OnLostFocus" ToolTip.Tip="Show a count when a cell reaches this percentage of the visible peak" AutomationProperties.Name="Heatmap value label threshold percent" />
+                              <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="%" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                            </Grid>
+                          </Grid>
+                        </Border>
+
+                        <Border Classes="outputSettingRow">
+                          <Grid ColumnDefinitions="34,92,*">
+                            <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
+                            <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
+                            <TextBlock x:Name="HeatmapRangeText" Grid.Column="2" Text="Selected replay range" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                          </Grid>
+                        </Border>
+                      </StackPanel>
+                    </ScrollViewer>
+                  </Border>
+                </Grid>
 
                 <Border x:Name="OutputPackagePanel" IsVisible="False" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
                   <Grid ColumnDefinitions="3*,1,22,2*">

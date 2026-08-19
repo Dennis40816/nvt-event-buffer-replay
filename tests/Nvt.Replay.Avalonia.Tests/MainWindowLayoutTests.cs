@@ -560,7 +560,7 @@ public sealed class MainWindowLayoutTests
             var outputContent = Required<ComboBox>(window, "OutputContentComboBox");
             Assert.Equal(3, outputContent.ItemCount);
             Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
-            Assert.False(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
+            Assert.False(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
             Assert.False(Required<Border>(window, "OutputPackagePanel").IsVisible);
             Assert.True(Required<ToggleButton>(window, "OutputPreviewRepeatToggleButton").IsChecked);
 
@@ -568,6 +568,7 @@ public sealed class MainWindowLayoutTests
             var settingsRail = Required<Border>(window, "OutputSettingsRailBorder");
             var settingsScroller = Required<ScrollViewer>(window, "OutputSettingsScrollViewer");
             var settingsLeft = BoundsInside(settingsRail, videoPanel).Left;
+            Assert.True(BoundsInside(outputContent, window).Left >= BoundsInside(settingsRail, window).Left);
             Assert.True(BoundsInside(Required<Button>(window, "OutputPreviewPlayPauseButton"), videoPanel).Right < settingsLeft);
             Assert.True(BoundsInside(Required<Button>(window, "OutputPreviewFullscreenButton"), videoPanel).Right < settingsLeft);
             var clockBounds = BoundsInside(Required<ComboBox>(window, "OutputClockComboBox"), settingsScroller);
@@ -576,15 +577,27 @@ public sealed class MainWindowLayoutTests
                 $"Clock selector right edge {clockBounds.Right:0.##} should leave a scrollbar gutter inside {settingsScroller.Bounds.Width:0.##} px.");
 
             outputContent.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
             Assert.False(Required<Grid>(window, "OutputVideoPanel").IsVisible);
-            Assert.True(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
+            var heatmapPanel = Required<Grid>(window, "OutputHeatmapPanel");
+            Assert.True(heatmapPanel.IsVisible);
+            var heatmapSettings = Required<Border>(window, "HeatmapSettingsRailBorder");
+            var heatmapSurface = Required<AnalysisHeatmapSurface>(window, "AnalysisHeatmapPreview");
+            var heatmapSettingsLeft = BoundsInside(heatmapSettings, heatmapPanel).Left;
+            var heatmapSurfaceRight = BoundsInside(heatmapSurface, heatmapPanel).Right;
+            Assert.True(
+                heatmapSurfaceRight < heatmapSettingsLeft,
+                $"Heatmap preview right edge {heatmapSurfaceRight:0.##} must stay left of settings at {heatmapSettingsLeft:0.##}.");
+            Assert.Equal(
+                Required<Grid>(window, "OutputPageLayout").ColumnDefinitions[0].Width,
+                heatmapPanel.ColumnDefinitions[0].Width);
             Assert.Equal("Export PNG", Required<Button>(window, "ExportSelectedOutputButton").Content);
             var heatmapMode = Required<ComboBox>(window, "HeatmapModeComboBox");
             Assert.Equal(2, heatmapMode.ItemCount);
             Assert.Equal("All recorded points", Assert.IsType<SelectOption>(heatmapMode.SelectedItem).Label);
             heatmapMode.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
-            Assert.True(Required<Grid>(window, "HeatmapRepeatedThresholdPanel").IsVisible);
+            Assert.True(Required<Border>(window, "HeatmapRepeatedThresholdPanel").IsVisible);
             var repeatedMinimum = Required<TextBox>(window, "HeatmapRepeatedThresholdTextBox");
             repeatedMinimum.Text = "2";
             repeatedMinimum.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
@@ -599,7 +612,7 @@ public sealed class MainWindowLayoutTests
 
             outputContent.SelectedIndex = 0;
             Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
-            Assert.False(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
+            Assert.False(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
             Assert.Null(window.FindControl<ToggleButton>("OutputSettingsToggleButton"));
             Assert.True(Required<ComboBox>(window, "OutputClockComboBox").IsVisible);
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 5;
