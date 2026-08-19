@@ -1300,6 +1300,42 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Continuous_timeline_seek_is_latest_wins_and_a_final_seek_cancels_stale_work()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Dispatcher.UIThread.RunJobs();
+
+            var timeline = Required<Control>(window, "ReplayTimelineSurface");
+            var handler = typeof(MainWindow).GetMethod(
+                "ReplayTimelineSurface_OnSeekRequested",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            handler.Invoke(window, [timeline, new ReplayTimelineSeekEventArgs(4, isContinuous: true)]);
+            handler.Invoke(window, [timeline, new ReplayTimelineSeekEventArgs(9, isContinuous: true)]);
+            handler.Invoke(window, [timeline, new ReplayTimelineSeekEventArgs(17, isContinuous: true)]);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                17,
+                Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).LogicalIndex);
+
+            handler.Invoke(window, [timeline, new ReplayTimelineSeekEventArgs(3, isContinuous: true)]);
+            handler.Invoke(window, [timeline, new ReplayTimelineSeekEventArgs(14)]);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("15 / 19", Required<TextBlock>(window, "InspectorLogicalText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Mark_is_always_one_frame_and_can_be_renamed_or_cleared()
     {
         var window = ShowWindow();

@@ -38,6 +38,9 @@ public sealed class ReplayPaintSurface : Control
 
     private ReplayScene? scene;
     private ReplayScene? outgoingScene;
+    private readonly ReplayTrailBatchCache trailBatchCache = new();
+    private IReadOnlyList<ReplayTrailDrawBatch> sceneTrailBatches = [];
+    private IReadOnlyList<ReplayTrailDrawBatch> outgoingTrailBatches = [];
     private readonly DispatcherTimer loopCrossfadeTimer;
     private long loopCrossfadeStarted;
     private double zoomFactor = 1;
@@ -65,6 +68,7 @@ public sealed class ReplayPaintSurface : Control
     public ReplayLegendPosition LegendPosition => legendPosition;
     public bool TrailLinesVisible => trailLinesVisible;
     public bool TrailPointsVisible => trailPointsVisible;
+    internal int CachedTrailBatchCount => trailBatchCache.Count;
     internal ReplayScene? CurrentScene => scene;
     public event EventHandler? ZoomChanged;
     public event EventHandler? LegendCollapsedChanged;
@@ -84,6 +88,7 @@ public sealed class ReplayPaintSurface : Control
             if (LoopCrossfadeProgress() >= 1)
             {
                 outgoingScene = null;
+                outgoingTrailBatches = [];
                 loopCrossfadeTimer.Stop();
             }
             InvalidateVisual();
@@ -109,10 +114,17 @@ public sealed class ReplayPaintSurface : Control
         if (crossfade && scene is not null)
         {
             outgoingScene = scene;
+            outgoingTrailBatches = sceneTrailBatches;
             loopCrossfadeStarted = Stopwatch.GetTimestamp();
             loopCrossfadeTimer.Start();
         }
+        else
+        {
+            outgoingScene = null;
+            outgoingTrailBatches = [];
+        }
         scene = value;
+        sceneTrailBatches = trailBatchCache.Build(value);
         viewportOffset = ClampViewportOffset(viewportOffset, value.ViewExtent, zoomFactor);
         UpdatePanCursor();
         InvalidateVisual();
@@ -122,6 +134,9 @@ public sealed class ReplayPaintSurface : Control
     {
         scene = null;
         outgoingScene = null;
+        sceneTrailBatches = [];
+        outgoingTrailBatches = [];
+        trailBatchCache.Clear();
         highlightedContactId = null;
         loopCrossfadeTimer.Stop();
         EndPan(releaseCapture: true);
@@ -301,17 +316,23 @@ public sealed class ReplayPaintSurface : Control
         if (outgoingScene is { } previous)
         {
             var previousViewport = BuildViewport(bounds, previous.ViewExtent, zoomFactor, viewportOffset);
-            DrawSceneContacts(context, previousViewport, available, previous, 1 - transition);
+            DrawSceneContacts(context, previousViewport, available, previous, outgoingTrailBatches, 1 - transition);
         }
-        DrawSceneContacts(context, viewport, available, scene, transition);
+        DrawSceneContacts(context, viewport, available, scene, sceneTrailBatches, transition);
         DrawLegend(context, legendViewport, scene);
     }
 
-    private void DrawSceneContacts(DrawingContext context, Rect viewport, Rect available, ReplayScene value, double opacity)
+    private void DrawSceneContacts(
+        DrawingContext context,
+        Rect viewport,
+        Rect available,
+        ReplayScene value,
+        IReadOnlyList<ReplayTrailDrawBatch> trailBatches,
+        double opacity)
     {
         if (opacity <= 0) return;
+        DrawTrails(context, viewport, value, trailBatches, opacity);
         using var opacityScope = context.PushOpacity(Math.Clamp(opacity, 0, 1));
-        DrawTrails(context, viewport, value);
 
         if (Mode is ReplayRenderMode.ReportedFrame or ReplayRenderMode.Compare)
         {
@@ -441,48 +462,24 @@ public sealed class ReplayPaintSurface : Control
         }
     }
 
-    private void DrawTrails(DrawingContext context, Rect viewport, ReplayScene scene)
+    private void DrawTrails(
+        DrawingContext context,
+        Rect viewport,
+        ReplayScene scene,
+        IReadOnlyList<ReplayTrailDrawBatch> batches,
+        double opacity)
     {
-        if (!trailLinesVisible && !trailPointsVisible) return;
-
-        foreach (var trail in scene.ContactTrails)
-        {
-            if (trail.Points.Count < 2) continue;
-            var color = ContactColor(trail.Id);
-            var brush = new SolidColorBrush(color);
-            if (trailLinesVisible)
-            {
-                var lineBrush = new SolidColorBrush(Color.FromArgb(150, color.R, color.G, color.B));
-                var pen = new Pen(lineBrush, 1.6);
-                var geometry = new StreamGeometry();
-                var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
-                using (var path = geometry.Open())
-                {
-                    var first = trail.Points[0];
-                    path.BeginFigure(Project(viewport, scene, first.X, first.Y), isFilled: false);
-                    for (var index = lineStep; index < trail.Points.Count; index += lineStep)
-                    {
-                        var point = trail.Points[index];
-                        path.LineTo(Project(viewport, scene, point.X, point.Y));
-                    }
-                    if ((trail.Points.Count - 1) % lineStep != 0)
-                    {
-                        var last = trail.Points[^1];
-                        path.LineTo(Project(viewport, scene, last.X, last.Y));
-                    }
-                    path.EndFigure(isClosed: false);
-                }
-                context.DrawGeometry(null, pen, geometry);
-            }
-
-            if (trailPointsVisible)
-            {
-                // Report markers are evidence, not decoration: draw every
-                // decoded report even when the background line is sampled.
-                foreach (var point in trail.Points)
-                    context.DrawEllipse(brush, null, Project(viewport, scene, point.X, point.Y), 2.35, 2.35);
-            }
-        }
+        if ((!trailLinesVisible && !trailPointsVisible) || batches.Count == 0) return;
+        context.Custom(new ReplayTrailDrawOperation(
+            viewport,
+            scene.ViewExtent,
+            batches,
+            Palette.ContactColors,
+            scene.ReverseX,
+            scene.ReverseY,
+            trailLinesVisible,
+            trailPointsVisible,
+            opacity));
     }
 
     private void DrawLegend(DrawingContext context, Rect viewport, ReplayScene scene)

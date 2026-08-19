@@ -260,31 +260,32 @@ public static class ReplayFrameRenderer
     {
         if (!showLines && !showPoints) return;
         var color = ReplayVisualStyle.ContactColor(palette, trail.Id);
-        if (showLines)
+        var lineColor = Fade(color);
+        foreach (var chunk in ReplayTrailChunker.Enumerate(trail))
         {
-            var lineColor = Fade(color);
-            var lineStep = Math.Max(1, (int)Math.Ceiling(trail.Points.Count / 1200d));
-            var prior = Project(viewport, scene, trail.Points[0].X, trail.Points[0].Y);
-            for (var index = lineStep; index < trail.Points.Count; index += lineStep)
+            var leadingCount = chunk.LeadingOffset is null ? 0 : 1;
+            var linePoints = showLines ? new SKPoint[chunk.Count + leadingCount] : [];
+            var reportPoints = showPoints ? new SKPoint[chunk.Count] : [];
+            if (showLines && chunk.LeadingOffset is not null)
             {
-                var current = Project(viewport, scene, trail.Points[index].X, trail.Points[index].Y);
-                canvas.Line(prior.X, prior.Y, current.X, current.Y, lineColor, lineThickness);
-                prior = current;
+                var leading = chunk.LeadingPoint;
+                var projected = Project(viewport, scene, leading.X, leading.Y);
+                linePoints[0] = new SKPoint(projected.X, projected.Y);
             }
-            if ((trail.Points.Count - 1) % lineStep != 0)
-            {
-                var last = Project(viewport, scene, trail.Points[^1].X, trail.Points[^1].Y);
-                canvas.Line(prior.X, prior.Y, last.X, last.Y, lineColor, lineThickness);
-            }
-        }
 
-        if (showPoints)
-        {
-            foreach (var point in trail.Points)
+            for (var index = 0; index < chunk.Count; index++)
             {
-                var marker = Project(viewport, scene, point.X, point.Y);
-                canvas.FillCircle(marker.X, marker.Y, pointRadius, color);
+                var point = chunk[index];
+                var projected = Project(viewport, scene, point.X, point.Y);
+                var skPoint = new SKPoint(projected.X, projected.Y);
+                if (showLines) linePoints[index + leadingCount] = skPoint;
+                if (showPoints) reportPoints[index] = skPoint;
             }
+
+            if (showLines && linePoints.Length > 1)
+                canvas.Polyline(linePoints, lineColor, lineThickness);
+            if (showPoints && reportPoints.Length > 0)
+                canvas.Points(reportPoints, color, pointRadius * 2);
         }
     }
 
@@ -587,6 +588,23 @@ public static class ReplayFrameRenderer
             using var paint = CreatePaint(color, SKPaintStyle.Stroke, thickness);
             paint.StrokeCap = SKStrokeCap.Round;
             canvas.DrawLine(x0, y0, x1, y1, paint);
+        }
+
+        public void Polyline(SKPoint[] points, ReplayColor color, int thickness)
+        {
+            if (points.Length < 2) return;
+            using var paint = CreatePaint(color, SKPaintStyle.Stroke, thickness);
+            paint.StrokeCap = SKStrokeCap.Round;
+            paint.StrokeJoin = SKStrokeJoin.Round;
+            canvas.DrawPoints(SKPointMode.Polygon, points, paint);
+        }
+
+        public void Points(SKPoint[] points, ReplayColor color, int diameter)
+        {
+            if (points.Length == 0) return;
+            using var paint = CreatePaint(color, SKPaintStyle.Stroke, Math.Max(1, diameter));
+            paint.StrokeCap = SKStrokeCap.Round;
+            canvas.DrawPoints(SKPointMode.Points, points, paint);
         }
 
         public void FillCircle(int centerX, int centerY, int radius, ReplayColor color)

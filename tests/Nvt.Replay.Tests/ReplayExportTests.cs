@@ -173,6 +173,36 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public void Trail_line_keeps_subpixel_motion_that_the_previous_sampling_stride_skipped()
+    {
+        var replay = UniformReplay(1, TimeSpan.FromMilliseconds(10));
+        var points = Enumerable.Range(0, 1201)
+            .Select(index => new ReplayTrailPoint(
+                (ushort)(100 + index),
+                (ushort)(index == 1 ? 900 : 500),
+                index == 0 ? TouchStatus.Enter : TouchStatus.Move,
+                index))
+            .ToArray();
+        var baseline = points.ToArray();
+        baseline[1] = baseline[1] with { Y = 500 };
+        var extent = new ReplayExtent(1400, 1000);
+        var settings = new ReplayRenderSettings(ReplayRenderMode.HostState)
+        {
+            ShowTrailPoints = false,
+        };
+        ReplayScene Scene(IReadOnlyList<ReplayTrailPoint> trailPoints) => ReplaySceneFactory.Create(
+            replay.Seek(0),
+            replay.Count,
+            extent,
+            contactTrails: [new ReplayContactTrail(1, TouchType.Finger, trailPoints)]);
+
+        var detailed = ReplayFrameRenderer.RenderRgb(Scene(points), 640, 360, settings);
+        var flattened = ReplayFrameRenderer.RenderRgb(Scene(baseline), 640, 360, settings);
+
+        Assert.NotEqual(SHA256.HashData(flattened), SHA256.HashData(detailed));
+    }
+
+    [Fact]
     public void Reusable_render_buffer_is_pixel_identical_to_allocating_renderer()
     {
         var replay = Replay(TimeSpan.FromMilliseconds(10));

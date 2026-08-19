@@ -59,7 +59,11 @@ public sealed record ReplayScene(
 
 public sealed record ReplayTrailPoint(ushort X, ushort Y, TouchStatus Status, int LogicalIndex);
 
-public sealed record ReplayContactTrail(byte Id, TouchType Type, IReadOnlyList<ReplayTrailPoint> Points);
+public sealed record ReplayContactTrail(
+    byte Id,
+    TouchType Type,
+    IReadOnlyList<ReplayTrailPoint> Points,
+    bool IsComplete = false);
 
 public static class ReplaySceneFactory
 {
@@ -252,7 +256,11 @@ public sealed class ReplayTrailHistory
                 if (mode == ReplayTrailMode.Recent && points.Count > recentPointCount)
                     points = SliceRange(points, points.Count - recentPointCount, recentPointCount);
                 if (points.Count > 1)
-                    result.Add(new ReplayContactTrail(gesture.Id, gesture.Type, points));
+                    result.Add(new ReplayContactTrail(
+                        gesture.Id,
+                        gesture.Type,
+                        points,
+                        IsComplete: gesture.EndLogicalIndex <= logicalIndex));
             }
         }
         return result;

@@ -13,7 +13,7 @@
 | UI-03 | 修正 Save 按鈕不一致的 hover/focus 顏色 | 已實作，待視覺驗收 | Save/Review/Export header actions 使用同一無框樣式，沒有灰色殘留框 |
 | UI-04 | 只有 Paint 顯示下方 replay transport | 已實作；測試與 Output 實機通過 | Raw Explorer、Decoded Events、Output、Settings 均不保留底部進度列；回 Paint 後立即恢復 |
 | UI-05 | Mark 恢復單 frame 語義並在 timeline 顯示旗標 | 已實作；測試與長 golden 實機通過 | 每次 Mark 只標目前 frame；旗標位置正確；rename、clear、unmark 與重疊 marker 選單正常 |
-| UI-06 | 調查並降低 Paint 播放卡頓 | 第一階段已實作；待 3 分鐘 Loop 壓測 | 軌跡切片不再逐 frame 掃描／複製完整 gesture；長路徑採可視密度取樣；MAX、慢放與 Loop 切換不凍結 UI |
+| UI-06 | 調查並降低 Paint 播放卡頓 | 第二階段已實作；待 3 分鐘 Loop 壓測 | 軌跡切片不再逐 frame 掃描／複製完整 gesture；完整線段改用 2,048 點無損 chunk 與 Skia 批次快取；timeline drag 採 latest-frame-wins；MAX、慢放與 Loop 切換不凍結 UI |
 | UI-07 | ComboBox 關閉後移除 focus 殘留外框與顏色 | 已實作，待互動驗收 | 選取或取消選單後焦點回 workspace；不保留 lime/灰色框；鍵盤快捷鍵可立即恢復 |
 | UI-08 | 選單未變更時不重新 decode/render/export preview | 已實作，待計數驗證 | Event Buffer version、Paint mode、trail、panel resolution、Output video 與 Heatmap 設定值不變時不觸發昂貴刷新 |
 | UI-09 | Settings 與主頁視覺一致，左側導覽可點擊 | 已實作；測試與導覽實機通過 | 五個導覽項可捲到對應 section；active/hover 樣式使用主題 token；設定列不再像另一套 UI |
@@ -22,7 +22,8 @@
 | UI-12 | 修正 Unmark ContextMenu 關閉後的透明 overlay 攔截 | 已實作，測試通過 | menu 一律先 Close 再解除；刪除 marker 後 timeline 空白區仍可 seek，右鍵不留下 stale menu |
 | UI-13 | 修正啟動時假滿版與底部 transport 落到螢幕外 | 已修正；冷啟動實機通過 | 不再用 `MaxHeight` 手動扣除 non-client 高度；由 Windows working area 管理 Maximized，視窗左上角與工作區對齊，Paint transport 完整可見 |
 | UI-14 | 逐張與核准參考圖重新比對所有細小差異 | 進行中 | Paint、Output、Settings、Heatmap 逐張核對位置、padding、字級、顏色、focus、圖示、label、timeline 與窄視窗狀態；差異不得只以「大致相近」結案 |
-| UI-15 | 軌跡線與真實 report points 分層顯示 | 已實作；長 golden dark 實機通過 | `Trace` 只控制取樣後的背景線；`Points` 預設開啟並顯示每一筆 report point；兩者可獨立切換且不重新 decode，Paint／MP4 語義一致 |
+| UI-15 | 軌跡線與真實 report points 分層顯示 | 已實作；長 golden dark 實機通過 | `Trace` 顯示完整、未抽樣的背景線；`Points` 預設開啟並顯示每一筆 report point；兩者可獨立切換且不重新 decode，Paint／MP4 語義一致 |
+| UI-16 | 十萬點無損軌跡與快速 frame 切換 | 已實作；synthetic gate 與長 golden 通過 | 100,003 點拆成 49 個 chunk；完整 chunk 快取、每次 seek 最多重建 2,047 點尾端；250 次亂序 frame 切換不重建完整歷史；120 Hz 長 golden 播放可到尾端 |
 
 ## 參考圖逐張對照
 
@@ -56,7 +57,7 @@
 - [ ] Paint toolbar：Panel、Point view、Trail、Length 等 row 高度與文字垂直置中一致；選單關閉後不可保留亮框。
 - [ ] Paint canvas：boxed label 維持 baseline 的雙行格式、leader 長度與點距；1／5／10 點均不得遮點或漂到遠端。
 - [ ] Floating tools：Trace、Grid、Flip X、Flip Y、Swap XY、Fit、Settings 對齊同一基線，不使用多餘的大外框。
-- [x] Trail evidence：Trace line 採取樣降低成本，但 Points 數量與目前 retention 範圍內的真實 report 數一致；Lines only、Points only、Both、Neither 均有測試，並以長 golden 實機驗收前三種可視狀態。
+- [x] Trail evidence：Trace line 與 Points 都保留 retention 範圍內的完整 report 序列；切片僅是無損繪圖批次，不刪除線段或報點。Lines only、Points only、Both、Neither 均有測試，並以長 golden 實機驗收前三種可視狀態。
 - [ ] Transport：Play、clock、speed、Loop、Mark、Auto-pause、marker 旗標、Loop bracket 與時間文字的 padding、層級和點擊熱區逐項比對參考圖。
 - [ ] Inspector：Frame／time／contact／CRC／ASIL hierarchy 在 320、380、520 px 寬度都不裁切；selected contact 與畫布 highlight 同色。
 - [ ] Output：共用 content selector、MP4 preview controls、右側設定 rail、Heatmap color bar 與輸出 action 使用一致 spacing；頁面不可出現 Paint transport。

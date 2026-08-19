@@ -56,6 +56,38 @@ public sealed class ReplayTrailHistoryTests
         Assert.Equal(Enumerable.Range(0, reportCount), trail.Points.Select(point => point.LogicalIndex));
     }
 
+    [Fact]
+    public void Hundred_thousand_points_are_losslessly_chunked_with_continuous_line_boundaries()
+    {
+        const int reportCount = 100_003;
+        var points = Enumerable.Range(0, reportCount)
+            .Select(index => new ReplayTrailPoint(
+                (ushort)(index % 4096),
+                (ushort)((index * 7) % 2048),
+                index == 0 ? TouchStatus.Enter : TouchStatus.Move,
+                index))
+            .ToArray();
+        var chunks = ReplayTrailChunker.Enumerate(
+            new ReplayContactTrail(1, TouchType.Finger, points, IsComplete: true))
+            .ToArray();
+
+        Assert.Equal(reportCount, chunks.Sum(chunk => chunk.Count));
+        Assert.Equal(49, chunks.Length);
+        Assert.Null(chunks[0].LeadingOffset);
+        Assert.All(chunks, chunk => Assert.True(chunk.IsCacheable));
+        for (var index = 1; index < chunks.Length; index++)
+        {
+            Assert.Equal(
+                chunks[index - 1][chunks[index - 1].Count - 1],
+                chunks[index].LeadingPoint);
+        }
+
+        var activeTail = ReplayTrailChunker.Enumerate(
+            new ReplayContactTrail(1, TouchType.Finger, new ArraySegment<ReplayTrailPoint>(points, 0, reportCount - 1)))
+            .ToArray();
+        Assert.False(activeTail[^1].IsCacheable);
+    }
+
     private static FakeReplay Replay()
     {
         var contacts = new[]

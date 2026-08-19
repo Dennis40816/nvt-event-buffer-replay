@@ -92,6 +92,8 @@ public partial class MainWindow : Window
     private bool configuringSourceChoice;
     private bool configuringRegisterProfile;
     private bool configuringOutputSettings;
+    private bool continuousTimelineSeekScheduled;
+    private int? pendingContinuousTimelineSeek;
     private bool synchronizingAutoPauseControls;
     private bool operationInProgress;
     private bool outputExportInProgress;
@@ -3218,11 +3220,29 @@ public partial class MainWindow : Window
 
     private void ReplayTimelineSurface_OnSeekRequested(object? sender, ReplayTimelineSeekEventArgs e)
     {
-        if (!synchronizingSelection && replaySession is not null)
+        if (synchronizingSelection || replaySession is null) return;
+
+        if (e.IsContinuous)
         {
-            StopPlayback();
-            SeekReplay(e.LogicalIndex);
+            pendingContinuousTimelineSeek = e.LogicalIndex;
+            if (continuousTimelineSeekScheduled) return;
+            continuousTimelineSeekScheduled = true;
+            Dispatcher.UIThread.Post(ProcessPendingContinuousTimelineSeek, DispatcherPriority.Render);
+            return;
         }
+
+        pendingContinuousTimelineSeek = null;
+        StopPlayback();
+        SeekReplay(e.LogicalIndex);
+    }
+
+    private void ProcessPendingContinuousTimelineSeek()
+    {
+        continuousTimelineSeekScheduled = false;
+        if (pendingContinuousTimelineSeek is not { } logicalIndex || replaySession is null) return;
+        pendingContinuousTimelineSeek = null;
+        StopPlayback();
+        SeekReplay(logicalIndex, synchronizeLists: false);
     }
 
     private void ReplaySpeedComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)

@@ -227,7 +227,7 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         if (dragTarget == DragTarget.Playhead)
         {
             value = frame;
-            SeekRequested?.Invoke(this, new ReplayTimelineSeekEventArgs(frame));
+            SeekRequested?.Invoke(this, new ReplayTimelineSeekEventArgs(frame, isContinuous: true));
         }
         else if (dragTarget == DragTarget.LoopStart && loopEnd is { } end)
         {
@@ -251,6 +251,12 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         }
 
         base.OnPointerReleased(e);
+        if (dragTarget == DragTarget.Playhead)
+        {
+            var frame = FrameFor(e.GetPosition(this).X);
+            value = frame;
+            SeekRequested?.Invoke(this, new ReplayTimelineSeekEventArgs(frame));
+        }
         dragTarget = DragTarget.None;
         if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
         e.Handled = true;
@@ -319,9 +325,10 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     }
 }
 
-public sealed class ReplayTimelineSeekEventArgs(int logicalIndex) : EventArgs
+public sealed class ReplayTimelineSeekEventArgs(int logicalIndex, bool isContinuous = false) : EventArgs
 {
     public int LogicalIndex { get; } = logicalIndex;
+    public bool IsContinuous { get; } = isContinuous;
 }
 
 public sealed class ReplayTimelineLoopEventArgs(int startLogicalIndex, int endLogicalIndex) : EventArgs
