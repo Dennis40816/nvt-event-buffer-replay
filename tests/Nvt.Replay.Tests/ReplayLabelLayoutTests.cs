@@ -71,4 +71,48 @@ public sealed class ReplayLabelLayoutTests
         Assert.All(placements, placement =>
             Assert.True(placement.Bounds.Right <= 180 || placement.Bounds.X >= 480));
     }
+
+    [Fact]
+    public void Contact_four_uses_a_distant_south_anchor_by_default()
+    {
+        var request = new ReplayLabelRequest(4, 450, 260, 126, 42);
+
+        var placement = Assert.Single(ReplayLabelLayout.Place(
+            new ReplayLabelBounds(0, 0, 900, 600),
+            [request]));
+
+        Assert.Equal(ReplayLabelAnchor.South, placement.Anchor);
+        Assert.True(placement.Bounds.Y >= request.AnchorY + 40);
+        Assert.True(placement.LeaderY >= request.AnchorY + 40);
+    }
+
+    [Fact]
+    public void Previous_anchor_is_retained_during_small_contact_motion()
+    {
+        var bounds = new ReplayLabelBounds(0, 0, 900, 600);
+        var first = Assert.Single(ReplayLabelLayout.Place(
+            bounds,
+            [new ReplayLabelRequest(4, 450, 260, 126, 42)]));
+        var moved = Assert.Single(ReplayLabelLayout.Place(
+            bounds,
+            [new ReplayLabelRequest(4, 453, 262, 126, 42, first.Anchor)]));
+
+        Assert.Equal(first.Anchor, moved.Anchor);
+        Assert.Equal(first.Bounds.X + 3, moved.Bounds.X, precision: 3);
+        Assert.Equal(first.Bounds.Y + 2, moved.Bounds.Y, precision: 3);
+    }
+
+    [Fact]
+    public void Preferred_anchor_relocates_only_when_it_would_cross_the_viewport()
+    {
+        var bounds = new ReplayLabelBounds(0, 0, 640, 400);
+
+        var placement = Assert.Single(ReplayLabelLayout.Place(
+            bounds,
+            [new ReplayLabelRequest(4, 320, 382, 126, 42, ReplayLabelAnchor.South)]));
+
+        Assert.NotEqual(ReplayLabelAnchor.South, placement.Anchor);
+        Assert.True(placement.Bounds.Bottom <= bounds.Bottom);
+        Assert.False(placement.Bounds.Intersects(new ReplayLabelBounds(297, 359, 46, 46)));
+    }
 }

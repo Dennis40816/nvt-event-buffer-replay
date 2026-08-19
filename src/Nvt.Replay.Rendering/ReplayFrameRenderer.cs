@@ -329,7 +329,7 @@ public static class ReplayFrameRenderer
             new ReplayLabelBounds(labelBounds.X + 4, labelBounds.Y + 4, labelBounds.Width - 8, labelBounds.Height - 8),
             requests,
             pointRadius,
-            Math.Max(20, (int)Math.Round(27 * chromeScale)),
+            Math.Max(28, (int)Math.Round(40 * chromeScale)),
             Math.Max(4, (int)Math.Round(5 * chromeScale)));
 
         for (var index = 0; index < labelData.Length; index++)

@@ -90,7 +90,7 @@ public sealed class ReplayExportTests : IDisposable
         var firstFrame = Directory.GetFiles(output + ".frames", "frame-*.png").Order().First();
         Assert.Equal([137, 80, 78, 71, 13, 10, 26, 10], (await File.ReadAllBytesAsync(firstFrame))[..8]);
         var hash = Hash(firstFrame);
-        Assert.Equal("f6306b56e788d686904c3fc8a0068939f7d64f9e5df632d65db0d79250deaf27", hash);
+        Assert.Equal("c251b7f7fb22a4e59e940103aff4ac33e74b07f5b9390330359fdb9ca50e3f84", hash);
         Assert.Empty(Directory.GetDirectories(directory, ".*.tmp"));
     }
 

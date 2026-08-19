@@ -39,6 +39,7 @@ public sealed class ReplayPaintSurface : Control
     private ReplayScene? scene;
     private ReplayScene? outgoingScene;
     private readonly ReplayTrailBatchCache trailBatchCache = new();
+    private readonly Dictionary<int, ReplayLabelAnchor> labelAnchors = [];
     private IReadOnlyList<ReplayTrailDrawBatch> sceneTrailBatches = [];
     private IReadOnlyList<ReplayTrailDrawBatch> outgoingTrailBatches = [];
     private readonly DispatcherTimer loopCrossfadeTimer;
@@ -97,7 +98,9 @@ public sealed class ReplayPaintSurface : Control
 
     public void SetMode(ReplayRenderMode mode)
     {
+        if (Mode == mode) return;
         Mode = mode;
+        labelAnchors.Clear();
         InvalidateVisual();
     }
 
@@ -124,6 +127,13 @@ public sealed class ReplayPaintSurface : Control
             outgoingTrailBatches = [];
         }
         scene = value;
+        uint activeIds = 0;
+        foreach (var contact in value.ReportedContacts)
+            if (contact.Id <= 10) activeIds |= 1u << contact.Id;
+        foreach (var contact in value.HostContacts)
+            if (contact.Id <= 10) activeIds |= 1u << contact.Id;
+        for (var id = 1; id <= 10; id++)
+            if ((activeIds & (1u << id)) == 0) labelAnchors.Remove(id);
         sceneTrailBatches = trailBatchCache.Build(value);
         viewportOffset = ClampViewportOffset(viewportOffset, value.ViewExtent, zoomFactor);
         UpdatePanCursor();
@@ -137,6 +147,7 @@ public sealed class ReplayPaintSurface : Control
         sceneTrailBatches = [];
         outgoingTrailBatches = [];
         trailBatchCache.Clear();
+        labelAnchors.Clear();
         highlightedContactId = null;
         loopCrossfadeTimer.Stop();
         EndPan(releaseCapture: true);
@@ -316,9 +327,9 @@ public sealed class ReplayPaintSurface : Control
         if (outgoingScene is { } previous)
         {
             var previousViewport = BuildViewport(bounds, previous.ViewExtent, zoomFactor, viewportOffset);
-            DrawSceneContacts(context, previousViewport, available, previous, outgoingTrailBatches, 1 - transition);
+            DrawSceneContacts(context, previousViewport, available, previous, outgoingTrailBatches, 1 - transition, updateLabelAnchors: false);
         }
-        DrawSceneContacts(context, viewport, available, scene, sceneTrailBatches, transition);
+        DrawSceneContacts(context, viewport, available, scene, sceneTrailBatches, transition, updateLabelAnchors: true);
         DrawLegend(context, legendViewport, scene);
     }
 
@@ -328,7 +339,8 @@ public sealed class ReplayPaintSurface : Control
         Rect available,
         ReplayScene value,
         IReadOnlyList<ReplayTrailDrawBatch> trailBatches,
-        double opacity)
+        double opacity,
+        bool updateLabelAnchors)
     {
         if (opacity <= 0) return;
         DrawTrails(context, viewport, value, trailBatches, opacity);
@@ -361,11 +373,17 @@ public sealed class ReplayPaintSurface : Control
                 data.Center.X,
                 data.Center.Y,
                 data.Width,
-                data.Height);
+                data.Height,
+                labelAnchors.TryGetValue(data.Contact.Id, out var previousAnchor)
+                    ? previousAnchor
+                    : ReplayLabelLayout.PreferredAnchorForKey(data.Contact.Id));
         }
         var placements = ReplayLabelLayout.Place(
             new ReplayLabelBounds(available.X + 4, available.Y + 4, available.Width - 8, available.Height - 8),
             requests);
+        if (updateLabelAnchors)
+            foreach (var placement in placements)
+                labelAnchors[placement.Key] = placement.Anchor;
         for (var index = 0; index < labelData.Length; index++)
             DrawContactLabel(context, labelData[index], placements[index]);
 

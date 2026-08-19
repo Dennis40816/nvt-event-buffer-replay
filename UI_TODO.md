@@ -24,6 +24,7 @@
 | UI-14 | 逐張與核准參考圖重新比對所有細小差異 | 進行中 | Paint、Output、Settings、Heatmap 逐張核對位置、padding、字級、顏色、focus、圖示、label、timeline 與窄視窗狀態；差異不得只以「大致相近」結案 |
 | UI-15 | 軌跡線與真實 report points 分層顯示 | 已實作；長 golden dark 實機通過 | `Trace` 顯示完整、未抽樣的背景線；`Points` 預設開啟並顯示每一筆 report point；兩者可獨立切換且不重新 decode，Paint／MP4 語義一致 |
 | UI-16 | 十萬點無損軌跡與快速 frame 切換 | 已實作；synthetic gate 與長 golden 通過 | 100,003 點拆成 49 個 chunk；完整 chunk 快取、每次 seek 最多重建 2,047 點尾端；250 次亂序 frame 切換不重建完整歷史；120 Hz 長 golden 播放可到尾端 |
+| UI-17 | Contact label 穩定定位 | 已實作；長 golden 視覺驗收通過 | 1–10 號固定慣用方位；ID4 優先下方；40 px leader 距離；只在碰撞或越界時換位；Frame 1 與密集軌跡 Frame 2072→2073 無換邊跳動，Paint 與輸出共用 layout |
 
 ## 參考圖逐張對照
 
