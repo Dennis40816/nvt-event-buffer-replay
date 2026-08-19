@@ -11,6 +11,8 @@ public sealed record ReplayPlaybackPreferences(
 
 public partial class SettingsView : UserControl
 {
+    private bool synchronizingPlaybackPreferences;
+
     public SettingsView()
     {
         InitializeComponent();
@@ -28,10 +30,20 @@ public partial class SettingsView : UserControl
 
     public void SetPlaybackPreferences(ReplayPlaybackPreferences preferences)
     {
-        PauseOnAlarmCheckBox.IsChecked = preferences.PauseOnAlarmOrQaFail;
-        PauseOnBreakCheckBox.IsChecked = preferences.PauseOnBreak;
-        PauseOnAllBreakCheckBox.IsChecked = preferences.PauseOnAllBreak;
+        synchronizingPlaybackPreferences = true;
+        try
+        {
+            PauseOnAlarmCheckBox.IsChecked = preferences.PauseOnAlarmOrQaFail;
+            PauseOnBreakCheckBox.IsChecked = preferences.PauseOnBreak;
+            PauseOnAllBreakCheckBox.IsChecked = preferences.PauseOnAllBreak;
+        }
+        finally
+        {
+            synchronizingPlaybackPreferences = false;
+        }
     }
+
+    public void NavigateToPlayback() => NavigateTo(PlaybackNavButton, PlaybackSection);
 
     private void CloseSettingsButton_OnClick(object? sender, RoutedEventArgs e) =>
         CloseRequested?.Invoke(this, EventArgs.Empty);
@@ -39,6 +51,38 @@ public partial class SettingsView : UserControl
     private void ThemeButton_OnClick(object? sender, RoutedEventArgs e) =>
         ThemeToggleRequested?.Invoke(this, EventArgs.Empty);
 
-    private void PlaybackOption_OnChanged(object? sender, RoutedEventArgs e) =>
-        PlaybackPreferencesChanged?.Invoke(this, PlaybackPreferences);
+    private void PlaybackOption_OnChanged(object? sender, RoutedEventArgs e)
+    {
+        if (!synchronizingPlaybackPreferences)
+            PlaybackPreferencesChanged?.Invoke(this, PlaybackPreferences);
+    }
+
+    private void GeneralNavButton_OnClick(object? sender, RoutedEventArgs e) =>
+        NavigateTo(GeneralNavButton, GeneralSection);
+
+    private void PlaybackNavButton_OnClick(object? sender, RoutedEventArgs e) =>
+        NavigateTo(PlaybackNavButton, PlaybackSection);
+
+    private void OutputDefaultsNavButton_OnClick(object? sender, RoutedEventArgs e) =>
+        NavigateTo(OutputDefaultsNavButton, OutputDefaultsSection);
+
+    private void ShortcutsNavButton_OnClick(object? sender, RoutedEventArgs e) =>
+        NavigateTo(ShortcutsNavButton, ShortcutsSection);
+
+    private void PerformanceNavButton_OnClick(object? sender, RoutedEventArgs e) =>
+        NavigateTo(PerformanceNavButton, PerformanceSection);
+
+    private void NavigateTo(Button selected, Control section)
+    {
+        foreach (var button in new[]
+                 {
+                     GeneralNavButton,
+                     PlaybackNavButton,
+                     OutputDefaultsNavButton,
+                     ShortcutsNavButton,
+                     PerformanceNavButton,
+                 })
+            button.Classes.Set("active", ReferenceEquals(button, selected));
+        section.BringIntoView();
+    }
 }

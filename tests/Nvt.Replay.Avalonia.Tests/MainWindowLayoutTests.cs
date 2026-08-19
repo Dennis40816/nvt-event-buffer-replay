@@ -43,6 +43,8 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(19, frames.ItemCount);
             Assert.Contains("decoded automatically", hint.Text, StringComparison.OrdinalIgnoreCase);
             Assert.Null(window.FindControl<Button>("DecodeButton"));
+            Assert.Same(Required<TabItem>(window, "PaintTab"), Required<TabControl>(window, "WorkspaceTabs").SelectedItem);
+            Assert.True(Required<Border>(window, "ReplayTransportBorder").IsVisible);
         }
         finally
         {
@@ -596,6 +598,8 @@ public sealed class MainWindowLayoutTests
             Assert.True(heatmap.VisibleCellCount < 35);
 
             outputContent.SelectedIndex = 0;
+            Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
+            Assert.False(Required<Border>(window, "OutputHeatmapPanel").IsVisible);
             Assert.Null(window.FindControl<ToggleButton>("OutputSettingsToggleButton"));
             Assert.True(Required<ComboBox>(window, "OutputClockComboBox").IsVisible);
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 5;
@@ -633,6 +637,49 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Border>(window, "ReplayTransportBorder").IsVisible);
             Assert.True(Required<Border>(window, "InspectorRailBorder").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Paint_owns_the_replay_transport_and_Trace_hides_without_clearing_source_history()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            var transport = Required<Border>(window, "ReplayTransportBorder");
+
+            Assert.Equal(2, tabs.SelectedIndex);
+            Assert.True(transport.IsVisible);
+            tabs.SelectedIndex = 0;
+            Assert.False(transport.IsVisible);
+            tabs.SelectedIndex = 1;
+            Assert.False(transport.IsVisible);
+            tabs.SelectedIndex = 2;
+            Assert.True(transport.IsVisible);
+            tabs.SelectedIndex = 3;
+            Assert.False(transport.IsVisible);
+            tabs.SelectedIndex = 2;
+
+            var frames = Required<ListBox>(window, "DecodedFramesList");
+            frames.SelectedItem = frames.Items.OfType<DecodedFrameRow>().Last(row => row.Touches > 0);
+            Dispatcher.UIThread.RunJobs();
+            var paint = Required<ReplayPaintSurface>(window, "PaintSurface");
+            Assert.NotEmpty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+
+            var trace = Required<ToggleButton>(window, "TraceToggleButton");
+            Assert.True(trace.IsChecked);
+            trace.IsChecked = false;
+            Assert.Empty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+            trace.IsChecked = true;
+            Assert.NotEmpty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
         }
         finally
         {
@@ -899,9 +946,10 @@ public sealed class MainWindowLayoutTests
             await window.OpenCaptureAsync(fixture);
             await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
 
-            SettingsControl<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked = false;
-            SettingsControl<CheckBox>(window, "PauseOnBreakCheckBox").IsChecked = true;
-            SettingsControl<CheckBox>(window, "PauseOnAllBreakCheckBox").IsChecked = false;
+            Required<CheckBox>(window, "TransportPauseOnAlarmCheckBox").IsChecked = false;
+            Required<CheckBox>(window, "TransportPauseOnBreakCheckBox").IsChecked = true;
+            Required<CheckBox>(window, "TransportPauseOnAllBreakCheckBox").IsChecked = false;
+            Assert.True(SettingsControl<CheckBox>(window, "PauseOnBreakCheckBox").IsChecked);
             var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
             speed.SelectedItem = speed.Items.OfType<ComboBoxItem>().Single(item => item.Tag?.ToString() == "max");
             var play = Required<Button>(window, "PlayPauseButton");
@@ -911,8 +959,9 @@ public sealed class MainWindowLayoutTests
                 TimeSpan.FromSeconds(2));
             Assert.Equal(13, Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).LogicalIndex);
 
-            SettingsControl<CheckBox>(window, "PauseOnBreakCheckBox").IsChecked = false;
-            SettingsControl<CheckBox>(window, "PauseOnAllBreakCheckBox").IsChecked = true;
+            Required<CheckBox>(window, "TransportPauseOnBreakCheckBox").IsChecked = false;
+            Required<CheckBox>(window, "TransportPauseOnAllBreakCheckBox").IsChecked = true;
+            Assert.True(SettingsControl<CheckBox>(window, "PauseOnAllBreakCheckBox").IsChecked);
             play.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             await WaitUntilAsync(
                 () => Required<TextBlock>(window, "TimelineStatusText").Text?.Contains("All Break", StringComparison.Ordinal) == true,
@@ -1032,7 +1081,7 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
-    public async Task Timeline_empty_space_click_seeks_to_the_nearest_logical_frame()
+    public async Task Timeline_seek_request_updates_the_nearest_logical_frame()
     {
         var window = ShowWindow();
         try
@@ -1040,16 +1089,12 @@ public sealed class MainWindowLayoutTests
             var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
             await window.OpenCaptureAsync(fixture);
             await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Dispatcher.UIThread.RunJobs();
 
             var timeline = Required<Control>(window, "ReplayTimelineSurface");
-            var localPoint = new Point(timeline.Bounds.Width * 0.75, timeline.Bounds.Height * 0.32);
-            var windowPoint = timeline.TranslatePoint(localPoint, window) ??
-                throw new InvalidOperationException("Timeline could not translate its click point to the window.");
-            var hit = window.InputHitTest(windowPoint);
-            Assert.Same(timeline, hit);
-
-            window.MouseDown(windowPoint, MouseButton.Left, RawInputModifiers.None);
-            window.MouseUp(windowPoint, MouseButton.Left, RawInputModifiers.None);
+            typeof(MainWindow)
+                .GetMethod("ReplayTimelineSurface_OnSeekRequested", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [timeline, new ReplayTimelineSeekEventArgs(14)]);
 
             Assert.Equal("15 / 19", Required<TextBlock>(window, "InspectorLogicalText").Text);
         }
@@ -1133,6 +1178,7 @@ public sealed class MainWindowLayoutTests
             mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("1", Required<TextBlock>(window, "DiagnosticCountText").Text);
+            Assert.Equal([0], Required<ReplayTimelineSurface>(window, "ReplayTimelineSurface").MarkerFrames);
             Required<Button>(window, "ReviewRailToggleButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             var reviewTarget = window.GetVisualDescendants()
@@ -1226,6 +1272,9 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             var remainingItem = Assert.Single(Assert.IsType<ContextMenu>(timeline.ContextMenu).Items.OfType<MenuItem>());
             Assert.StartsWith("Unmark Marker 1 · frame 1", remainingItem.Header?.ToString(), StringComparison.Ordinal);
+            timeline.ContextMenu?.Close();
+            timeline.ContextMenu = null;
+            Dispatcher.UIThread.RunJobs();
         }
         finally
         {
@@ -1344,6 +1393,11 @@ public sealed class MainWindowLayoutTests
             Assert.True(SettingsControl<ItemsControl>(window, "SettingsShortcutModulesItemsControl").ItemCount > 0);
             Assert.True(SettingsControl<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked);
             Assert.True(SettingsControl<RadioButton>(window, "DefaultFramePacedRadioButton").IsChecked);
+            var playbackNav = SettingsControl<Button>(window, "PlaybackNavButton");
+            playbackNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("active", playbackNav.Classes);
+            Assert.DoesNotContain("active", SettingsControl<Button>(window, "GeneralNavButton").Classes);
             Assert.NotNull(Required<ComboBox>(window, "PaintModeComboBox"));
             Assert.NotNull(Required<ComboBox>(window, "TrailModeComboBox"));
             Assert.NotNull(Required<ComboBox>(window, "OutputClockComboBox"));

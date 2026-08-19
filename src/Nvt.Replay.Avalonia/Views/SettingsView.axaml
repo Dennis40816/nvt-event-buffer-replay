@@ -23,16 +23,40 @@
     </Style>
     <Style Selector="RadioButton.settingsChoice">
       <Setter Property="MinHeight" Value="58" />
-      <Setter Property="Padding" Value="12,8" />
-      <Setter Property="Margin" Value="0,0,0,6" />
+      <Setter Property="Padding" Value="8,9" />
+      <Setter Property="Margin" Value="0" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Background" Value="{DynamicResource HeaderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:checked">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+    </Style>
+    <Style Selector="Button.settingsNav">
+      <Setter Property="Height" Value="38" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.settingsNav:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+    </Style>
+    <Style Selector="Button.settingsNav.active">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.settingsNav.active:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     </Style>
   </UserControl.Styles>
 
@@ -49,18 +73,18 @@
 
     <Grid Grid.Row="1" ColumnDefinitions="220,*">
       <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-        <StackPanel Margin="24,28" Spacing="18">
-          <TextBlock Text="GENERAL" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Text="PLAYBACK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
-          <TextBlock Text="OUTPUT DEFAULTS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
-          <TextBlock Text="SHORTCUTS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
-          <TextBlock Text="PERFORMANCE" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+        <StackPanel Margin="16,22" Spacing="4">
+          <Button x:Name="GeneralNavButton" Classes="settingsNav active" Content="GENERAL" Click="GeneralNavButton_OnClick" />
+          <Button x:Name="PlaybackNavButton" Classes="settingsNav" Content="PLAYBACK" Click="PlaybackNavButton_OnClick" />
+          <Button x:Name="OutputDefaultsNavButton" Classes="settingsNav" Content="OUTPUT DEFAULTS" Click="OutputDefaultsNavButton_OnClick" />
+          <Button x:Name="ShortcutsNavButton" Classes="settingsNav" Content="SHORTCUTS" Click="ShortcutsNavButton_OnClick" />
+          <Button x:Name="PerformanceNavButton" Classes="settingsNav" Content="PERFORMANCE" Click="PerformanceNavButton_OnClick" />
         </StackPanel>
       </Border>
 
-      <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Width="760" MaxWidth="760" Margin="40,30,40,48" HorizontalAlignment="Left" Spacing="32">
-          <StackPanel Spacing="10">
+      <ScrollViewer x:Name="SettingsScrollViewer" Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="960" Margin="40,30,40,48" HorizontalAlignment="Stretch" Spacing="32">
+          <StackPanel x:Name="GeneralSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="General" />
             <TextBlock Classes="settingsSectionDescription" Text="Appearance and window behavior are global; capture-specific panel settings stay in Paint." />
             <Border Classes="settingsRow">
@@ -77,7 +101,7 @@
             </Border>
           </StackPanel>
 
-          <StackPanel Spacing="10">
+          <StackPanel x:Name="PlaybackSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="Playback" />
             <TextBlock Classes="settingsSectionDescription" Text="Auto-pause rules apply during replay without occupying the Review queue." />
             <Border Classes="settingsRow">
@@ -91,7 +115,7 @@
             </Border>
           </StackPanel>
 
-          <StackPanel Spacing="10">
+          <StackPanel x:Name="OutputDefaultsSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="Output defaults" />
             <TextBlock Classes="settingsSectionDescription" Text="These are startup defaults only. Timing, speed, FPS, resolution and range remain adjustable on Output." />
             <RadioButton x:Name="DefaultFramePacedRadioButton" Classes="settingsChoice" GroupName="DefaultOutputClock" IsChecked="True">
@@ -108,7 +132,7 @@
             </RadioButton>
           </StackPanel>
 
-          <StackPanel Spacing="10">
+          <StackPanel x:Name="ShortcutsSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="Keyboard shortcuts" />
             <TextBlock Classes="settingsSectionDescription" Text="The workspace keeps only the essential transport actions visible." />
             <ItemsControl x:Name="SettingsShortcutModulesItemsControl">
@@ -142,7 +166,7 @@
             </ItemsControl>
           </StackPanel>
 
-          <StackPanel Spacing="10">
+          <StackPanel x:Name="PerformanceSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="Performance" />
             <TextBlock Classes="settingsSectionDescription" Text="Diagnostics are opt-in so normal replay remains quiet and uncluttered." />
             <Border Classes="settingsRow">

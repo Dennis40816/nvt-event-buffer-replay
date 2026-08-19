@@ -25,6 +25,10 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(LoopBrush));
     public static readonly StyledProperty<IBrush?> LoopSurfaceBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(LoopSurfaceBrush));
+    public static readonly StyledProperty<IBrush?> MarkerBrushProperty =
+        AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(MarkerBrush));
+    public static readonly StyledProperty<IBrush?> ActiveMarkerBrushProperty =
+        AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(ActiveMarkerBrush));
 
     private const double TrackInset = 5;
     private int maximum = 1;
@@ -34,6 +38,7 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     private int? loopStart;
     private int? loopEnd;
     private bool loopEnabled;
+    private int[] markerFrames = [];
     private int? hoverFrame;
     private DragTarget dragTarget;
 
@@ -54,7 +59,10 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     public IBrush? PlayheadBrush { get => GetValue(PlayheadBrushProperty); set => SetValue(PlayheadBrushProperty, value); }
     public IBrush? LoopBrush { get => GetValue(LoopBrushProperty); set => SetValue(LoopBrushProperty, value); }
     public IBrush? LoopSurfaceBrush { get => GetValue(LoopSurfaceBrushProperty); set => SetValue(LoopSurfaceBrushProperty, value); }
+    public IBrush? MarkerBrush { get => GetValue(MarkerBrushProperty); set => SetValue(MarkerBrushProperty, value); }
+    public IBrush? ActiveMarkerBrush { get => GetValue(ActiveMarkerBrushProperty); set => SetValue(ActiveMarkerBrushProperty, value); }
     public bool Compact { get; set; } = true;
+    internal IReadOnlyList<int> MarkerFrames => markerFrames;
 
     bool ICustomHitTest.HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
 
@@ -62,6 +70,7 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     {
         maximum = Math.Max(1, value);
         this.value = Math.Clamp(this.value, 0, maximum);
+        markerFrames = markerFrames.Select(frame => Math.Clamp(frame, 0, maximum)).Distinct().Order().ToArray();
         InvalidateVisual();
     }
 
@@ -91,6 +100,17 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         loopStart = start is null ? null : Math.Clamp(start.Value, 0, maximum);
         loopEnd = end is null ? null : Math.Clamp(end.Value, 0, maximum);
         loopEnabled = enabled && loopStart is not null && loopEnd is not null;
+        InvalidateVisual();
+    }
+
+    public void SetMarkerFrames(IEnumerable<int> frames)
+    {
+        ArgumentNullException.ThrowIfNull(frames);
+        markerFrames = frames
+            .Select(frame => Math.Clamp(frame, 0, maximum))
+            .Distinct()
+            .Order()
+            .ToArray();
         InvalidateVisual();
     }
 
@@ -129,6 +149,22 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
             context.DrawLine(loopPen, new Point(endX, logicalY - 10), new Point(endX, logicalY + 10));
             context.DrawLine(loopPen, new Point(endX - 6, logicalY - 10), new Point(endX, logicalY - 10));
             context.DrawLine(loopPen, new Point(endX - 6, logicalY + 10), new Point(endX, logicalY + 10));
+        }
+
+        foreach (var markerFrame in markerFrames)
+        {
+            var x = PositionFor(markerFrame);
+            var brush = markerFrame == value ? ActiveMarkerBrush : MarkerBrush;
+            context.DrawLine(new Pen(brush, 1.5), new Point(x, 2), new Point(x, logicalY - 1));
+            var flag = new StreamGeometry();
+            using (var path = flag.Open())
+            {
+                path.BeginFigure(new Point(x, 2), isFilled: true);
+                path.LineTo(new Point(x + 7, 5));
+                path.LineTo(new Point(x, 8));
+                path.EndFigure(isClosed: true);
+            }
+            context.DrawGeometry(brush, null, flag);
         }
 
         var playheadX = Math.Clamp(PositionFor(value), left, right);

@@ -64,6 +64,7 @@ public partial class MainWindow : Window
     private CaptureAnalysisReport? currentOutputReport;
     private int heatmapMinimumCount = 5;
     private double heatmapLabelThresholdRatio = 0.65;
+    private string appliedHeatmapMode = "all";
     private bool outputFullscreenActive;
     private WindowState outputFullscreenPreviousWindowState = WindowState.Normal;
     private int currentLogicalIndex = -1;
@@ -73,6 +74,7 @@ public partial class MainWindow : Window
     private double replaySpeed = 1;
     private int trailLength = 10;
     private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
+    private bool traceVisible = true;
     private ReplayLegendPosition legendPosition = ReplayLegendPosition.Auto;
     private ReplayTrailHistory? trailHistory;
     private ReplayAutoPauseIndex? autoPauseIndex;
@@ -89,11 +91,13 @@ public partial class MainWindow : Window
     private bool configuringSourceChoice;
     private bool configuringRegisterProfile;
     private bool configuringOutputSettings;
+    private bool synchronizingAutoPauseControls;
     private bool operationInProgress;
     private bool outputExportInProgress;
     private int playbackTimingRevision;
     private int playbackRunGeneration;
     private bool outputWorkspaceActive;
+    private bool comboBoxDismissHandlersAttached;
     private int themeMode;
     private bool reviewRailCollapsed;
     private bool inspectorRailCollapsed;
@@ -179,7 +183,7 @@ public partial class MainWindow : Window
         SettingsPage.CloseRequested += (_, _) => CloseSettingsPage();
         SettingsPage.ThemeToggleRequested += (_, _) => ToggleTheme();
         SettingsPage.PlaybackPreferencesChanged += SettingsPage_OnPlaybackPreferencesChanged;
-        UpdateAutoPauseIndicator(SettingsPage.PlaybackPreferences);
+        ApplyPlaybackPreferences(SettingsPage.PlaybackPreferences, syncTransportControls: true);
         CompressIdleCheckBox.IsVisible = ClockModeComboBox.SelectedIndex == 0;
         ComboBoxAutoSizer.Fit(
             SourceAdapterComboBox,
@@ -215,8 +219,8 @@ public partial class MainWindow : Window
         RegisterActivitySurface.ActivitySelected += RegisterActivitySurface_OnActivitySelected;
         Opened += (_, _) =>
         {
-            ApplyWorkingAreaHeightLimit();
             ApplyResponsiveRails(Bounds.Width);
+            AttachComboBoxDismissHandlers();
         };
         SizeChanged += MainWindow_OnSizeChanged;
         if (Application.Current is { } application) application.ActualThemeVariantChanged += Application_OnActualThemeVariantChanged;
@@ -224,15 +228,16 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnSizeChanged(object? sender, SizeChangedEventArgs e) => ApplyResponsiveRails(e.NewSize.Width);
 
-    private void ApplyWorkingAreaHeightLimit()
+    private void AttachComboBoxDismissHandlers()
     {
-        var screen = Screens.ScreenFromWindow(this);
-        if (screen is null) return;
-        const double nonClientAllowance = 40;
-        var workingHeight = screen.WorkingArea.Height / screen.Scaling;
-        MaxHeight = Math.Max(MinHeight, workingHeight - nonClientAllowance);
-        if (Height > MaxHeight) Height = MaxHeight;
+        if (comboBoxDismissHandlersAttached) return;
+        comboBoxDismissHandlersAttached = true;
+        foreach (var comboBox in this.GetVisualDescendants().OfType<ComboBox>())
+            comboBox.DropDownClosed += ComboBox_OnAnyDropDownClosed;
     }
+
+    private void ComboBox_OnAnyDropDownClosed(object? sender, EventArgs e) =>
+        Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Background);
 
     private void ApplyResponsiveRails(double width)
     {
@@ -354,10 +359,13 @@ public partial class MainWindow : Window
         ToolTip.SetTip(InspectorRailToggleButton, collapsed ? "Open inspector" : "Collapse inspector");
     }
 
-    private void SetOutputWorkspaceChrome(bool active)
+    private void SetOutputWorkspaceChrome(bool active, bool showReplayTransport)
     {
-        ReplayTransportBorder.IsVisible = !active;
-        RootLayoutGrid.RowDefinitions[2].Height = active ? new GridLength(0) : new GridLength(ReplayTransportHeight);
+        if (!showReplayTransport) TransportAutoPausePanel.IsVisible = false;
+        ReplayTransportBorder.IsVisible = showReplayTransport;
+        RootLayoutGrid.RowDefinitions[2].Height = showReplayTransport
+            ? new GridLength(ReplayTransportHeight)
+            : new GridLength(0);
         InspectorRailBorder.IsVisible = !active;
         InspectorGridSplitter.IsVisible = !active && !inspectorRailCollapsed;
         var inspectorColumn = WorkspaceShellGrid.ColumnDefinitions[3];
@@ -449,6 +457,8 @@ public partial class MainWindow : Window
         StopPlayback();
         StopOutputVideoPreviewPlayback();
         CloseCommandPalette();
+        SetSourceTransportEnabled(false);
+        SetOutputWorkspaceChrome(outputWorkspaceActive, showReplayTransport: false);
         SettingsPage.IsVisible = true;
         SettingsPage.Focus();
     }
@@ -456,6 +466,9 @@ public partial class MainWindow : Window
     private void CloseSettingsPage()
     {
         SettingsPage.IsVisible = false;
+        var paintSelected = ReferenceEquals(WorkspaceTabs.SelectedItem, PaintTab);
+        SetOutputWorkspaceChrome(outputWorkspaceActive, paintSelected);
+        SetSourceTransportEnabled(paintSelected && !outputWorkspaceActive);
         Focus();
     }
 
@@ -740,7 +753,10 @@ public partial class MainWindow : Window
             AddMarkerButton.IsEnabled = decodedRows.Length > 0;
             if (decodedRows.Length > 0)
             {
-                WorkspaceTabs.SelectedIndex = 2;
+                WorkspaceTabs.SelectedItem = PaintTab;
+                outputWorkspaceActive = false;
+                SetOutputWorkspaceChrome(false, showReplayTransport: true);
+                SetSourceTransportEnabled(true);
                 SeekReplay(0);
             }
             else
@@ -779,6 +795,7 @@ public partial class MainWindow : Window
         OutputVideoPanel.IsVisible = mp4;
         OutputHeatmapPanel.IsVisible = heatmap;
         OutputPackagePanel.IsVisible = option.Value == "package";
+        OutputModeTitleText.Text = option.Label.ToUpperInvariant();
         ExportSelectedOutputButton.Content = option.Value switch
         {
             "heatmap" => "Export PNG",
@@ -823,8 +840,15 @@ public partial class MainWindow : Window
             SessionStatusText.Text = "Heatmap value label threshold must be between 0% and 100%.";
             return;
         }
+        var selectedMode = SelectedHeatmapMode();
+        var nextLabelRatio = labelPercent / 100d;
+        if (minimumCount == heatmapMinimumCount &&
+            Math.Abs(nextLabelRatio - heatmapLabelThresholdRatio) < 0.0001 &&
+            string.Equals(selectedMode, appliedHeatmapMode, StringComparison.Ordinal))
+            return;
         heatmapMinimumCount = minimumCount;
-        heatmapLabelThresholdRatio = labelPercent / 100d;
+        heatmapLabelThresholdRatio = nextLabelRatio;
+        appliedHeatmapMode = selectedMode;
         RefreshHeatmapPresentation();
     }
 
@@ -1118,7 +1142,8 @@ public partial class MainWindow : Window
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
         if (!configuringEventVersion && session is not null && !isDesay97 &&
-            comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false })
+            comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false } &&
+            !SelectedDecodeConfigurationMatchesActive())
             await DecodeSelectedAsync();
     }
 
@@ -1134,6 +1159,7 @@ public partial class MainWindow : Window
             OutputFrameRateComboBox is null || OutputResolutionComboBox is null)
             return;
 
+        var previousSettings = (outputVideoClock, outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
         OutputExportWarningPanel.IsVisible = false;
 
         outputVideoClock = SelectedTag(OutputClockComboBox) == "recorded"
@@ -1173,6 +1199,8 @@ public partial class MainWindow : Window
             OutputHeightTextBox.Text = height.ToString(CultureInfo.InvariantCulture);
         }
 
+        var nextSettings = (outputVideoClock, outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
+        if (nextSettings == previousSettings) return;
         StopOutputVideoPreviewPlayback();
         RefreshOutputPreviewIfVisible();
     }
@@ -1188,6 +1216,7 @@ public partial class MainWindow : Window
 
     private void ApplyOutputCustomSettings()
     {
+        var previousSettings = (outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
         if (OutputSpeedComboBox.SelectedItem is ComboBoxItem speedItem &&
             string.Equals(speedItem.Tag?.ToString(), "custom", StringComparison.OrdinalIgnoreCase))
         {
@@ -1226,6 +1255,8 @@ public partial class MainWindow : Window
             outputVideoHeight = height;
         }
 
+        var nextSettings = (outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
+        if (nextSettings == previousSettings) return;
         SessionStatusText.Text = $"MP4 preview settings · {OutputVideoSettingsLabel()}";
         StopOutputVideoPreviewPlayback();
         RefreshOutputPreviewIfVisible();
@@ -1269,25 +1300,32 @@ public partial class MainWindow : Window
     private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (AnalysisTab is null) return;
-        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
         var outputSelected = ReferenceEquals(WorkspaceTabs.SelectedItem, AnalysisTab);
-        if (outputWorkspaceActive == outputSelected) return;
+        var paintSelected = ReferenceEquals(WorkspaceTabs.SelectedItem, PaintTab);
+        var wasOutputSelected = outputWorkspaceActive;
         outputWorkspaceActive = outputSelected;
         if (outputSelected)
         {
             StopPlayback();
             SetSourceTransportEnabled(false);
-            SetOutputWorkspaceChrome(true);
+            SetOutputWorkspaceChrome(true, showReplayTransport: false);
             SetReviewRailCollapsed(true);
-            await RefreshOutputPreviewAsync();
+            if (!wasOutputSelected)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+                await RefreshOutputPreviewAsync();
+            }
         }
         else
         {
-            ExitOutputFullscreen();
-            StopOutputVideoPreviewPlayback();
-            SetOutputWorkspaceChrome(false);
-            SetSourceTransportEnabled(true);
-            if (replaySession is { Count: > 0 })
+            if (wasOutputSelected)
+            {
+                ExitOutputFullscreen();
+                StopOutputVideoPreviewPlayback();
+            }
+            SetOutputWorkspaceChrome(false, paintSelected && !SettingsPage.IsVisible);
+            SetSourceTransportEnabled(paintSelected && !SettingsPage.IsVisible);
+            if (paintSelected && replaySession is { Count: > 0 })
                 TimelineStatusText.Text = "Paused · Space play/pause · ←/→ step · drag Loop handles to set range";
             ApplyResponsiveRails(Bounds.Width);
         }
@@ -1340,7 +1378,9 @@ public partial class MainWindow : Window
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            trailHistory?.Build(logicalIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
+            traceVisible
+                ? trailHistory?.Build(logicalIndex, trailMode, trailLength, trailVisibilityStart) ?? []
+                : [],
             reverseX,
             reverseY,
             swapAxes);
@@ -1639,7 +1679,8 @@ public partial class MainWindow : Window
     {
         var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
                         versionItem.Content?.ToString() == "0x97";
-        if (session is not null && !isDesay97 && EventVersionComboBox.SelectedIndex >= 0)
+        if (session is not null && !isDesay97 && EventVersionComboBox.SelectedIndex >= 0 &&
+            !SelectedDecodeConfigurationMatchesActive())
             await DecodeSelectedAsync();
     }
 
@@ -1648,10 +1689,32 @@ public partial class MainWindow : Window
         var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
                         versionItem.Content?.ToString() == "0x97";
         if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0 &&
-            NvtRegisterCatalog.FindProfile(session.RegisterProfile) is not null)
+            NvtRegisterCatalog.FindProfile(session.RegisterProfile) is not null &&
+            !SelectedDecodeConfigurationMatchesActive())
             await DecodeSelectedAsync();
         else if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
             ConfigurationHintText.Text = $"Palm profile confirmed · {ActiveDecodeContext()} · select the IC profile to decode 0x97.";
+    }
+
+    private bool SelectedDecodeConfigurationMatchesActive()
+    {
+        if (session is null || decodeConfiguration is null ||
+            EventVersionComboBox.SelectedItem is not ComboBoxItem versionItem)
+            return false;
+
+        var version = versionItem.Content?.ToString() ?? string.Empty;
+        var palmProfile = version.Equals("0x97", StringComparison.OrdinalIgnoreCase)
+            ? Desay97ProfileComboBox.SelectedItem is ComboBoxItem palmItem
+                ? palmItem.Content?.ToString()
+                : null
+            : null;
+        var registerProfile = NvtRegisterCatalog.FindProfile(session.RegisterProfile);
+        var eventBufferBase = registerProfile?.EventBufferBase ?? 0;
+        return decodeConfiguration.EventBufferVersion.Equals(version, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(decodeConfiguration.Desay97Profile, palmProfile, StringComparison.OrdinalIgnoreCase) &&
+               decodeConfiguration.SourceAdapterId.Equals(session.Probe.AdapterId, StringComparison.Ordinal) &&
+               decodeConfiguration.EventBufferBase == eventBufferBase &&
+               string.Equals(decodeConfiguration.RegisterProfile, session.RegisterProfile, StringComparison.OrdinalIgnoreCase);
     }
 
     private string ActiveDecodeContext()
@@ -1881,14 +1944,14 @@ public partial class MainWindow : Window
         if (sender is not Control control) return;
         if (control.DataContext is not ReviewGroupRow { CanUnmark: true } row)
         {
-            control.ContextMenu = null;
+            CloseContextMenu(control);
             return;
         }
         DiagnosticListBox.SelectedItem = row;
         var matchingMarkers = markers.Where(marker => marker.Id == row.MarkerId).ToArray();
         if (matchingMarkers.Length == 0)
         {
-            control.ContextMenu = null;
+            CloseContextMenu(control);
             return;
         }
         OpenMarkerContextMenu(control, matchingMarkers);
@@ -1904,7 +1967,7 @@ public partial class MainWindow : Window
             .ToArray();
         if (matchingMarkers.Length == 0)
         {
-            ReplayTimelineSurface.ContextMenu = null;
+            CloseContextMenu(ReplayTimelineSurface);
             return;
         }
         OpenMarkerContextMenu(ReplayTimelineSurface, matchingMarkers);
@@ -1921,14 +1984,13 @@ public partial class MainWindow : Window
             var item = new MenuItem { Header = $"Unmark {marker.Label} · {range}", Tag = marker.Id };
             item.Click += (_, _) =>
             {
-                target.ContextMenu = null;
+                CloseContextMenu(target);
                 RemoveMarker(marker.Id);
             };
             return item;
         }).ToArray();
         if (items.Length == 0) return;
-        target.ContextMenu?.Close();
-        target.ContextMenu = null;
+        CloseContextMenu(target);
         var menu = new ContextMenu { ItemsSource = items };
         menu.Closed += (_, _) =>
         {
@@ -1936,6 +1998,13 @@ public partial class MainWindow : Window
         };
         target.ContextMenu = menu;
         menu.Open(target);
+    }
+
+    private static void CloseContextMenu(Control target)
+    {
+        var menu = target.ContextMenu;
+        if (menu is not null) menu.Close();
+        if (ReferenceEquals(target.ContextMenu, menu)) target.ContextMenu = null;
     }
 
     private void ReviewOccurrenceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1968,6 +2037,46 @@ public partial class MainWindow : Window
 
     private void SettingsPage_OnPlaybackPreferencesChanged(object? sender, ReplayPlaybackPreferences preferences)
     {
+        ApplyPlaybackPreferences(preferences, syncTransportControls: true);
+    }
+
+    private void AutoPauseSettingsButton_OnClick(object? sender, RoutedEventArgs e) =>
+        TransportAutoPausePanel.IsVisible = !TransportAutoPausePanel.IsVisible;
+
+    private void OpenPlaybackSettingsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        TransportAutoPausePanel.IsVisible = false;
+        OpenSettingsPage();
+        SettingsPage.NavigateToPlayback();
+    }
+
+    private void TransportAutoPauseOption_OnChanged(object? sender, RoutedEventArgs e)
+    {
+        if (synchronizingAutoPauseControls || TransportPauseOnAlarmCheckBox is null) return;
+        var preferences = new ReplayPlaybackPreferences(
+            TransportPauseOnAlarmCheckBox.IsChecked == true,
+            TransportPauseOnBreakCheckBox.IsChecked == true,
+            TransportPauseOnAllBreakCheckBox.IsChecked == true);
+        SettingsPage.SetPlaybackPreferences(preferences);
+        ApplyPlaybackPreferences(preferences, syncTransportControls: false);
+    }
+
+    private void ApplyPlaybackPreferences(ReplayPlaybackPreferences preferences, bool syncTransportControls)
+    {
+        if (syncTransportControls)
+        {
+            synchronizingAutoPauseControls = true;
+            try
+            {
+                TransportPauseOnAlarmCheckBox.IsChecked = preferences.PauseOnAlarmOrQaFail;
+                TransportPauseOnBreakCheckBox.IsChecked = preferences.PauseOnBreak;
+                TransportPauseOnAllBreakCheckBox.IsChecked = preferences.PauseOnAllBreak;
+            }
+            finally
+            {
+                synchronizingAutoPauseControls = false;
+            }
+        }
         UpdateAutoPauseIndicator(preferences);
         if (reviewSession is not null)
         {
@@ -2067,6 +2176,7 @@ public partial class MainWindow : Window
         DiagnosticListBox.ItemsSource = reviewRows;
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
         ClearMarkersButton.IsEnabled = markers.Count > 0;
+        ReplayTimelineSurface.SetMarkerFrames(markers.Select(marker => marker.StartLogicalIndex));
         var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
         if (selected is not null) DiagnosticListBox.SelectedItem = selected;
         if (Bounds.Width > 0) ApplyResponsiveRails(Bounds.Width);
@@ -2106,7 +2216,7 @@ public partial class MainWindow : Window
         markers.RemoveAt(index);
         selectedMarkerId = null;
         selectedReviewGroupId = null;
-        ReplayTimelineSurface.ContextMenu = null;
+        CloseContextMenu(ReplayTimelineSurface);
         CreateReviewSession(baseDiagnostics);
         DiagnosticListBox.SelectedItem = null;
         ReviewActionsPanel.IsVisible = false;
@@ -2148,9 +2258,10 @@ public partial class MainWindow : Window
         if (markers.Count == 0) return;
         var count = markers.Count;
         markers.Clear();
+        ReplayTimelineSurface.SetMarkerFrames([]);
         selectedMarkerId = null;
         selectedReviewGroupId = null;
-        ReplayTimelineSurface.ContextMenu = null;
+        CloseContextMenu(ReplayTimelineSurface);
         CreateReviewSession(baseDiagnostics);
         DiagnosticListBox.SelectedItem = null;
         ReviewActionsPanel.IsVisible = false;
@@ -2483,6 +2594,8 @@ public partial class MainWindow : Window
         trailHistory = null;
         autoPauseIndex = null;
         trailVisibilityStart = 0;
+        traceVisible = true;
+        TraceToggleButton.IsChecked = true;
         allRawRows = [];
         registerActivities = [];
         rawRowsById = [];
@@ -2497,6 +2610,7 @@ public partial class MainWindow : Window
         selectedMarkerId = null;
         baseDiagnostics = [];
         markers.Clear();
+        ReplayTimelineSurface.SetMarkerFrames([]);
         decodeConfiguration = null;
         pendingSidecar = null;
         currentLogicalIndex = -1;
@@ -2675,6 +2789,8 @@ public partial class MainWindow : Window
         trailHistory = ReplayTrailHistory.Create(replayFrames.Snapshots);
         autoPauseIndex = ReplayAutoPauseIndex.Create(replayFrames.Snapshots);
         trailVisibilityStart = 0;
+        traceVisible = true;
+        TraceToggleButton.IsChecked = true;
         RefreshLegendPlacement();
         PanelWidthTextBox.Text = replayExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
         PanelHeightTextBox.Text = replayExtent.MaximumY.ToString("0", CultureInfo.InvariantCulture);
@@ -2721,7 +2837,9 @@ public partial class MainWindow : Window
             replayExtent,
             reviewSession?.Diagnostics,
             markers,
-            trailHistory?.Build(snapshot.LogicalIndex, trailMode, trailLength, trailVisibilityStart) ?? [],
+            traceVisible
+                ? trailHistory?.Build(snapshot.LogicalIndex, trailMode, trailLength, trailVisibilityStart) ?? []
+                : [],
             reverseX,
             reverseY,
             swapAxes), crossfade);
@@ -2804,7 +2922,7 @@ public partial class MainWindow : Window
         if (preferences.PauseOnAlarmOrQaFail) enabled.Add("Alarm / QA Fail");
         if (preferences.PauseOnBreak) enabled.Add("Break");
         if (preferences.PauseOnAllBreak) enabled.Add("All Break");
-        AutoPauseSettingsButton.IsVisible = enabled.Count > 0;
+        AutoPauseSettingsButton.Classes.Set("active", enabled.Count > 0);
         ToolTip.SetTip(AutoPauseSettingsButton,
             enabled.Count == 0 ? "Auto-pause is disabled" : $"Auto-pause · {string.Join(" · ", enabled)}");
     }
@@ -3103,11 +3221,15 @@ public partial class MainWindow : Window
         }
 
         var tag = item.Tag?.ToString() ?? "1";
-        maxReplaySpeed = tag.Equals("max", StringComparison.OrdinalIgnoreCase);
-        if (!maxReplaySpeed && double.TryParse(tag, NumberStyles.Float, CultureInfo.InvariantCulture, out var speed))
+        var nextMaximum = tag.Equals("max", StringComparison.OrdinalIgnoreCase);
+        var nextSpeed = replaySpeed;
+        if (!nextMaximum && double.TryParse(tag, NumberStyles.Float, CultureInfo.InvariantCulture, out var speed))
         {
-            replaySpeed = speed;
+            nextSpeed = speed;
         }
+        if (nextMaximum == maxReplaySpeed && Math.Abs(nextSpeed - replaySpeed) < 0.0001) return;
+        maxReplaySpeed = nextMaximum;
+        replaySpeed = nextSpeed;
         NotifyPlaybackTimingChanged();
     }
 
@@ -3138,6 +3260,7 @@ public partial class MainWindow : Window
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayRenderMode>(option.Value, out var mode))
             return;
+        if (PaintSurface?.Mode == mode) return;
         PaintSurface?.SetMode(mode);
         if (currentInspectorRecord is not null)
             ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
@@ -3162,6 +3285,10 @@ public partial class MainWindow : Window
             ConfigurationHintText.Text = "Panel X and Y must be numbers from 1 to 1,000,000.";
             return;
         }
+
+        if (Math.Abs(replayExtent.MaximumX - width) < 0.001 &&
+            Math.Abs(replayExtent.MaximumY - height) < 0.001)
+            return;
 
         replayExtent = new ReplayExtent(width, height);
         SyncOutputResolutionWithPanel();
@@ -3206,6 +3333,8 @@ public partial class MainWindow : Window
             !Enum.TryParse<ReplayTrailMode>(option.Value, out var selectedMode))
             return;
 
+        if (trailMode == selectedMode) return;
+
         trailMode = selectedMode;
         if (TrailLengthComboBox is not null)
             TrailLengthComboBox.IsVisible = true;
@@ -3221,17 +3350,21 @@ public partial class MainWindow : Window
             !int.TryParse(item.Tag?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var selectedLength))
             return;
 
+        if (trailLength == selectedLength) return;
+
         trailLength = selectedLength;
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
     }
 
-    private void ClearTrailsButton_OnClick(object? sender, RoutedEventArgs e)
+    private void TraceToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        trailVisibilityStart = Math.Max(0, currentLogicalIndex + 1);
+        traceVisible = TraceToggleButton.IsChecked == true;
         if (replaySession is not null && currentLogicalIndex >= 0)
             SeekReplay(currentLogicalIndex);
-        SessionStatusText.Text = "Visible trajectory history cleared · source data unchanged";
+        SessionStatusText.Text = traceVisible
+            ? "Touch traces visible"
+            : "Touch traces hidden · source data unchanged";
     }
 
     private void CanvasSettingsToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -3245,6 +3378,8 @@ public partial class MainWindow : Window
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayLegendPosition>(option.Value, out var selectedPosition))
             return;
+
+        if (legendPosition == selectedPosition) return;
 
         legendPosition = selectedPosition;
         RefreshLegendPlacement();

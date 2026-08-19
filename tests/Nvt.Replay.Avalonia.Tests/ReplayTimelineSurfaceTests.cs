@@ -86,6 +86,8 @@ public sealed class ReplayTimelineSurfaceTests
             var capturedOnPress = false;
             var capturedOnRelease = true;
             var releaseWasHandled = false;
+            int? soughtFrame = null;
+            timeline.SeekRequested += (_, e) => soughtFrame = e.LogicalIndex;
             timeline.AddHandler(
                 InputElement.PointerPressedEvent,
                 (_, e) => capturedOnPress = ReferenceEquals(e.Pointer.Captured, timeline),
@@ -112,6 +114,7 @@ public sealed class ReplayTimelineSurfaceTests
             Assert.True(capturedOnPress);
             Assert.False(capturedOnRelease);
             Assert.True(releaseWasHandled);
+            Assert.Equal(5, soughtFrame);
         }
         finally
         {
