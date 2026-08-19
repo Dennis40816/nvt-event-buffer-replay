@@ -44,26 +44,6 @@ public readonly record struct ReplayLabelPlacement(
 /// </summary>
 public static class ReplayLabelLayout
 {
-    private static readonly ReplayLabelAnchor[] HomeAnchors =
-    [
-        ReplayLabelAnchor.West,
-        ReplayLabelAnchor.East,
-        ReplayLabelAnchor.NorthEast,
-        ReplayLabelAnchor.South,
-        ReplayLabelAnchor.NorthWest,
-        ReplayLabelAnchor.SouthEast,
-        ReplayLabelAnchor.SouthWest,
-        ReplayLabelAnchor.North,
-        ReplayLabelAnchor.East,
-        ReplayLabelAnchor.West,
-    ];
-
-    public static ReplayLabelAnchor PreferredAnchorForKey(int key)
-    {
-        var index = ((key - 1) % HomeAnchors.Length + HomeAnchors.Length) % HomeAnchors.Length;
-        return HomeAnchors[index];
-    }
-
     public static IReadOnlyList<ReplayLabelPlacement> Place(
         ReplayLabelBounds bounds,
         IReadOnlyList<ReplayLabelRequest> requests,
@@ -77,6 +57,7 @@ public static class ReplayLabelLayout
             return [];
 
         var protectedPoints = new ReplayLabelBounds[requests.Count];
+        var initialAnchors = ResolveInitialAnchors(bounds, requests);
         var occupied = new ReplayLabelBounds[requests.Count];
         var placements = new ReplayLabelPlacement[requests.Count];
         for (var index = 0; index < requests.Count; index++)
@@ -92,9 +73,10 @@ public static class ReplayLabelLayout
         for (var index = 0; index < requests.Count; index++)
         {
             var request = requests[index];
-            if (!TryNearby(bounds, request, clearance, protectedPoints, occupied, index, labelGap, obstacles, out var candidate) &&
+            var preferred = request.PreferredAnchor ?? initialAnchors[index];
+            if (!TryNearby(bounds, request, preferred, clearance, protectedPoints, occupied, index, labelGap, obstacles, out var candidate) &&
                 !TryFallback(bounds, request, protectedPoints, occupied, index, labelGap, obstacles, out candidate))
-                candidate = BestEffortCandidate(bounds, request, protectedPoints, occupied, index, obstacles);
+                candidate = BestEffortCandidate(bounds, request, preferred, protectedPoints, occupied, index, obstacles);
 
             // A tiny viewport can be physically incapable of fitting every
             // label. Keep the result deterministic and inside the viewport;
@@ -114,6 +96,7 @@ public static class ReplayLabelLayout
     private static bool TryNearby(
         ReplayLabelBounds bounds,
         ReplayLabelRequest request,
+        ReplayLabelAnchor preferred,
         double clearance,
         ReplayLabelBounds[] protectedPoints,
         ReplayLabelBounds[] occupied,
@@ -124,7 +107,6 @@ public static class ReplayLabelLayout
     {
         var w = Math.Min(request.Width, Math.Max(1, bounds.Width));
         var h = Math.Min(request.Height, Math.Max(1, bounds.Height));
-        var preferred = request.PreferredAnchor ?? PreferredAnchorForKey(request.Key);
         foreach (var (anchor, distanceScale) in CandidateSequence(preferred))
         {
             var candidate = NearbyCandidate(bounds, request, clearance * distanceScale, w, h, anchor);
@@ -180,6 +162,7 @@ public static class ReplayLabelLayout
     private static LabelCandidate BestEffortCandidate(
         ReplayLabelBounds bounds,
         ReplayLabelRequest request,
+        ReplayLabelAnchor preferred,
         ReplayLabelBounds[] protectedPoints,
         ReplayLabelBounds[] occupied,
         int occupiedCount,
@@ -187,7 +170,6 @@ public static class ReplayLabelLayout
     {
         var w = Math.Min(request.Width, Math.Max(1, bounds.Width));
         var h = Math.Min(request.Height, Math.Max(1, bounds.Height));
-        var preferred = request.PreferredAnchor ?? PreferredAnchorForKey(request.Key);
         var best = new LabelCandidate(Clamp(bounds, request.AnchorX, request.AnchorY, w, h), preferred);
         var bestScore = double.MaxValue;
         var candidateIndex = 0;
@@ -201,6 +183,54 @@ public static class ReplayLabelLayout
             bestScore = score;
         }
         return best;
+    }
+
+    private static ReplayLabelAnchor[] ResolveInitialAnchors(
+        ReplayLabelBounds bounds,
+        IReadOnlyList<ReplayLabelRequest> requests)
+    {
+        var result = new ReplayLabelAnchor[requests.Count];
+        var centerX = requests.Average(request => request.AnchorX);
+        var centerY = requests.Average(request => request.AnchorY);
+        for (var index = 0; index < requests.Count; index++)
+        {
+            var request = requests[index];
+            var dx = (request.AnchorX - centerX) / Math.Max(1, bounds.Width);
+            var dy = (request.AnchorY - centerY) / Math.Max(1, bounds.Height);
+            result[index] = Math.Abs(dx) + Math.Abs(dy) < 0.0001
+                ? RoomiestAnchor(bounds, request)
+                : DirectionAnchor(dx, dy);
+        }
+        return result;
+    }
+
+    private static ReplayLabelAnchor DirectionAnchor(double dx, double dy)
+    {
+        var horizontal = Math.Abs(dx);
+        var vertical = Math.Abs(dy);
+        if (horizontal >= vertical * 1.45)
+            return dx < 0 ? ReplayLabelAnchor.West : ReplayLabelAnchor.East;
+        if (vertical >= horizontal * 1.45)
+            return dy < 0 ? ReplayLabelAnchor.North : ReplayLabelAnchor.South;
+        if (dx < 0)
+            return dy < 0 ? ReplayLabelAnchor.NorthWest : ReplayLabelAnchor.SouthWest;
+        return dy < 0 ? ReplayLabelAnchor.NorthEast : ReplayLabelAnchor.SouthEast;
+    }
+
+    private static ReplayLabelAnchor RoomiestAnchor(ReplayLabelBounds bounds, ReplayLabelRequest request)
+    {
+        var north = request.AnchorY - bounds.Y - request.Height;
+        var south = bounds.Bottom - request.AnchorY - request.Height;
+        var west = request.AnchorX - bounds.X - request.Width;
+        var east = bounds.Right - request.AnchorX - request.Width;
+        var rooms = new[]
+        {
+            (Anchor: ReplayLabelAnchor.North, Room: north),
+            (Anchor: ReplayLabelAnchor.South, Room: south),
+            (Anchor: ReplayLabelAnchor.West, Room: west),
+            (Anchor: ReplayLabelAnchor.East, Room: east),
+        };
+        return rooms.MaxBy(item => item.Room).Anchor;
     }
 
     private static bool IsFree(

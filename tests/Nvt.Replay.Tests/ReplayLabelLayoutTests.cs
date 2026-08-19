@@ -73,17 +73,42 @@ public sealed class ReplayLabelLayoutTests
     }
 
     [Fact]
-    public void Contact_four_uses_a_distant_south_anchor_by_default()
+    public void Lower_outlier_uses_a_distant_south_anchor_from_contact_geometry()
     {
-        var request = new ReplayLabelRequest(4, 450, 260, 126, 42);
+        var request = new ReplayLabelRequest(99, 450, 410, 126, 42);
 
-        var placement = Assert.Single(ReplayLabelLayout.Place(
+        var placement = ReplayLabelLayout.Place(
             new ReplayLabelBounds(0, 0, 900, 600),
-            [request]));
+            [
+                new ReplayLabelRequest(7, 420, 220, 126, 42),
+                new ReplayLabelRequest(3, 480, 220, 126, 42),
+                request,
+            ]).Single(item => item.Key == request.Key);
 
         Assert.Equal(ReplayLabelAnchor.South, placement.Anchor);
         Assert.True(placement.Bounds.Y >= request.AnchorY + 40);
         Assert.True(placement.LeaderY >= request.AnchorY + 40);
+    }
+
+    [Fact]
+    public void Contact_identifier_does_not_choose_the_initial_anchor()
+    {
+        var bounds = new ReplayLabelBounds(0, 0, 900, 600);
+        var first = ReplayLabelLayout.Place(bounds,
+        [
+            new ReplayLabelRequest(1, 250, 300, 126, 42),
+            new ReplayLabelRequest(4, 650, 300, 126, 42),
+        ]);
+        var swapped = ReplayLabelLayout.Place(bounds,
+        [
+            new ReplayLabelRequest(4, 250, 300, 126, 42),
+            new ReplayLabelRequest(1, 650, 300, 126, 42),
+        ]);
+
+        Assert.Equal(first[0].Anchor, swapped[0].Anchor);
+        Assert.Equal(first[1].Anchor, swapped[1].Anchor);
+        Assert.Equal(ReplayLabelAnchor.West, first[0].Anchor);
+        Assert.Equal(ReplayLabelAnchor.East, first[1].Anchor);
     }
 
     [Fact]

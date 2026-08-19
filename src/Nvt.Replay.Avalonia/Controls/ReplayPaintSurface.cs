@@ -376,7 +376,7 @@ public sealed class ReplayPaintSurface : Control
                 data.Height,
                 labelAnchors.TryGetValue(data.Contact.Id, out var previousAnchor)
                     ? previousAnchor
-                    : ReplayLabelLayout.PreferredAnchorForKey(data.Contact.Id));
+                    : null);
         }
         var placements = ReplayLabelLayout.Place(
             new ReplayLabelBounds(available.X + 4, available.Y + 4, available.Width - 8, available.Height - 8),
