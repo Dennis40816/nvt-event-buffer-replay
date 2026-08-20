@@ -27,6 +27,38 @@ public sealed class Desay97Tests
     }
 
     [Fact]
+    public void Assembler_owns_crc_calculation_and_decoder_consumes_the_verified_evidence()
+    {
+        var full = Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]);
+        var assembly = new Desay97Assembler().Assemble([Record(10, [0x01]), Record(11, full)]);
+        var packet = Assert.Single(assembly.Packets);
+
+        Assert.Equal(full[^1], packet.CapturedCrc);
+        Assert.Equal(Crc8Poly1D.Compute(full.AsSpan(0, full.Length - 1)), packet.ComputedCrc);
+        Assert.True(packet.CrcValid);
+
+        var decoded = new Desay97Decoder().Decode(packet, Desay97Profile.Standard);
+        var frame = Assert.IsType<Desay97Frame>(decoded.Frame);
+
+        Assert.Equal(packet.CapturedCrc, frame.CapturedCrc);
+        Assert.Equal(packet.ComputedCrc, frame.ComputedCrc);
+        Assert.True(frame.CrcValid);
+        Assert.DoesNotContain(decoded.Diagnostics, item => item.Code == "DESAY97_CRC_MISMATCH");
+    }
+
+    [Fact]
+    public void Invalid_crc_is_reported_once_and_dropped_at_the_assembly_boundary()
+    {
+        var corrupt = Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]);
+        corrupt[^1] ^= 0xFF;
+
+        var assembly = new Desay97Assembler().Assemble([Record(1, [0x01]), Record(2, corrupt)]);
+
+        Assert.Empty(assembly.Packets);
+        Assert.Single(assembly.Diagnostics, item => item.Code == "DESAY97_CRC_MISMATCH");
+    }
+
+    [Fact]
     public void Zero_touch_still_requires_a_full_header_and_crc_second_read()
     {
         var result = new Desay97Assembler().Assemble([Record(1, [0x00]), Record(2, [0x00, 0x00])]);

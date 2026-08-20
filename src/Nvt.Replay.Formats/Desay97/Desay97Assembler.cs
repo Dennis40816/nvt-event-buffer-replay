@@ -111,7 +111,12 @@ public sealed class Desay97Assembler(uint eventBufferBase = 0x99000)
                 continue;
             }
 
-            packets.Add(new Desay97AssembledPacket(pending, record, record.Data.ToArray()));
+            packets.Add(new Desay97AssembledPacket(
+                pending,
+                record,
+                record.Data.ToArray(),
+                record.Data[^1],
+                computedCrc));
             pending = null;
         }
 

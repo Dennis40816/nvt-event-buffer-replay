@@ -47,14 +47,14 @@ public sealed class Desay97Decoder
             return new Desay97DecodeResult(null, diagnostics);
         }
 
-        var computedCrc = Crc8Poly1D.Compute(data.Take(data.Count - 1).ToArray());
-        var crcValid = computedCrc == data[^1];
+        var computedCrc = packet.ComputedCrc;
+        var crcValid = packet.CrcValid;
         if (!crcValid)
         {
             diagnostics.Add(Diagnostic(
                 packet,
                 "DESAY97_CRC_MISMATCH",
-                $"Desay 0x97 CRC mismatch: expected 0x{computedCrc:X2}, captured 0x{data[^1]:X2}."));
+                $"Desay 0x97 CRC mismatch: expected 0x{computedCrc:X2}, captured 0x{packet.CapturedCrc:X2}."));
         }
 
         var fingers = new Desay97Finger[touchCount];
@@ -112,7 +112,7 @@ public sealed class Desay97Decoder
             touchCount,
             fingers,
             touchCount == 0,
-            data[^1],
+            packet.CapturedCrc,
             computedCrc,
             crcValid,
             crcValid && touchCount <= MaximumTouchCount && duplicateIds.Length == 0);

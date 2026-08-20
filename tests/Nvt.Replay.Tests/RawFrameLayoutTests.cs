@@ -42,7 +42,7 @@ public sealed class RawFrameLayoutTests
         bytes[^1] = Crc8Poly1D.Compute(bytes.AsSpan(0, bytes.Length - 1));
         var probe = Record(1, [0x01]);
         var payload = Record(2, bytes);
-        var packet = new Desay97AssembledPacket(probe, payload, bytes);
+        var packet = new Desay97AssembledPacket(probe, payload, bytes, bytes[^1], bytes[^1]);
         var frame = Assert.IsType<Desay97Frame>(new Desay97Decoder().Decode(packet, Desay97Profile.BenzPalm).Frame);
 
         var layout = RawFrameLayoutBuilder.Build(payload, frame);

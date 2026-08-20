@@ -54,7 +54,7 @@ public sealed class CommonNdsInspectorTests : IDisposable
 
         var report = await new CommonNdsInspector().InspectAsync(path, CommonEventBufferVersion.V83);
 
-        Assert.Contains(report.Diagnostics, item => item.Code == "COMMON_CRC_MISMATCH");
+        Assert.Single(report.Diagnostics, item => item.Code == "COMMON_CRC_MISMATCH");
         Assert.DoesNotContain(report.Diagnostics, item => item.Code == "COMMON_ASIL_ALARM");
         Assert.False(Assert.Single(report.Frames).HostStateEligible);
     }

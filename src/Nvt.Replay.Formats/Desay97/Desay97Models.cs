@@ -22,11 +22,15 @@ public sealed record Desay97Finger(
 public sealed record Desay97AssembledPacket(
     SourceRecord Probe,
     SourceRecord PayloadRead,
-    IReadOnlyList<byte> Data)
+    IReadOnlyList<byte> Data,
+    byte CapturedCrc,
+    byte ComputedCrc)
 {
     public IReadOnlyList<SourceRecord> PhysicalRecords => [Probe, PayloadRead];
 
     public string StableId => $"{Probe.StableId}+{PayloadRead.StableId}";
+
+    public bool CrcValid => CapturedCrc == ComputedCrc;
 }
 
 public sealed record Desay97Frame(
