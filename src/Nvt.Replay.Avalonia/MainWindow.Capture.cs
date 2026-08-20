@@ -645,7 +645,10 @@ public partial class MainWindow : Window
         registerActivities = projected;
         var activityById = projected.ToDictionary(item => item.Record.StableId, StringComparer.Ordinal);
         allRawRows = session?.Records
-            .Select(record => new RawRecordRow(record, activityById.GetValueOrDefault(record.StableId)))
+            .Select(record => new RawRecordRow(
+                record,
+                activityById.GetValueOrDefault(record.StableId),
+                session.RegisterAnnotations.Find(record.StableId)))
             .ToArray() ?? [];
         rawRowsById = allRawRows.ToDictionary(row => row.Record.StableId, StringComparer.Ordinal);
         RefreshRawExplorer(preferredStableId);
@@ -662,7 +665,7 @@ public partial class MainWindow : Window
             RawRegisterFilter.All => true,
             RawRegisterFilter.Registers => row.Activity is not null,
             RawRegisterFilter.ChangedReads => row.Activity?.ChangedFromPreviousSample == true,
-            RawRegisterFilter.WritesAndCommands => row.Activity?.Kind is RegisterActivityKind.Write or RegisterActivityKind.Command or RegisterActivityKind.Reset,
+            RawRegisterFilter.WritesAndCommands => row.Activity?.Kind is RegisterActivityKind.Write or RegisterActivityKind.Command or RegisterActivityKind.Reset or RegisterActivityKind.PageSwitch,
             RawRegisterFilter.Ambiguous => row.Activity?.IsAmbiguous == true,
             _ => true,
         }).ToArray();

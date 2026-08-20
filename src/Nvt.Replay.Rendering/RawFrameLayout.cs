@@ -42,7 +42,7 @@ public static class RawFrameLayoutBuilder
             var finger = frame.Fingers[index];
             var detail = finger.IsUnused
                 ? "unused"
-                : $"ID {finger.Id}, {finger.Type} {finger.Status}, X {finger.X}, Y {finger.Y}";
+                : ContactDetail(finger.Id, finger.Type.ToString(), finger.Status.ToString(), finger.X, finger.Y);
             sections.Add(Section(
                 data,
                 1 + (index * CommonEventBufferDecoder.FingerLength),
@@ -96,7 +96,12 @@ public static class RawFrameLayoutBuilder
         {
             var finger = frame.Fingers[index];
             var type = finger.Invalid ? "Invalid" : finger.Palm ? "Palm" : "Finger";
-            sections.Add(Section(data, 1 + (index * 5), 5, $"TOUCH {index + 1}", $"ID {finger.Id}, {type} {finger.Status}, X {finger.X}, Y {finger.Y}"));
+            sections.Add(Section(
+                data,
+                1 + (index * 5),
+                5,
+                $"TOUCH {index + 1}",
+                ContactDetail(finger.Id, type, finger.Status.ToString(), finger.X, finger.Y)));
         }
         sections.Add(Section(data, data.Count - 1, 1, "CRC", frame.CrcValid ? "OK" : $"FAIL, expected {frame.ComputedCrc:X2}"));
         return new RawFrameLayout(
@@ -150,6 +155,9 @@ public static class RawFrameLayoutBuilder
         : $"EMS {Convert.ToString(diagnostic.EmsBitmap, 2).PadLeft(4, '0')}, global palm {OnOff(diagnostic.PalmOn)}";
 
     private static string OnOff(bool value) => value ? "on" : "off";
+
+    private static string ContactDetail(byte id, string type, string state, ushort x, ushort y) =>
+        $"ID {id}, {type} {state}{Environment.NewLine}X {x}{Environment.NewLine}Y {y}";
 
     private static string Version(CommonEventBufferVersion version) => version switch
     {

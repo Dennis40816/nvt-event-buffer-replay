@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using Nvt.Replay.Core;
 using Nvt.Replay.Sources;
 
@@ -122,13 +123,24 @@ public sealed class RegisterAnnotationIndex
             cancellationToken.ThrowIfCancellationRequested();
             var record = records[index];
             RegisterAnnotation? annotation = null;
-            if (record.Address is { } address)
+            var address = record.Address;
+            var inferredFromProfile = false;
+            if (address is null &&
+                profile is not null &&
+                TryResolveOffsetOnlyEventBufferAddress(record, profile, out var inferredAddress))
+            {
+                address = inferredAddress;
+                inferredFromProfile = true;
+            }
+            if (address is { } resolvedAddress)
             {
                 var description = profile is null
-                    ? NvtRegisterCatalog.Describe(address, record.Operation, record.Data)
-                    : NvtRegisterCatalog.DescribeForProfile(address, record.Operation, record.Data, profile);
+                    ? NvtRegisterCatalog.Describe(resolvedAddress, record.Operation, record.Data)
+                    : NvtRegisterCatalog.DescribeForProfile(resolvedAddress, record.Operation, record.Data, profile);
                 if (description is not null)
                 {
+                    if (inferredFromProfile)
+                        description = description with { ProfileResolution = "inferred" };
                     annotation = new RegisterAnnotation(record.StableId, identity, description);
                     if (!annotations.TryAdd(record.StableId, annotation))
                         throw new InvalidDataException($"Duplicate source record identity '{record.StableId}'.");
@@ -146,5 +158,32 @@ public sealed class RegisterAnnotationIndex
             projections.Add(identity, projection);
             return projection;
         }
+    }
+
+    private static bool TryResolveOffsetOnlyEventBufferAddress(
+        SourceRecord record,
+        NvtRegisterProfile profile,
+        out uint address)
+    {
+        address = 0;
+        var fields = record.SourceFields;
+        if (record.Address is not null ||
+            record.I2c is null ||
+            !record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) ||
+            fields?.GetValueOrDefault("register_page_known") != "false" ||
+            !fields.ContainsKey("register_name") ||
+            !fields.TryGetValue("register_offset", out var offsetText))
+        {
+            return false;
+        }
+
+        var hex = offsetText.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            ? offsetText.AsSpan(2)
+            : offsetText.AsSpan();
+        if (!uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var offset) || offset >= 128)
+            return false;
+
+        address = checked(profile.EventBufferBase + offset);
+        return true;
     }
 }

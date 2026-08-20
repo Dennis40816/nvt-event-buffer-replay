@@ -1,5 +1,6 @@
 using System.Globalization;
 using Nvt.Replay.Core;
+using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Analysis;
 
@@ -10,6 +11,7 @@ public enum RegisterActivityKind
     Write,
     Command,
     Reset,
+    PageSwitch,
     Ambiguous,
 }
 
@@ -25,7 +27,7 @@ public sealed record RegisterActivityEntry(
     bool HasPreviousSample,
     bool ChangedFromPreviousSample)
 {
-    public bool IsKnown => Resolution is "resolved" or "common";
+    public bool IsKnown => Resolution is "resolved" or "common" or "inferred";
     public bool IsAmbiguous => Resolution == "ambiguous";
 }
 
@@ -43,6 +45,25 @@ public static class RegisterActivityProjector
         var previousReads = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         foreach (var record in records)
         {
+            if (record.Operation == BusOperation.Write &&
+                record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
+                NvtRegisterTracker.TryGetPageSelection(record.Data, out var page))
+            {
+                var pageText = $"0x{page:X}";
+                result.Add(new RegisterActivityEntry(
+                    record,
+                    RegisterActivityKind.PageSwitch,
+                    projection?.Profile?.IcFamily ?? "Common",
+                    "common",
+                    "I²C control",
+                    $"Switch page · {pageText}",
+                    "Page select",
+                    Raw(record.Data),
+                    HasPreviousSample: false,
+                    ChangedFromPreviousSample: false));
+                continue;
+            }
+
             var fields = projection is null
                 ? record.SourceFields
                 : projection.TryGet(record, out var annotation) ? annotation.Fields : null;

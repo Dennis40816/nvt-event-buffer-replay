@@ -3,6 +3,7 @@ using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Formats.Desay97;
+using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Avalonia.ViewModels;
 
@@ -25,7 +26,10 @@ public sealed record RegisterProfileChoice(string Label, string? IcFamily)
     public override string ToString() => Label;
 }
 
-public sealed record RawRecordRow(SourceRecord Record, RegisterActivityEntry? Activity = null)
+public sealed record RawRecordRow(
+    SourceRecord Record,
+    RegisterActivityEntry? Activity = null,
+    RegisterAnnotation? RegisterAnnotation = null)
 {
     public long Index => Record.Index;
 
@@ -35,9 +39,56 @@ public sealed record RawRecordRow(SourceRecord Record, RegisterActivityEntry? Ac
 
     public string Target => Record.Target;
 
-    public string Address => Record.Address is { } address ? $"0x{address:X}" : "-";
+    public string Address => AddressPrimary;
 
-    public string Register => Activity?.Register ?? Record.SourceFields?.GetValueOrDefault("register_readable") ?? "-";
+    public string AddressPrimary
+    {
+        get
+        {
+            if (TryGetPageSwitch(out var page))
+                return $"PAGE 0x{page:X}";
+
+            var registerAddress = Field("register_address");
+            if (!string.IsNullOrWhiteSpace(registerAddress) &&
+                !registerAddress.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"REG {registerAddress}";
+            }
+            if (Record.Address is { } address) return $"REG 0x{address:X}";
+
+            var offset = Field("register_offset");
+            if (!string.IsNullOrWhiteSpace(offset)) return $"PTR +{offset}";
+            if (Record.Operation == BusOperation.Write && Record.I2c is not null && Record.Data.Count == 1)
+                return $"PTR +0x{Record.Data[0]:X2}";
+
+            return BusAddress ?? "-";
+        }
+    }
+
+    public string AddressSecondary => AddressPrimary.StartsWith("I2C ", StringComparison.Ordinal)
+        ? string.Empty
+        : BusAddress ?? string.Empty;
+
+    public bool HasSecondaryAddress => AddressSecondary.Length > 0;
+
+    public string AddressTooltip
+    {
+        get
+        {
+            var notes = new List<string>();
+            if (TryGetPageSwitch(out var page))
+                notes.Add($"Switch page selects 0x{page:X}; the captured FF command bytes remain unchanged.");
+            else if (Field("register_profile_resolution") == "inferred")
+                notes.Add("Register address is inferred from the confirmed IC profile and Event Buffer offset; the source has no page-select transaction.");
+            else if (Field("register_page_known") == "false")
+                notes.Add("The source has no page-select transaction; only the register offset is captured.");
+            if (BusAddress is not null)
+                notes.Add("I2C shows the captured 8-bit bus address including the read/write bit.");
+            return notes.Count == 0 ? AddressPrimary : string.Join(Environment.NewLine, notes);
+        }
+    }
+
+    public string Register => Activity?.Register ?? Field("register_readable") ?? Field("register_name") ?? "-";
 
     public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
 
@@ -46,8 +97,38 @@ public sealed record RawRecordRow(SourceRecord Record, RegisterActivityEntry? Ac
     public bool Matches(string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return true;
-        return new[] { Index.ToString(CultureInfo.InvariantCulture), Timestamp, Operation, Target, Address, Register, Preview, Record.StableId }
+        return new[] { Index.ToString(CultureInfo.InvariantCulture), Timestamp, Operation, Target, AddressPrimary, AddressSecondary, Register, Preview, Record.StableId }
             .Any(value => value.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string? BusAddress
+    {
+        get
+        {
+            if (Field("raw_address") is { Length: > 0 } rawAddress)
+                return $"I2C {rawAddress} {Direction}";
+            if (Record.I2c is not { } transport) return null;
+            var raw = (transport.SlaveAddress << 1) | (Record.Operation == BusOperation.Read ? 1 : 0);
+            return $"I2C 0x{raw:X2} {Direction}";
+        }
+    }
+
+    private string Direction => Record.Operation switch
+    {
+        BusOperation.Read => "R",
+        BusOperation.Write => "W",
+        _ => string.Empty,
+    };
+
+    private string? Field(string key) =>
+        RegisterAnnotation?.Fields.GetValueOrDefault(key) ?? Record.SourceFields?.GetValueOrDefault(key);
+
+    private bool TryGetPageSwitch(out uint page)
+    {
+        page = 0;
+        return Record.Operation == BusOperation.Write &&
+            Record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
+            NvtRegisterTracker.TryGetPageSelection(Record.Data, out page);
     }
 }
 

@@ -51,8 +51,34 @@ public sealed class RawFrameLayoutTests
         var touch = Assert.Single(layout.Sections, section => section.Label == "TOUCH 1");
         Assert.Equal("01-05", touch.Offset);
         Assert.Equal(5, touch.Bytes.Split(' ').Length);
-        Assert.Contains("ID 1", touch.Detail);
+        Assert.Equal($"ID 1, Finger Break{Environment.NewLine}X 788{Environment.NewLine}Y 1817", touch.Detail);
         Assert.Equal("06", Assert.Single(layout.Sections, section => section.Label == "CRC").Offset);
+    }
+
+    [Fact]
+    public void Common_touch_detail_puts_x_and_y_on_separate_lines()
+    {
+        var bytes = Enumerable.Repeat((byte)0xFF, CommonEventBufferDecoder.FrameLength).ToArray();
+        bytes[0] = 1;
+        bytes[1] = 0x12;
+        bytes[2] = 0x07;
+        bytes[3] = 0xD3;
+        bytes[4] = 0x04;
+        bytes[5] = 0x48;
+        bytes[6] = 0xFF;
+        bytes[7] = 0xFF;
+        bytes[73] = 0;
+        bytes[79] = CommonCrc8.Compute(bytes.AsSpan(0, 79));
+        var source = Record(1, bytes);
+        var frame = Assert.IsType<CommonEventBufferFrame>(new CommonEventBufferDecoder().Decode(source, CommonEventBufferVersion.V83).Frame);
+
+        var touch = Assert.Single(
+            RawFrameLayoutBuilder.Build(source, frame).Sections,
+            section => section.Label == "TOUCH 1");
+
+        Assert.Equal(3, touch.Detail.Split(Environment.NewLine).Length);
+        Assert.StartsWith("ID 1, Finger Move", touch.Detail, StringComparison.Ordinal);
+        Assert.Contains($"{Environment.NewLine}X 2003{Environment.NewLine}Y 1096", touch.Detail, StringComparison.Ordinal);
     }
 
     private static SourceRecord Record(long index, IReadOnlyList<byte> data) =>

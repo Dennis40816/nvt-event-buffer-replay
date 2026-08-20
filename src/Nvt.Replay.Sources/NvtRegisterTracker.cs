@@ -64,9 +64,8 @@ public sealed class NvtRegisterTracker
         }
 
         var command = record.Data.ToArray();
-        if (command.Length >= 3 && command[0] == 0xFF)
+        if (TryGetPageSelection(command, out var selectedPage))
         {
-            var selectedPage = (uint)((command[1] << 16) | (command[2] << 8));
             pageBySlave[slave] = selectedPage;
             pendingWritesBySlave[slave] = [command];
             return record;
@@ -116,9 +115,8 @@ public sealed class NvtRegisterTracker
         offset = null;
         foreach (var command in commands)
         {
-            if (command.Count >= 3 && command[0] == 0xFF)
+            if (TryGetPageSelection(command, out var page))
             {
-                var page = (uint)((command[1] << 16) | (command[2] << 8));
                 pageBySlave[slave] = page;
                 if (command.Count >= 4)
                 {
@@ -133,6 +131,14 @@ public sealed class NvtRegisterTracker
         return offset is { } value && pageBySlave.TryGetValue(slave, out var pageBase)
             ? pageBase + value
             : null;
+    }
+
+    public static bool TryGetPageSelection(IReadOnlyList<byte> command, out uint page)
+    {
+        page = 0;
+        if (command.Count < 3 || command[0] != 0xFF) return false;
+        page = (uint)((command[1] << 16) | (command[2] << 8));
+        return true;
     }
 
 }

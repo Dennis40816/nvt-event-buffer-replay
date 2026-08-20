@@ -317,7 +317,14 @@ public sealed class MainWindowLayoutTests
             Assert.True(sourceIdentity.Bounds.Width > 250, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
             sourceIdentity.IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
-            Assert.True(Required<ItemsControl>(window, "RawByteSectionsItemsControl").ItemCount > 0);
+            var rawSections = Required<ItemsControl>(window, "RawByteSectionsItemsControl");
+            Assert.True(rawSections.ItemCount > 0);
+            var touchSection = rawSections.Items
+                .OfType<RawByteSection>()
+                .First(section => section.Label == "TOUCH 1");
+            Assert.Equal(3, touchSection.Detail.Split(Environment.NewLine).Length);
+            Assert.Contains($"{Environment.NewLine}X ", touchSection.Detail, StringComparison.Ordinal);
+            Assert.Contains($"{Environment.NewLine}Y ", touchSection.Detail, StringComparison.Ordinal);
             Assert.NotEqual("-", Required<TextBlock>(window, "StableIdText").Text);
             sourceIdentity.BringIntoView();
             Dispatcher.UIThread.RunJobs();
@@ -1031,6 +1038,86 @@ public sealed class MainWindowLayoutTests
                 Assert.Equal(before[index].RawText, after[index].RawText);
                 Assert.Equal(before[index].Location, after[index].Location);
             }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Confirmed_profile_exposes_offset_only_reads_in_register_filters_without_mutating_raw_records()
+    {
+        var path = await WriteOffsetOnlyKingstVisCaptureAsync(
+            CommonPacket(asil: 0x00, corruptCrc: false, x: 120),
+            CommonPacket(asil: 0x00, corruptCrc: false, x: 240));
+        var window = ShowWindow();
+        try
+        {
+            await window.OpenCaptureAsync(path);
+            await window.ApplyRegisterProfileForTestingAsync("51927");
+
+            var raw = Required<ListBox>(window, "RawRecordsList");
+            var allRows = raw.Items.OfType<RawRecordRow>().ToArray();
+            var reads = allRows.Where(row => row.Record.Operation == Nvt.Replay.Core.BusOperation.Read).ToArray();
+            Assert.Equal(4, allRows.Length);
+            Assert.Equal(2, reads.Length);
+            Assert.All(reads, row =>
+            {
+                Assert.Equal("REG 0x99000", row.AddressPrimary);
+                Assert.Equal("I2C 0x03 R", row.AddressSecondary);
+                Assert.Null(row.Record.Address);
+            });
+
+            var filter = Required<ComboBox>(window, "RegisterFilterComboBox");
+            filter.SelectedItem = filter.Items
+                .OfType<RawRegisterFilterChoice>()
+                .Single(choice => choice.Filter == RawRegisterFilter.Registers);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(2, raw.ItemCount);
+
+            filter.SelectedItem = filter.Items
+                .OfType<RawRegisterFilterChoice>()
+                .Single(choice => choice.Filter == RawRegisterFilter.ChangedReads);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, raw.ItemCount);
+
+            filter.SelectedItem = filter.Items
+                .OfType<RawRegisterFilterChoice>()
+                .Single(choice => choice.Filter == RawRegisterFilter.WritesAndCommands);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, raw.ItemCount);
+        }
+        finally
+        {
+            window.Close();
+            File.Delete(path);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Switch_page_is_visible_in_raw_and_writes_commands_filters()
+    {
+        var window = ShowWindow();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+
+            var raw = Required<ListBox>(window, "RawRecordsList");
+            var pageSwitch = Assert.Single(
+                raw.Items.OfType<RawRecordRow>(),
+                row => row.Record.Index == 0 && row.Activity?.Kind == RegisterActivityKind.PageSwitch);
+            Assert.Equal("PAGE 0x99000", pageSwitch.AddressPrimary);
+            Assert.Equal("I2C 0x02 W", pageSwitch.AddressSecondary);
+            Assert.Equal("Switch page · 0x99000", pageSwitch.Register);
+
+            var filter = Required<ComboBox>(window, "RegisterFilterComboBox");
+            filter.SelectedItem = filter.Items
+                .OfType<RawRegisterFilterChoice>()
+                .Single(choice => choice.Filter == RawRegisterFilter.WritesAndCommands);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Contains(raw.Items.OfType<RawRecordRow>(), row => row.Activity?.Kind == RegisterActivityKind.PageSwitch);
         }
         finally
         {
@@ -3122,6 +3209,27 @@ public sealed class MainWindowLayoutTests
             foreach (var value in new byte[] { 0xFF, 0x09, 0x90, 0x00 })
                 lines.Add($"{writeTime.ToString("0.000000", CultureInfo.InvariantCulture)},{packetId},0x02,0x{value:X2},Write,ACK");
             packetId++;
+            var readTime = writeTime + 0.0002;
+            for (var index = 0; index < packets[frameIndex].Length; index++)
+            {
+                var ack = index == packets[frameIndex].Length - 1 ? "NAK" : "ACK";
+                lines.Add($"{readTime.ToString("0.000000", CultureInfo.InvariantCulture)},{packetId},0x03,0x{packets[frameIndex][index]:X2},Read,{ack}");
+            }
+            packetId++;
+        }
+        await File.WriteAllLinesAsync(path, lines);
+        return path;
+    }
+
+    private static async Task<string> WriteOffsetOnlyKingstVisCaptureAsync(params byte[][] packets)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"nvt-offset-only-{Guid.NewGuid():N}.csv");
+        var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
+        var packetId = 0;
+        for (var frameIndex = 0; frameIndex < packets.Length; frameIndex++)
+        {
+            var writeTime = 1.0 + (frameIndex * 0.1);
+            lines.Add($"{writeTime.ToString("0.000000", CultureInfo.InvariantCulture)},{packetId++},0x02,0x00,Write,ACK");
             var readTime = writeTime + 0.0002;
             for (var index = 0; index < packets[frameIndex].Length; index++)
             {

@@ -65,7 +65,7 @@ public sealed class RegisterActivitySurface : Control
             var x = PositionFor(activity.Record.Index, inset);
             var selected = activity.Record.StableId == selectedStableId;
             var brush = selected ? SelectionBrush : BrushFor(activity.Kind);
-            var halfHeight = selected ? 8d : activity.Kind is RegisterActivityKind.Reset or RegisterActivityKind.Command ? 6d : 4d;
+            var halfHeight = selected ? 8d : activity.Kind is RegisterActivityKind.Reset or RegisterActivityKind.Command or RegisterActivityKind.PageSwitch ? 6d : 4d;
             context.DrawLine(new Pen(brush, selected ? 2.5 : 1.5), new Point(x, y - halfHeight), new Point(x, y + halfHeight));
         }
     }
@@ -98,6 +98,7 @@ public sealed class RegisterActivitySurface : Control
         RegisterActivityKind.Write => WriteBrush,
         RegisterActivityKind.Command => CommandBrush,
         RegisterActivityKind.Reset => ResetBrush,
+        RegisterActivityKind.PageSwitch => CommandBrush,
         RegisterActivityKind.Ambiguous => AmbiguousBrush,
         _ => TrackBrush,
     };

@@ -5,6 +5,16 @@ namespace Nvt.Replay.Tests;
 
 public sealed class NvtRegisterTrackerTests
 {
+    [Theory]
+    [InlineData(new byte[] { 0xFF, 0x08, 0x08, 0x00 }, 0x80800u)]
+    [InlineData(new byte[] { 0xFF, 0x09, 0x90 }, 0x99000u)]
+    public void Page_switch_command_exposes_the_selected_page_without_consuming_raw_bytes(byte[] command, uint expectedPage)
+    {
+        Assert.True(NvtRegisterTracker.TryGetPageSelection(command, out var page));
+        Assert.Equal(expectedPage, page);
+        Assert.Equal(0xFF, command[0]);
+    }
+
     [Fact]
     public void Register_write_is_annotated_without_becoming_a_stale_read_pointer()
     {
