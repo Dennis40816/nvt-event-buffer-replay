@@ -1,3 +1,4 @@
+using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Rendering;
 using Nvt.Replay.Sources;
@@ -38,6 +39,33 @@ public sealed class ReadableCommunicationLogWriterTests : IDisposable
         Assert.Contains("\"lineNumber\":42", jsonl);
         Assert.Contains("\"rawHex\":\"23\"", jsonl);
         Assert.DoesNotContain("original remains", csv);
+    }
+
+    [Fact]
+    public async Task Writer_overlays_selected_profile_without_modifying_the_source_record()
+    {
+        var record = new SourceRecord(
+            13,
+            "capture:L43",
+            null,
+            BusOperation.Read,
+            "TP",
+            0x99000,
+            1,
+            [0x11],
+            "raw source remains unchanged",
+            new SourceLocation(1300, 43));
+        var records = new[] { record };
+        var projection = new RegisterAnnotationIndex(records).Project(NvtRegisterCatalog.FindProfile("51927"));
+
+        var result = await new ReadableCommunicationLogWriter().WriteAsync(directory, records, projection);
+        var csv = await File.ReadAllTextAsync(result.CsvPath);
+
+        Assert.Contains("51927", csv);
+        Assert.Contains("Event Buffer", csv);
+        Assert.Same(record, records[0]);
+        Assert.Null(record.SourceFields);
+        Assert.Equal("raw source remains unchanged", record.RawText);
     }
 
     public void Dispose()

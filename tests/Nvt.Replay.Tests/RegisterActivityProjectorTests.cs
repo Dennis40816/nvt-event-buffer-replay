@@ -28,6 +28,25 @@ public sealed class RegisterActivityProjectorTests
         Assert.Equal(RegisterActivityKind.Reset, activities[4].Kind);
     }
 
+    [Fact]
+    public void Typed_projection_changes_profile_semantics_without_reannotating_records()
+    {
+        var record = Record(0, BusOperation.Read, 0x99000, 0x00);
+        var records = new[] { record };
+        var index = new RegisterAnnotationIndex(records);
+        var wrongProfile = index.Project(NvtRegisterCatalog.FindProfile("51929/51932"));
+        var profile51927 = index.Project(NvtRegisterCatalog.FindProfile("51927"));
+
+        Assert.Empty(RegisterActivityProjector.Project(records, wrongProfile));
+        var activity = Assert.Single(RegisterActivityProjector.Project(records, profile51927));
+
+        Assert.Equal("51927", activity.Profile);
+        Assert.Equal("Event Buffer", activity.Region);
+        Assert.Equal("Event Buffer · 00", activity.Register);
+        Assert.Same(record, records[0]);
+        Assert.Null(record.SourceFields);
+    }
+
     private static SourceRecord Record(long index, BusOperation operation, uint address, params byte[] data) =>
         new(index, $"source-{index}", null, operation, "TP", address, data.Length, data, "raw", new SourceLocation(index, (int)index));
 }

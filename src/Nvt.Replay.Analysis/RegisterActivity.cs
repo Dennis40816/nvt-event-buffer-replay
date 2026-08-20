@@ -32,13 +32,20 @@ public sealed record RegisterActivityEntry(
 public static class RegisterActivityProjector
 {
     public static IReadOnlyList<RegisterActivityEntry> Project(IEnumerable<SourceRecord> records)
+        => Project(records, null);
+
+    public static IReadOnlyList<RegisterActivityEntry> Project(
+        IEnumerable<SourceRecord> records,
+        RegisterAnnotationProjection? projection)
     {
         ArgumentNullException.ThrowIfNull(records);
         var result = new List<RegisterActivityEntry>();
         var previousReads = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         foreach (var record in records)
         {
-            var fields = record.SourceFields;
+            var fields = projection is null
+                ? record.SourceFields
+                : projection.TryGet(record, out var annotation) ? annotation.Fields : null;
             if (fields is null || !fields.TryGetValue("register_readable", out var readable)) continue;
 
             var profile = fields.GetValueOrDefault("register_profile") ?? "Unknown";

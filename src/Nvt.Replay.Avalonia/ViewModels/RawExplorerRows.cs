@@ -37,7 +37,7 @@ public sealed record RawRecordRow(SourceRecord Record, RegisterActivityEntry? Ac
 
     public string Address => Record.Address is { } address ? $"0x{address:X}" : "-";
 
-    public string Register => Record.SourceFields?.GetValueOrDefault("register_readable") ?? "-";
+    public string Register => Activity?.Register ?? Record.SourceFields?.GetValueOrDefault("register_readable") ?? "-";
 
     public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
 

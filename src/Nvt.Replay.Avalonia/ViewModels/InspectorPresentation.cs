@@ -67,7 +67,8 @@ public static class InspectorPresentationBuilder
         object? frame,
         ITouchReplaySnapshot? snapshot,
         int totalFrames,
-        ReplayRenderMode renderMode)
+        ReplayRenderMode renderMode,
+        RegisterAnnotation? registerAnnotation = null)
     {
         var contacts = BuildContacts(snapshot, renderMode);
         var summary = BuildSummary(snapshot);
@@ -109,8 +110,8 @@ public static class InspectorPresentationBuilder
             _ => new InspectorFramePresentation(
                 logicalLabel,
                 timestamp,
-                record.SourceFields?.GetValueOrDefault("register_readable") is { } readable
-                    ? $"Physical #{record.Index} · {readable} · {record.SourceFields?.GetValueOrDefault("register_profile") ?? "profile unknown"}"
+                registerAnnotation?.Description is { } register
+                    ? $"Physical #{record.Index} · {register.Readable} · {register.Profiles}"
                     : $"Physical #{record.Index} · Raw source record",
                 summary,
                 contacts,
@@ -120,7 +121,7 @@ public static class InspectorPresentationBuilder
                 "-",
                 false,
                 false,
-                FormatProtocolRows(record)),
+                FormatProtocolRows(record, registerAnnotation)),
         };
     }
 
@@ -200,15 +201,17 @@ public static class InspectorPresentationBuilder
         new("Phase 2", $"Physical #{frame.Packet.PayloadRead.Index}, line {frame.Packet.PayloadRead.Location.LineNumber}"),
     ];
 
-    private static IReadOnlyList<InspectorDetailRow> FormatProtocolRows(SourceRecord record)
+    private static IReadOnlyList<InspectorDetailRow> FormatProtocolRows(
+        SourceRecord record,
+        RegisterAnnotation? registerAnnotation)
     {
-        var readable = record.SourceFields?.GetValueOrDefault("register_readable");
-        if (readable is null) return [new("Decode", "No decoded event is linked to this physical record")];
+        if (registerAnnotation?.Description is not { } register)
+            return [new("Decode", "No decoded event is linked to this physical record")];
         return
         [
-            new("Register", readable),
-            new("Raw value", record.SourceFields?.GetValueOrDefault("register_value") ?? FormatBytes(record.Data)),
-            new("Profile", record.SourceFields?.GetValueOrDefault("register_profile_resolution") ?? "Unknown"),
+            new("Register", register.Readable),
+            new("Raw value", register.RawValue),
+            new("Profile", register.ProfileResolution),
         ];
     }
 

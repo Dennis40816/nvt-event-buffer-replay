@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
@@ -25,6 +26,13 @@ public sealed class ReadableCommunicationLogWriter
         string directory,
         IReadOnlyList<SourceRecord> records,
         CancellationToken cancellationToken = default)
+        => await WriteAsync(directory, records, null, cancellationToken);
+
+    public async Task<ReadableCommunicationLogResult> WriteAsync(
+        string directory,
+        IReadOnlyList<SourceRecord> records,
+        RegisterAnnotationProjection? registerAnnotations,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(records);
@@ -33,7 +41,7 @@ public sealed class ReadableCommunicationLogWriter
         Directory.CreateDirectory(fullDirectory);
         var csvPath = Path.Combine(fullDirectory, "communication-readable.csv");
         var jsonlPath = Path.Combine(fullDirectory, "communication-readable.jsonl");
-        var rows = records.Select(ToRow).ToArray();
+        var rows = records.Select(record => ToRow(record, registerAnnotations)).ToArray();
 
         await AtomicOutput.WriteAsync(csvPath, async (stream, token) =>
         {
@@ -66,9 +74,11 @@ public sealed class ReadableCommunicationLogWriter
             rows.Count(row => row.ProfileResolution == "ambiguous"));
     }
 
-    private static ReadableCommunicationRow ToRow(SourceRecord record)
+    private static ReadableCommunicationRow ToRow(
+        SourceRecord record,
+        RegisterAnnotationProjection? registerAnnotations)
     {
-        var fields = record.SourceFields;
+        var fields = registerAnnotations?.EffectiveFields(record) ?? record.SourceFields;
         return new ReadableCommunicationRow(
             record.Index,
             record.StableId,

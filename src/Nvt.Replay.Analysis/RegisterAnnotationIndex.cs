@@ -7,7 +7,12 @@ namespace Nvt.Replay.Analysis;
 public sealed record RegisterAnnotation(
     string SourceRecordId,
     NvtRegisterProfileIdentity ProfileIdentity,
-    NvtRegisterDescription Description);
+    NvtRegisterDescription Description)
+{
+    public IReadOnlyDictionary<string, string> Fields { get; } =
+        new ReadOnlyDictionary<string, string>(
+            new Dictionary<string, string>(Description.ToSourceFields(), StringComparer.Ordinal));
+}
 
 public sealed class RegisterAnnotationProjection
 {
@@ -42,6 +47,48 @@ public sealed class RegisterAnnotationProjection
 
     public RegisterAnnotation? Find(string sourceRecordId) =>
         annotations.GetValueOrDefault(sourceRecordId);
+
+    public IReadOnlyDictionary<string, string> EffectiveFields(SourceRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        var offsetOnly = record.SourceFields?.GetValueOrDefault("register_page_known") == "false";
+        if (record.SourceFields is not null)
+        {
+            foreach (var field in record.SourceFields)
+            {
+                if (!ProjectedFieldKeys.Contains(field.Key) ||
+                    offsetOnly && field.Key is "register_name" or "register_address" or "register_offset")
+                {
+                    result[field.Key] = field.Value;
+                }
+            }
+        }
+
+        if (TryGet(record, out var annotation))
+        {
+            foreach (var field in annotation.Fields) result[field.Key] = field.Value;
+        }
+        return new ReadOnlyDictionary<string, string>(result);
+    }
+
+    private static readonly IReadOnlySet<string> ProjectedFieldKeys = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "register_profile",
+        "register_profile_resolution",
+        "register_region",
+        "register_name",
+        "register_display_name",
+        "register_address",
+        "register_base",
+        "register_offset",
+        "register_value",
+        "register_meaning",
+        "register_readable",
+        "fw_command_code",
+        "fw_command_name",
+        "fw_command_confirmed",
+    };
 }
 
 public sealed class RegisterAnnotationIndex
