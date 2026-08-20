@@ -718,6 +718,89 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Paint_workspace_is_authoritative_and_applies_the_smallest_redraw_for_each_setting()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var decoded = Required<ListBox>(window, "DecodedFramesList");
+            decoded.SelectedItem = decoded.Items.OfType<DecodedFrameRow>().Last(row => row.Touches > 0);
+            Dispatcher.UIThread.RunJobs();
+            var workspace = Assert.IsType<ReplayPaintWorkspace>(window.PaintWorkspace);
+            var history = workspace.TrailHistory;
+            var paint = Required<ReplayPaintSurface>(window, "PaintSurface");
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            tabs.SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
+            tabs.SelectedItem = Required<TabItem>(window, "PaintTab");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(workspace.Settings.PointView, paint.Mode);
+            Assert.Equal(workspace.Settings.TraceVisible, paint.TrailLinesVisible);
+            Assert.Equal(workspace.Settings.TrailPointsVisible, paint.TrailPointsVisible);
+            Assert.Same(history, workspace.TrailHistory);
+
+            var revision = workspace.Revision;
+            var sceneCount = paint.ScenePresentationCount;
+            var fitCount = paint.FitCount;
+            var planBuildCount = window.OutputPreviewPlanBuildCount;
+            Required<TextBox>(window, "PanelWidthTextBox")
+                .RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(revision, workspace.Revision);
+            Assert.Equal(sceneCount, paint.ScenePresentationCount);
+            Assert.Equal(fitCount, paint.FitCount);
+            Assert.Equal(planBuildCount, window.OutputPreviewPlanBuildCount);
+
+            Required<ToggleButton>(window, "GridStrengthToggleButton").IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(workspace.Settings.StrongGrid);
+            Assert.True(paint.StrongGrid);
+            Assert.Equal(sceneCount, paint.ScenePresentationCount);
+            Assert.Equal(planBuildCount, window.OutputPreviewPlanBuildCount);
+
+            var trailMode = Required<ComboBox>(window, "TrailModeComboBox");
+            trailMode.SelectedItem = trailMode.Items
+                .OfType<SelectOption>()
+                .Single(option => option.Value == nameof(ReplayTrailMode.Recent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(ReplayTrailMode.Recent, workspace.Settings.TrailRetention);
+            Assert.Equal(++sceneCount, paint.ScenePresentationCount);
+
+            Required<ToggleButton>(window, "TraceToggleButton").IsChecked = false;
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(workspace.Settings.TraceVisible);
+            Assert.Equal(sceneCount, paint.ScenePresentationCount);
+            Assert.NotEmpty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+
+            Required<ToggleButton>(window, "TrailPointsToggleButton").IsChecked = false;
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(workspace.Settings.TrailPointsVisible);
+            Assert.Equal(++sceneCount, paint.ScenePresentationCount);
+            Assert.Empty(Assert.IsType<ReplayScene>(paint.CurrentScene).ContactTrails);
+            Assert.Same(history, workspace.TrailHistory);
+
+            var width = Required<TextBox>(window, "PanelWidthTextBox");
+            width.Text = (workspace.Settings.PanelExtent.MaximumX + 2).ToString(CultureInfo.InvariantCulture);
+            width.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(++fitCount, paint.FitCount);
+            Assert.Equal(++sceneCount, paint.ScenePresentationCount);
+            Assert.Equal(workspace.Settings.PanelExtent, Assert.IsType<ReplayScene>(paint.CurrentScene).Extent);
+            Assert.Equal(1, paint.ZoomFactor);
+            Assert.Same(history, workspace.TrailHistory);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Prepared_common_decode_keeps_the_raw_first_flow_and_source_object_identity()
     {
         var window = ShowWindow();
@@ -1697,6 +1780,8 @@ public sealed class MainWindowLayoutTests
             var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
             await window.OpenCaptureAsync(fixture);
             await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var workspace = Assert.IsType<ReplayPaintWorkspace>(window.PaintWorkspace);
+            var history = workspace.TrailHistory;
 
             Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
             var mark = Required<Button>(window, "AddMarkerButton");
@@ -1706,6 +1791,10 @@ public sealed class MainWindowLayoutTests
             var markerRow = Assert.Single(Required<ListBox>(window, "DiagnosticListBox").Items.OfType<ReviewGroupRow>());
             Assert.Contains("frame 1", markerRow.Message, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("frames 1-", markerRow.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(1, workspace.AnnotationRevision);
+            Assert.Equal("Marker 1", Assert.Single(
+                Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).MarkerLabels));
+            Assert.Same(history, workspace.TrailHistory);
 
             var name = Required<TextBox>(window, "MarkerNameTextBox");
             name.Text = "Startup touch";
@@ -1714,6 +1803,9 @@ public sealed class MainWindowLayoutTests
             markerRow = Assert.Single(Required<ListBox>(window, "DiagnosticListBox").Items.OfType<ReviewGroupRow>());
             Assert.Contains("Startup touch", markerRow.Message, StringComparison.Ordinal);
             Assert.Equal("Renamed marker · Startup touch", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Equal(2, workspace.AnnotationRevision);
+            Assert.Equal("Startup touch", Assert.Single(
+                Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).MarkerLabels));
 
             mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
@@ -1725,6 +1817,10 @@ public sealed class MainWindowLayoutTests
             Assert.Equal("0", Required<TextBlock>(window, "DiagnosticCountText").Text);
             Assert.False(clear.IsEnabled);
             Assert.Equal("Cleared 2 markers", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Equal(4, workspace.AnnotationRevision);
+            Assert.Empty(Assert.IsType<ReplayScene>(
+                Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).MarkerLabels);
+            Assert.Same(history, workspace.TrailHistory);
         }
         finally
         {

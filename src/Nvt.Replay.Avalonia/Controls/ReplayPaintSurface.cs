@@ -71,6 +71,8 @@ public sealed class ReplayPaintSurface : Control
     public bool TrailPointsVisible => trailPointsVisible;
     internal int CachedTrailBatchCount => trailBatchCache.Count;
     internal ReplayScene? CurrentScene => scene;
+    internal int ScenePresentationCount { get; private set; }
+    internal int FitCount { get; private set; }
     public event EventHandler? ZoomChanged;
     public event EventHandler? LegendCollapsedChanged;
 
@@ -114,6 +116,7 @@ public sealed class ReplayPaintSurface : Control
 
     public void Show(ReplayScene value, bool crossfade = false)
     {
+        ScenePresentationCount++;
         if (crossfade && scene is not null)
         {
             outgoingScene = scene;
@@ -163,6 +166,7 @@ public sealed class ReplayPaintSurface : Control
 
     public void Fit()
     {
+        FitCount++;
         EndPan(releaseCapture: true);
         viewportOffset = default;
         SetZoom(1, force: true);
@@ -170,13 +174,16 @@ public sealed class ReplayPaintSurface : Control
 
     public void SetStrongGrid(bool value)
     {
+        if (strongGrid == value) return;
         strongGrid = value;
         InvalidateVisual();
     }
 
     public void SetLegendPosition(ReplayLegendPosition value)
     {
-        legendPosition = value == ReplayLegendPosition.Auto ? ReplayLegendPosition.TopLeft : value;
+        var resolved = value == ReplayLegendPosition.Auto ? ReplayLegendPosition.TopLeft : value;
+        if (legendPosition == resolved) return;
+        legendPosition = resolved;
         InvalidateVisual();
     }
 
