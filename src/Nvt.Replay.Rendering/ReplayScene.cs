@@ -57,7 +57,7 @@ public sealed record ReplayScene(
         SwapAxes ? (y, x) : (x, y);
 }
 
-public sealed record ReplayTrailPoint(ushort X, ushort Y, TouchStatus Status, int LogicalIndex);
+public readonly record struct ReplayTrailPoint(ushort X, ushort Y, TouchStatus Status, int LogicalIndex);
 
 public sealed record ReplayContactTrail(
     byte Id,
@@ -137,20 +137,29 @@ public static class ReplaySceneFactory
 public sealed class ReplayTrailHistory
 {
     private readonly IReadOnlyDictionary<byte, IReadOnlyList<Gesture>> gesturesById;
-    private readonly IReadOnlyList<IReadOnlySet<byte>> reportedIdsByFrame;
-    private readonly IReadOnlyList<IReadOnlySet<byte>> activeIdsByFrame;
+    private readonly uint[] reportedIdMasksByFrame;
+    private readonly uint[] activeIdMasksByFrame;
+    private readonly uint persistentIdMask;
 
     private ReplayTrailHistory(
         IReadOnlyDictionary<byte, IReadOnlyList<Gesture>> gesturesById,
-        IReadOnlyList<IReadOnlySet<byte>> reportedIdsByFrame,
-        IReadOnlyList<IReadOnlySet<byte>> activeIdsByFrame)
+        uint[] reportedIdMasksByFrame,
+        uint[] activeIdMasksByFrame)
     {
         this.gesturesById = gesturesById;
-        this.reportedIdsByFrame = reportedIdsByFrame;
-        this.activeIdsByFrame = activeIdsByFrame;
+        this.reportedIdMasksByFrame = reportedIdMasksByFrame;
+        this.activeIdMasksByFrame = activeIdMasksByFrame;
+        persistentIdMask = Mask(gesturesById.Keys);
+        Statistics = new ReplayTrailStorageStatistics(
+            gesturesById.Values.Sum(gestures => gestures.Count),
+            gesturesById.Values.SelectMany(gestures => gestures).Sum(gesture => gesture.Points.Count),
+            gesturesById.Values.SelectMany(gestures => gestures)
+                .Sum(gesture => gesture.Points.Count / ReplayTrailChunker.DefaultChunkSize));
     }
 
-    public int Count => reportedIdsByFrame.Count;
+    public int Count => reportedIdMasksByFrame.Length;
+
+    public ReplayTrailStorageStatistics Statistics { get; }
 
     public static ReplayTrailHistory Create(
         ITouchReplaySession replay,
@@ -167,29 +176,40 @@ public sealed class ReplayTrailHistory
         ArgumentNullException.ThrowIfNull(snapshots);
         var completed = new Dictionary<byte, List<Gesture>>();
         var open = new Dictionary<byte, GestureBuilder>();
-        var reportedIds = new IReadOnlySet<byte>[snapshots.Count];
-        var activeIds = new IReadOnlySet<byte>[snapshots.Count];
+        var reportedIdMasks = new uint[snapshots.Count];
+        var activeIdMasks = new uint[snapshots.Count];
 
         for (var logicalIndex = 0; logicalIndex < snapshots.Count; logicalIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var snapshot = snapshots[logicalIndex];
-            var reported = snapshot.ReportedContacts.Where(IsTrackable).OrderBy(contact => contact.Id).ToArray();
-            reportedIds[logicalIndex] = reported.Select(contact => contact.Id).ToHashSet();
-            activeIds[logicalIndex] = snapshot.HostContacts
-                .Where(contact => contact.IsActive && !contact.Invalid)
-                .Select(contact => contact.Id)
-                .ToHashSet();
+            var reportedIdMask = 0u;
+            for (var contactIndex = 0; contactIndex < snapshot.ReportedContacts.Count; contactIndex++)
+            {
+                var contact = snapshot.ReportedContacts[contactIndex];
+                if (IsTrackable(contact)) reportedIdMask |= Bit(contact.Id);
+            }
+            reportedIdMasks[logicalIndex] = reportedIdMask;
+
+            var activeIdMask = 0u;
+            for (var contactIndex = 0; contactIndex < snapshot.HostContacts.Count; contactIndex++)
+            {
+                var contact = snapshot.HostContacts[contactIndex];
+                if (contact.IsActive && !contact.Invalid) activeIdMask |= Bit(contact.Id);
+            }
+            activeIdMasks[logicalIndex] = activeIdMask;
 
             if (!snapshot.HostStateUpdated)
             {
-                foreach (var builder in open.Values.ToArray()) Finish(builder, logicalIndex - 1, completed);
+                foreach (var builder in open.Values) Finish(builder, logicalIndex - 1, completed);
                 open.Clear();
                 continue;
             }
 
-            foreach (var contact in reported)
+            for (var contactIndex = 0; contactIndex < snapshot.ReportedContacts.Count; contactIndex++)
             {
+                var contact = snapshot.ReportedContacts[contactIndex];
+                if (!IsTrackable(contact)) continue;
                 if (contact.Status == TouchStatus.Enter && open.Remove(contact.Id, out var prior))
                     Finish(prior, logicalIndex - 1, completed);
 
@@ -207,9 +227,9 @@ public sealed class ReplayTrailHistory
                 }
             }
 
-            if (activeIds[logicalIndex].Count == 0)
+            if (activeIdMask == 0)
             {
-                foreach (var builder in open.Values.ToArray()) Finish(builder, logicalIndex - 1, completed);
+                foreach (var builder in open.Values) Finish(builder, logicalIndex - 1, completed);
                 open.Clear();
             }
         }
@@ -221,8 +241,8 @@ public sealed class ReplayTrailHistory
             completed.ToDictionary(
                 pair => pair.Key,
                 pair => (IReadOnlyList<Gesture>)pair.Value.OrderBy(gesture => gesture.StartLogicalIndex).ToArray()),
-            reportedIds,
-            activeIds);
+            reportedIdMasks,
+            activeIdMasks);
     }
 
     public IReadOnlyList<ReplayContactTrail> Build(
@@ -237,38 +257,59 @@ public sealed class ReplayTrailHistory
             throw new ArgumentOutOfRangeException(nameof(recentPointCount));
         minimumLogicalIndex = Math.Clamp(minimumLogicalIndex, 0, Count);
 
-        var selectedIds = mode switch
+        var selectedIdMask = mode switch
         {
-            ReplayTrailMode.Recent => reportedIdsByFrame[logicalIndex],
-            ReplayTrailMode.UntilBreak => activeIdsByFrame[logicalIndex],
-            _ => gesturesById.Keys.ToHashSet(),
+            ReplayTrailMode.Recent => reportedIdMasksByFrame[logicalIndex],
+            ReplayTrailMode.UntilBreak => activeIdMasksByFrame[logicalIndex],
+            _ => persistentIdMask,
         };
         var result = new List<ReplayContactTrail>();
-        foreach (var id in selectedIds.Order())
+        for (byte id = 0; id < 32; id++)
         {
+            if ((selectedIdMask & Bit(id)) == 0) continue;
             if (!gesturesById.TryGetValue(id, out var gestures)) continue;
-            var candidates = mode == ReplayTrailMode.Persistent
-                ? gestures.Where(gesture => gesture.StartLogicalIndex <= logicalIndex)
-                : gestures.Where(gesture =>
-                    gesture.StartLogicalIndex <= logicalIndex && gesture.EndLogicalIndex >= logicalIndex).TakeLast(1);
-
-            foreach (var gesture in candidates)
+            if (mode == ReplayTrailMode.Persistent)
             {
-                IReadOnlyList<ReplayTrailPoint> points = Slice(
-                    gesture.Points,
-                    minimumLogicalIndex,
-                    logicalIndex);
-                if (mode == ReplayTrailMode.Recent && points.Count > recentPointCount)
-                    points = SliceRange(points, points.Count - recentPointCount, recentPointCount);
-                if (points.Count > 1)
-                    result.Add(new ReplayContactTrail(
-                        gesture.Id,
-                        gesture.Type,
-                        points,
-                        IsComplete: gesture.EndLogicalIndex <= logicalIndex));
+                foreach (var gesture in gestures)
+                {
+                    if (gesture.StartLogicalIndex > logicalIndex) break;
+                    AddTrail(result, gesture, logicalIndex, minimumLogicalIndex, mode, recentPointCount);
+                }
+                continue;
+            }
+
+            for (var gestureIndex = gestures.Count - 1; gestureIndex >= 0; gestureIndex--)
+            {
+                var gesture = gestures[gestureIndex];
+                if (gesture.StartLogicalIndex > logicalIndex) continue;
+                if (gesture.EndLogicalIndex >= logicalIndex)
+                    AddTrail(result, gesture, logicalIndex, minimumLogicalIndex, mode, recentPointCount);
+                break;
             }
         }
         return result;
+    }
+
+    private static void AddTrail(
+        ICollection<ReplayContactTrail> result,
+        Gesture gesture,
+        int logicalIndex,
+        int minimumLogicalIndex,
+        ReplayTrailMode mode,
+        int recentPointCount)
+    {
+        IReadOnlyList<ReplayTrailPoint> points = Slice(
+            gesture.Points,
+            minimumLogicalIndex,
+            logicalIndex);
+        if (mode == ReplayTrailMode.Recent && points.Count > recentPointCount)
+            points = SliceRange(points, points.Count - recentPointCount, recentPointCount);
+        if (points.Count > 1)
+            result.Add(new ReplayContactTrail(
+                gesture.Id,
+                gesture.Type,
+                points,
+                IsComplete: gesture.EndLogicalIndex <= logicalIndex));
     }
 
     private static IReadOnlyList<ReplayTrailPoint> Slice(
@@ -344,6 +385,15 @@ public sealed class ReplayTrailHistory
         (contact.Status is TouchStatus.Enter or TouchStatus.Move or TouchStatus.Break ||
          contact.Type == TouchType.Palm && contact.Status == TouchStatus.NoFinger);
 
+    private static uint Bit(byte id) => id < 32 ? 1u << id : 0;
+
+    private static uint Mask(IEnumerable<byte> ids)
+    {
+        var result = 0u;
+        foreach (var id in ids) result |= Bit(id);
+        return result;
+    }
+
     private sealed class GestureBuilder(byte id, TouchType type, int startLogicalIndex)
     {
         public byte Id { get; } = id;
@@ -359,3 +409,8 @@ public sealed class ReplayTrailHistory
         int EndLogicalIndex,
         IReadOnlyList<ReplayTrailPoint> Points);
 }
+
+public readonly record struct ReplayTrailStorageStatistics(
+    int GestureCount,
+    int PointCount,
+    int ReusableFullChunkCount);

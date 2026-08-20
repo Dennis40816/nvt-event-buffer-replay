@@ -88,6 +88,52 @@ public sealed class ReplayTrailHistoryTests
         Assert.False(activeTail[^1].IsCacheable);
     }
 
+    [Fact]
+    public void Hundred_thousand_report_points_survive_random_seeks_without_rebuilding_history()
+    {
+        const int reportCount = 100_003;
+        var snapshots = Enumerable.Range(0, reportCount)
+            .Select(index => (ITouchReplaySnapshot)Snapshot(
+                index,
+                Contact(index, index == 0 ? TouchStatus.Enter : TouchStatus.Move, (ushort)(index % 4096))))
+            .ToArray();
+
+        var beforeCreate = GC.GetAllocatedBytesForCurrentThread();
+        var history = ReplayTrailHistory.Create(snapshots);
+        var createBytes = GC.GetAllocatedBytesForCurrentThread() - beforeCreate;
+        var statistics = history.Statistics;
+        var firstSeekBytes = MeasureRandomBuilds(history, reportCount, 250);
+        var secondSeekBytes = MeasureRandomBuilds(history, reportCount, 250);
+        Console.WriteLine($"trail-allocation create={createBytes} random-seeks={firstSeekBytes}");
+
+        var complete = Assert.Single(history.Build(reportCount - 1, ReplayTrailMode.Persistent));
+        Assert.Equal(reportCount, complete.Points.Count);
+        Assert.Equal(new ReplayTrailStorageStatistics(1, reportCount, 48), statistics);
+        Assert.Equal(statistics, history.Statistics);
+        Assert.InRange(secondSeekBytes, 0, firstSeekBytes + 16_384);
+
+        var early = Assert.Single(history.Build(4095, ReplayTrailMode.Persistent));
+        var earlyChunks = ReplayTrailChunker.Enumerate(early).ToArray();
+        var completeChunks = ReplayTrailChunker.Enumerate(complete).ToArray();
+        Assert.True(earlyChunks[0].IsCacheable);
+        Assert.Same(earlyChunks[0].Source, completeChunks[0].Source);
+        Assert.Equal(earlyChunks[0].Offset, completeChunks[0].Offset);
+        Assert.Equal(earlyChunks[0].Count, completeChunks[0].Count);
+    }
+
+    private static long MeasureRandomBuilds(ReplayTrailHistory history, int frameCount, int buildCount)
+    {
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        IReadOnlyList<ReplayContactTrail> last = [];
+        for (var seek = 0; seek < buildCount; seek++)
+        {
+            var logicalIndex = (int)((long)seek * 104_729 % frameCount);
+            last = history.Build(logicalIndex, ReplayTrailMode.Persistent);
+        }
+        GC.KeepAlive(last);
+        return GC.GetAllocatedBytesForCurrentThread() - before;
+    }
+
     private static FakeReplay Replay()
     {
         var contacts = new[]
