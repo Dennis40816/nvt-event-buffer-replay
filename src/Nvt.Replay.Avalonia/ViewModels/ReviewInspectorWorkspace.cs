@@ -214,6 +214,15 @@ public sealed class ReviewInspectorWorkspace
         SelectedMarkerId = null;
     }
 
+    public ReviewEventGroup AcknowledgeFinding(string groupId) =>
+        MutateFinding(groupId, reviewSession.Acknowledge);
+
+    public ReviewEventGroup SetFindingDisposition(string groupId, ReviewDisposition disposition) =>
+        MutateFinding(groupId, id => reviewSession.SetDisposition(id, disposition));
+
+    public ReviewEventGroup ResolveFinding(string groupId) =>
+        MutateFinding(groupId, reviewSession.Resolve);
+
     public ReplayMarker AddMarker(string? label = null)
     {
         if (CurrentLogicalIndex < 0)
@@ -367,6 +376,16 @@ public sealed class ReviewInspectorWorkspace
         SelectedMarkerId = occurrence.Diagnostic.Details?.GetValueOrDefault("marker_id");
         if (occurrence.LogicalIndex is { } logicalIndex) SelectFrame(logicalIndex);
         return occurrence;
+    }
+
+    private ReviewEventGroup MutateFinding(
+        string groupId,
+        Func<string, ReviewEventGroup> mutation)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        var updated = mutation(groupId);
+        RefreshVisibleGroups();
+        return visibleGroups.FirstOrDefault(group => group.Id.Equals(groupId, StringComparison.Ordinal)) ?? updated;
     }
 
     private (ReplayMarker Marker, int Index) FindMarker(string markerId)

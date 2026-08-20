@@ -39,13 +39,8 @@ public partial class MainWindow : Window
     private DecodedFrameRow[] decodedRows = [];
     private DiagnosticRow[] diagnosticRows = [];
     private int[] diagnosticLineNumbers = [];
-    private ReviewSession? reviewSession;
+    private ReviewInspectorWorkspace? reviewWorkspace;
     private ReviewGroupRow[] reviewRows = [];
-    private ReviewQueueFilter reviewFilter = ReviewQueueFilter.All;
-    private string? selectedReviewGroupId;
-    private string? selectedMarkerId;
-    private IReadOnlyList<ReplayDiagnostic> baseDiagnostics = [];
-    private readonly List<ReplayMarker> markers = [];
     private ReplayDecodeConfiguration? decodeConfiguration;
     private ReplaySidecarOpenResult? pendingSidecar;
     private static readonly ReplayExtent DefaultPaintExtent = new(2304, 1280);
@@ -100,6 +95,7 @@ public partial class MainWindow : Window
     private object? currentInspectorFrame;
     private ITouchReplaySnapshot? currentInspectorSnapshot;
     private InspectorFramePresentation? currentInspectorPresentation;
+    private bool synchronizingReviewSelection;
     private double expandedInspectorRailWidth = 286;
     private const double ExpandedReviewRailWidth = 260;
     private const double DefaultInspectorRailWidth = 286;
@@ -118,6 +114,7 @@ public partial class MainWindow : Window
     internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => outputVideoPreviewPlan?.FramePlan;
     internal int OutputPreviewPlanBuildCount => outputPreviewPlanBuildCount;
     internal ReplayPaintWorkspace? PaintWorkspace => paintWorkspace;
+    internal ReviewInspectorWorkspace? ReviewWorkspace => reviewWorkspace;
     private int outputVideoFrameCount => outputVideoPreviewPlan?.Estimate.OutputFrameCount ?? 0;
     private int outputVideoFrameRate => outputVideoPreviewPlan?.Identity.Settings.FrameRate ?? outputWorkspace.Settings.FrameRate;
     public MainWindow()
@@ -277,6 +274,7 @@ public partial class MainWindow : Window
 
     private async void CopyInspectorButton_OnClick(object? sender, RoutedEventArgs e)
     {
+        SynchronizeVisibleDecodedInspector();
         if (currentInspectorPresentation is null || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
             return;
         await clipboard.SetTextAsync(InspectorPresentationBuilder.BuildCopyText(currentInspectorPresentation));
@@ -289,36 +287,26 @@ public partial class MainWindow : Window
 
     private void NavigateFinding(int direction)
     {
-        if (reviewSession is null || replaySession is null) return;
-        var indices = reviewSession.Groups
-            .SelectMany(group => group.Occurrences)
-            .Where(occurrence => occurrence.LogicalIndex is not null)
-            .Select(occurrence => occurrence.LogicalIndex!.Value)
-            .Distinct()
-            .OrderBy(index => index)
-            .ToArray();
-        if (indices.Length == 0) return;
-
-        var target = direction < 0
-            ? indices.Where(index => index < currentLogicalIndex).DefaultIfEmpty(indices[^1]).Last()
-            : indices.Where(index => index > currentLogicalIndex).DefaultIfEmpty(indices[0]).First();
+        if (reviewWorkspace is null || replaySession is null) return;
+        var occurrence = reviewWorkspace.NavigateFinding(direction < 0
+            ? ReviewFindingDirection.Previous
+            : ReviewFindingDirection.Next);
+        if (occurrence?.LogicalIndex is not { } target) return;
         StopPlayback();
         SeekReplay(target);
-        reviewFilter = ReviewQueueFilter.All;
-        RefreshReviewQueue();
-        var row = reviewRows.FirstOrDefault(item => item.Group.Occurrences.Any(occurrence => occurrence.LogicalIndex == target));
-        if (row is null) return;
-        DiagnosticListBox.SelectedItem = row;
-        DiagnosticListBox.ScrollIntoView(row);
-        var targetOccurrence = ReviewOccurrenceComboBox.Items
-            .OfType<ReviewOccurrenceRow>()
-            .FirstOrDefault(item => item.Occurrence.LogicalIndex == target);
-        if (targetOccurrence is not null)
-            ReviewOccurrenceComboBox.SelectedItem = targetOccurrence;
+        SynchronizeReviewSelectionFromWorkspace(scrollIntoView: true);
     }
 
-    private void InspectorContactsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) =>
-        PaintSurface.SetHighlightedContact((InspectorContactsList.SelectedItem as InspectorContactRow)?.Id);
+    private void InspectorContactsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var selectedId = (InspectorContactsList.SelectedItem as InspectorContactRow)?.Id;
+        if (reviewWorkspace is not null)
+        {
+            if (selectedId is { } id) reviewWorkspace.SelectContact(id);
+            else reviewWorkspace.ClearContactSelection();
+        }
+        PaintSurface.SetHighlightedContact(selectedId);
+    }
 
     private void SetReviewRailCollapsed(bool collapsed)
     {
@@ -552,7 +540,7 @@ public partial class MainWindow : Window
             session = nextSession;
             ApplyRawExplorerProjection(projectedActivities);
             diagnosticRows = nextDiagnosticRows;
-            CreateReviewSession(nextDiagnostics);
+            CreateReviewWorkspace(nextDiagnostics, []);
             CaptureNameText.Text = Path.GetFileName(session.SourcePath).ToUpperInvariant();
             SessionStatusText.Text = $"{session.Records.Count:N0} physical records indexed · {diagnosticRows.Length:N0} source diagnostics · semantic format required";
             SourceAdapterText.Text = session.Probe.DisplayName;
@@ -776,8 +764,9 @@ public partial class MainWindow : Window
             var nextConfiguration = result.Decode.Configuration;
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (decodeConfiguration is not null && decodeConfiguration != nextConfiguration)
-                markers.Clear();
+            var preserveReview = decodeConfiguration is null || decodeConfiguration == nextConfiguration;
+            var preservedMarkers = preserveReview ? reviewWorkspace?.Markers.ToArray() ?? [] : [];
+            var preservedReviewState = preserveReview ? reviewWorkspace?.ReviewSession.ExportState() ?? [] : [];
             session = result.Capture;
             decodeConfiguration = nextConfiguration;
             replaySession = presentation.Replay;
@@ -786,13 +775,17 @@ public partial class MainWindow : Window
             diagnosticRows = presentation.DiagnosticRows;
             replayFrames = result.Workspace.Frames;
             autoPauseIndex = result.Workspace.AutoPauseIndex;
-            CreateReviewSession(diagnosticRows.Select(row => row.Diagnostic).ToArray());
+            CreateReviewWorkspace(
+                diagnosticRows.Select(row => row.Diagnostic).ToArray(),
+                result.Workspace.Frames.Snapshots,
+                preservedMarkers,
+                preservedReviewState);
             paintWorkspace = new ReplayPaintWorkspace(
                 replaySession,
                 presentation.TrailHistory,
                 CreateInitialPaintSettings(presentation.Extent),
-                reviewSession?.Diagnostics,
-                markers);
+                reviewWorkspace?.ReviewSession.Diagnostics,
+                reviewWorkspace?.Markers);
 
             DecodedFramesList.ItemsSource = decodedRows;
             SessionStatusText.Text = $"{result.Decode.DisplayIdentity} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
@@ -1013,7 +1006,7 @@ public partial class MainWindow : Window
 
     private async void ExportAnalysisButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (session is null || replaySession is null || decodeConfiguration is null || reviewSession is null || replaySession.Count == 0) return;
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewWorkspace is null || replaySession.Count == 0) return;
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = "Export analysis outputs",
@@ -1538,7 +1531,7 @@ public partial class MainWindow : Window
 
     private CaptureAnalysisReport BuildOutputReport(AnalysisRange range, CancellationToken cancellationToken)
     {
-        if (session is null || replaySession is null || decodeConfiguration is null || reviewSession is null)
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewWorkspace is null)
             throw new InvalidOperationException("A decoded replay is required for output preview.");
         var evidence = decodeConfiguration.EventBufferVersion is "0x83" or "0x84"
             ? EvidenceStatus.Verified
@@ -1549,8 +1542,8 @@ public partial class MainWindow : Window
             decodeConfiguration,
             evidence,
             replaySession,
-            reviewSession.Diagnostics,
-            reviewSession,
+            reviewWorkspace.ReviewSession.Diagnostics,
+            reviewWorkspace.ReviewSession,
             range,
             cancellationToken: cancellationToken,
             snapshots: replayFrames?.Snapshots);
@@ -1558,7 +1551,7 @@ public partial class MainWindow : Window
 
     private async Task RefreshOutputPreviewAsync()
     {
-        if (session is null || replaySession is null || decodeConfiguration is null || reviewSession is null || replaySession.Count == 0)
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewWorkspace is null || replaySession.Count == 0)
             return;
 
         StopOutputVideoPreviewPlayback();
@@ -1920,7 +1913,7 @@ public partial class MainWindow : Window
             ApplyRawExplorerProjection(projected, selectedId);
             var diagnostics = SessionDiagnostics(session);
             diagnosticRows = diagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
-            CreateReviewSession(diagnostics);
+            CreateReviewWorkspace(diagnostics);
             var ambiguous = registerActivities.Count(item => item.IsAmbiguous);
             ConfigurationHintText.Text = choice.IcFamily is null
                 ? $"IC profile unconfirmed · {ambiguous:N0} collision-prone register events remain raw-only"
@@ -2092,28 +2085,17 @@ public partial class MainWindow : Window
 
     private void DiagnosticListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (synchronizingReviewSelection) return;
         if (DiagnosticListBox.SelectedItem is not ReviewGroupRow row)
         {
+            reviewWorkspace?.ClearFindingSelection();
+            ClearReviewSelectionPresentation();
             return;
         }
-        selectedReviewGroupId = row.Group.Id;
-        var details = row.Group.Occurrences.FirstOrDefault()?.Diagnostic.Details;
-        selectedMarkerId = details?.GetValueOrDefault("marker_id");
-        AnnotationMetadataPanel.IsVisible = selectedMarkerId is not null;
-        MarkerNameTextBox.Text = selectedMarkerId is null
-            ? string.Empty
-            : markers.FirstOrDefault(marker => marker.Id == selectedMarkerId)?.Label ?? string.Empty;
-        MarkerQaCaseTextBox.Text = selectedMarkerId is null
-            ? string.Empty
-            : string.Join(", ", markers.FirstOrDefault(marker => marker.Id == selectedMarkerId)?.QaCaseIds ?? []);
-        ReviewActionsPanel.IsVisible = true;
-        ReviewEmptyText.IsVisible = false;
-        ReviewOccurrenceComboBox.ItemsSource = row.Group.Occurrences
-            .Select((occurrence, index) => new ReviewOccurrenceRow(index + 1, occurrence))
-            .ToArray();
-        ComboBoxAutoSizer.Fit(ReviewOccurrenceComboBox);
-        ReviewOccurrenceComboBox.SelectedIndex = 0;
-        UpdateReviewState(row.Group);
+        if (reviewWorkspace is null) return;
+        var occurrence = reviewWorkspace.SelectFinding(row.Group.Id);
+        PresentReviewSelection(row.Group, occurrence.Id);
+        NavigateToOccurrence(occurrence);
     }
 
     private void ReviewGroupBorder_OnContextRequested(object? sender, ContextRequestedEventArgs e)
@@ -2125,7 +2107,7 @@ public partial class MainWindow : Window
             return;
         }
         DiagnosticListBox.SelectedItem = row;
-        var matchingMarkers = markers.Where(marker => marker.Id == row.MarkerId).ToArray();
+        var matchingMarkers = reviewWorkspace?.Markers.Where(marker => marker.Id == row.MarkerId).ToArray() ?? [];
         if (matchingMarkers.Length == 0)
         {
             CloseContextMenu(control);
@@ -2137,7 +2119,7 @@ public partial class MainWindow : Window
 
     private void ReplayTimelineSurface_OnMarkerContextRequested(object? sender, ReplayTimelineContextEventArgs e)
     {
-        var matchingMarkers = markers
+        var matchingMarkers = (reviewWorkspace?.Markers ?? [])
             .Where(marker => marker.StartLogicalIndex <= e.LogicalIndex && marker.EndLogicalIndex >= e.LogicalIndex)
             .OrderBy(marker => marker.StartLogicalIndex)
             .ThenBy(marker => marker.CreatedAt)
@@ -2186,8 +2168,11 @@ public partial class MainWindow : Window
 
     private void ReviewOccurrenceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (ReviewOccurrenceComboBox.SelectedItem is ReviewOccurrenceRow row)
-            NavigateToOccurrence(row.Occurrence);
+        if (synchronizingReviewSelection || reviewWorkspace is null ||
+            ReviewOccurrenceComboBox.SelectedItem is not ReviewOccurrenceRow row)
+            return;
+        var occurrence = reviewWorkspace.SelectOccurrence(row.Number - 1);
+        NavigateToOccurrence(occurrence);
     }
 
     private void NavigateToOccurrence(ReviewOccurrence occurrence)
@@ -2207,7 +2192,7 @@ public partial class MainWindow : Window
     {
         if (sender is Button { Tag: { } tag } && Enum.TryParse<ReviewQueueFilter>(tag.ToString(), out var filter))
         {
-            reviewFilter = filter;
+            reviewWorkspace?.SetFilter(filter);
             RefreshReviewQueue();
         }
     }
@@ -2258,27 +2243,28 @@ public partial class MainWindow : Window
             preferences.PauseOnBreak,
             preferences.PauseOnAllBreak));
         UpdateAutoPauseIndicator(preferences);
-        if (reviewSession is not null)
+        if (reviewWorkspace is not null)
         {
             var enabled = preferences.PauseOnAlarmOrQaFail;
-            reviewSession.Options = reviewSession.Options with { PauseOnAlarm = enabled, PauseOnQaFail = enabled };
+            reviewWorkspace.SetReviewOptions(
+                reviewWorkspace.ReviewOptions with { PauseOnAlarm = enabled, PauseOnQaFail = enabled });
         }
     }
 
     private void AcknowledgeReviewButton_OnClick(object? sender, RoutedEventArgs e) =>
-        MutateReview(groupId => reviewSession!.Acknowledge(groupId));
+        MutateReview(groupId => reviewWorkspace!.AcknowledgeFinding(groupId));
 
     private void DispositionReviewButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: { } tag } && Enum.TryParse<ReviewDisposition>(tag.ToString(), out var disposition))
-            MutateReview(groupId => reviewSession!.SetDisposition(groupId, disposition));
+            MutateReview(groupId => reviewWorkspace!.SetFindingDisposition(groupId, disposition));
     }
 
     private void ResolveReviewButton_OnClick(object? sender, RoutedEventArgs e)
     {
         try
         {
-            MutateReview(groupId => reviewSession!.Resolve(groupId));
+            MutateReview(groupId => reviewWorkspace!.ResolveFinding(groupId));
         }
         catch (InvalidOperationException exception)
         {
@@ -2288,9 +2274,9 @@ public partial class MainWindow : Window
 
     private void MutateReview(Func<string, ReviewEventGroup> action)
     {
-        if (reviewSession is null || selectedReviewGroupId is not { } groupId) return;
+        if (reviewWorkspace?.SelectedFindingGroupId is not { } groupId) return;
         var updated = action(groupId);
-        RefreshReviewQueue(groupId);
+        RefreshReviewQueue();
         UpdateReviewState(updated);
     }
 
@@ -2306,106 +2292,139 @@ public partial class MainWindow : Window
             (string.IsNullOrWhiteSpace(evidence) || evidence == "-" ? string.Empty : $"\nevidence={evidence}");
     }
 
-    private void CreateReviewSession(IReadOnlyList<ReplayDiagnostic> diagnostics)
+    private void PresentReviewSelection(ReviewEventGroup group, string? occurrenceId)
     {
-        var previousState = reviewSession?.ExportState() ?? [];
-        baseDiagnostics = diagnostics;
-        diagnosticLineNumbers = diagnosticRows
-            .Select(row => row.Diagnostic.Location.LineNumber)
-            .OrderBy(line => line)
+        var marker = reviewWorkspace?.SelectedMarker;
+        AnnotationMetadataPanel.IsVisible = marker is not null;
+        MarkerNameTextBox.Text = marker?.Label ?? string.Empty;
+        MarkerQaCaseTextBox.Text = marker is null
+            ? string.Empty
+            : string.Join(", ", marker.QaCaseIds ?? []);
+        ReviewActionsPanel.IsVisible = true;
+        ReviewEmptyText.IsVisible = false;
+        var occurrences = group.Occurrences
+            .Select((occurrence, index) => new ReviewOccurrenceRow(index + 1, occurrence))
             .ToArray();
-        var logicalIndices = decodedRows
-            .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, row.LogicalIndex)))
-            .GroupBy(item => item.StableId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Last().LogicalIndex, StringComparer.Ordinal);
-        reviewSession = new ReviewSession(
-            diagnostics.Concat(markers.Select(MarkerDiagnostic)).ToArray(),
-            logicalIndices,
-            new ReviewSessionOptions(
-                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
-                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail));
-        reviewSession.ImportState(previousState);
-        RefreshReviewQueue();
-        RefreshPaintAnnotations();
+        synchronizingReviewSelection = true;
+        try
+        {
+            ReviewOccurrenceComboBox.ItemsSource = occurrences;
+            ReviewOccurrenceComboBox.SelectedItem = occurrences.FirstOrDefault(row =>
+                row.Occurrence.Id.Equals(occurrenceId, StringComparison.Ordinal)) ?? occurrences.FirstOrDefault();
+        }
+        finally
+        {
+            synchronizingReviewSelection = false;
+        }
+        ComboBoxAutoSizer.Fit(ReviewOccurrenceComboBox);
+        UpdateReviewState(group);
     }
 
-    private ReplayDiagnostic MarkerDiagnostic(ReplayMarker marker)
+    private void ClearReviewSelectionPresentation()
     {
-        var index = Math.Clamp(marker.StartLogicalIndex, 0, Math.Max(0, decodedRows.Length - 1));
-        var source = decodedRows.Length > 0 ? decodedRows[index].Source : session?.Records.FirstOrDefault();
-        var evidence = marker.Evidence ?? [];
-        return new ReplayDiagnostic(
-            DiagnosticSeverity.Info,
-            "ANNOTATION_MARKER",
-            marker.IsRange ? $"{marker.Label} · frames {marker.StartLogicalIndex + 1}-{marker.EndLogicalIndex + 1}" : $"{marker.Label} · frame {marker.StartLogicalIndex + 1}",
-            source?.StableId ?? session?.SourceSha256 ?? "sidecar",
-            source?.Location ?? new SourceLocation(0, 0),
-            new Dictionary<string, string>
-            {
-                ["marker_id"] = marker.Id,
-                ["qa_case_ids"] = string.Join(", ", marker.QaCaseIds ?? []),
-                ["evidence"] = evidence.Count == 0 ? "-" : string.Join("; ", evidence.Select(item => $"{item.Kind}:{item.Label ?? Path.GetFileName(item.Path)}:{(File.Exists(item.Path) ? "available" : "missing")}")),
-            });
-    }
-
-    private void RefreshReviewQueue(string? selectGroupId = null)
-    {
-        reviewRows = reviewSession?.Filter(reviewFilter)
-            .Where(group => group.Severity >= DiagnosticSeverity.Warning || group.IsAsil ||
-                            group.Category is ReviewEventCategory.QaResult or ReviewEventCategory.Annotation)
-            .Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
-        DiagnosticListBox.ItemsSource = reviewRows;
-        DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
-        ClearMarkersButton.IsEnabled = markers.Count > 0;
-        ReplayTimelineSurface.SetMarkerFrames(markers.Select(marker => marker.StartLogicalIndex));
-        var selected = selectGroupId is null ? null : reviewRows.FirstOrDefault(row => row.Group.Id == selectGroupId);
-        if (selected is not null) DiagnosticListBox.SelectedItem = selected;
-        if (Bounds.Width > 0) ApplyResponsiveRails(Bounds.Width);
-    }
-
-    private void AddMarkerButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (currentLogicalIndex < 0) return;
-        var marker = new ReplayMarker(
-            $"marker-{Guid.NewGuid():N}",
-            NextMarkerLabel(),
-            currentLogicalIndex,
-            currentLogicalIndex,
-            DateTimeOffset.UtcNow);
-        markers.Add(marker);
-        CreateReviewSession(baseDiagnostics);
-        RefreshReviewQueue($"ANNOTATION_MARKER:{marker.Id}");
-        SessionStatusText.Text = $"Added marker · frame {currentLogicalIndex + 1}";
-    }
-
-    private string NextMarkerLabel()
-    {
-        var number = 1;
-        while (markers.Any(marker => marker.Label.Equals($"Marker {number}", StringComparison.OrdinalIgnoreCase)))
-            number++;
-        return $"Marker {number}";
-    }
-
-    private void UnmarkButton_OnClick(object? sender, RoutedEventArgs e) => RemoveMarker(selectedMarkerId);
-
-    private void RemoveMarker(string? markerId)
-    {
-        if (markerId is null) return;
-        var index = markers.FindIndex(marker => marker.Id == markerId);
-        if (index < 0) return;
-        var removed = markers[index];
-        markers.RemoveAt(index);
-        selectedMarkerId = null;
-        selectedReviewGroupId = null;
-        CloseContextMenu(ReplayTimelineSurface);
-        CreateReviewSession(baseDiagnostics);
-        DiagnosticListBox.SelectedItem = null;
         ReviewActionsPanel.IsVisible = false;
         ReviewEmptyText.IsVisible = true;
         AnnotationMetadataPanel.IsVisible = false;
         MarkerNameTextBox.Text = string.Empty;
         MarkerQaCaseTextBox.Text = string.Empty;
-        RefreshOutputPreviewIfVisible();
+        ReviewOccurrenceComboBox.ItemsSource = null;
+    }
+
+    private void SynchronizeReviewSelectionFromWorkspace(bool scrollIntoView)
+    {
+        if (reviewWorkspace?.SelectedFindingGroupId is not { } groupId)
+        {
+            ClearReviewSelectionPresentation();
+            return;
+        }
+        var row = reviewRows.FirstOrDefault(item => item.Group.Id.Equals(groupId, StringComparison.Ordinal));
+        if (row is null)
+        {
+            ClearReviewSelectionPresentation();
+            return;
+        }
+        synchronizingReviewSelection = true;
+        try
+        {
+            DiagnosticListBox.SelectedItem = row;
+            if (scrollIntoView) DiagnosticListBox.ScrollIntoView(row);
+        }
+        finally
+        {
+            synchronizingReviewSelection = false;
+        }
+        PresentReviewSelection(row.Group, reviewWorkspace.SelectedOccurrenceId);
+    }
+
+    private void CreateReviewWorkspace(
+        IReadOnlyList<ReplayDiagnostic> diagnostics,
+        IReadOnlyList<ITouchReplaySnapshot>? frames = null,
+        IReadOnlyList<ReplayMarker>? replacementMarkers = null,
+        IReadOnlyList<ReviewStateSnapshot>? reviewState = null)
+    {
+        var markers = replacementMarkers ?? reviewWorkspace?.Markers.ToArray() ?? [];
+        var state = reviewState ?? reviewWorkspace?.ReviewSession.ExportState() ?? [];
+        diagnosticLineNumbers = diagnosticRows
+            .Select(row => row.Diagnostic.Location.LineNumber)
+            .OrderBy(line => line)
+            .ToArray();
+        reviewWorkspace = new ReviewInspectorWorkspace(
+            frames ?? reviewWorkspace?.Frames ?? [],
+            diagnostics,
+            session?.RegisterAnnotations,
+            markers,
+            CurrentPaintMode,
+            reviewOptions: new ReviewSessionOptions(
+                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
+                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail));
+        reviewWorkspace.ReplaceMarkersAndImportState(markers, state);
+        RefreshReviewQueue();
+    }
+
+    private void RefreshReviewQueue()
+    {
+        reviewRows = reviewWorkspace?.VisibleGroups.Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
+        synchronizingReviewSelection = true;
+        try
+        {
+            DiagnosticListBox.ItemsSource = reviewRows;
+            var selected = reviewWorkspace?.SelectedFindingGroupId is { } groupId
+                ? reviewRows.FirstOrDefault(row => row.Group.Id == groupId)
+                : null;
+            DiagnosticListBox.SelectedItem = selected;
+        }
+        finally
+        {
+            synchronizingReviewSelection = false;
+        }
+        DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
+        ClearMarkersButton.IsEnabled = reviewWorkspace?.Markers.Count > 0;
+        ReplayTimelineSurface.SetMarkerFrames(reviewWorkspace?.Markers.Select(marker => marker.StartLogicalIndex) ?? []);
+        if (DiagnosticListBox.SelectedItem is ReviewGroupRow selectedRow)
+            PresentReviewSelection(selectedRow.Group, reviewWorkspace?.SelectedOccurrenceId);
+        else
+            ClearReviewSelectionPresentation();
+        if (Bounds.Width > 0) ApplyResponsiveRails(Bounds.Width);
+    }
+
+    private void AddMarkerButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (currentLogicalIndex < 0 || reviewWorkspace is null) return;
+        reviewWorkspace.SelectFrame(currentLogicalIndex);
+        var marker = reviewWorkspace.AddMarker();
+        RefreshWorkspaceAfterReviewMutation();
+        SessionStatusText.Text = $"Added marker · frame {currentLogicalIndex + 1}";
+    }
+
+    private void UnmarkButton_OnClick(object? sender, RoutedEventArgs e) => RemoveMarker(reviewWorkspace?.SelectedMarkerId);
+
+    private void RemoveMarker(string? markerId)
+    {
+        if (markerId is null || reviewWorkspace?.Markers.FirstOrDefault(marker => marker.Id == markerId) is not { } removed)
+            return;
+        if (!reviewWorkspace.RemoveMarker(markerId)) return;
+        CloseContextMenu(ReplayTimelineSurface);
+        RefreshWorkspaceAfterReviewMutation();
         SessionStatusText.Text = removed.IsRange
             ? $"Removed range marker · frames {removed.StartLogicalIndex + 1}-{removed.EndLogicalIndex + 1}"
             : $"Removed marker · frame {removed.StartLogicalIndex + 1}";
@@ -2413,7 +2432,7 @@ public partial class MainWindow : Window
 
     private void RenameMarkerButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!TryGetSelectedMarker(out var marker, out var index)) return;
+        if (!TryGetSelectedMarker(out var marker)) return;
         var label = (MarkerNameTextBox.Text ?? string.Empty).Trim();
         if (label.Length == 0)
         {
@@ -2421,52 +2440,44 @@ public partial class MainWindow : Window
             MarkerNameTextBox.Text = marker.Label;
             return;
         }
-        if (markers.Any(item => item.Id != marker.Id && item.Label.Equals(label, StringComparison.OrdinalIgnoreCase)))
+        try
         {
-            SessionStatusText.Text = $"Marker name already exists · {label}";
-            MarkerNameTextBox.Text = marker.Label;
-            return;
+            reviewWorkspace!.RenameMarker(marker.Id, label);
+            RefreshWorkspaceAfterReviewMutation();
+            SessionStatusText.Text = $"Renamed marker · {label}";
         }
-
-        markers[index] = marker with { Label = label };
-        RefreshMarkerReview(marker.Id, $"Renamed marker · {label}");
+        catch (ArgumentException exception)
+        {
+            SessionStatusText.Text = exception.Message;
+            MarkerNameTextBox.Text = marker.Label;
+        }
     }
 
     private void ClearMarkersButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (markers.Count == 0) return;
-        var count = markers.Count;
-        markers.Clear();
-        ReplayTimelineSurface.SetMarkerFrames([]);
-        selectedMarkerId = null;
-        selectedReviewGroupId = null;
+        if (reviewWorkspace is null) return;
+        var count = reviewWorkspace.ClearMarkers();
+        if (count == 0) return;
         CloseContextMenu(ReplayTimelineSurface);
-        CreateReviewSession(baseDiagnostics);
-        DiagnosticListBox.SelectedItem = null;
-        ReviewActionsPanel.IsVisible = false;
-        ReviewEmptyText.IsVisible = true;
-        AnnotationMetadataPanel.IsVisible = false;
-        MarkerNameTextBox.Text = string.Empty;
-        MarkerQaCaseTextBox.Text = string.Empty;
-        RefreshReviewQueue();
-        RefreshOutputPreviewIfVisible();
+        RefreshWorkspaceAfterReviewMutation();
         SessionStatusText.Text = $"Cleared {count} marker{(count == 1 ? string.Empty : "s")}";
     }
 
     private void ApplyMarkerQaButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!TryGetSelectedMarker(out var marker, out var index)) return;
+        if (!TryGetSelectedMarker(out var marker)) return;
         var qaCaseIds = (MarkerQaCaseTextBox.Text ?? string.Empty)
             .Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        markers[index] = marker with { QaCaseIds = qaCaseIds };
-        RefreshMarkerReview(marker.Id, $"QA references updated · {qaCaseIds.Length} IDs");
+        reviewWorkspace!.SetMarkerQaCaseIds(marker.Id, qaCaseIds);
+        RefreshWorkspaceAfterReviewMutation();
+        SessionStatusText.Text = $"QA references updated · {qaCaseIds.Length} IDs";
     }
 
     private async void AttachMarkerEvidenceButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!TryGetSelectedMarker(out var marker, out var index)) return;
+        if (!TryGetSelectedMarker(out var marker)) return;
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Attach raw Kernel / FW log",
@@ -2486,10 +2497,10 @@ public partial class MainWindow : Window
                 : lowerName.Contains("fw") || lowerName.Contains("firmware")
                     ? ReplayEvidenceKind.FirmwareLog
                     : ReplayEvidenceKind.Other;
-            var evidence = (marker.Evidence ?? []).Append(new ReplayEvidenceReference(
-                $"evidence-{Guid.NewGuid():N}", kind, path, hash, name)).ToArray();
-            markers[index] = marker with { Evidence = evidence };
-            RefreshMarkerReview(marker.Id, $"Raw evidence attached · {name} · SHA-256 recorded");
+            reviewWorkspace!.AddMarkerEvidence(marker.Id, new ReplayEvidenceReference(
+                $"evidence-{Guid.NewGuid():N}", kind, path, hash, name));
+            RefreshWorkspaceAfterReviewMutation();
+            SessionStatusText.Text = $"Raw evidence attached · {name} · SHA-256 recorded";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -2497,23 +2508,22 @@ public partial class MainWindow : Window
         }
     }
 
-    private bool TryGetSelectedMarker(out ReplayMarker marker, out int index)
+    private bool TryGetSelectedMarker(out ReplayMarker marker)
     {
-        index = selectedMarkerId is null ? -1 : markers.FindIndex(item => item.Id == selectedMarkerId);
-        marker = index >= 0 ? markers[index] : null!;
-        return index >= 0;
+        marker = reviewWorkspace?.SelectedMarker!;
+        return marker is not null;
     }
 
-    private void RefreshMarkerReview(string markerId, string status)
+    private void RefreshWorkspaceAfterReviewMutation()
     {
-        CreateReviewSession(baseDiagnostics);
-        RefreshReviewQueue($"ANNOTATION_MARKER:{markerId}");
-        SessionStatusText.Text = status;
+        RefreshReviewQueue();
+        RefreshPaintAnnotations();
+        RefreshOutputPreviewIfVisible();
     }
 
     private async void SaveReviewButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (session is null || decodeConfiguration is null || reviewSession is null) return;
+        if (session is null || decodeConfiguration is null || reviewWorkspace is null) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save replay review",
@@ -2530,8 +2540,8 @@ public partial class MainWindow : Window
                 session.SourceSha256,
                 Path.GetFileName(session.SourcePath),
                 decodeConfiguration,
-                markers.ToArray(),
-                reviewSession.ExportState(),
+                reviewWorkspace.Markers.ToArray(),
+                reviewWorkspace.ReviewSession.ExportState(),
                 new Dictionary<string, bool>
                 {
                     ["pauseOnAlarm"] = SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
@@ -2587,32 +2597,32 @@ public partial class MainWindow : Window
     private void ApplySidecar(ReplaySidecarOpenResult loaded)
     {
         var resolvedById = loaded.Evidence.ToDictionary(item => item.Reference.Id, item => item.ResolvedPath, StringComparer.Ordinal);
-        markers.Clear();
-        markers.AddRange(loaded.Document.Markers.Select(marker => marker with
+        var resolvedMarkers = loaded.Document.Markers.Select(marker => marker with
         {
             Evidence = marker.Evidence?.Select(reference => reference with
             {
                 Path = resolvedById.GetValueOrDefault(reference.Id, reference.Path),
             }).ToArray(),
-        }));
+        }).ToArray();
         var currentPreferences = SettingsPage.PlaybackPreferences;
-        SettingsPage.SetPlaybackPreferences(new ReplayPlaybackPreferences(
+        var importedPreferences = new ReplayPlaybackPreferences(
             loaded.Document.VisibilityPreferences.TryGetValue("pauseOnAlarm", out var pauseOnAlarm)
                 ? pauseOnAlarm
                 : currentPreferences.PauseOnAlarmOrQaFail,
             loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnBreak"),
-            loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnAllBreak")));
+            loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnAllBreak"));
+        SettingsPage.SetPlaybackPreferences(importedPreferences);
+        ApplyPlaybackPreferences(importedPreferences, syncTransportControls: true);
         if (loaded.Document.VisibilityPreferences.TryGetValue("compressIdle", out var compress)) CompressIdleCheckBox.IsChecked = compress;
-        CreateReviewSession(baseDiagnostics);
-        var unresolved = reviewSession?.ImportState(loaded.Document.ReviewStates) ?? [];
-        RefreshReviewQueue();
+        var import = reviewWorkspace?.ReplaceMarkersAndImportState(resolvedMarkers, loaded.Document.ReviewStates);
+        RefreshWorkspaceAfterReviewMutation();
         pendingSidecar = null;
         ApplySidecarButton.IsVisible = false;
         LoadReviewButton.IsVisible = true;
         SessionStatusText.Text =
-            $"Review opened · {markers.Count} markers · {loaded.Evidence.Count} evidence refs" +
+            $"Review opened · {import?.MarkerCount ?? 0} markers · {loaded.Evidence.Count} evidence refs" +
             (loaded.Warnings.Count > 0 ? $" · {loaded.Warnings.Count} warnings" : string.Empty) +
-            (unresolved.Count > 0 ? $" · {unresolved.Count} stale review groups" : string.Empty);
+            (import?.UnresolvedReviewGroupIds.Count > 0 ? $" · {import.UnresolvedReviewGroupIds.Count} stale review groups" : string.Empty);
     }
 
     private object? FindFrame(string sourceId) =>
@@ -2624,7 +2634,17 @@ public partial class MainWindow : Window
         currentInspectorRecord = record;
         currentInspectorFrame = frame;
         currentInspectorSnapshot = snapshot;
-        currentInspectorPresentation = InspectorPresentationBuilder.Build(
+        currentInspectorPresentation = snapshot is not null &&
+            reviewWorkspace?.CurrentSnapshot?.LogicalIndex == snapshot.LogicalIndex
+                ? reviewWorkspace.CurrentPresentation
+                : InspectorPresentationBuilder.Build(
+                    record,
+                    frame,
+                    snapshot,
+                    replaySession?.Count ?? 0,
+                    CurrentPaintMode,
+                    registerAnnotation);
+        currentInspectorPresentation ??= InspectorPresentationBuilder.Build(
             record,
             frame,
             snapshot,
@@ -2638,14 +2658,14 @@ public partial class MainWindow : Window
             };
         ApplyInspectorPresentation(currentInspectorPresentation, frame is null && registerAnnotation is not null);
 
-        var frameAlerts = reviewSession?.FrameAlerts(record.StableId, record.Location.LineNumber) ?? [];
+        var frameAlerts = reviewWorkspace?.ReviewSession.FrameAlerts(record.StableId, record.Location.LineNumber) ?? [];
         var crcFailed = currentInspectorPresentation.CrcFailed;
         var asilAlarm = currentInspectorPresentation.AsilAlarm;
         InspectorAlertBorder.IsVisible = frameAlerts.Count > 0 || crcFailed || asilAlarm;
         InspectorAlertText.Text = frameAlerts.Count > 0
             ? string.Join(" · ", frameAlerts.Select(item => item.Code))
             : crcFailed ? "CRC validation failed" : asilAlarm ? "ASIL alarm active" : string.Empty;
-        var hasNavigableFindings = reviewSession?.HasNavigableFindings == true;
+        var hasNavigableFindings = reviewWorkspace?.ReviewSession.HasNavigableFindings == true;
         PreviousFindingButton.IsVisible = hasNavigableFindings;
         NextFindingButton.IsVisible = hasNavigableFindings;
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
@@ -2661,9 +2681,19 @@ public partial class MainWindow : Window
         ProtocolFieldsItemsControl.ItemsSource = currentInspectorPresentation.ProtocolRows;
     }
 
+    private void SynchronizeVisibleDecodedInspector()
+    {
+        if (currentInspectorSnapshot is null || reviewWorkspace?.CurrentSnapshot is not { } snapshot ||
+            currentInspectorSnapshot.LogicalIndex == snapshot.LogicalIndex)
+            return;
+        ShowRecord(snapshot.PrimarySource, snapshot.DecodedFrame, snapshot);
+    }
+
     private void ApplyInspectorPresentation(InspectorFramePresentation presentation, bool registerActivity)
     {
-        var selectedId = (InspectorContactsList.SelectedItem as InspectorContactRow)?.Id;
+        var selectedId = currentInspectorSnapshot is not null
+            ? reviewWorkspace?.SelectedContactId
+            : (InspectorContactsList.SelectedItem as InspectorContactRow)?.Id;
         InspectorTitleText.Text = registerActivity ? "Register" : "Frame";
         InspectorLogicalText.Text = presentation.LogicalLabel;
         InspectorTimestampText.Text = presentation.TimestampLabel;
@@ -2784,13 +2814,8 @@ public partial class MainWindow : Window
         decodedRows = [];
         diagnosticRows = [];
         diagnosticLineNumbers = [];
-        reviewSession = null;
+        reviewWorkspace = null;
         reviewRows = [];
-        reviewFilter = ReviewQueueFilter.All;
-        selectedReviewGroupId = null;
-        selectedMarkerId = null;
-        baseDiagnostics = [];
-        markers.Clear();
         ReplayTimelineSurface.SetMarkerFrames([]);
         decodeConfiguration = null;
         pendingSidecar = null;
@@ -2975,7 +3000,7 @@ public partial class MainWindow : Window
         playbackController.Load(
             replaySession.Timeline,
             autoPauseIndex,
-            (exclusiveStart, inclusiveEnd) => reviewSession?.FirstPauseIndex(exclusiveStart, inclusiveEnd));
+            (exclusiveStart, inclusiveEnd) => reviewWorkspace?.ReviewSession.FirstPauseIndex(exclusiveStart, inclusiveEnd));
         playbackController.ConfigureAutoPause(new ReplayPlaybackPauseOptions(
             SettingsPage.PlaybackPreferences.PauseOnBreak,
             SettingsPage.PlaybackPreferences.PauseOnAllBreak));
@@ -3069,6 +3094,10 @@ public partial class MainWindow : Window
 
         var clampedIndex = playbackController.Seek(logicalIndex);
         var snapshot = replayFrames?[clampedIndex] ?? replaySession.Seek(clampedIndex);
+        reviewWorkspace?.SelectFrame(clampedIndex);
+        if (reviewWorkspace?.SelectedContactId is null && InspectorContactsList.SelectedItem is not null)
+            InspectorContactsList.SelectedItem = null;
+        PaintSurface.SetHighlightedContact(reviewWorkspace?.SelectedContactId);
         RenderReplayFrame(snapshot, crossfade);
         UpdateReplayProgress(snapshot);
 
@@ -3296,9 +3325,7 @@ public partial class MainWindow : Window
 
     private void SelectReviewAt(int logicalIndex)
     {
-        if (reviewSession is null) return;
-        reviewFilter = ReviewQueueFilter.All;
-        RefreshReviewQueue();
+        if (reviewWorkspace is null) return;
         var row = reviewRows.FirstOrDefault(item => item.Group.Occurrences.Any(occurrence =>
             occurrence.LogicalIndex == logicalIndex &&
             (occurrence.Diagnostic.Severity == DiagnosticSeverity.Alarm || occurrence.Category == ReviewEventCategory.QaResult)));
@@ -3549,8 +3576,10 @@ public partial class MainWindow : Window
 
     private void RefreshPaintAnnotations()
     {
-        if (paintWorkspace is null || reviewSession is null) return;
-        var update = paintWorkspace.UpdateAnnotations(reviewSession.Diagnostics, markers);
+        if (paintWorkspace is null || reviewWorkspace is null) return;
+        var update = paintWorkspace.UpdateAnnotations(
+            reviewWorkspace.ReviewSession.Diagnostics,
+            reviewWorkspace.Markers);
         if (!update.Changed) return;
         RenderCurrentPaintScene();
         RefreshCurrentOutputVideoFrame();
@@ -3562,6 +3591,7 @@ public partial class MainWindow : Window
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayRenderMode>(option.Value, out var mode))
             return;
+        reviewWorkspace?.SetRenderMode(mode);
         ApplyPaintSettings(
             paintWorkspace.Settings with { PointView = mode },
             rebuildScene: false,

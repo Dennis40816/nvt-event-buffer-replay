@@ -161,6 +161,31 @@ public sealed class ReviewInspectorWorkspaceTests
     }
 
     [Fact]
+    public void Human_review_mutations_refresh_visible_projection_without_rebuilding_session()
+    {
+        var frames = Frames(1);
+        var workspace = new ReviewInspectorWorkspace(
+            frames,
+            [Diagnostic("WARNING", frames[0].PrimarySource, DiagnosticSeverity.Warning)]);
+        var group = Assert.Single(workspace.VisibleGroups);
+        workspace.SelectFinding(group.Id);
+        var session = workspace.ReviewSession;
+        var revision = workspace.ReviewSessionRevision;
+
+        var acknowledged = workspace.AcknowledgeFinding(group.Id);
+        Assert.Equal(ReviewWorkflowState.Acknowledged, acknowledged.WorkflowState);
+        Assert.Equal(ReviewWorkflowState.Acknowledged, workspace.SelectedFinding?.WorkflowState);
+
+        var expected = workspace.SetFindingDisposition(group.Id, ReviewDisposition.Expected);
+        Assert.Equal(ReviewDisposition.Expected, expected.Disposition);
+        var resolved = workspace.ResolveFinding(group.Id);
+        Assert.Equal(ReviewWorkflowState.Resolved, resolved.WorkflowState);
+        Assert.Same(session, workspace.ReviewSession);
+        Assert.Equal(revision, workspace.ReviewSessionRevision);
+        Assert.Equal(group.Id, workspace.SelectedFindingGroupId);
+    }
+
+    [Fact]
     public void Marker_metadata_rebuilds_once_per_change_and_keeps_evidence_availability_semantics()
     {
         var workspace = new ReviewInspectorWorkspace(

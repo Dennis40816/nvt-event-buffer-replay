@@ -718,6 +718,91 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Review_filter_navigation_walks_visible_occurrences_and_clears_hidden_selection()
+    {
+        var capture = await WriteKingstVisCaptureAsync(
+            CommonPacket(asil: 0x02, corruptCrc: true, x: 120),
+            CommonPacket(asil: 0x02, corruptCrc: true, x: 240));
+        var window = ShowWindow();
+        try
+        {
+            await window.OpenCaptureAsync(capture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var workspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            var alarmFilter = window.GetVisualDescendants().OfType<Button>()
+                .Single(button => button.Tag?.ToString() == nameof(ReviewQueueFilter.Warnings));
+            alarmFilter.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(ReviewQueueFilter.Warnings, workspace.Filter);
+            var alarmRow = Assert.Single(Required<ListBox>(window, "DiagnosticListBox").Items.OfType<ReviewGroupRow>());
+            Required<ListBox>(window, "DiagnosticListBox").SelectedItem = alarmRow;
+            Dispatcher.UIThread.RunJobs();
+            var firstOccurrence = workspace.SelectedOccurrenceId;
+
+            Required<Button>(window, "NextFindingButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(ReviewQueueFilter.Warnings, workspace.Filter);
+            Assert.NotEqual(firstOccurrence, workspace.SelectedOccurrenceId);
+            Assert.Equal(1, workspace.CurrentLogicalIndex);
+
+            Required<Button>(window, "NextFindingButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(firstOccurrence, workspace.SelectedOccurrenceId);
+            Assert.Equal(0, workspace.CurrentLogicalIndex);
+
+            var alarmOnlyFilter = window.GetVisualDescendants().OfType<Button>()
+                .Single(button => button.Tag?.ToString() == nameof(ReviewQueueFilter.Alarms));
+            alarmOnlyFilter.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(workspace.SelectedFindingGroupId);
+            Assert.False(Required<StackPanel>(window, "ReviewActionsPanel").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+            File.Delete(capture);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Fast_seek_updates_headless_contact_and_copy_before_throttled_inspector_detail()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var frames = Required<ListBox>(window, "DecodedFramesList");
+            frames.SelectedItem = frames.Items.OfType<DecodedFrameRow>().First(row => row.Touches == 3);
+            Dispatcher.UIThread.RunJobs();
+            Required<ListBox>(window, "InspectorContactsList").SelectedIndex = 1;
+            var workspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            Assert.NotNull(workspace.SelectedContactId);
+
+            typeof(MainWindow).GetMethod(
+                    "SeekReplay",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [18, false, false]);
+            Assert.Equal(18, workspace.CurrentLogicalIndex);
+            Assert.Null(workspace.SelectedContactId);
+            Assert.Null(Required<ListBox>(window, "InspectorContactsList").SelectedItem);
+
+            Required<Button>(window, "CopyInspectorButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(() => Required<TextBlock>(window, "SessionStatusText").Text?.Contains("19 / 19", StringComparison.Ordinal) == true);
+            var copied = await (TopLevel.GetTopLevel(window)?.Clipboard ??
+                throw new InvalidOperationException("Headless clipboard is unavailable.")).TryGetTextAsync();
+            Assert.StartsWith("Frame 19 / 19", copied, StringComparison.Ordinal);
+            Assert.Contains("ALL BREAK", copied);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Paint_workspace_is_authoritative_and_applies_the_smallest_redraw_for_each_setting()
     {
         var window = ShowWindow();
@@ -1879,7 +1964,9 @@ public sealed class MainWindowLayoutTests
             await window.OpenCaptureAsync(fixture);
             await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
             var workspace = Assert.IsType<ReplayPaintWorkspace>(window.PaintWorkspace);
+            var review = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
             var history = workspace.TrailHistory;
+            var reviewRevision = review.ReviewSessionRevision;
 
             Required<ToggleButton>(window, "LoopToggleButton").IsChecked = true;
             var mark = Required<Button>(window, "AddMarkerButton");
@@ -1887,6 +1974,10 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
 
             var markerRow = Assert.Single(Required<ListBox>(window, "DiagnosticListBox").Items.OfType<ReviewGroupRow>());
+            var marker = Assert.Single(review.Markers);
+            Assert.Equal(marker.StartLogicalIndex, marker.EndLogicalIndex);
+            Assert.Equal(0, marker.StartLogicalIndex);
+            Assert.Equal(reviewRevision + 1, review.ReviewSessionRevision);
             Assert.Contains("frame 1", markerRow.Message, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("frames 1-", markerRow.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Equal(1, workspace.AnnotationRevision);
@@ -1901,6 +1992,8 @@ public sealed class MainWindowLayoutTests
             markerRow = Assert.Single(Required<ListBox>(window, "DiagnosticListBox").Items.OfType<ReviewGroupRow>());
             Assert.Contains("Startup touch", markerRow.Message, StringComparison.Ordinal);
             Assert.Equal("Renamed marker · Startup touch", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Equal(reviewRevision + 2, review.ReviewSessionRevision);
+            Assert.Equal("Startup touch", Assert.Single(review.Markers).Label);
             Assert.Equal(2, workspace.AnnotationRevision);
             Assert.Equal("Startup touch", Assert.Single(
                 Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).MarkerLabels));
@@ -1915,10 +2008,91 @@ public sealed class MainWindowLayoutTests
             Assert.Equal("0", Required<TextBlock>(window, "DiagnosticCountText").Text);
             Assert.False(clear.IsEnabled);
             Assert.Equal("Cleared 2 markers", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Empty(review.Markers);
+            Assert.Equal(reviewRevision + 4, review.ReviewSessionRevision);
             Assert.Equal(4, workspace.AnnotationRevision);
             Assert.Empty(Assert.IsType<ReplayScene>(
                 Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).MarkerLabels);
             Assert.Same(history, workspace.TrailHistory);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Sidecar_import_replaces_canonical_markers_state_and_playback_options_once()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var workspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            var revision = workspace.ReviewSessionRevision;
+            var evidence = new ReplayEvidenceReference(
+                "sidecar-evidence",
+                ReplayEvidenceKind.KernelLog,
+                "portable/kernel.log",
+                Label: "kernel.log");
+            var marker = new ReplayMarker(
+                "sidecar-marker",
+                "Imported finding",
+                4,
+                4,
+                DateTimeOffset.Parse("2026-08-20T00:00:00Z", CultureInfo.InvariantCulture),
+                QaCaseIds: ["QA-1615"],
+                Evidence: [evidence]);
+            var document = new ReplaySidecarDocument(
+                ReplaySidecarDocument.CurrentSchemaVersion,
+                "test-source",
+                "capture.csv",
+                new ReplayDecodeConfiguration("0x83", null, "kingstvis"),
+                [marker],
+                [new ReviewStateSnapshot(
+                    "ANNOTATION_MARKER:sidecar-marker",
+                    ReviewWorkflowState.Acknowledged,
+                    ReviewDisposition.Expected)],
+                new Dictionary<string, bool>
+                {
+                    ["pauseOnAlarm"] = false,
+                    ["pauseOnBreak"] = true,
+                    ["pauseOnAllBreak"] = true,
+                    ["compressIdle"] = false,
+                },
+                DateTimeOffset.Parse("2026-08-20T00:00:00Z", CultureInfo.InvariantCulture));
+            var loaded = new ReplaySidecarOpenResult(
+                document,
+                true,
+                true,
+                [new ReplayEvidenceResolution(evidence, "C:\\resolved\\kernel.log", false, false)],
+                []);
+
+            typeof(MainWindow).GetMethod(
+                    "ApplySidecar",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [loaded]);
+            Dispatcher.UIThread.RunJobs();
+
+            var imported = Assert.Single(workspace.Markers);
+            Assert.Equal("sidecar-marker", imported.Id);
+            Assert.Equal("C:\\resolved\\kernel.log", Assert.Single(imported.Evidence!).Path);
+            Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+            Assert.Equal([4], Required<ReplayTimelineSurface>(window, "ReplayTimelineSurface").MarkerFrames);
+            var group = Assert.Single(workspace.ReviewSession.Groups, item => item.Id == "ANNOTATION_MARKER:sidecar-marker");
+            Assert.Equal(ReviewWorkflowState.Acknowledged, group.WorkflowState);
+            Assert.Equal(ReviewDisposition.Expected, group.Disposition);
+            Assert.False(workspace.ReviewOptions.PauseOnAlarm);
+            Assert.True(SettingsControl<CheckBox>(window, "PauseOnBreakCheckBox").IsChecked);
+            Assert.True(SettingsControl<CheckBox>(window, "PauseOnAllBreakCheckBox").IsChecked);
+            typeof(MainWindow).GetMethod(
+                    "SeekReplay",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [4, false, true]);
+            Assert.Equal("Imported finding", Assert.Single(
+                Assert.IsType<ReplayScene>(Required<ReplayPaintSurface>(window, "PaintSurface").CurrentScene).MarkerLabels));
         }
         finally
         {
@@ -1948,6 +2122,14 @@ public sealed class MainWindowLayoutTests
             Assert.Equal("ACK ×79; final NAK", transport["Data ACK"]);
             Assert.DoesNotContain("ACK ACK ACK", transport["Data ACK"]);
             Assert.Equal(80, eventBufferRead.Record.I2c?.Acked.Count);
+
+            Required<Button>(window, "CopyInspectorButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(() => Required<TextBlock>(window, "SessionStatusText").Text?.StartsWith("Copied frame", StringComparison.Ordinal) == true);
+            var copied = await (TopLevel.GetTopLevel(window)?.Clipboard ??
+                throw new InvalidOperationException("Headless clipboard is unavailable.")).TryGetTextAsync();
+            Assert.Contains($"Physical #{eventBufferRead.Record.Index} · Event Buffer", copied);
+            Assert.DoesNotContain("Common 0x83", copied);
+            Assert.Equal(-1, Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace).CurrentLogicalIndex);
         }
         finally
         {
