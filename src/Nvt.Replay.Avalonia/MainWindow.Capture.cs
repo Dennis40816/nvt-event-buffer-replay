@@ -821,13 +821,18 @@ public partial class MainWindow : Window
         ExportSelectedOutputButton.IsEnabled = false;
         AnalysisTab.IsEnabled = false;
         currentOutputReport = null;
+        outputRangeUserDefined = false;
+        InitializeOutputRange();
         ClearOutputVideoPreview();
         AnalysisHeatmapPreview.Show(null);
+        AnalysisPointPlotPreview.Show(null, outputWorkspace.Settings.Width, outputWorkspace.Settings.Height);
         AnalysisSummaryText.Text = "Decode a capture to prepare output preview.";
         OutputRangeText.Text = "-";
         OutputClockText.Text = "-";
         OutputFindingsText.Text = "-";
         OutputHotspotText.Text = "Waiting for preview";
+        OutputPointPlotText.Text = "Waiting for preview";
+        PointPlotRangeText.Text = "Selected output range";
         OutputConfigurationText.Text = "Decoder configuration will appear here.";
         OutputSourceText.Text = "Source identity will appear here.";
         AnalysisOutputText.Text = "Nothing exported in this session.";

@@ -7,6 +7,7 @@ public enum ReplayOutputContentType
 {
     Mp4Video,
     Heatmap,
+    ReportedPointPlot,
     DataPackage,
 }
 

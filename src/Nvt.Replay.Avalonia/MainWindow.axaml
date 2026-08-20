@@ -472,7 +472,7 @@
                           </Grid>
                         </Grid>
 
-                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,64,10,210">
+                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
                           <ScrollViewer x:Name="OutputSettingsScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                             <StackPanel Spacing="8">
                               <TextBlock x:Name="OutputModeTitleText" Margin="0,0,0,2" Text="VIDEO SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
@@ -524,16 +524,10 @@
                                 </Grid>
                               </Border>
 
-                              <Border Classes="outputSettingRow">
-                                <Grid ColumnDefinitions="34,92,*">
-                                  <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
-                                  <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
-                                  <Grid Grid.Column="2" ColumnDefinitions="*,12,*">
-                                    <TextBlock x:Name="OutputRangeText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                    <TextBlock x:Name="OutputClockText" Grid.Column="2" Text="-" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                  </Grid>
-                                </Grid>
-                              </Border>
+                              <StackPanel IsVisible="False">
+                                <TextBlock x:Name="OutputRangeText" Text="-" />
+                                <TextBlock x:Name="OutputClockText" Text="-" />
+                              </StackPanel>
                               <StackPanel IsVisible="False">
                                 <TextBlock Classes="fieldLabel" Text="FINDINGS" />
                                 <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
@@ -569,7 +563,7 @@
                     </Grid>
                   </Border>
 
-                  <Border x:Name="HeatmapSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,64,10,210">
+                  <Border x:Name="HeatmapSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                       <StackPanel Spacing="8">
                         <TextBlock Margin="0,0,0,2" Text="HEATMAP SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
@@ -628,6 +622,57 @@
                   </Border>
                 </Grid>
 
+                <Grid x:Name="OutputPointPlotPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="7*,12,3*">
+                  <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
+                    <Grid RowDefinitions="Auto,14,*,12,Auto">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="Reported point history" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
+                          <TextBlock Text="One dot per valid reported coordinate; color stays consistent with contact ID." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TextBlock x:Name="OutputPointPlotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                      </Grid>
+                      <controls:AnalysisPointPlotSurface x:Name="AnalysisPointPlotPreview"
+                                                         Grid.Row="2"
+                                                         MinHeight="190"
+                                                         SurfaceBrush="{DynamicResource CanvasBrush}"
+                                                         GridBrush="{DynamicResource StrongBorderBrush}"
+                                                         TextBrush="{DynamicResource CanvasMutedTextBrush}"
+                                                         ToolTipSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
+                                                         ToolTipBorderBrush="{DynamicResource AccentBorderBrush}"
+                                                         AutomationProperties.Name="Reported point history preview" />
+                      <TextBlock Grid.Row="4" Text="Hover a point for frame, ID, type, state, and coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" HorizontalAlignment="Right" />
+                    </Grid>
+                  </Border>
+
+                  <Border x:Name="PointPlotSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
+                    <StackPanel Spacing="8">
+                      <TextBlock Margin="0,0,0,2" Text="POINT PLOT" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
+                      <Border Classes="outputSettingRow">
+                        <Grid ColumnDefinitions="34,92,*">
+                          <TextBlock Text="&#xE81E;" Classes="outputSettingIcon" />
+                          <TextBlock Grid.Column="1" Text="Samples" Classes="outputSettingLabel" />
+                          <TextBlock Grid.Column="2" Text="Valid reports" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                        </Grid>
+                      </Border>
+                      <Border Classes="outputSettingRow">
+                        <Grid ColumnDefinitions="34,92,*">
+                          <TextBlock Text="&#xE790;" Classes="outputSettingIcon" />
+                          <TextBlock Grid.Column="1" Text="Color" Classes="outputSettingLabel" />
+                          <TextBlock Grid.Column="2" Text="Contact ID" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                        </Grid>
+                      </Border>
+                      <Border Classes="outputSettingRow">
+                        <Grid ColumnDefinitions="34,92,*">
+                          <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
+                          <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
+                          <TextBlock x:Name="PointPlotRangeText" Grid.Column="2" Text="Selected output range" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </Grid>
+                      </Border>
+                    </StackPanel>
+                  </Border>
+                </Grid>
+
                 <Grid x:Name="OutputPackagePanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="7*,12,3*">
                   <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
                     <StackPanel Spacing="12">
@@ -638,7 +683,7 @@
                       <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv / communication-readable.jsonl&#x0a;manifest.json&#x0a;heatmap.png" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" LineHeight="24" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
-                  <Border Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,64,10,210">
+                  <Border Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="18">
                       <StackPanel Spacing="7">
@@ -660,13 +705,14 @@
 
                 <Border Grid.Column="2"
                         ZIndex="10"
-                        Height="58"
+                        Height="126"
                         VerticalAlignment="Top"
                         Background="{DynamicResource HeaderBrush}"
                         BorderBrush="{DynamicResource StrongBorderBrush}"
                         BorderThickness="1,0,0,1"
                         Padding="14,9,10,9">
-                  <Grid ColumnDefinitions="Auto,10,*" VerticalAlignment="Center">
+                  <Grid RowDefinitions="36,10,52">
+                    <Grid ColumnDefinitions="Auto,10,*" VerticalAlignment="Center">
                     <TextBlock Text="Output type" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                     <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Classes="semanticSelect" Height="36" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
                       <ComboBox.ItemTemplate>
@@ -684,6 +730,14 @@
                       </ComboBox.SelectionBoxItemTemplate>
                     </ComboBox>
                     <TextBlock x:Name="OutputContentDescriptionText" IsVisible="False" Text="Preview and export use the same renderer" />
+                    </Grid>
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,10,*,6,Auto,6,*,8,Auto" VerticalAlignment="Center">
+                      <TextBlock Text="Frames" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                      <TextBox x:Name="OutputRangeStartTextBox" Grid.Column="2" Classes="panelSize" MinWidth="48" HorizontalAlignment="Stretch" Text="1" KeyDown="OutputRangeTextBox_OnKeyDown" LostFocus="OutputRangeTextBox_OnLostFocus" ToolTip.Tip="First source frame to export (1-based)" AutomationProperties.Name="Output range first frame" />
+                      <TextBlock Grid.Column="4" Text="to" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                      <TextBox x:Name="OutputRangeEndTextBox" Grid.Column="6" Classes="panelSize" MinWidth="48" HorizontalAlignment="Stretch" Text="1" KeyDown="OutputRangeTextBox_OnKeyDown" LostFocus="OutputRangeTextBox_OnLostFocus" ToolTip.Tip="Last source frame to export (1-based)" AutomationProperties.Name="Output range last frame" />
+                      <Button x:Name="OutputRangeFullButton" Grid.Column="8" Classes="ghost" Height="32" MinWidth="44" Padding="8,0" Content="Full" Click="OutputRangeFullButton_OnClick" ToolTip.Tip="Use the full decoded capture" AutomationProperties.Name="Use full output range" />
+                    </Grid>
                   </Grid>
                 </Border>
 
@@ -702,8 +756,8 @@
                       <TextBlock x:Name="OutputInfoFormatText" Grid.Column="1" Text="MP4 · H.264" Classes="outputInfoValue" />
                       <TextBlock Grid.Row="2" Text="Resolution" Classes="outputInfoLabel" />
                       <TextBlock x:Name="OutputInfoResolutionText" Grid.Row="2" Grid.Column="1" Text="Paint · 2304 × 1280" Classes="outputInfoValue" />
-                      <TextBlock Grid.Row="4" Text="Estimated size" Classes="outputInfoLabel" />
-                      <TextBlock x:Name="OutputInfoSizeText" Grid.Row="4" Grid.Column="1" Text="Waiting for preview" Classes="outputInfoValue" />
+                      <TextBlock x:Name="OutputInfoSizeLabelText" Grid.Row="4" Text="Estimated size" Classes="outputInfoLabel" />
+                      <TextBlock x:Name="OutputInfoSizeText" Grid.Row="4" Grid.Column="1" Text="Waiting for preview" Classes="outputInfoValue" ToolTip.Tip="H.264 and PNG sizes vary with image content and encoder settings. Exact size appears after export." />
                     </Grid>
                     <TextBlock x:Name="OutputInfoDetailText" Grid.Row="4" Text="120 FPS · range - · duration -" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                     <Button x:Name="ExportSelectedOutputButton" Grid.Row="6" Classes="primary" Height="36" MinWidth="132" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />

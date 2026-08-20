@@ -75,6 +75,7 @@ public partial class MainWindow : Window
         {
             new("MP4 video", "Preview the exact sampled replay video", "mp4"),
             new("Heatmap", "Inspect and export coordinate density", "heatmap"),
+            new("Reported points", "Export every valid historical coordinate", "points"),
             new("Data package", "Export linked QA and automation files", "package"),
         };
         HeatmapModeComboBox.ItemsSource = new SelectOption[]

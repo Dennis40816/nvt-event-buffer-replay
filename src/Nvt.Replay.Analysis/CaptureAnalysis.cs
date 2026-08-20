@@ -19,6 +19,14 @@ public sealed record AnalysisContact(
     ushort Y,
     bool Invalid);
 
+public static class AnalysisContactRules
+{
+    public static bool IsCoordinateSample(AnalysisContact contact) =>
+        !contact.Invalid &&
+        (contact.Status is TouchStatus.Enter or TouchStatus.Move ||
+         contact.Type == TouchType.Palm && contact.Status == TouchStatus.NoFinger);
+}
+
 public sealed record AnalysisEvent(
     string Id,
     int LogicalIndex,
@@ -267,9 +275,7 @@ public sealed class CaptureAnalyzer
             foreach (var contact in analysisEvent.ReportedContacts)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!contact.Invalid &&
-                    (contact.Status is TouchStatus.Enter or TouchStatus.Move ||
-                     contact.Type == TouchType.Palm && contact.Status == TouchStatus.NoFinger))
+                if (AnalysisContactRules.IsCoordinateSample(contact))
                 {
                     validSampleList.Add(contact);
                     maximumSampleX = Math.Max(maximumSampleX, contact.X);

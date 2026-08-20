@@ -195,7 +195,7 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             CaptureHash(window, "28-golden-heatmap-repeated-dark.png");
             Required<ComboBox>(window, "HeatmapModeComboBox").SelectedIndex = 0;
-            outputContent.SelectedIndex = 2;
+            outputContent.SelectedIndex = 3;
             Dispatcher.UIThread.RunJobs();
             var packageDark = CaptureHash(window, "10-golden-package-dark.png");
             outputContent.SelectedIndex = 0;
@@ -555,14 +555,15 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(0, Required<Grid>(window, "WorkspaceShellGrid").ColumnDefinitions[3].Width.Value);
 
             var outputContent = Required<ComboBox>(window, "OutputContentComboBox");
-            Assert.Equal(3, outputContent.ItemCount);
+            Assert.Equal(4, outputContent.ItemCount);
             Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
             Assert.False(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
+            Assert.False(Required<Grid>(window, "OutputPointPlotPanel").IsVisible);
             Assert.False(Required<Grid>(window, "OutputPackagePanel").IsVisible);
             Assert.True(Required<ToggleButton>(window, "OutputPreviewRepeatToggleButton").IsChecked);
             Assert.Equal("MP4 · H.264", Required<TextBlock>(window, "OutputInfoFormatText").Text);
             Assert.Contains("Paint ·", Required<TextBlock>(window, "OutputInfoResolutionText").Text);
-            Assert.StartsWith("Approx.", Required<TextBlock>(window, "OutputInfoSizeText").Text);
+            Assert.StartsWith("Estimated", Required<TextBlock>(window, "OutputInfoSizeText").Text);
             Assert.Contains("120 FPS", Required<TextBlock>(window, "OutputInfoDetailText").Text);
 
             var videoPanel = Required<Grid>(window, "OutputVideoPanel");
@@ -620,6 +621,22 @@ public sealed class MainWindowLayoutTests
             Assert.True(heatmap.VisibleCellCount < 35);
 
             outputContent.SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
+            var pointPlotPanel = Required<Grid>(window, "OutputPointPlotPanel");
+            Assert.True(pointPlotPanel.IsVisible);
+            var pointPlotSettings = Required<Border>(window, "PointPlotSettingsRailBorder");
+            var pointPlotSurface = Required<AnalysisPointPlotSurface>(window, "AnalysisPointPlotPreview");
+            Assert.True(pointPlotSurface.PointCount > 0);
+            Assert.True(BoundsInside(pointPlotSurface, pointPlotPanel).Right < BoundsInside(pointPlotSettings, pointPlotPanel).Left);
+            Assert.Equal("Export PNG", exportButton.Content);
+            Assert.Equal("PNG · reported points", Required<TextBlock>(window, "OutputInfoFormatText").Text);
+            Assert.Contains("points", Required<TextBlock>(window, "OutputInfoDetailText").Text);
+            var pointPlotExportBounds = BoundsInside(exportButton, window);
+            Assert.Equal(videoExportBounds.Right, pointPlotExportBounds.Right);
+            Assert.Equal(videoExportBounds.Bottom, pointPlotExportBounds.Bottom);
+
+            outputContent.SelectedIndex = 3;
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Grid>(window, "OutputPackagePanel").IsVisible);
             Assert.Equal("Export package", exportButton.Content);
@@ -1220,6 +1237,21 @@ public sealed class MainWindowLayoutTests
             Assert.Contains("kingstvis", window.OutputReplayIdentityForTesting, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("0x00000000", window.OutputReplayIdentityForTesting, StringComparison.Ordinal);
 
+            var outputRangeStart = Required<TextBox>(window, "OutputRangeStartTextBox");
+            var outputRangeEnd = Required<TextBox>(window, "OutputRangeEndTextBox");
+            Assert.Equal("1", outputRangeStart.Text);
+            Assert.Equal("19", outputRangeEnd.Text);
+            outputRangeStart.Text = "2";
+            outputRangeEnd.Text = "5";
+            outputRangeEnd.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity?.Settings.Range == new AnalysisRange(1, 4));
+            Assert.Equal(new AnalysisRange(1, 4), window.CreateCurrentOutputExportOptions("range.mp4").Range);
+            Assert.Equal("Loop: off", Required<TextBlock>(window, "LoopRangeText").Text);
+            Required<Button>(window, "OutputRangeFullButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity?.Settings.Range == new AnalysisRange(0, 18));
+            Assert.Equal("1", outputRangeStart.Text);
+            Assert.Equal("19", outputRangeEnd.Text);
+
             var initialPlan = window.OutputPreviewFramePlan;
             var initialPlanBuilds = window.OutputPreviewPlanBuildCount;
             var initialReportBuilds = window.OutputReportBuildCount;
@@ -1534,9 +1566,13 @@ public sealed class MainWindowLayoutTests
             var heatmap = await window.GetCurrentOutputReportForTestingAsync();
             content.SelectedIndex = 2;
             Dispatcher.UIThread.RunJobs();
+            var points = await window.GetCurrentOutputReportForTestingAsync();
+            content.SelectedIndex = 3;
+            Dispatcher.UIThread.RunJobs();
             var package = await window.GetCurrentOutputReportForTestingAsync();
 
             Assert.Same(preview, heatmap);
+            Assert.Same(preview, points);
             Assert.Same(preview, package);
             Assert.Equal(1, reports.BuildCount);
 
@@ -1793,6 +1829,11 @@ public sealed class MainWindowLayoutTests
             VerifySnapshotMatrix(window, "heatmap");
 
             Required<ComboBox>(window, "OutputContentComboBox").SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Grid>(window, "OutputPointPlotPanel").IsVisible);
+            VerifySnapshotMatrix(window, "points");
+
+            Required<ComboBox>(window, "OutputContentComboBox").SelectedIndex = 3;
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Grid>(window, "OutputPackagePanel").IsVisible);
             VerifySnapshotMatrix(window, "package");
@@ -2129,6 +2170,76 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.NotNull(surface.HoveredCell);
             Assert.True(surface.HoveredCell!.Count >= 3);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Reported_point_surface_keeps_every_valid_coordinate_and_exposes_indexed_hover()
+    {
+        var surface = new AnalysisPointPlotSurface
+        {
+            SurfaceBrush = Brushes.Black,
+            GridBrush = Brushes.DimGray,
+            TextBrush = Brushes.White,
+        };
+        var window = new Window { Width = 640, Height = 360, Content = surface };
+        window.Show();
+        try
+        {
+            var contacts = Enumerable.Range(0, 100_000)
+                .Select(index => new AnalysisContact(
+                    (byte)((index % 10) + 1),
+                    index % 10 == 8 ? Nvt.Replay.Core.TouchType.Glove : Nvt.Replay.Core.TouchType.Finger,
+                    Nvt.Replay.Core.TouchStatus.Move,
+                    (ushort)(index % 2048),
+                    (ushort)((index * 7) % 1280),
+                    Invalid: false))
+                .ToArray();
+            surface.ShowEvents(
+                [new AnalysisEvent("bulk", 6, "source", ["source"], TimeSpan.Zero, TimeSpan.Zero, false, true, false, contacts)],
+                2048,
+                1280);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(100_000, surface.PointCount);
+            Assert.Equal(10, surface.ContactIdCount);
+            Assert.InRange(surface.OccupiedSpatialCellCount, 1, 64 * 36);
+
+            surface.ShowEvents(
+                [new AnalysisEvent(
+                    "hover",
+                    8,
+                    "source",
+                    ["source"],
+                    TimeSpan.Zero,
+                    TimeSpan.Zero,
+                    false,
+                    true,
+                    false,
+                    [
+                        new AnalysisContact(4, Nvt.Replay.Core.TouchType.Glove, Nvt.Replay.Core.TouchStatus.Move, 1024, 640, false),
+                        new AnalysisContact(5, Nvt.Replay.Core.TouchType.Finger, Nvt.Replay.Core.TouchStatus.Break, 1024, 640, false),
+                        new AnalysisContact(6, Nvt.Replay.Core.TouchType.Finger, Nvt.Replay.Core.TouchStatus.Move, 1024, 640, true),
+                    ])],
+                2048,
+                1280);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(1, surface.PointCount);
+            var sourcePoint = new Point(
+                58 + ((1024d / 2048d) * Math.Max(1, surface.Bounds.Width - 86)),
+                24 + ((640d / 1280d) * Math.Max(1, surface.Bounds.Height - 70)));
+            var hoverPoint = surface.TranslatePoint(sourcePoint, window) ??
+                throw new InvalidOperationException("Reported point plot could not translate its hover point.");
+            window.MouseMove(hoverPoint);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal<byte?>(4, surface.HoveredPoint?.ContactId);
+            Assert.Equal<ushort?>(1024, surface.HoveredPoint?.X);
+            Assert.Equal<ushort?>(640, surface.HoveredPoint?.Y);
         }
         finally
         {

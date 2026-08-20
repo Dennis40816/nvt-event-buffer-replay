@@ -85,6 +85,7 @@ public partial class MainWindow : Window
             SettingsPage.PlaybackPreferences.PauseOnAllBreak));
         SynchronizePaintPresentation(fit: true);
         SyncOutputResolutionWithPanel();
+        InitializeOutputRange();
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
     }
 

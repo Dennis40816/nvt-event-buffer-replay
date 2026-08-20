@@ -48,6 +48,8 @@ public partial class MainWindow : Window
     private bool outputFullscreenActive;
     private WindowState outputFullscreenPreviousWindowState = WindowState.Normal;
     private bool configuringOutputSettings;
+    private bool configuringOutputRange;
+    private bool outputRangeUserDefined;
     internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
     internal long OutputSettingsRevision => outputWorkspace.Revision;
     internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => outputVideoPreviewPlan?.Identity;
@@ -81,27 +83,32 @@ public partial class MainWindow : Window
     private void OutputContentComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (OutputContentComboBox?.SelectedItem is not SelectOption option ||
-            OutputVideoPanel is null || OutputHeatmapPanel is null || OutputPackagePanel is null)
+            OutputVideoPanel is null || OutputHeatmapPanel is null ||
+            OutputPointPlotPanel is null || OutputPackagePanel is null)
             return;
 
         var mp4 = option.Value == "mp4";
         var heatmap = option.Value == "heatmap";
+        var points = option.Value == "points";
         var outputTypeChanged = outputWorkspace.Update(outputWorkspace.Settings with
         {
             ContentType = option.Value switch
             {
                 "heatmap" => ReplayOutputContentType.Heatmap,
+                "points" => ReplayOutputContentType.ReportedPointPlot,
                 "package" => ReplayOutputContentType.DataPackage,
                 _ => ReplayOutputContentType.Mp4Video,
             },
         });
         OutputVideoPanel.IsVisible = mp4;
         OutputHeatmapPanel.IsVisible = heatmap;
+        OutputPointPlotPanel.IsVisible = points;
         OutputPackagePanel.IsVisible = option.Value == "package";
         OutputModeTitleText.Text = option.Label.ToUpperInvariant();
         ExportSelectedOutputButton.Content = option.Value switch
         {
             "heatmap" => "Export PNG",
+            "points" => "Export PNG",
             "package" => "Export package",
             _ => "Export MP4",
         };
@@ -111,6 +118,7 @@ public partial class MainWindow : Window
         if (!mp4) StopOutputVideoPreviewPlayback();
         if (!mp4) OutputExportWarningPanel.IsVisible = false;
         if (heatmap) RefreshHeatmapPresentation();
+        if (points) RefreshPointPlotPresentation();
         UpdateOutputExportButtonAvailability();
         if (outputTypeChanged) RefreshOutputPreviewIfVisible();
     }
@@ -167,8 +175,94 @@ public partial class MainWindow : Window
             ExportAnalysisButton_OnClick(sender, e);
         else if (value == "heatmap")
             ExportHeatmapButton_OnClick(sender, e);
+        else if (value == "points")
+            ExportPointPlotButton_OnClick(sender, e);
         else
             ExportReplayButton_OnClick(sender, e);
+    }
+
+    private async void ExportPointPlotButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (session is null || replaySession is null || decodeConfiguration is null || replaySession.Count == 0) return;
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export reported point history",
+            SuggestedFileName = Path.GetFileNameWithoutExtension(session.SourcePath) + ".reported-points.png",
+            DefaultExtension = "png",
+            FileTypeChoices = [new FilePickerFileType("PNG image") { Patterns = ["*.png"] }],
+        });
+        var path = file?.TryGetLocalPath();
+        if (path is null) return;
+
+        operationCancellation?.Cancel();
+        operationCancellation?.Dispose();
+        operationCancellation = new CancellationTokenSource();
+        var cancellationToken = operationCancellation.Token;
+        var operation = CaptureOutputOperation(SelectedOutputRange());
+        SetBusy(true, "Rendering reported point PNG");
+        try
+        {
+            var reportSnapshot = await GetOutputReportAsync(operation.ReportIdentity, cancellationToken);
+            ThrowIfStaleOutputOperation(operation);
+            currentOutputReport = reportSnapshot.Report;
+            RefreshPointPlotPresentation();
+            await WriteCurrentPointPlotPreviewAsync(path, currentOutputReport, cancellationToken);
+            ThrowIfStaleOutputOperation(operation);
+            SetActualOutputSize(path);
+            AnalysisOutputText.Text =
+                $"Reported point PNG · {path}\n{AnalysisPointPlotPreview.PointCount:N0} points · " +
+                $"range {currentOutputReport.Manifest.Range.StartLogicalIndex + 1:N0}-{currentOutputReport.Manifest.Range.EndLogicalIndex + 1:N0}";
+            SessionStatusText.Text = "Reported point PNG exported";
+        }
+        catch (OperationCanceledException)
+        {
+            SessionStatusText.Text = "Point plot export cancelled; no partial output was kept";
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+        {
+            SessionStatusText.Text = $"Point plot export failed · {exception.Message}";
+        }
+        finally
+        {
+            SetBusy(false, SessionStatusText.Text ?? "Ready");
+        }
+    }
+
+    private async Task WriteCurrentPointPlotPreviewAsync(
+        string path,
+        CaptureAnalysisReport report,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        AnalysisPointPlotPreview.ClearHover();
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+        var width = outputWorkspace.Settings.Width;
+        var height = outputWorkspace.Settings.Height;
+        var exportSurface = new AnalysisPointPlotSurface
+        {
+            Width = width,
+            Height = height,
+            SurfaceBrush = AnalysisPointPlotPreview.SurfaceBrush,
+            GridBrush = AnalysisPointPlotPreview.GridBrush,
+            TextBrush = AnalysisPointPlotPreview.TextBrush,
+            ToolTipSurfaceBrush = AnalysisPointPlotPreview.ToolTipSurfaceBrush,
+            ToolTipBorderBrush = AnalysisPointPlotPreview.ToolTipBorderBrush,
+            RenderThemeOverride = AnalysisPointPlotPreview.ActualThemeVariant == ThemeVariant.Light
+                ? ReplayRenderTheme.Light
+                : ReplayRenderTheme.Dark,
+        };
+        exportSurface.Show(report, width, height);
+        exportSurface.Measure(new Size(width, height));
+        exportSurface.Arrange(new Rect(0, 0, width, height));
+        using var bitmap = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96, 96));
+        bitmap.Render(exportSurface);
+        await using var memory = new MemoryStream();
+        bitmap.Save(memory, PngBitmapEncoderOptions.Default);
+        var png = memory.ToArray();
+        await AtomicOutput.WriteAsync(
+            path,
+            (stream, token) => stream.WriteAsync(png, token).AsTask(),
+            cancellationToken);
     }
 
     private async void ExportHeatmapButton_OnClick(object? sender, RoutedEventArgs e)
@@ -199,6 +293,7 @@ public partial class MainWindow : Window
             RefreshHeatmapPresentation();
             await WriteCurrentHeatmapPreviewAsync(path, cancellationToken);
             ThrowIfStaleOutputOperation(operation);
+            SetActualOutputSize(path);
             var mode = SelectedHeatmapMode() == "repeated" ? $"repeated N≥{heatmapMinimumCount:N0}" : "all recorded points";
             AnalysisOutputText.Text = $"Heatmap PNG · {path}\n{AnalysisHeatmapPreview.VisibleSampleCount:N0} visible samples · {mode} · range {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0}";
             SessionStatusText.Text = "Heatmap PNG exported";
@@ -264,6 +359,7 @@ public partial class MainWindow : Window
                 cancellationToken,
                 reportSnapshot.Inputs.Capture.Records);
             ThrowIfStaleOutputOperation(operation);
+            SetActualOutputSize(result.Directory);
             AnalysisSummaryText.Text =
                 $"{report.Events.Count:N0} frames · {report.DiagnosticAggregates.Count:N0} finding groups · " +
                 $"{report.Asil.Assertions} ASIL assert / {report.Asil.Clears} clear · {report.Hotspot.SampleCount:N0} hotspot samples";
@@ -402,6 +498,7 @@ public partial class MainWindow : Window
         PresentOutputExportSnapshot(completed);
         if (completed.Status == ExportJobStatus.Succeeded && completed.Result is { } result)
         {
+            SetActualOutputSize(result.OutputPath);
             AnalysisOutputText.Text =
                 $"{result.Kind} · {result.OutputPath}\n{result.OutputFrameCount:N0} frames · {result.Duration.TotalSeconds:0.###} s\nmanifest={result.ManifestPath}" +
                 (result.Warning is null ? string.Empty : $"\nWARNING: {result.Warning}");
@@ -511,6 +608,101 @@ public partial class MainWindow : Window
     }
 
     private void OutputCustomSetting_OnLostFocus(object? sender, RoutedEventArgs e) => ApplyOutputCustomSettings();
+
+    private void OutputRangeTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        ApplyOutputRangeFromControls();
+        e.Handled = true;
+    }
+
+    private void OutputRangeTextBox_OnLostFocus(object? sender, RoutedEventArgs e) =>
+        ApplyOutputRangeFromControls();
+
+    private void OutputRangeFullButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (replaySession is not { Count: > 0 }) return;
+        outputRangeUserDefined = false;
+        ApplyOutputRange(new AnalysisRange(0, replaySession.Count - 1), showStatus: true);
+    }
+
+    private void ApplyOutputRangeFromControls()
+    {
+        if (configuringOutputRange || replaySession is not { Count: > 0 }) return;
+        if (!int.TryParse(OutputRangeStartTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var start) ||
+            !int.TryParse(OutputRangeEndTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var end) ||
+            start < 1 || end < start || end > replaySession.Count)
+        {
+            SessionStatusText.Text = $"Output range must use frames 1-{replaySession.Count:N0}, with From no greater than To.";
+            SynchronizeOutputRangeControls(SelectedOutputRange());
+            return;
+        }
+
+        outputRangeUserDefined = true;
+        ApplyOutputRange(new AnalysisRange(start - 1, end - 1), showStatus: true);
+    }
+
+    private void InitializeOutputRange()
+    {
+        if (replaySession is not { Count: > 0 })
+        {
+            outputRangeUserDefined = false;
+            ApplyOutputRange(new AnalysisRange(0, 0), showStatus: false, refreshPreview: false);
+            return;
+        }
+
+        var existing = outputWorkspace.Settings.Range;
+        var preserveExisting = outputRangeUserDefined &&
+                               existing.StartLogicalIndex >= 0 &&
+                               existing.EndLogicalIndex >= existing.StartLogicalIndex &&
+                               existing.EndLogicalIndex < replaySession.Count;
+        var range = preserveExisting
+            ? existing
+            : new AnalysisRange(0, replaySession.Count - 1);
+        if (!preserveExisting) outputRangeUserDefined = false;
+        ApplyOutputRange(range, showStatus: false, refreshPreview: false);
+    }
+
+    private void ApplyOutputRange(
+        AnalysisRange range,
+        bool showStatus,
+        bool refreshPreview = true)
+    {
+        if (replaySession is { Count: > 0 })
+        {
+            var start = Math.Clamp(range.StartLogicalIndex, 0, replaySession.Count - 1);
+            var end = Math.Clamp(range.EndLogicalIndex, start, replaySession.Count - 1);
+            range = new AnalysisRange(start, end);
+        }
+        else
+        {
+            range = new AnalysisRange(0, 0);
+        }
+
+        var changed = outputWorkspace.Update(outputWorkspace.Settings with { Range = range });
+        SynchronizeOutputRangeControls(range);
+        OutputVideoTimeline.SetSourceRange(replaySession?.Count ?? 0, range.StartLogicalIndex, range.EndLogicalIndex);
+        RefreshOutputInfo();
+        if (!changed) return;
+        if (showStatus)
+            SessionStatusText.Text = $"Output range set to frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
+        if (refreshPreview) RefreshOutputPreviewIfVisible();
+    }
+
+    private void SynchronizeOutputRangeControls(AnalysisRange range)
+    {
+        if (OutputRangeStartTextBox is null || OutputRangeEndTextBox is null) return;
+        configuringOutputRange = true;
+        try
+        {
+            OutputRangeStartTextBox.Text = (range.StartLogicalIndex + 1).ToString(CultureInfo.InvariantCulture);
+            OutputRangeEndTextBox.Text = (range.EndLogicalIndex + 1).ToString(CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            configuringOutputRange = false;
+        }
+    }
 
     private void ApplyOutputCustomSettings()
     {
@@ -631,6 +823,17 @@ public partial class MainWindow : Window
                 OutputInfoDetailText.Text = $"{samples:N0} samples · {rangeText}";
                 break;
             }
+            case "points":
+            {
+                var samples = AnalysisPointPlotPreview?.PointCount ?? 0;
+                OutputInfoFormatText.Text = "PNG · reported points";
+                OutputInfoResolutionText.Text = $"Paint · {settings.Width} × {settings.Height}";
+                OutputInfoSizeText.Text = FormatEstimatedRange(
+                    EstimateRasterBytes(settings.Width, settings.Height, 0.04),
+                    EstimateRasterBytes(settings.Width, settings.Height, 0.55));
+                OutputInfoDetailText.Text = $"{samples:N0} points · {rangeText}";
+                break;
+            }
             case "package":
             {
                 var events = currentOutputReport?.Events.Count ?? 0;
@@ -660,6 +863,7 @@ public partial class MainWindow : Window
                 break;
             }
         }
+        OutputInfoSizeLabelText.Text = "Estimated size";
     }
 
     private static long EstimateVideoBytes(int width, int height, long frameCount, double bitsPerPixelPerFrame) =>
@@ -670,7 +874,26 @@ public partial class MainWindow : Window
         (long)Math.Ceiling(Math.Max(0, width) * (double)Math.Max(0, height) * Math.Max(0, bytesPerPixel));
 
     private static string FormatEstimatedRange(long minimumBytes, long maximumBytes) =>
-        $"Approx. {FormatFileSize(Math.Min(minimumBytes, maximumBytes))}-{FormatFileSize(Math.Max(minimumBytes, maximumBytes))}";
+        $"Estimated {FormatFileSize(Math.Min(minimumBytes, maximumBytes))}-{FormatFileSize(Math.Max(minimumBytes, maximumBytes))}";
+
+    private void SetActualOutputSize(string path)
+    {
+        try
+        {
+            var bytes = File.Exists(path)
+                ? new FileInfo(path).Length
+                : Directory.Exists(path)
+                    ? Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories).Sum(file => new FileInfo(file).Length)
+                    : -1;
+            if (bytes < 0) return;
+            OutputInfoSizeLabelText.Text = "Actual size";
+            OutputInfoSizeText.Text = FormatFileSize(bytes);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // The export succeeded. A size probe failure must not turn it into a failed export.
+        }
+    }
 
     private static string FormatFileSize(long bytes)
     {
@@ -688,9 +911,10 @@ public partial class MainWindow : Window
     {
         if (replaySession is null || replaySession.Count == 0)
             return new AnalysisRange(0, 0);
-        return loopIn is { } start && loopOut is { } end
-            ? new AnalysisRange(Math.Min(start, end), Math.Max(start, end))
-            : new AnalysisRange(0, replaySession.Count - 1);
+        var range = outputWorkspace.Settings.Range;
+        var start = Math.Clamp(range.StartLogicalIndex, 0, replaySession.Count - 1);
+        var end = Math.Clamp(range.EndLogicalIndex, start, replaySession.Count - 1);
+        return new AnalysisRange(start, end);
     }
 
     private ReplayExportOptions CreateReplayExportOptions(string path)
@@ -866,6 +1090,7 @@ public partial class MainWindow : Window
             AnalysisSummaryText.Text = "Output preview unavailable";
             OutputHotspotText.Text = exception.Message;
             AnalysisHeatmapPreview.Show(null);
+            AnalysisPointPlotPreview.Show(null, outputWorkspace.Settings.Width, outputWorkspace.Settings.Height);
             ClearOutputVideoPreview();
         }
         finally
@@ -902,6 +1127,7 @@ public partial class MainWindow : Window
         OutputSourceText.Text =
             $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{FormatSha256(session.SourceSha256)}";
         RefreshHeatmapPresentation();
+        RefreshPointPlotPresentation();
         if (preview is not null)
             PrepareOutputVideoPreview(preview, clockName, speed);
         RefreshOutputInfo();
@@ -926,6 +1152,25 @@ public partial class MainWindow : Window
             $"Frames {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0} · " +
             $"{report.Hotspot.Columns} × {report.Hotspot.Rows} grid" +
             (hiddenSamples > 0 ? $" · {hiddenSamples:N0} samples below N" : string.Empty);
+        RefreshOutputInfo();
+    }
+
+    private void RefreshPointPlotPresentation()
+    {
+        if (AnalysisPointPlotPreview is null) return;
+        var settings = outputWorkspace.Settings;
+        AnalysisPointPlotPreview.Show(currentOutputReport, settings.Width, settings.Height);
+        if (currentOutputReport is not { } report)
+        {
+            OutputPointPlotText.Text = "Waiting for preview";
+            PointPlotRangeText.Text = "Selected output range";
+            return;
+        }
+
+        OutputPointPlotText.Text =
+            $"{AnalysisPointPlotPreview.PointCount:N0} points · {AnalysisPointPlotPreview.ContactIdCount:N0} contact IDs";
+        PointPlotRangeText.Text =
+            $"Frames {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0}";
         RefreshOutputInfo();
     }
 
@@ -985,8 +1230,8 @@ public partial class MainWindow : Window
 
     private void OutputVideoTimeline_OnRangeChanged(object? sender, OutputVideoRangeEventArgs e)
     {
-        ApplyLoopConfiguration(loopEnabled, e.StartLogicalIndex, e.EndLogicalIndex);
-        UpdateLoopText();
+        outputRangeUserDefined = true;
+        ApplyOutputRange(new AnalysisRange(e.StartLogicalIndex, e.EndLogicalIndex), showStatus: true);
     }
 
     private void OutputPreviewFullscreenButton_OnClick(object? sender, RoutedEventArgs e) => EnterOutputFullscreen();
@@ -1144,6 +1389,7 @@ public partial class MainWindow : Window
         outputPreviewPlanError = null;
         currentOutputReport = null;
         AnalysisHeatmapPreview.Show(null);
+        AnalysisPointPlotPreview.Show(null, outputWorkspace.Settings.Width, outputWorkspace.Settings.Height);
         ClearOutputVideoPreview();
     }
 
