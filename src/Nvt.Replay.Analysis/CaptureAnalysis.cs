@@ -165,68 +165,136 @@ public sealed class CaptureAnalyzer
             }
         }
 
-        var selectedDiagnostics = diagnostics
-            .Where(item => eventIdsBySource.ContainsKey(item.SourceRecordId) || !allReplaySourceIds.Contains(item.SourceRecordId))
-            .Select((diagnostic, index) => new AnalysisDiagnostic(
-                $"diagnostic-{index:D8}-{diagnostic.Code}",
+        var selectedDiagnosticList = new List<AnalysisDiagnostic>();
+        foreach (var diagnostic in diagnostics)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!eventIdsBySource.ContainsKey(diagnostic.SourceRecordId) &&
+                allReplaySourceIds.Contains(diagnostic.SourceRecordId))
+                continue;
+            var diagnosticIndex = selectedDiagnosticList.Count;
+            selectedDiagnosticList.Add(new AnalysisDiagnostic(
+                $"diagnostic-{diagnosticIndex:D8}-{diagnostic.Code}",
                 diagnostic.Severity,
                 diagnostic.Code,
                 diagnostic.Message,
                 diagnostic.SourceRecordId,
                 diagnostic.Location,
                 eventIdsBySource.GetValueOrDefault(diagnostic.SourceRecordId, []).Distinct(StringComparer.Ordinal).ToArray(),
-                diagnostic.Details ?? new Dictionary<string, string>()))
-            .ToArray();
+                diagnostic.Details ?? new Dictionary<string, string>()));
+        }
+        var selectedDiagnostics = selectedDiagnosticList.ToArray();
 
-        var reviewByCode = (review?.Groups ?? [])
-            .GroupBy(group => group.Code, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-        var aggregates = selectedDiagnostics
-            .GroupBy(item => item.Code, StringComparer.Ordinal)
-            .OrderBy(group => group.Key, StringComparer.Ordinal)
-            .Select(group =>
+        var reviewByCode = new Dictionary<string, ReviewEventGroup>(StringComparer.Ordinal);
+        foreach (var group in review?.Groups ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            reviewByCode.TryAdd(group.Code, group);
+        }
+        var diagnosticsByCode = new Dictionary<string, List<AnalysisDiagnostic>>(StringComparer.Ordinal);
+        foreach (var diagnostic in selectedDiagnostics)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!diagnosticsByCode.TryGetValue(diagnostic.Code, out var group))
+                diagnosticsByCode[diagnostic.Code] = group = [];
+            group.Add(diagnostic);
+        }
+        var aggregateList = new List<AnalysisDiagnosticAggregate>(diagnosticsByCode.Count);
+        foreach (var code in diagnosticsByCode.Keys.Order(StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var group = diagnosticsByCode[code];
+            var state = reviewByCode.GetValueOrDefault(code);
+            var severity = group[0].Severity;
+            var diagnosticIds = new string[group.Count];
+            var eventIds = new List<string>();
+            var uniqueEventIds = new HashSet<string>(StringComparer.Ordinal);
+            var sourceIds = new List<string>();
+            var uniqueSourceIds = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < group.Count; index++)
             {
-                var state = reviewByCode.GetValueOrDefault(group.Key);
-                return new AnalysisDiagnosticAggregate(
-                    group.Key,
-                    group.Max(item => item.Severity),
-                    group.Count(),
-                    group.Select(item => item.Id).ToArray(),
-                    group.SelectMany(item => item.EventIds).Distinct(StringComparer.Ordinal).ToArray(),
-                    group.Select(item => item.SourceRecordId).Distinct(StringComparer.Ordinal).ToArray(),
-                    state?.WorkflowState ?? ReviewWorkflowState.Open,
-                    state?.Disposition ?? ReviewDisposition.None);
-            })
-            .ToArray();
+                cancellationToken.ThrowIfCancellationRequested();
+                var diagnostic = group[index];
+                if (diagnostic.Severity > severity) severity = diagnostic.Severity;
+                diagnosticIds[index] = diagnostic.Id;
+                if (uniqueSourceIds.Add(diagnostic.SourceRecordId)) sourceIds.Add(diagnostic.SourceRecordId);
+                foreach (var eventId in diagnostic.EventIds)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (uniqueEventIds.Add(eventId)) eventIds.Add(eventId);
+                }
+            }
+            aggregateList.Add(new AnalysisDiagnosticAggregate(
+                code,
+                severity,
+                group.Count,
+                diagnosticIds,
+                eventIds,
+                sourceIds,
+                state?.WorkflowState ?? ReviewWorkflowState.Open,
+                state?.Disposition ?? ReviewDisposition.None));
+        }
+        var aggregates = aggregateList.ToArray();
 
         var timeline = replay.Timeline;
         var startEntry = timeline[selected.StartLogicalIndex];
         var endEntry = timeline[selected.EndLogicalIndex];
+        var syntheticTimestampFrames = 0;
+        var compressedIdleGaps = 0;
+        foreach (var item in events)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (item.TimestampSynthetic) syntheticTimestampFrames++;
+        }
+        for (var index = selected.StartLogicalIndex; index <= selected.EndLogicalIndex; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (timeline[index].IdleGapCompressed) compressedIdleGaps++;
+        }
         var clock = new AnalysisClockSummary(
-            events.All(item => !item.TimestampSynthetic) ? "captured" : events.All(item => item.TimestampSynthetic) ? "synthetic-frame" : "mixed",
+            syntheticTimestampFrames == 0 ? "captured" : syntheticTimestampFrames == events.Count ? "synthetic-frame" : "mixed",
             endEntry.RecordedTime - startEntry.RecordedTime,
             endEntry.FrameTime - startEntry.FrameTime,
-            events.Count(item => item.TimestampSynthetic),
-            timeline.Skip(selected.StartLogicalIndex).Take(events.Count).Count(item => item.IdleGapCompressed));
+            syntheticTimestampFrames,
+            compressedIdleGaps);
 
-        var validSamples = events.SelectMany(item => item.ReportedContacts)
-            .Where(contact => !contact.Invalid && (contact.Status is TouchStatus.Enter or TouchStatus.Move || contact.Type == TouchType.Palm && contact.Status == TouchStatus.NoFinger))
-            .ToArray();
+        var validSampleList = new List<AnalysisContact>();
+        var maximumSampleX = 0d;
+        var maximumSampleY = 0d;
+        foreach (var analysisEvent in events)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (var contact in analysisEvent.ReportedContacts)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!contact.Invalid &&
+                    (contact.Status is TouchStatus.Enter or TouchStatus.Move ||
+                     contact.Type == TouchType.Palm && contact.Status == TouchStatus.NoFinger))
+                {
+                    validSampleList.Add(contact);
+                    maximumSampleX = Math.Max(maximumSampleX, contact.X);
+                    maximumSampleY = Math.Max(maximumSampleY, contact.Y);
+                }
+            }
+        }
+        var validSamples = validSampleList.ToArray();
         var transform = new AnalysisCoordinateTransform(
             "linear-origin-top-left",
             0,
-            NiceExtent(validSamples.Select(item => (double)item.X).DefaultIfEmpty(1920).Max(), 1920),
+            NiceExtent(maximumSampleX, 1920),
             0,
-            NiceExtent(validSamples.Select(item => (double)item.Y).DefaultIfEmpty(1080).Max(), 1080));
+            NiceExtent(maximumSampleY, 1080));
         var counts = new int[heatmapColumns * heatmapRows];
         foreach (var sample in validSamples)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var column = Math.Clamp((int)(sample.X / transform.MaximumX * heatmapColumns), 0, heatmapColumns - 1);
             var row = Math.Clamp((int)(sample.Y / transform.MaximumY * heatmapRows), 0, heatmapRows - 1);
             counts[(row * heatmapColumns) + column]++;
         }
         var hotspot = new AnalysisHotspot(heatmapColumns, heatmapRows, counts, validSamples.Length, transform);
-        var asil = BuildAsilSummary(selectedDiagnostics, events, review);
+        var asil = BuildAsilSummary(selectedDiagnostics, events, review, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         var manifest = new AnalysisManifest(
             1,
             Path.GetFileName(sourcePath),
@@ -244,26 +312,53 @@ public sealed class CaptureAnalyzer
     private static AnalysisAsilSummary BuildAsilSummary(
         IReadOnlyList<AnalysisDiagnostic> diagnostics,
         IReadOnlyList<AnalysisEvent> events,
-        ReviewSession? review)
+        ReviewSession? review,
+        CancellationToken cancellationToken)
     {
-        var transitions = diagnostics
-            .Where(item => item.Code is "COMMON_ASIL_ALARM" or "COMMON_ASIL_CLEARED")
-            .Select(item => (Diagnostic: item, Event: events.FirstOrDefault(candidate => item.EventIds.Contains(candidate.Id))))
-            .Where(item => item.Event is not null)
-            .OrderBy(item => item.Event!.LogicalIndex)
-            .ToArray();
+        var eventsById = new Dictionary<string, AnalysisEvent>(events.Count, StringComparer.Ordinal);
+        foreach (var analysisEvent in events)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            eventsById[analysisEvent.Id] = analysisEvent;
+        }
+        var transitionList = new List<(AnalysisDiagnostic Diagnostic, AnalysisEvent? Event)>();
+        foreach (var diagnostic in diagnostics)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (diagnostic.Code is not ("COMMON_ASIL_ALARM" or "COMMON_ASIL_CLEARED")) continue;
+            AnalysisEvent? analysisEvent = null;
+            foreach (var eventId in diagnostic.EventIds)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (eventsById.TryGetValue(eventId, out var candidate) &&
+                    (analysisEvent is null || candidate.LogicalIndex < analysisEvent.LogicalIndex))
+                    analysisEvent = candidate;
+            }
+            if (analysisEvent is not null) transitionList.Add((diagnostic, analysisEvent));
+        }
+        var transitions = transitionList.OrderBy(item => item.Event!.LogicalIndex).ToArray();
+        cancellationToken.ThrowIfCancellationRequested();
         var periods = new List<AnalysisAsilPeriod>();
         (AnalysisDiagnostic Diagnostic, AnalysisEvent? Event)? assertion = null;
+        var assertionCount = 0;
+        var clearCount = 0;
         foreach (var transition in transitions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (transition.Diagnostic.Code == "COMMON_ASIL_ALARM")
             {
+                assertionCount++;
                 assertion ??= transition;
             }
             else if (assertion is { } active)
             {
+                clearCount++;
                 periods.Add(Period(active, transition, remainsAsserted: false));
                 assertion = null;
+            }
+            else
+            {
+                clearCount++;
             }
         }
         if (assertion is { } remaining)
@@ -278,12 +373,23 @@ public sealed class CaptureAnalyzer
                 last.FrameTime - (remaining.Event?.FrameTime ?? last.FrameTime),
                 true));
         }
-        var asilGroups = review?.Groups.Where(group => group.IsAsil).ToArray() ?? [];
+        var asilGroups = new List<ReviewEventGroup>();
+        var acknowledgedGroups = 0;
+        var unresolvedAlarms = 0;
+        foreach (var group in review?.Groups ?? [])
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!group.IsAsil) continue;
+            asilGroups.Add(group);
+            if (group.WorkflowState != ReviewWorkflowState.Open) acknowledgedGroups++;
+            if (group.Severity == DiagnosticSeverity.Alarm && group.WorkflowState != ReviewWorkflowState.Resolved)
+                unresolvedAlarms++;
+        }
         return new AnalysisAsilSummary(
-            transitions.Count(item => item.Diagnostic.Code == "COMMON_ASIL_ALARM"),
-            transitions.Count(item => item.Diagnostic.Code == "COMMON_ASIL_CLEARED"),
-            asilGroups.Count(group => group.WorkflowState != ReviewWorkflowState.Open),
-            asilGroups.Count(group => group.Severity == DiagnosticSeverity.Alarm && group.WorkflowState != ReviewWorkflowState.Resolved),
+            assertionCount,
+            clearCount,
+            acknowledgedGroups,
+            unresolvedAlarms,
             periods);
 
         static AnalysisAsilPeriod Period(

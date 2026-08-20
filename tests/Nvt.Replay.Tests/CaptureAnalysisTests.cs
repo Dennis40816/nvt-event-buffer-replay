@@ -155,6 +155,36 @@ public sealed class CaptureAnalysisTests : IDisposable
         Assert.Contains(new string('a', 64), await File.ReadAllTextAsync(result.ManifestJson));
     }
 
+    [Fact]
+    public void Analysis_observes_cancellation_while_projecting_diagnostics()
+    {
+        var replay = Replay();
+        using var cancellation = new CancellationTokenSource();
+
+        IEnumerable<ReplayDiagnostic> CancellingDiagnostics()
+        {
+            for (var index = 0; index < 1_000; index++)
+            {
+                if (index == 25) cancellation.Cancel();
+                yield return new ReplayDiagnostic(
+                    DiagnosticSeverity.Warning,
+                    $"TEST_{index:D4}",
+                    "synthetic cancellation workload",
+                    $"external-{index:D4}",
+                    new SourceLocation(index, index + 1));
+            }
+        }
+
+        Assert.ThrowsAny<OperationCanceledException>(() => new CaptureAnalyzer().Analyze(
+            "capture.txt",
+            new string('a', 64),
+            new ReplayDecodeConfiguration("0x83", null, "synthetic"),
+            EvidenceStatus.Verified,
+            replay,
+            CancellingDiagnostics(),
+            cancellationToken: cancellation.Token));
+    }
+
     public void Dispose()
     {
         Directory.Delete(directory, recursive: true);

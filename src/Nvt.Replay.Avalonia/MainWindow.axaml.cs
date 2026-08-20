@@ -57,8 +57,7 @@ public partial class MainWindow : Window
     private long outputPreviewGeneration;
     private bool outputPreviewPlanPending;
     private string? outputPreviewPlanError;
-    private OutputReportRequest? outputReportRequest;
-    private int outputReportBuildCount;
+    private OutputReportService outputReportService = new();
     private CaptureAnalysisReport? currentOutputReport;
     private readonly ReplayPlaybackController playbackController = new();
     private readonly CaptureDecodeController captureDecodeController = new();
@@ -120,7 +119,7 @@ public partial class MainWindow : Window
     internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => outputVideoPreviewPlan?.Identity;
     internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => outputVideoPreviewPlan?.FramePlan;
     internal int OutputPreviewPlanBuildCount => outputPlanService.BuildCount;
-    internal int OutputReportBuildCount => outputReportBuildCount;
+    internal int OutputReportBuildCount => outputReportService.BuildCount;
     internal int OutputVideoRenderCount => OutputVideoPreview.RgbRenderCount;
     internal bool OutputVideoPreviewDirty => outputVideoPreviewDirty;
     internal CaptureAnalysisReport? CurrentOutputReport => currentOutputReport;
@@ -134,6 +133,14 @@ public partial class MainWindow : Window
         outputPlanService.Dispose();
         outputPlanService = replacement;
         ClearOutputVideoPreview();
+    }
+    internal void ReplaceOutputReportServiceForTesting(OutputReportService replacement)
+    {
+        ArgumentNullException.ThrowIfNull(replacement);
+        outputReportService.Reset();
+        outputReportService.Dispose();
+        outputReportService = replacement;
+        currentOutputReport = null;
     }
     internal ReplayPaintWorkspace? PaintWorkspace => paintWorkspace;
     internal ReviewInspectorWorkspace? ReviewWorkspace => reviewWorkspace;
@@ -521,6 +528,7 @@ public partial class MainWindow : Window
         activeCaptureLoadGeneration = loadGeneration;
         captureDecodeController.CancelCurrent();
         activeCaptureDecodeGeneration = 0;
+        ResetOutputPlanning();
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
         var loadCancellation = new CancellationTokenSource();
@@ -747,6 +755,7 @@ public partial class MainWindow : Window
 
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
+        ResetOutputPlanning();
         var decodeCancellation = new CancellationTokenSource();
         operationCancellation = decodeCancellation;
         var cancellationToken = decodeCancellation.Token;
@@ -1021,16 +1030,17 @@ public partial class MainWindow : Window
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
         var cancellationToken = operationCancellation.Token;
+        var operation = CaptureOutputOperation(SelectedOutputRange());
         SetBusy(true, "Rendering heatmap PNG");
         try
         {
-            var reportInputs = CaptureOutputReportInputs(SelectedOutputRange());
-            var report = await Task.Run(
-                () => reportInputs.Build(cancellationToken),
-                cancellationToken);
+            var reportSnapshot = await GetOutputReportAsync(operation.ReportIdentity, cancellationToken);
+            ThrowIfStaleOutputOperation(operation);
+            var report = reportSnapshot.Report;
             currentOutputReport = report;
             RefreshHeatmapPresentation();
             await WriteCurrentHeatmapPreviewAsync(path, cancellationToken);
+            ThrowIfStaleOutputOperation(operation);
             var mode = SelectedHeatmapMode() == "repeated" ? $"repeated N≥{heatmapMinimumCount:N0}" : "all recorded points";
             AnalysisOutputText.Text = $"Heatmap PNG · {path}\n{AnalysisHeatmapPreview.VisibleSampleCount:N0} visible samples · {mode} · range {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0}";
             SessionStatusText.Text = "Heatmap PNG exported";
@@ -1082,17 +1092,20 @@ public partial class MainWindow : Window
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
         var cancellationToken = operationCancellation.Token;
+        var operation = CaptureOutputOperation(SelectedOutputRange());
         SetBusy(true, "Analyzing selected replay range");
         try
         {
-            var range = SelectedOutputRange();
-            var reportInputs = CaptureOutputReportInputs(range);
-            var report = await Task.Run(() => reportInputs.Build(cancellationToken), cancellationToken);
+            var reportSnapshot = await GetOutputReportAsync(operation.ReportIdentity, cancellationToken);
+            ThrowIfStaleOutputOperation(operation);
+            var report = reportSnapshot.Report;
+            var range = reportSnapshot.Identity.Range;
             var result = await new AnalysisOutputWriter().WriteAsync(
                 directory,
                 report,
                 cancellationToken,
-                reportInputs.Capture.Records);
+                reportSnapshot.Inputs.Capture.Records);
+            ThrowIfStaleOutputOperation(operation);
             AnalysisSummaryText.Text =
                 $"{report.Events.Count:N0} frames · {report.DiagnosticAggregates.Count:N0} finding groups · " +
                 $"{report.Asil.Assertions} ASIL assert / {report.Asil.Clears} clear · {report.Hotspot.SampleCount:N0} hotspot samples";
@@ -1533,6 +1546,7 @@ public partial class MainWindow : Window
                 StopOutputVideoPreviewPlayback();
                 outputPreviewCancellation?.Cancel();
                 if (outputPreviewPlanPending) outputPlanService.Invalidate();
+                outputReportService.CancelActive();
             }
             SetOutputWorkspaceChrome(false, paintSelected && !SettingsPage.IsVisible);
             SetSourceTransportEnabled(paintSelected && !SettingsPage.IsVisible);
@@ -1648,45 +1662,64 @@ public partial class MainWindow : Window
             reviewWorkspace);
     }
 
-    private Task<CaptureAnalysisReport> GetOutputReportAsync(
+    private OutputReportIdentity CaptureOutputReportIdentity(
+        AnalysisRange range,
+        string replayIdentity)
+    {
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewWorkspace is null)
+            throw new InvalidOperationException("A decoded replay is required for output preview.");
+        return new OutputReportIdentity(
+            session,
+            replaySession,
+            decodeConfiguration,
+            replayIdentity,
+            range,
+            reviewWorkspace.ReportRevision);
+    }
+
+    private Task<OutputReportSnapshot> GetOutputReportAsync(
         AnalysisRange range,
         string replayIdentity,
         CancellationToken cancellationToken)
     {
-        if (replaySession is null || reviewWorkspace is null)
-            throw new InvalidOperationException("A decoded replay is required for output preview.");
-        if (outputReportRequest is { } current &&
-            ReferenceEquals(current.Inputs.Replay, replaySession) &&
-            ReferenceEquals(current.Inputs.Capture, session) &&
-            current.ReplayIdentity == replayIdentity &&
-            current.Inputs.Range == range &&
-            current.Inputs.ReportRevision == reviewWorkspace.ReportRevision)
-            return current.Task.WaitAsync(cancellationToken);
-
-        var inputs = CaptureOutputReportInputs(range);
-        var superseded = outputReportRequest;
-        var reportCancellation = new CancellationTokenSource();
-        var task = Task.Run(
-            () => inputs.Build(reportCancellation.Token),
-            CancellationToken.None);
-        outputReportRequest = new OutputReportRequest(
-            inputs,
-            replayIdentity,
-            reportCancellation,
-            task);
-        outputReportBuildCount++;
-        if (superseded is not null)
-        {
-            superseded.Cancellation.Cancel();
-            _ = superseded.Task.ContinueWith(
-                (_, state) => ((CancellationTokenSource)state!).Dispose(),
-                superseded.Cancellation,
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
-        }
-        return task.WaitAsync(cancellationToken);
+        var identity = CaptureOutputReportIdentity(range, replayIdentity);
+        return GetOutputReportAsync(identity, cancellationToken);
     }
+
+    private Task<OutputReportSnapshot> GetOutputReportAsync(
+        OutputReportIdentity identity,
+        CancellationToken cancellationToken)
+    {
+        return outputReportService.GetAsync(
+            identity,
+            () => CaptureOutputReportInputs(identity.Range),
+            cancellationToken);
+    }
+
+    private OutputOperationIdentity CaptureOutputOperation(AnalysisRange range) => new(
+        CaptureOutputReportIdentity(range, OutputReplayIdentity()),
+        activeCaptureLoadGeneration,
+        activeCaptureDecodeGeneration);
+
+    private bool IsCurrentOutputOperation(OutputOperationIdentity operation)
+    {
+        if (session is null || replaySession is null || decodeConfiguration is null || reviewWorkspace is null)
+            return false;
+        var current = CaptureOutputReportIdentity(operation.ReportIdentity.Range, OutputReplayIdentity());
+        return operation.ReportIdentity.Matches(current) &&
+               operation.LoadGeneration == activeCaptureLoadGeneration &&
+               operation.DecodeGeneration == activeCaptureDecodeGeneration;
+    }
+
+    private void ThrowIfStaleOutputOperation(OutputOperationIdentity operation)
+    {
+        if (!IsCurrentOutputOperation(operation))
+            throw new OperationCanceledException("Output analysis was superseded by a newer capture or review generation.");
+    }
+
+    internal Task<OutputReportSnapshot> GetCurrentOutputReportForTestingAsync(
+        CancellationToken cancellationToken = default) =>
+        GetOutputReportAsync(SelectedOutputRange(), OutputReplayIdentity(), cancellationToken);
 
     private async Task RefreshOutputPreviewAsync()
     {
@@ -1710,23 +1743,21 @@ public partial class MainWindow : Window
         UpdateOutputExportButtonAvailability();
         try
         {
-            var reportTask = GetOutputReportAsync(range, replayIdentity, cancellationToken);
-            Task<ReplayOutputPreviewPlan>? previewTask = null;
+            ReplayOutputPreviewPlan? preview = null;
             if (settings.ContentType == ReplayOutputContentType.Mp4Video)
             {
-                previewTask = outputPlanService.GetPreviewAsync(
+                preview = await outputPlanService.GetPreviewAsync(
                     replaySession,
                     replayIdentity,
                     settings,
                     cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (generation != outputPreviewGeneration || settings != outputWorkspace.Settings) return;
             }
-            if (previewTask is null) await reportTask;
-            else await Task.WhenAll(reportTask, previewTask);
+            var reportSnapshot = await GetOutputReportAsync(range, replayIdentity, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (generation != outputPreviewGeneration || settings != outputWorkspace.Settings) return;
-            var report = await reportTask;
-            var preview = previewTask is null ? null : await previewTask;
-            ApplyOutputPreview(report, preview);
+            ApplyOutputPreview(reportSnapshot.Report, preview);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -3161,23 +3192,12 @@ public partial class MainWindow : Window
         outputPreviewCancellation?.Dispose();
         outputPreviewCancellation = null;
         outputPlanService.Invalidate();
+        outputReportService.Reset();
         outputPreviewPlanPending = false;
         outputPreviewPlanError = null;
         currentOutputReport = null;
         AnalysisHeatmapPreview.Show(null);
         ClearOutputVideoPreview();
-        var report = outputReportRequest;
-        outputReportRequest = null;
-        if (report is not null)
-        {
-            report.Cancellation.Cancel();
-            _ = report.Task.ContinueWith(
-                (_, state) => ((CancellationTokenSource)state!).Dispose(),
-                report.Cancellation,
-                CancellationToken.None,
-                TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
-        }
     }
 
     private sealed record SourceAdapterChoice(string AdapterId, string DisplayName, ProbeConfidence Confidence)
@@ -4445,11 +4465,10 @@ public partial class MainWindow : Window
                visual.FindAncestorOfType<Slider>() is not null;
     }
 
-    private sealed record OutputReportRequest(
-        OutputReportInputs Inputs,
-        string ReplayIdentity,
-        CancellationTokenSource Cancellation,
-        Task<CaptureAnalysisReport> Task);
+    private sealed record OutputOperationIdentity(
+        OutputReportIdentity ReportIdentity,
+        long LoadGeneration,
+        long DecodeGeneration);
 
     protected override void OnClosed(EventArgs e)
     {
@@ -4460,6 +4479,7 @@ public partial class MainWindow : Window
         StopOutputVideoPreviewPlayback();
         ResetOutputPlanning();
         outputPlanService.Dispose();
+        outputReportService.Dispose();
         var activeOperationCancellation = operationCancellation;
         operationCancellation = null;
         activeOperationCancellation?.Cancel();

@@ -1471,6 +1471,186 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Output_report_is_single_flight_across_preview_heatmap_package_and_caller_cancellation()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var reports = new OutputReportService((inputs, cancellationToken) =>
+            {
+                entered.Set();
+                release.Wait(cancellationToken);
+                return inputs.Build(cancellationToken);
+            });
+            window.ReplaceOutputReportServiceForTesting(reports);
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            var outputTab = Required<TabItem>(window, "AnalysisTab");
+            tabs.SelectedItem = outputTab;
+            await WaitUntilAsync(() => entered.IsSet);
+
+            using var cancelledWaiter = new CancellationTokenSource();
+            var cancelled = window.GetCurrentOutputReportForTestingAsync(cancelledWaiter.Token);
+            var surviving = window.GetCurrentOutputReportForTestingAsync();
+            cancelledWaiter.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled);
+
+            release.Set();
+            var preview = await surviving;
+            await WaitUntilAsync(() => window.CurrentOutputReport is not null);
+            Assert.Equal(1, reports.BuildCount);
+
+            var content = Required<ComboBox>(window, "OutputContentComboBox");
+            content.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            var heatmap = await window.GetCurrentOutputReportForTestingAsync();
+            content.SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            var package = await window.GetCurrentOutputReportForTestingAsync();
+
+            Assert.Same(preview, heatmap);
+            Assert.Same(preview, package);
+            Assert.Equal(1, reports.BuildCount);
+
+            tabs.SelectedItem = Required<TabItem>(window, "PaintTab");
+            Dispatcher.UIThread.RunJobs();
+            tabs.SelectedItem = outputTab;
+            await WaitUntilAsync(() => window.CurrentOutputReport is not null);
+            Assert.Equal(1, reports.BuildCount);
+        }
+        finally
+        {
+            release.Set();
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Leaving_output_cancels_hidden_report_work_and_cancelled_work_is_not_cached()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim();
+        using var cancellationObserved = new ManualResetEventSlim();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var attempt = 0;
+            var reports = new OutputReportService((inputs, cancellationToken) =>
+            {
+                if (Interlocked.Increment(ref attempt) == 1)
+                {
+                    entered.Set();
+                    try
+                    {
+                        cancellationToken.WaitHandle.WaitOne();
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        cancellationObserved.Set();
+                        throw;
+                    }
+                }
+                return inputs.Build(cancellationToken);
+            });
+            window.ReplaceOutputReportServiceForTesting(reports);
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            var outputTab = Required<TabItem>(window, "AnalysisTab");
+            tabs.SelectedItem = outputTab;
+            await WaitUntilAsync(() => entered.IsSet);
+
+            tabs.SelectedItem = Required<TabItem>(window, "PaintTab");
+            await WaitUntilAsync(() => cancellationObserved.IsSet);
+            Assert.Null(window.CurrentOutputReport);
+            Assert.Equal(1, reports.BuildCount);
+
+            tabs.SelectedItem = outputTab;
+            await WaitUntilAsync(() => window.CurrentOutputReport is not null);
+            Assert.Equal(2, reports.BuildCount);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Failed_output_report_is_retried_and_only_a_success_is_cached()
+    {
+        var window = ShowWindow();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var attempt = 0;
+            var reports = new OutputReportService((inputs, cancellationToken) =>
+            {
+                if (Interlocked.Increment(ref attempt) == 1)
+                    throw new InvalidOperationException("synthetic analysis failure");
+                return inputs.Build(cancellationToken);
+            });
+            window.ReplaceOutputReportServiceForTesting(reports);
+
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => window.GetCurrentOutputReportForTestingAsync());
+            Assert.Contains("synthetic", failure.Message, StringComparison.Ordinal);
+
+            var successful = await window.GetCurrentOutputReportForTestingAsync();
+            var cached = await window.GetCurrentOutputReportForTestingAsync();
+            Assert.Same(successful, cached);
+            Assert.Equal(2, reports.BuildCount);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Superseded_capture_cannot_publish_a_late_output_report()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        using var cancellationObserved = new ManualResetEventSlim();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var reports = new OutputReportService((inputs, cancellationToken) =>
+            {
+                using var registration = cancellationToken.Register(cancellationObserved.Set);
+                entered.Set();
+                release.Wait();
+                return inputs.Build(CancellationToken.None);
+            });
+            window.ReplaceOutputReportServiceForTesting(reports);
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => entered.IsSet);
+
+            var replacement = Path.Combine(AppContext.BaseDirectory, "fixtures", "desay97-full-reread.nds.txt");
+            await window.OpenCaptureAsync(replacement);
+            Assert.True(cancellationObserved.IsSet);
+            release.Set();
+            await Task.Delay(50);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Null(window.CurrentOutputReport);
+            Assert.Equal(Path.GetFileName(replacement).ToUpperInvariant(), Required<TextBlock>(window, "CaptureNameText").Text);
+            Assert.Equal(1, reports.BuildCount);
+        }
+        finally
+        {
+            release.Set();
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Output_plan_hard_limit_disables_export_without_crashing_the_workspace()
     {
         var window = ShowWindow();
@@ -1478,6 +1658,8 @@ public sealed class MainWindowLayoutTests
         {
             await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
             await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var reports = new OutputReportService();
+            window.ReplaceOutputReportServiceForTesting(reports);
             window.ReplaceOutputPlanServiceForTesting(new ReplayOutputPlanService(
                 (_, _, _, _) => throw new InvalidOperationException("Export exceeds the safety limit.")));
 
@@ -1487,6 +1669,7 @@ public sealed class MainWindowLayoutTests
             Assert.False(Required<Button>(window, "ExportSelectedOutputButton").IsEnabled);
             Assert.Contains("safety limit", Required<TextBlock>(window, "OutputHotspotText").Text, StringComparison.OrdinalIgnoreCase);
             Assert.True(Required<TabItem>(window, "AnalysisTab").IsSelected);
+            Assert.Equal(0, reports.BuildCount);
         }
         finally
         {
