@@ -718,6 +718,121 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Output_controls_project_one_workspace_and_no_op_custom_input_keeps_the_plan()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
+
+            Assert.Equal(120, window.OutputSettings.FrameRate);
+            Assert.Equal(3, Required<ComboBox>(window, "OutputFrameRateComboBox").SelectedIndex);
+            Assert.Contains("120 FPS", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
+            Assert.Contains("Frame-paced", Required<TextBlock>(window, "OutputClockDescriptionText").Text);
+
+            var frameRate = Required<ComboBox>(window, "OutputFrameRateComboBox");
+            var customFrameRate = Required<TextBox>(window, "OutputCustomFrameRateTextBox");
+            frameRate.SelectedIndex = 4;
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity?.Settings.FrameRate == 180);
+            customFrameRate.Text = "120";
+            customFrameRate.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity?.Settings.FrameRate == 120);
+
+            var revision = window.OutputSettingsRevision;
+            var buildCount = window.OutputPreviewPlanBuildCount;
+            var identity = window.OutputPreviewPlanIdentity;
+            var framePlan = window.OutputPreviewFramePlan;
+            customFrameRate.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Dispatcher.UIThread.RunJobs();
+            await Task.Delay(30);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(revision, window.OutputSettingsRevision);
+            Assert.Equal(buildCount, window.OutputPreviewPlanBuildCount);
+            Assert.Equal(identity, window.OutputPreviewPlanIdentity);
+            Assert.Same(framePlan, window.OutputPreviewFramePlan);
+
+            var finalOptions = window.CreateCurrentOutputExportOptions("final.mp4");
+            Assert.NotNull(identity);
+            Assert.Equal(identity.Settings.Range, finalOptions.Range);
+            Assert.Equal(identity.Settings.Clock, finalOptions.Clock);
+            Assert.Equal(identity.Settings.Speed, finalOptions.Speed);
+            Assert.Equal(identity.Settings.FrameRate, finalOptions.FrameRate);
+            Assert.Equal((identity.Settings.Width, identity.Settings.Height), (finalOptions.Width, finalOptions.Height));
+
+            Required<ComboBox>(window, "OutputClockComboBox").SelectedIndex = 0;
+            Assert.Contains("long idle gaps", Required<TextBlock>(window, "OutputClockDescriptionText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Background_output_job_reports_progress_allows_navigation_and_cancels_without_blocking()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            var outputTab = Required<TabItem>(window, "AnalysisTab");
+            tabs.SelectedItem = outputTab;
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
+
+            var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var handle = window.StartOutputExportJob(async (cancellationToken, progress) =>
+            {
+                progress.Report(new ReplayExportProgress(12, 100, "Encoding MP4"));
+                started.SetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return new ReplayExportResult(
+                    ReplayExportKind.Mp4,
+                    "unused.mp4",
+                    "unused.manifest.json",
+                    100,
+                    TimeSpan.FromSeconds(1),
+                    null);
+            });
+            await started.Task;
+            await WaitUntilAsync(() => Required<TextBlock>(window, "OutputExportStatusText").Text == "Encoding MP4");
+
+            Assert.True(Required<Border>(window, "OutputExportActivityPanel").IsVisible);
+            Assert.True(Required<Button>(window, "OutputExportCancelButton").IsEnabled);
+            Assert.False(Required<Button>(window, "LoadButton").IsEnabled);
+            Assert.Contains("12%", Required<TextBlock>(window, "OutputExportProgressText").Text);
+
+            tabs.SelectedItem = Required<TabItem>(window, "PaintTab");
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<TabItem>(window, "PaintTab").IsSelected);
+            tabs.SelectedItem = outputTab;
+            Required<ComboBox>(window, "OutputContentComboBox").SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
+            Required<ComboBox>(window, "OutputContentComboBox").SelectedIndex = 0;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Border>(window, "OutputExportActivityPanel").IsVisible);
+
+            Assert.True(window.CancelOutputExportJob());
+            var completed = await handle.Completion;
+            Assert.Equal(ExportJobStatus.Cancelled, completed.Status);
+            await WaitUntilAsync(() => !Required<Border>(window, "OutputExportActivityPanel").IsVisible);
+            Assert.True(Required<Button>(window, "LoadButton").IsEnabled);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Approved_visual_contract_captures_Paint_and_Output_as_separate_pages()
     {
         var window = ShowWindow();

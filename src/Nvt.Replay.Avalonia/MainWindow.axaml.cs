@@ -52,15 +52,11 @@ public partial class MainWindow : Window
     private CancellationTokenSource? playbackCancellation;
     private CancellationTokenSource? outputPreviewCancellation;
     private CancellationTokenSource? outputVideoPlaybackCancellation;
-    private CancellationTokenSource? outputExportCancellation;
-    private IReadOnlyList<ReplayFramePlanEntry> outputVideoPlan = [];
-    private int outputVideoFrameCount;
+    private readonly ReplayOutputWorkspace outputWorkspace = new();
+    private readonly ExportJobService outputExportJobs = new();
+    private ReplayOutputPreviewPlan? outputVideoPreviewPlan;
     private int outputVideoFrameIndex;
-    private int outputVideoWidth = 2304;
-    private int outputVideoHeight = 1280;
-    private int outputVideoFrameRate = 30;
-    private double outputVideoSpeed = 1;
-    private ReplayExportClock outputVideoClock = ReplayExportClock.Frame;
+    private int outputPreviewPlanBuildCount;
     private CaptureAnalysisReport? currentOutputReport;
     private readonly ReplayPlaybackController playbackController = new();
     private int heatmapMinimumCount = 5;
@@ -97,7 +93,6 @@ public partial class MainWindow : Window
     private int? pendingContinuousTimelineSeek;
     private bool synchronizingAutoPauseControls;
     private bool operationInProgress;
-    private bool outputExportInProgress;
     private bool outputWorkspaceActive;
     private bool comboBoxDismissHandlersAttached;
     private int themeMode;
@@ -119,6 +114,13 @@ public partial class MainWindow : Window
     private static readonly TimeSpan PlaybackDetailPresentationInterval = TimeSpan.FromMilliseconds(100);
     private long lastDetailPresentationTimestamp;
     internal int DetailPresentationCount { get; private set; }
+    internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
+    internal long OutputSettingsRevision => outputWorkspace.Revision;
+    internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => outputVideoPreviewPlan?.Identity;
+    internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => outputVideoPreviewPlan?.FramePlan;
+    internal int OutputPreviewPlanBuildCount => outputPreviewPlanBuildCount;
+    private int outputVideoFrameCount => outputVideoPreviewPlan?.Estimate.OutputFrameCount ?? 0;
+    private int outputVideoFrameRate => outputVideoPreviewPlan?.Identity.Settings.FrameRate ?? outputWorkspace.Settings.FrameRate;
     public MainWindow()
     {
         InitializeComponent();
@@ -176,7 +178,7 @@ public partial class MainWindow : Window
         HeatmapModeComboBox.SelectedIndex = 0;
         OutputClockComboBox.SelectedIndex = 1;
         OutputSpeedComboBox.SelectedIndex = 2;
-        OutputFrameRateComboBox.SelectedIndex = 1;
+        OutputFrameRateComboBox.SelectedIndex = 3;
         OutputResolutionComboBox.SelectedIndex = 0;
         SyncOutputResolutionWithPanel();
         configuringOutputSettings = false;
@@ -821,6 +823,15 @@ public partial class MainWindow : Window
 
         var mp4 = option.Value == "mp4";
         var heatmap = option.Value == "heatmap";
+        var outputTypeChanged = outputWorkspace.Update(outputWorkspace.Settings with
+        {
+            ContentType = option.Value switch
+            {
+                "heatmap" => ReplayOutputContentType.Heatmap,
+                "package" => ReplayOutputContentType.DataPackage,
+                _ => ReplayOutputContentType.Mp4Video,
+            },
+        });
         OutputVideoPanel.IsVisible = mp4;
         OutputHeatmapPanel.IsVisible = heatmap;
         OutputPackagePanel.IsVisible = option.Value == "package";
@@ -837,6 +848,7 @@ public partial class MainWindow : Window
         if (!mp4) OutputExportWarningPanel.IsVisible = false;
         if (heatmap) RefreshHeatmapPresentation();
         UpdateOutputExportButtonAvailability();
+        if (outputTypeChanged) RefreshOutputPreviewIfVisible();
     }
 
     private void HeatmapSetting_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1015,25 +1027,25 @@ public partial class MainWindow : Window
 
     private void OutputExportCancelButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (outputExportCancellation is null) return;
-        OutputExportCancelButton.IsEnabled = false;
-        OutputExportStatusText.Text = "Cancelling MP4 export…";
-        outputExportCancellation.Cancel();
+        CancelOutputExportJob();
     }
 
     private async Task BeginReplayExportAsync(bool longExportConfirmed)
     {
-        if (session is null || replaySession is null || decodeConfiguration is null || replaySession.Count == 0 || outputExportInProgress) return;
-        var range = SelectedOutputRange();
-        var preflightOptions = CreateReplayExportOptions("preflight.mp4", range);
-        var preflightPlan = ReplayFramePlan.Build(replaySession, preflightOptions);
-        var estimatedFrames = ReplayFramePlan.OutputFrameCount(preflightPlan);
-        var estimatedDuration = TimeSpan.FromSeconds(estimatedFrames / (double)outputVideoFrameRate);
-        if (!longExportConfirmed && RequiresLongVideoExport(estimatedFrames, estimatedDuration))
+        if (session is null || replaySession is null || decodeConfiguration is null || replaySession.Count == 0 || outputExportJobs.IsActive) return;
+        outputWorkspace.Update(outputWorkspace.Settings with
+        {
+            ContentType = ReplayOutputContentType.Mp4Video,
+            Range = SelectedOutputRange(),
+        });
+        var preview = EnsureOutputVideoPreviewPlan();
+        var estimate = preview.Estimate;
+        var settings = preview.Identity.Settings;
+        if (!longExportConfirmed && estimate.RequiresConfirmation)
         {
             OutputExportWarningText.Text =
-                $"This selection produces {estimatedFrames:N0} frames ({FormatClock(estimatedDuration)}) at " +
-                $"{outputVideoFrameRate} FPS and {outputVideoWidth} × {outputVideoHeight}. " +
+                $"This selection produces {estimate.OutputFrameCount:N0} frames ({FormatClock(estimate.Duration)}) at " +
+                $"{settings.FrameRate} FPS and {settings.Width} × {settings.Height}. " +
                 "Recorded gaps can substantially increase export time and file size.";
             OutputExportWarningPanel.IsVisible = true;
             SessionStatusText.Text = "Review long MP4 export estimate";
@@ -1050,6 +1062,14 @@ public partial class MainWindow : Window
         });
         var path = file?.TryGetLocalPath();
         if (path is null) return;
+
+        var options = CreateReplayExportOptions(path);
+        if (preview.Identity.Settings != outputWorkspace.Settings)
+        {
+            SessionStatusText.Text = "Output settings changed; review the refreshed MP4 preview before exporting.";
+            RefreshOutputPreviewIfVisible();
+            return;
+        }
 
         var exportReplay = replaySession;
         var exportExtent = replayExtent;
@@ -1076,27 +1096,20 @@ public partial class MainWindow : Window
             exportReverseY,
             exportSwapAxes);
 
-        outputExportCancellation?.Dispose();
-        var cancellation = new CancellationTokenSource();
-        outputExportCancellation = cancellation;
-        var cancellationToken = cancellation.Token;
-        SetOutputExportState(true, estimatedFrames);
-        var progress = new Progress<ReplayExportProgress>(item =>
+        var handle = StartOutputExportJob(
+            (cancellationToken, progress) => new ReplayRangeExporter().ExportAsync(
+                exportReplay,
+                ExportScene,
+                options,
+                preview.FramePlan,
+                cancellationToken,
+                progress));
+        var completed = await handle.Completion;
+        if (completed.JobId != outputExportJobs.Snapshot.JobId) return;
+
+        PresentOutputExportSnapshot(completed);
+        if (completed.Status == ExportJobStatus.Succeeded && completed.Result is { } result)
         {
-            if (!ReferenceEquals(outputExportCancellation, cancellation)) return;
-            OutputExportProgressBar.IsIndeterminate = item.TotalFrames == 0;
-            OutputExportProgressBar.Value = item.Percent;
-            OutputExportStatusText.Text = item.Stage;
-            OutputExportProgressText.Text = item.TotalFrames == 0
-                ? "Preparing"
-                : $"{item.Percent:0}% · {item.CompletedFrames:N0}/{item.TotalFrames:N0}";
-        });
-        try
-        {
-            var options = CreateReplayExportOptions(path, range);
-            var result = await Task.Run(
-                () => new ReplayRangeExporter().ExportAsync(exportReplay, ExportScene, options, cancellationToken, progress),
-                cancellationToken);
             AnalysisOutputText.Text =
                 $"{result.Kind} · {result.OutputPath}\n{result.OutputFrameCount:N0} frames · {result.Duration.TotalSeconds:0.###} s\nmanifest={result.ManifestPath}" +
                 (result.Warning is null ? string.Empty : $"\nWARNING: {result.Warning}");
@@ -1104,40 +1117,54 @@ public partial class MainWindow : Window
                 ? "Replay MP4 exported"
                 : "FFmpeg unavailable · PNG sequence exported safely";
         }
-        catch (OperationCanceledException)
+        else if (completed.Status == ExportJobStatus.Cancelled)
         {
             SessionStatusText.Text = "Replay export cancelled; no partial output was kept";
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
+        else if (completed.Status == ExportJobStatus.Failed)
         {
-            SessionStatusText.Text = $"Replay export failed · {exception.Message}";
-        }
-        finally
-        {
-            if (ReferenceEquals(outputExportCancellation, cancellation))
-            {
-                outputExportCancellation = null;
-                cancellation.Dispose();
-                SetOutputExportState(false, 0);
-            }
+            SessionStatusText.Text = $"Replay export failed · {completed.Error?.Message ?? "Unknown export error"}";
         }
     }
 
     internal static bool RequiresLongVideoExport(int frameCount, TimeSpan duration) =>
-        frameCount >= 10_000 || duration >= TimeSpan.FromMinutes(2);
+        frameCount >= ReplayOutputWorkspace.LongExportFrameThreshold ||
+        duration >= ReplayOutputWorkspace.LongExportDurationThreshold;
 
-    private void SetOutputExportState(bool exporting, int totalFrames)
+    internal ExportJobHandle StartOutputExportJob(
+        Func<CancellationToken, IProgress<ReplayExportProgress>, Task<ReplayExportResult>> operation)
     {
-        outputExportInProgress = exporting;
+        var observer = new Progress<ExportJobSnapshot>(PresentOutputExportSnapshot);
+        var handle = outputExportJobs.Start(operation, observer);
+        PresentOutputExportSnapshot(outputExportJobs.Snapshot);
+        return handle;
+    }
+
+    internal bool CancelOutputExportJob()
+    {
+        var cancelled = outputExportJobs.Cancel();
+        PresentOutputExportSnapshot(outputExportJobs.Snapshot);
+        return cancelled;
+    }
+
+    private void PresentOutputExportSnapshot(ExportJobSnapshot snapshot)
+    {
+        if (snapshot.JobId != outputExportJobs.Snapshot.JobId) return;
+        var exporting = snapshot.IsActive;
         LoadButton.IsEnabled = !exporting && !operationInProgress;
         OutputExportActivityPanel.IsVisible = exporting;
-        OutputExportCancelButton.IsEnabled = exporting;
+        OutputExportCancelButton.IsEnabled = snapshot.Status == ExportJobStatus.Running;
         if (exporting)
         {
-            OutputExportProgressBar.IsIndeterminate = true;
-            OutputExportProgressBar.Value = 0;
-            OutputExportStatusText.Text = "Preparing MP4 export";
-            OutputExportProgressText.Text = totalFrames > 0 ? $"0% · 0/{totalFrames:N0}" : "Preparing";
+            var progress = snapshot.Progress;
+            OutputExportProgressBar.IsIndeterminate = progress is null || progress.TotalFrames == 0;
+            OutputExportProgressBar.Value = progress?.Percent ?? 0;
+            OutputExportStatusText.Text = snapshot.Status == ExportJobStatus.Cancelling
+                ? "Cancelling MP4 export…"
+                : progress?.Stage ?? "Preparing MP4 export";
+            OutputExportProgressText.Text = progress is { TotalFrames: > 0 }
+                ? $"{progress.Percent:0}% · {progress.CompletedFrames:N0}/{progress.TotalFrames:N0}"
+                : "Preparing";
         }
         UpdateOutputExportButtonAvailability();
     }
@@ -1147,7 +1174,7 @@ public partial class MainWindow : Window
         if (ExportSelectedOutputButton is null) return;
         var mp4Selected = (OutputContentComboBox.SelectedItem as SelectOption)?.Value == "mp4";
         ExportSelectedOutputButton.IsEnabled =
-            !operationInProgress && replaySession is { Count: > 0 } && (!mp4Selected || !outputExportInProgress);
+            !operationInProgress && replaySession is { Count: > 0 } && (!mp4Selected || !outputExportJobs.IsActive);
     }
 
     private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1191,29 +1218,17 @@ public partial class MainWindow : Window
             OutputFrameRateComboBox is null || OutputResolutionComboBox is null)
             return;
 
-        var previousSettings = (outputVideoClock, outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
-        OutputExportWarningPanel.IsVisible = false;
-
-        outputVideoClock = SelectedTag(OutputClockComboBox) == "recorded"
+        var clock = SelectedTag(OutputClockComboBox) == "recorded"
             ? ReplayExportClock.Recorded
             : ReplayExportClock.Frame;
-        OutputClockDescriptionText.Text = outputVideoClock == ReplayExportClock.Recorded
+        OutputClockDescriptionText.Text = clock == ReplayExportClock.Recorded
             ? "Follows source timestamps, including long idle gaps with no touch."
             : "Plays every decoded frame at 120 Hz; REC labels keep their original timestamps.";
 
         var speedTag = SelectedTag(OutputSpeedComboBox);
         OutputCustomSpeedTextBox.IsVisible = speedTag == "custom";
-        if (speedTag != "custom" && double.TryParse(speedTag, NumberStyles.Float, CultureInfo.InvariantCulture, out var speed))
-            outputVideoSpeed = speed;
-
         var frameRateTag = SelectedTag(OutputFrameRateComboBox);
         OutputCustomFrameRateTextBox.IsVisible = frameRateTag == "custom";
-        if (int.TryParse(frameRateTag, NumberStyles.Integer, CultureInfo.InvariantCulture, out var frameRate))
-            outputVideoFrameRate = frameRate;
-        else if (frameRateTag == "custom" &&
-                 int.TryParse(OutputCustomFrameRateTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var customFrameRate) &&
-                 customFrameRate is >= 1 and <= 240)
-            outputVideoFrameRate = customFrameRate;
 
         var resolutionTag = SelectedTag(OutputResolutionComboBox);
         var customResolution = resolutionTag == "custom";
@@ -1225,16 +1240,10 @@ public partial class MainWindow : Window
         }
         else if (!customResolution && TryParseOutputResolution(resolutionTag, out var width, out var height))
         {
-            outputVideoWidth = width;
-            outputVideoHeight = height;
             OutputWidthTextBox.Text = width.ToString(CultureInfo.InvariantCulture);
             OutputHeightTextBox.Text = height.ToString(CultureInfo.InvariantCulture);
         }
-
-        var nextSettings = (outputVideoClock, outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
-        if (nextSettings == previousSettings) return;
-        StopOutputVideoPreviewPlayback();
-        RefreshOutputPreviewIfVisible();
+        ApplyOutputSettingsFromControls(showStatus: false);
     }
 
     private void OutputCustomSetting_OnKeyDown(object? sender, KeyEventArgs e)
@@ -1248,50 +1257,92 @@ public partial class MainWindow : Window
 
     private void ApplyOutputCustomSettings()
     {
-        var previousSettings = (outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
-        if (OutputSpeedComboBox.SelectedItem is ComboBoxItem speedItem &&
-            string.Equals(speedItem.Tag?.ToString(), "custom", StringComparison.OrdinalIgnoreCase))
-        {
-            if (!double.TryParse(OutputCustomSpeedTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var speed) ||
-                speed is <= 0 or > 100)
-            {
-                SessionStatusText.Text = "MP4 speed must be greater than 0 and no more than 100×.";
-                return;
-            }
-            outputVideoSpeed = speed;
-        }
+        ApplyOutputSettingsFromControls(showStatus: true);
+    }
 
-        if (OutputFrameRateComboBox.SelectedItem is ComboBoxItem frameRateItem &&
-            string.Equals(frameRateItem.Tag?.ToString(), "custom", StringComparison.OrdinalIgnoreCase))
+    private void ApplyOutputSettingsFromControls(bool showStatus)
+    {
+        if (!TryReadOutputSettings(out var settings, out var error))
         {
-            if (!int.TryParse(OutputCustomFrameRateTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var frameRate) ||
-                frameRate is < 1 or > 240)
-            {
-                SessionStatusText.Text = "MP4 frame rate must be between 1 and 240 FPS.";
-                return;
-            }
-            outputVideoFrameRate = frameRate;
+            SessionStatusText.Text = error;
+            return;
         }
+        if (!outputWorkspace.Update(settings)) return;
 
-        if (OutputResolutionComboBox.SelectedItem is ComboBoxItem resolutionItem &&
-            string.Equals(resolutionItem.Tag?.ToString(), "custom", StringComparison.OrdinalIgnoreCase))
-        {
-            if (!int.TryParse(OutputWidthTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var width) ||
-                !int.TryParse(OutputHeightTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var height) ||
-                width is < 320 or > 7680 || height is < 180 or > 4320 || width % 2 != 0 || height % 2 != 0)
-            {
-                SessionStatusText.Text = "MP4 size must use even values: width 320-7680 and height 180-4320.";
-                return;
-            }
-            outputVideoWidth = width;
-            outputVideoHeight = height;
-        }
-
-        var nextSettings = (outputVideoSpeed, outputVideoFrameRate, outputVideoWidth, outputVideoHeight);
-        if (nextSettings == previousSettings) return;
-        SessionStatusText.Text = $"MP4 preview settings · {OutputVideoSettingsLabel()}";
+        OutputExportWarningPanel.IsVisible = false;
+        if (showStatus)
+            SessionStatusText.Text = $"MP4 preview settings · {OutputVideoSettingsLabel()}";
         StopOutputVideoPreviewPlayback();
         RefreshOutputPreviewIfVisible();
+    }
+
+    private bool TryReadOutputSettings(out ReplayOutputSettings settings, out string error)
+    {
+        settings = outputWorkspace.Settings;
+        error = string.Empty;
+
+        var speedTag = SelectedTag(OutputSpeedComboBox);
+        if (!double.TryParse(
+                speedTag == "custom" ? OutputCustomSpeedTextBox.Text : speedTag,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var speed))
+        {
+            error = "MP4 speed must be a number greater than 0 and no more than 100×.";
+            return false;
+        }
+
+        var frameRateTag = SelectedTag(OutputFrameRateComboBox);
+        if (!int.TryParse(
+                frameRateTag == "custom" ? OutputCustomFrameRateTextBox.Text : frameRateTag,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var frameRate))
+        {
+            error = $"MP4 frame rate must be between 1 and {ReplayFramePlan.MaximumFrameRate} FPS.";
+            return false;
+        }
+
+        var width = settings.Width;
+        var height = settings.Height;
+        var resolutionTag = SelectedTag(OutputResolutionComboBox);
+        if (resolutionTag == "panel")
+        {
+            width = NormalizeVideoDimension(replayExtent.MaximumX, 320, ReplayOutputWorkspace.MaximumWidth);
+            height = NormalizeVideoDimension(replayExtent.MaximumY, 180, ReplayOutputWorkspace.MaximumHeight);
+        }
+        else if (resolutionTag == "custom")
+        {
+            if (!int.TryParse(OutputWidthTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out width) ||
+                !int.TryParse(OutputHeightTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out height))
+            {
+                error = $"MP4 size must use even values: width 320-{ReplayOutputWorkspace.MaximumWidth} and height 180-{ReplayOutputWorkspace.MaximumHeight}.";
+                return false;
+            }
+        }
+        else if (!TryParseOutputResolution(resolutionTag, out width, out height))
+        {
+            error = "Select a valid MP4 resolution.";
+            return false;
+        }
+
+        settings = settings with
+        {
+            Clock = SelectedTag(OutputClockComboBox) == "recorded" ? ReplayExportClock.Recorded : ReplayExportClock.Frame,
+            Speed = speed,
+            FrameRate = frameRate,
+            Width = width,
+            Height = height,
+            Range = SelectedOutputRange(),
+        };
+        var validation = new ReplayOutputWorkspace(settings with
+        {
+            ContentType = ReplayOutputContentType.Mp4Video,
+        }).Validate(replaySession);
+        if (validation.IsValid) return true;
+
+        error = validation.Errors[0];
+        return false;
     }
 
     private static string? SelectedTag(ComboBox comboBox) =>
@@ -1309,15 +1360,14 @@ public partial class MainWindow : Window
 
     private void SyncOutputResolutionWithPanel()
     {
-        var width = NormalizeVideoDimension(replayExtent.MaximumX, 320, 7680);
-        var height = NormalizeVideoDimension(replayExtent.MaximumY, 180, 4320);
+        var width = NormalizeVideoDimension(replayExtent.MaximumX, 320, ReplayOutputWorkspace.MaximumWidth);
+        var height = NormalizeVideoDimension(replayExtent.MaximumY, 180, ReplayOutputWorkspace.MaximumHeight);
         OutputPanelResolutionItem.Content = $"Paint · {width} × {height}";
         if (OutputResolutionComboBox.SelectedItem is not ComboBoxItem item || item.Tag?.ToString() != "panel")
             return;
-        outputVideoWidth = width;
-        outputVideoHeight = height;
         OutputWidthTextBox.Text = width.ToString(CultureInfo.InvariantCulture);
         OutputHeightTextBox.Text = height.ToString(CultureInfo.InvariantCulture);
+        outputWorkspace.Update(outputWorkspace.Settings with { Width = width, Height = height });
     }
 
     private static int NormalizeVideoDimension(double value, int minimum, int maximum)
@@ -1327,7 +1377,7 @@ public partial class MainWindow : Window
     }
 
     private string OutputVideoSettingsLabel() =>
-        $"{outputVideoWidth} × {outputVideoHeight} / {outputVideoFrameRate} FPS / {outputVideoSpeed:0.##}×";
+        $"{outputWorkspace.Settings.Width} × {outputWorkspace.Settings.Height} / {outputWorkspace.Settings.FrameRate} FPS / {outputWorkspace.Settings.Speed:0.##}×";
 
     private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -1372,23 +1422,58 @@ public partial class MainWindow : Window
             : new AnalysisRange(0, replaySession.Count - 1);
     }
 
-    private ReplayExportOptions CreateReplayExportOptions(string path, AnalysisRange range)
+    private ReplayExportOptions CreateReplayExportOptions(string path)
     {
         if (session is null || decodeConfiguration is null)
             throw new InvalidOperationException("A decoded capture is required for MP4 output.");
-        return new ReplayExportOptions(
+        return outputWorkspace.CreateExportOptions(
             path,
-            range,
-            outputVideoWidth,
-            outputVideoHeight,
-            outputVideoFrameRate,
-            outputVideoSpeed,
-            outputVideoClock,
             PaintSurface.Mode,
-            SourceFileName: Path.GetFileName(session.SourcePath),
-            SourceSha256: session.SourceSha256,
-            DecodeConfiguration: decodeConfiguration,
-            RenderSettings: CurrentReplayRenderSettings());
+            sourceFileName: Path.GetFileName(session.SourcePath),
+            sourceSha256: session.SourceSha256,
+            decodeConfiguration: decodeConfiguration,
+            renderSettings: CurrentReplayRenderSettings());
+    }
+
+    internal ReplayExportOptions CreateCurrentOutputExportOptions(string path) => CreateReplayExportOptions(path);
+
+    private ReplayOutputPreviewPlan EnsureOutputVideoPreviewPlan()
+    {
+        if (replaySession is null)
+            throw new InvalidOperationException("A decoded replay is required for MP4 output.");
+        var replayIdentity = OutputReplayIdentity();
+        if (MatchingOutputVideoPreviewPlan(outputWorkspace.Settings, replayIdentity) is { } current)
+            return current;
+
+        var preview = outputWorkspace.BuildVideoPreview(replaySession, replayIdentity);
+        outputVideoPreviewPlan = preview;
+        outputPreviewPlanBuildCount++;
+        outputVideoFrameIndex = 0;
+        return preview;
+    }
+
+    private ReplayOutputPreviewPlan? MatchingOutputVideoPreviewPlan(
+        ReplayOutputSettings settings,
+        string replayIdentity) =>
+        replaySession is not null &&
+        outputVideoPreviewPlan is { } current &&
+        current.Identity.ReplayIdentity == replayIdentity &&
+        current.Identity.ReplayFrameCount == replaySession.Count &&
+        current.Identity.ReplayFrameInterval == replaySession.FrameInterval &&
+        current.Identity.Settings == settings
+            ? current
+            : null;
+
+    private string OutputReplayIdentity()
+    {
+        if (session is null || decodeConfiguration is null)
+            throw new InvalidOperationException("A decoded replay is required for output preview.");
+        return string.Join(
+            '/',
+            session.SourceSha256,
+            decodeConfiguration.EventBufferVersion,
+            decodeConfiguration.Desay97Profile ?? string.Empty,
+            decodeConfiguration.RegisterProfile ?? string.Empty);
     }
 
     private ReplayRenderSettings CurrentReplayRenderSettings() => new(
@@ -1451,13 +1536,32 @@ public partial class MainWindow : Window
         outputPreviewCancellation = new CancellationTokenSource();
         var cancellationToken = outputPreviewCancellation.Token;
         var range = SelectedOutputRange();
+        outputWorkspace.Update(outputWorkspace.Settings with { Range = range });
+        var settings = outputWorkspace.Settings;
+        var replayIdentity = OutputReplayIdentity();
         AnalysisSummaryText.Text = $"Preparing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}...";
         OutputHotspotText.Text = "Analyzing coordinates";
         try
         {
-            var report = await Task.Run(() => BuildOutputReport(range, cancellationToken), cancellationToken);
+            var reportTask = Task.Run(() => BuildOutputReport(range, cancellationToken), cancellationToken);
+            Task<ReplayOutputPreviewPlan>? previewTask = null;
+            if (settings.ContentType == ReplayOutputContentType.Mp4Video)
+            {
+                var existingPreview = MatchingOutputVideoPreviewPlan(settings, replayIdentity);
+                previewTask = existingPreview is not null
+                    ? Task.FromResult(existingPreview)
+                    : Task.Run(
+                        () => new ReplayOutputWorkspace(settings).BuildVideoPreview(
+                            replaySession,
+                            replayIdentity,
+                            cancellationToken),
+                        cancellationToken);
+            }
+            var report = await reportTask;
+            var preview = previewTask is null ? null : await previewTask;
             cancellationToken.ThrowIfCancellationRequested();
-            ApplyOutputPreview(report);
+            if (settings != outputWorkspace.Settings) return;
+            ApplyOutputPreview(report, preview);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -1472,17 +1576,18 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ApplyOutputPreview(CaptureAnalysisReport report)
+    private void ApplyOutputPreview(CaptureAnalysisReport report, ReplayOutputPreviewPlan? preview)
     {
         if (session is null || decodeConfiguration is null) return;
         currentOutputReport = report;
         var range = report.Manifest.Range;
-        var clockIsFrame = outputVideoClock == ReplayExportClock.Frame;
+        var settings = outputWorkspace.Settings;
+        var clockIsFrame = settings.Clock == ReplayExportClock.Frame;
         var clockName = clockIsFrame ? "Frame-paced 120 Hz" : "Recorded gaps";
         var profile = string.IsNullOrWhiteSpace(decodeConfiguration.Desay97Profile)
             ? string.Empty
             : $" / {decodeConfiguration.Desay97Profile}";
-        var speed = $"{outputVideoSpeed:0.##}×";
+        var speed = $"{settings.Speed:0.##}×";
 
         AnalysisSummaryText.Text = $"Previewing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
         OutputRangeText.Text = $"{report.Events.Count:N0} frames\n{range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}";
@@ -1496,7 +1601,8 @@ public partial class MainWindow : Window
         OutputSourceText.Text =
             $"{Path.GetFileName(session.SourcePath)}\nSHA-256\n{FormatSha256(session.SourceSha256)}";
         RefreshHeatmapPresentation();
-        PrepareOutputVideoPreview(range, clockName, speed);
+        if (preview is not null)
+            PrepareOutputVideoPreview(preview, clockName, speed);
     }
 
     private void RefreshHeatmapPresentation()
@@ -1520,40 +1626,42 @@ public partial class MainWindow : Window
             (hiddenSamples > 0 ? $" · {hiddenSamples:N0} samples below N" : string.Empty);
     }
 
-    private void PrepareOutputVideoPreview(AnalysisRange range, string clockName, string speed)
+    private void PrepareOutputVideoPreview(ReplayOutputPreviewPlan preview, string clockName, string speed)
     {
         if (replaySession is null) return;
-        var options = CreateReplayExportOptions("preview.mp4", range);
-        outputVideoPlan = ReplayFramePlan.Build(replaySession, options);
-        outputVideoFrameCount = ReplayFramePlan.OutputFrameCount(outputVideoPlan);
+        if (!ReferenceEquals(outputVideoPreviewPlan, preview))
+            outputPreviewPlanBuildCount++;
+        outputVideoPreviewPlan = preview;
         outputVideoFrameIndex = 0;
-        var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)outputVideoFrameRate);
-        OutputClockText.Text = $"{FormatClock(duration)}\n{outputVideoFrameCount:N0} frames at {outputVideoFrameRate} FPS";
+        var settings = preview.Identity.Settings;
+        var duration = preview.Estimate.Duration;
+        OutputClockText.Text = $"{FormatClock(duration)}\n{outputVideoFrameCount:N0} frames at {settings.FrameRate} FPS";
         OutputVideoBadgeText.Text = OutputVideoSettingsLabel();
-        OutputVideoTimeline.SetFrameCount(outputVideoFrameCount, outputVideoFrameRate);
-        OutputVideoTimeline.SetSourceRange(replaySession.Count, range.StartLogicalIndex, range.EndLogicalIndex);
-        OutputFullscreenTimeline.SetFrameCount(outputVideoFrameCount, outputVideoFrameRate);
+        OutputVideoTimeline.SetFrameCount(outputVideoFrameCount, settings.FrameRate);
+        OutputVideoTimeline.SetSourceRange(replaySession.Count, settings.Range.StartLogicalIndex, settings.Range.EndLogicalIndex);
+        OutputFullscreenTimeline.SetFrameCount(outputVideoFrameCount, settings.FrameRate);
         OutputPreviewPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputFullscreenPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputPreviewFullscreenButton.IsEnabled = outputVideoFrameCount > 0;
         ShowOutputVideoFrame(0);
-        OutputConfigurationText.Text += $"\nvideo    {clockName} / {outputVideoFrameRate} FPS / {speed}";
+        OutputConfigurationText.Text += $"\nvideo    {clockName} / {settings.FrameRate} FPS / {speed}";
     }
 
     private void ShowOutputVideoFrame(int outputFrameIndex)
     {
-        if (replaySession is null || outputVideoFrameCount == 0 || outputVideoPlan.Count == 0) return;
+        if (replaySession is null || outputVideoFrameCount == 0 || outputVideoPreviewPlan is null) return;
         outputVideoFrameIndex = Math.Clamp(outputFrameIndex, 0, outputVideoFrameCount - 1);
-        var logicalIndex = ReplayFramePlan.LogicalIndexAt(outputVideoPlan, outputVideoFrameIndex);
+        var logicalIndex = ReplayFramePlan.LogicalIndexAt(outputVideoPreviewPlan.Entries, outputVideoFrameIndex);
         var scene = CreateReplayScene(logicalIndex);
         var settings = CurrentReplayRenderSettings();
-        OutputVideoPreview.Show(scene, settings, outputVideoWidth, outputVideoHeight);
+        var outputSettings = outputVideoPreviewPlan.Identity.Settings;
+        OutputVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
         if (outputFullscreenActive)
-            OutputFullscreenVideoPreview.Show(scene, settings, outputVideoWidth, outputVideoHeight);
+            OutputFullscreenVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
         OutputFullscreenTimeline.SetPosition(outputVideoFrameIndex);
-        var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)outputVideoFrameRate);
-        var duration = TimeSpan.FromSeconds(outputVideoFrameCount / (double)outputVideoFrameRate);
+        var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)outputSettings.FrameRate);
+        var duration = outputVideoPreviewPlan.Estimate.Duration;
         OutputPreviewClockText.Text = $"{FormatClock(currentTime)} / {FormatClock(duration)}";
         OutputPreviewFrameText.Text = $"output {outputVideoFrameIndex + 1:N0}/{outputVideoFrameCount:N0}  source {logicalIndex + 1:N0}/{replaySession.Count:N0}";
         OutputFullscreenClockText.Text = OutputPreviewClockText.Text;
@@ -1680,8 +1788,7 @@ public partial class MainWindow : Window
     {
         ExitOutputFullscreen();
         StopOutputVideoPreviewPlayback();
-        outputVideoPlan = [];
-        outputVideoFrameCount = 0;
+        outputVideoPreviewPlan = null;
         outputVideoFrameIndex = 0;
         OutputVideoPreview.Clear();
         OutputFullscreenVideoPreview.Clear();
@@ -1698,7 +1805,7 @@ public partial class MainWindow : Window
 
     private void RefreshCurrentOutputVideoFrame()
     {
-        if (outputVideoFrameCount > 0 && outputVideoPlan.Count > 0)
+        if (outputVideoFrameCount > 0 && outputVideoPreviewPlan is not null)
             ShowOutputVideoFrame(outputVideoFrameIndex);
     }
 
@@ -2805,7 +2912,7 @@ public partial class MainWindow : Window
         operationInProgress = busy;
         LoadingProgress.IsVisible = busy;
         LoadButton.IsVisible = !busy;
-        LoadButton.IsEnabled = !busy && !outputExportInProgress;
+        LoadButton.IsEnabled = !busy && !outputExportJobs.IsActive;
         CancelButton.IsVisible = busy;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
         EditConfigurationButton.IsEnabled = !busy && session is not null;
@@ -3773,8 +3880,7 @@ public partial class MainWindow : Window
         outputPreviewCancellation?.Dispose();
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
-        outputExportCancellation?.Cancel();
-        outputExportCancellation?.Dispose();
+        outputExportJobs.Cancel();
         if (Application.Current is { } application) application.ActualThemeVariantChanged -= Application_OnActualThemeVariantChanged;
         base.OnClosed(e);
     }
