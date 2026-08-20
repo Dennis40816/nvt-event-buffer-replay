@@ -785,7 +785,7 @@
 
                 <Border x:Name="InspectorAlertBorder" IsVisible="False" Padding="9,7" CornerRadius="4" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1">
                   <Grid ColumnDefinitions="*,Auto,3,Auto">
-                    <TextBlock x:Name="InspectorAlertText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <TextBlock x:Name="InspectorAlertText" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
                     <Button x:Name="PreviousFindingButton" Grid.Column="1" Classes="inspectorIcon" Content="&#xE70E;" Click="PreviousFindingButton_OnClick" ToolTip.Tip="Previous finding" AutomationProperties.Name="Previous finding" />
                     <Button x:Name="NextFindingButton" Grid.Column="3" Classes="inspectorIcon" Content="&#xE70D;" Click="NextFindingButton_OnClick" ToolTip.Tip="Next finding" AutomationProperties.Name="Next finding" />
                   </Grid>
@@ -928,6 +928,7 @@
                         <Button Classes="ghost" Content="False positive" Margin="0,0,5,5" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
                       </WrapPanel>
                       <StackPanel x:Name="AnnotationMetadataPanel" Spacing="5" IsVisible="False">
+                        <TextBlock Classes="section" Text="MARKER DETAILS" />
                         <Grid ColumnDefinitions="*,8,Auto">
                           <TextBox x:Name="MarkerNameTextBox" PlaceholderText="Marker name" FontSize="13" AutomationProperties.Name="Selected marker name" />
                           <Button x:Name="RenameMarkerButton" Grid.Column="2" Classes="ghost" Content="Rename" Click="RenameMarkerButton_OnClick" AutomationProperties.Name="Rename selected marker" />
