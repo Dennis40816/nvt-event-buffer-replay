@@ -77,25 +77,67 @@ internal static class VisualTestCapture
         }
 
         var candidate = File.ReadAllBytes(candidatePath);
-        if (candidate.AsSpan().SequenceEqual(png))
+        VerifyExactSnapshot(
+            candidate,
+            png,
+            artifactName,
+            "candidate",
+            "nvt-ui-candidate-diff",
+            "A mismatch never auto-passes; review the diff before recapturing the candidate.");
+    }
+
+    public static void ProcessSnapshot(Window window, string artifactName)
+    {
+        if (CandidateMatrixEnabled)
+        {
+            ProcessCandidate(window, artifactName);
+            return;
+        }
+
+        var approvedPath = Path.Combine(AppContext.BaseDirectory, "ApprovedSnapshots", artifactName);
+        if (!File.Exists(approvedPath))
+        {
+            throw new InvalidOperationException(
+                $"Missing approved UI snapshot '{approvedPath}'. " +
+                "Capture candidates explicitly, review them, then promote the approved PNGs in source control.");
+        }
+
+        VerifyExactSnapshot(
+            File.ReadAllBytes(approvedPath),
+            CapturePng(window),
+            artifactName,
+            "approved baseline",
+            "nvt-ui-approved-diff",
+            "A mismatch never auto-passes; review the diff and approve an intentional visual change explicitly.");
+    }
+
+    private static void VerifyExactSnapshot(
+        byte[] expected,
+        byte[] actual,
+        string artifactName,
+        string expectedKind,
+        string defaultAuditDirectory,
+        string reviewInstruction)
+    {
+        if (expected.AsSpan().SequenceEqual(actual))
             return;
 
         var auditDirectory = Environment.GetEnvironmentVariable(AuditDirectoryVariable);
         if (string.IsNullOrWhiteSpace(auditDirectory))
-            auditDirectory = Path.Combine(Path.GetTempPath(), "nvt-ui-candidate-diff");
+            auditDirectory = Path.Combine(Path.GetTempPath(), defaultAuditDirectory);
         Directory.CreateDirectory(auditDirectory);
 
         var actualPath = Path.Combine(auditDirectory, $"actual-{artifactName}");
         var diffPath = Path.Combine(auditDirectory, $"diff-{artifactName}");
         var metricsPath = Path.Combine(auditDirectory, $"metrics-{Path.GetFileNameWithoutExtension(artifactName)}.txt");
-        File.WriteAllBytes(actualPath, png);
-        var metrics = WriteDiff(candidate, png, diffPath);
+        File.WriteAllBytes(actualPath, actual);
+        var metrics = WriteDiff(expected, actual, diffPath);
         File.WriteAllText(metricsPath, metrics.ToString());
 
         throw new InvalidOperationException(
-            $"UI snapshot candidate changed: '{artifactName}'. {metrics} " +
+            $"UI snapshot {expectedKind} changed: '{artifactName}'. {metrics} " +
             $"Actual: '{actualPath}'. Diff: '{diffPath}'. " +
-            "A mismatch never auto-passes; review the diff before recapturing the candidate.");
+            reviewInstruction);
     }
 
     private static RenderTargetBitmap CreateBitmap(Window window)
@@ -119,7 +161,7 @@ internal static class VisualTestCapture
     private static VisualDiffMetrics WriteDiff(byte[] expectedPng, byte[] actualPng, string diffPath)
     {
         using var expectedBitmap = SKBitmap.Decode(expectedPng) ??
-            throw new InvalidOperationException("The UI snapshot candidate is not a readable PNG.");
+            throw new InvalidOperationException("The expected UI snapshot is not a readable PNG.");
         using var actual = SKBitmap.Decode(actualPng) ??
             throw new InvalidOperationException("The actual UI snapshot is not a readable PNG.");
 

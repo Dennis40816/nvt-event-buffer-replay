@@ -10,7 +10,7 @@ $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $project = Join-Path $repoRoot 'tests\Nvt.Replay.Avalonia.Tests\Nvt.Replay.Avalonia.Tests.csproj'
 $candidateDirectory = Join-Path $repoRoot 'artifacts\ui-snapshot-candidates'
 $buildOutputName = 'bin-ui-candidates'
-$testFilter = 'FullyQualifiedName~Candidate_snapshot_matrix_covers_primary_workspaces_themes_and_widths'
+$testFilter = 'FullyQualifiedName~snapshot_matrix_covers_primary_workspaces_themes_and_widths'
 
 if (-not $Capture) {
     throw 'Candidate capture replaces local review artifacts. Re-run with -Capture to opt in explicitly.'

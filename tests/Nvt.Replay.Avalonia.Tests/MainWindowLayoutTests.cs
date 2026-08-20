@@ -783,10 +783,8 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
-    public async Task Candidate_snapshot_matrix_covers_primary_workspaces_themes_and_widths()
+    public async Task Approved_snapshot_matrix_covers_primary_workspaces_themes_and_widths()
     {
-        if (!VisualTestCapture.CandidateMatrixEnabled) return;
-
         var window = ShowWindow();
         try
         {
@@ -797,22 +795,22 @@ public sealed class MainWindowLayoutTests
             frames.SelectedItem = frames.Items.OfType<DecodedFrameRow>().First(row => row.Touches == 3);
             Dispatcher.UIThread.RunJobs();
 
-            CaptureCandidateMatrix(window, "paint");
+            VerifySnapshotMatrix(window, "paint");
 
             Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
             await WaitUntilAsync(() => Required<TextBlock>(window, "OutputPreviewFrameText").Text != "output 0/0");
             Dispatcher.UIThread.RunJobs();
-            CaptureCandidateMatrix(window, "output");
+            VerifySnapshotMatrix(window, "output");
 
             Required<ComboBox>(window, "OutputContentComboBox").SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
-            CaptureCandidateMatrix(window, "heatmap");
+            VerifySnapshotMatrix(window, "heatmap");
 
             Required<Button>(window, "SettingsButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Control>(window, "SettingsPage").IsVisible);
-            CaptureCandidateMatrix(window, "settings");
+            VerifySnapshotMatrix(window, "settings");
         }
         finally
         {
@@ -1707,7 +1705,7 @@ public sealed class MainWindowLayoutTests
     private static bool IsTransparent(IBrush? brush) =>
         brush is null || brush is ISolidColorBrush { Color.A: 0 };
 
-    private static void CaptureCandidateMatrix(MainWindow window, string workspace)
+    private static void VerifySnapshotMatrix(MainWindow window, string workspace)
     {
         var application = Assert.IsType<App>(Application.Current);
         foreach (var snapshot in new[]
@@ -1721,7 +1719,7 @@ public sealed class MainWindowLayoutTests
             window.Width = snapshot.Width;
             window.Height = snapshot.Height;
             application.RequestedThemeVariant = snapshot.Theme;
-            VisualTestCapture.ProcessCandidate(
+            VisualTestCapture.ProcessSnapshot(
                 window,
                 $"{workspace}-{snapshot.Width:0}x{snapshot.Height:0}-{snapshot.ThemeName}.png");
         }
