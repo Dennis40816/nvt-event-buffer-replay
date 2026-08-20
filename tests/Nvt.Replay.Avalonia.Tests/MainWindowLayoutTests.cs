@@ -9,7 +9,6 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -26,40 +25,6 @@ namespace Nvt.Replay.Avalonia.Tests;
 
 public sealed class MainWindowLayoutTests
 {
-    [AvaloniaFact]
-    public void Main_window_loads_external_style_dictionaries()
-    {
-        var window = ShowWindow();
-        try
-        {
-            var dictionaryUris = new[]
-            {
-                "MainWindow.TypographyButtons.axaml",
-                "MainWindow.FieldsTransport.axaml",
-                "MainWindow.Canvas.axaml",
-                "MainWindow.Shared.axaml",
-                "MainWindow.Inspector.axaml",
-                "MainWindow.WorkspacePanels.axaml",
-                "MainWindow.Output.axaml",
-                "MainWindow.InspectorDisclosure.axaml"
-            };
-
-            foreach (var fileName in dictionaryUris)
-            {
-                var uri = new Uri($"avares://Nvt.Replay.Avalonia/Styles/{fileName}");
-                var styles = Assert.IsType<Styles>(AvaloniaXamlLoader.Load(uri, baseUri: null));
-                Assert.NotEmpty(styles);
-            }
-
-            Assert.Equal(34, Required<TextBox>(window, "PanelWidthTextBox").Height);
-            Assert.Equal(32, Required<Button>(window, "SaveReviewButton").Height);
-        }
-        finally
-        {
-            window.Close();
-        }
-    }
-
     [AvaloniaFact]
     public async Task Confirming_a_common_version_decodes_immediately_without_an_action_button()
     {

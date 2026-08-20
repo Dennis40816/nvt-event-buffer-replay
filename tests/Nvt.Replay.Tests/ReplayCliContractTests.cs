@@ -1,7 +1,13 @@
+using System.Text.Json;
+
 namespace Nvt.Replay.Tests;
 
-public sealed class ReplayCliContractTests
+public sealed class ReplayCliContractTests : IDisposable
 {
+    private readonly string directory = Path.Combine(Path.GetTempPath(), $"nvt-cli-contract-{Guid.NewGuid():N}");
+
+    public ReplayCliContractTests() => Directory.CreateDirectory(directory);
+
     [Theory]
     [InlineData("1", 1)]
     [InlineData("120", 120)]
@@ -34,4 +40,154 @@ public sealed class ReplayCliContractTests
         Assert.Contains("[--fps <1-240>]", output.ToString(), StringComparison.Ordinal);
         Assert.Empty(error.ToString());
     }
+
+    [Fact]
+    public async Task Formats_command_is_backed_by_the_executable_registry()
+    {
+        var result = await RunAsync("formats", "--json");
+
+        Assert.Equal(0, result.ExitCode);
+        using var json = JsonDocument.Parse(result.Output);
+        Assert.Equal(5, json.RootElement.GetArrayLength());
+        Assert.Contains(json.RootElement.EnumerateArray(), item =>
+            item.GetProperty("Id").GetString() == "desay-97" &&
+            item.GetProperty("Version").GetString() == "0x97");
+    }
+
+    [Fact]
+    public async Task Common_inspect_preserves_the_typed_JSON_and_text_contract()
+    {
+        var fixture = Fixture("common-0x83-asil-lifecycle.nds.txt");
+        var jsonResult = await RunAsync(
+            "inspect", fixture, "--event-buffer-version", "0x83", "--json");
+
+        Assert.Equal(0, jsonResult.ExitCode);
+        using var json = JsonDocument.Parse(jsonResult.Output);
+        Assert.Equal("V83", json.RootElement.GetProperty("Version").GetString());
+        Assert.Equal(3, json.RootElement.GetProperty("Frames").GetArrayLength());
+        Assert.Equal(fixture, json.RootElement.GetProperty("SourcePath").GetString());
+
+        var textResult = await RunAsync("inspect", fixture, "--event-buffer-version", "0x83");
+        Assert.Equal(0, textResult.ExitCode);
+        Assert.Contains("Format  Common 0x83 (operator selected)", textResult.Output, StringComparison.Ordinal);
+        Assert.Contains("Frames  3", textResult.Output, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("standard", "Standard", "Desay 0x97 / Standard")]
+    [InlineData("benz-palm", "BenzPalm", "Desay 0x97 / Benz Palm")]
+    public async Task Desay_inspect_preserves_Standard_and_Benz_contracts(
+        string option,
+        string expectedJsonProfile,
+        string expectedTextIdentity)
+    {
+        var fixture = Fixture("desay97-full-reread.nds.txt");
+        var jsonResult = await RunAsync(
+            "inspect", fixture,
+            "--event-buffer-version", "0x97",
+            "--register-profile", "51927",
+            "--desay97-profile", option,
+            "--json");
+
+        Assert.Equal(0, jsonResult.ExitCode);
+        using var json = JsonDocument.Parse(jsonResult.Output);
+        Assert.Equal(expectedJsonProfile, json.RootElement.GetProperty("Profile").GetString());
+        Assert.Equal(0x99000u, json.RootElement.GetProperty("EventBufferBase").GetUInt32());
+        Assert.Equal(2, json.RootElement.GetProperty("Frames").GetArrayLength());
+
+        var textResult = await RunAsync(
+            "inspect", fixture,
+            "--event-buffer-version", "0x97",
+            "--register-profile", "51927",
+            "--desay97-profile", option);
+        Assert.Equal(0, textResult.ExitCode);
+        Assert.Contains($"Format  {expectedTextIdentity} (operator selected)", textResult.Output, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Inspect_configuration_failures_keep_usage_exit_and_messages()
+    {
+        var common = Fixture("common-0x83-asil-lifecycle.nds.txt");
+        var unsupported = await RunAsync(
+            "inspect", common, "--event-buffer-version", "0x86");
+        Assert.Equal(2, unsupported.ExitCode);
+        Assert.Equal("Unsupported Event Buffer Version: 0x86", unsupported.Error.Trim());
+
+        var desay = Fixture("desay97-full-reread.nds.txt");
+        var missingIc = await RunAsync(
+            "inspect", desay, "--event-buffer-version", "0x97");
+        Assert.Equal(2, missingIc.ExitCode);
+        Assert.Equal(
+            "Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.",
+            missingIc.Error.Trim());
+
+        var missingPalm = await RunAsync(
+            "inspect", desay,
+            "--event-buffer-version", "0x97",
+            "--register-profile", "51927");
+        Assert.Equal(2, missingPalm.ExitCode);
+        Assert.Equal(
+            "Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.",
+            missingPalm.Error.Trim());
+    }
+
+    [Fact]
+    public async Task Analyze_manifest_keeps_format_evidence_and_decode_configuration()
+    {
+        var outputDirectory = Path.Combine(directory, "analysis");
+        var result = await RunAsync(
+            "analyze", Fixture("common-0x83-asil-lifecycle.nds.txt"),
+            "--event-buffer-version", "0x83",
+            "--output", outputDirectory,
+            "--json");
+
+        Assert.Equal(0, result.ExitCode);
+        using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(outputDirectory, "manifest.json")));
+        Assert.Equal("0x83", manifest.RootElement.GetProperty("decodeConfiguration").GetProperty("eventBufferVersion").GetString());
+        Assert.Equal("nds-communication-log", manifest.RootElement.GetProperty("decodeConfiguration").GetProperty("sourceAdapterId").GetString());
+        Assert.Equal("verified", manifest.RootElement.GetProperty("formatEvidenceStatus").GetString());
+    }
+
+    [Fact]
+    public async Task Export_manifest_keeps_the_provider_configuration()
+    {
+        var outputPath = Path.Combine(directory, "replay.mp4");
+        var result = await RunAsync(
+            "export", Fixture("common-0x83-asil-lifecycle.nds.txt"),
+            "--event-buffer-version", "0x83",
+            "--output", outputPath,
+            "--ffmpeg", Path.Combine(directory, "missing-ffmpeg.exe"),
+            "--json");
+
+        Assert.Equal(0, result.ExitCode);
+        using var json = JsonDocument.Parse(result.Output);
+        var manifestPath = json.RootElement.GetProperty("ManifestPath").GetString();
+        Assert.NotNull(manifestPath);
+        using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(manifestPath));
+        Assert.Equal(2, manifest.RootElement.GetProperty("schemaVersion").GetInt32());
+        Assert.Equal("0x83", manifest.RootElement.GetProperty("decodeConfiguration").GetProperty("eventBufferVersion").GetString());
+        Assert.Equal("nds-communication-log", manifest.RootElement.GetProperty("decodeConfiguration").GetProperty("sourceAdapterId").GetString());
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        GC.SuppressFinalize(this);
+    }
+
+    private static string Fixture(string name) => Path.GetFullPath(Path.Combine(
+        AppContext.BaseDirectory,
+        "..", "..", "..", "..",
+        "fixtures",
+        name));
+
+    private static async Task<CliResult> RunAsync(params string[] args)
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var exitCode = await ReplayCli.RunAsync(args, output, error);
+        return new CliResult(exitCode, output.ToString(), error.ToString());
+    }
+
+    private sealed record CliResult(int ExitCode, string Output, string Error);
 }

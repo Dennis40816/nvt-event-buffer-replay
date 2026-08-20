@@ -41,7 +41,7 @@ internal static class ReplayCli
             switch (operands[0].ToLowerInvariant())
             {
                 case "formats":
-                    await WriteAsync(output, BuiltInFormats.All, json);
+                    await WriteAsync(output, ExecutableFormatRegistry.Descriptors, json);
                     return 0;
                 case "sources":
                     var sources = BuiltInSources.All.Select(source => new { source.Id, source.DisplayName });
@@ -143,41 +143,21 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
-        var isDesay97 = IsDesay97Version(versionText);
-        if (isDesay97 && registerProfile is null)
+        var palmProfile = TryReadOption(operands, "--desay97-profile", out var selectedPalm) ? selectedPalm : null;
+        if (!ExecutableFormatRegistry.TryResolve(
+                new FormatDecodeRequest(versionText, registerProfile, palmProfile),
+                out var formatSelection,
+                out var formatError))
         {
-            await error.WriteLineAsync("Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.");
+            await error.WriteLineAsync(formatError);
             return UsageError;
         }
-        var capture = (await CaptureSession.LoadAsync(path, adapterId: adapterId)).WithRegisterProfile(registerProfile);
-        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0;
-        ITouchReplaySession replay;
-        IReadOnlyList<ReplayDiagnostic> diagnostics;
-        ReplayDecodeConfiguration configuration;
-        if (isDesay97)
-        {
-            if (!TryReadOption(operands, "--desay97-profile", out var profileText) || !TryParseDesay97Profile(profileText, out var profile))
-            {
-                await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
-                return UsageError;
-            }
-            var decoded = capture.DecodeDesay97(profile, eventBufferBase);
-            replay = new Desay97ReplaySession(decoded.Frames);
-            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
-            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId, eventBufferBase, registerProfile);
-        }
-        else
-        {
-            if (!CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
-            {
-                await error.WriteLineAsync($"Unsupported Event Buffer Version: {versionText}");
-                return UsageError;
-            }
-            var decoded = capture.DecodeCommon(version);
-            replay = new CommonReplaySession(decoded.Frames);
-            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
-            configuration = new ReplayDecodeConfiguration(VersionText(version), null, capture.Probe.AdapterId, eventBufferBase, registerProfile);
-        }
+        var loadedCapture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
+        var decodedFormat = formatSelection!.Decode(loadedCapture);
+        var capture = decodedFormat.Capture;
+        var replay = decodedFormat.Replay;
+        var diagnostics = decodedFormat.Diagnostics;
+        var configuration = decodedFormat.Configuration;
         if (replay.Count == 0)
         {
             await error.WriteLineAsync("No decoded frames are available for export.");
@@ -297,45 +277,22 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
-        var isDesay97 = IsDesay97Version(versionText);
-        if (isDesay97 && registerProfile is null)
+        var palmProfile = TryReadOption(operands, "--desay97-profile", out var selectedPalm) ? selectedPalm : null;
+        if (!ExecutableFormatRegistry.TryResolve(
+                new FormatDecodeRequest(versionText, registerProfile, palmProfile),
+                out var formatSelection,
+                out var formatError))
         {
-            await error.WriteLineAsync("Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.");
+            await error.WriteLineAsync(formatError);
             return UsageError;
         }
-        var capture = (await CaptureSession.LoadAsync(path, adapterId: adapterId)).WithRegisterProfile(registerProfile);
-        var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ?? 0;
-        ITouchReplaySession replay;
-        IReadOnlyList<ReplayDiagnostic> diagnostics;
-        ReplayDecodeConfiguration configuration;
-        EvidenceStatus evidenceStatus;
-        if (isDesay97)
-        {
-            if (!TryReadOption(operands, "--desay97-profile", out var profileText) || !TryParseDesay97Profile(profileText, out var profile))
-            {
-                await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
-                return UsageError;
-            }
-            var decoded = capture.DecodeDesay97(profile, eventBufferBase);
-            replay = new Desay97ReplaySession(decoded.Frames);
-            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
-            configuration = new ReplayDecodeConfiguration("0x97", ProfileText(profile), capture.Probe.AdapterId, eventBufferBase, registerProfile);
-            evidenceStatus = EvidenceStatus.Provisional;
-        }
-        else
-        {
-            if (!CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
-            {
-                await error.WriteLineAsync($"Unsupported Event Buffer Version: {versionText}");
-                return UsageError;
-            }
-            var decoded = capture.DecodeCommon(version);
-            replay = new CommonReplaySession(decoded.Frames);
-            diagnostics = decoded.Diagnostics.Concat(replay.Diagnostics).ToArray();
-            var canonicalVersion = VersionText(version);
-            configuration = new ReplayDecodeConfiguration(canonicalVersion, null, capture.Probe.AdapterId, eventBufferBase, registerProfile);
-            evidenceStatus = canonicalVersion is "0x83" or "0x84" ? EvidenceStatus.Verified : EvidenceStatus.Provisional;
-        }
+        var loadedCapture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
+        var decodedFormat = formatSelection!.Decode(loadedCapture);
+        var capture = decodedFormat.Capture;
+        var replay = decodedFormat.Replay;
+        var diagnostics = decodedFormat.Diagnostics;
+        var configuration = decodedFormat.Configuration;
+        var evidenceStatus = decodedFormat.Descriptor.EvidenceStatus;
         if (replay.Count == 0)
         {
             await error.WriteLineAsync("No decoded frames are available for analysis.");
@@ -436,58 +393,39 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
-        var isDesay97 = IsDesay97Version(versionText);
-        if (isDesay97 && registerProfile is null)
+        var palmProfile = TryReadOption(operands, "--desay97-profile", out var selectedPalm) ? selectedPalm : null;
+        if (!ExecutableFormatRegistry.TryResolve(
+                new FormatDecodeRequest(versionText, registerProfile, palmProfile),
+                out var formatSelection,
+                out var formatError))
         {
-            await error.WriteLineAsync("Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.");
+            await error.WriteLineAsync(formatError);
             return UsageError;
         }
-        var capture = (await CaptureSession.LoadAsync(path, adapterId: sourceAdapterId)).WithRegisterProfile(registerProfile);
-
-        if (isDesay97)
-        {
-            if (!TryReadOption(operands, "--desay97-profile", out var profileText) ||
-                !TryParseDesay97Profile(profileText, out var profile))
-            {
-                await error.WriteLineAsync("Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.");
-                return UsageError;
-            }
-
-            var eventBufferBase = NvtRegisterCatalog.FindProfile(registerProfile)?.EventBufferBase ??
-                throw new InvalidOperationException("Desay register profile was validated before decoding.");
-            var desayReport = capture.DecodeDesay97(profile, eventBufferBase);
-            if (json)
-            {
-                await output.WriteLineAsync(JsonSerializer.Serialize(desayReport, JsonOptions));
-            }
-            else
-            {
-                await WriteDesay97InspectionAsync(desayReport, output, error);
-            }
-            return desayReport.Diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-                ? DecodeError
-                : 0;
-        }
-
-        if (!CommonEventBufferDecoder.TryParseVersion(versionText, out var version))
-        {
-            await error.WriteLineAsync($"Unsupported Event Buffer Version: {versionText}");
-            return UsageError;
-        }
-
-        var report = capture.DecodeCommon(version);
+        var capture = await CaptureSession.LoadAsync(path, adapterId: sourceAdapterId);
+        var decodedFormat = formatSelection!.Decode(capture);
         if (json)
         {
-            await output.WriteLineAsync(JsonSerializer.Serialize(report, JsonOptions));
+            await output.WriteLineAsync(JsonSerializer.Serialize(
+                decodedFormat.InspectionReport,
+                decodedFormat.InspectionReport.GetType(),
+                JsonOptions));
         }
         else
         {
-            await WriteInspectionAsync(report, output, error);
+            switch (decodedFormat)
+            {
+                case CommonFormatDecodeResult common:
+                    await WriteInspectionAsync(common.Report, output, error);
+                    break;
+                case Desay97FormatDecodeResult desay:
+                    await WriteDesay97InspectionAsync(desay.Report, output, error);
+                    break;
+                default:
+                    throw new InvalidOperationException($"No CLI inspection presenter is registered for {decodedFormat.DisplayIdentity}.");
+            }
         }
-
-        return report.Diagnostics.Any(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            ? DecodeError
-            : 0;
+        return decodedFormat.HasInspectionErrors ? DecodeError : 0;
     }
 
     private static async Task WriteDesay97InspectionAsync(
@@ -540,18 +478,6 @@ internal static class ReplayCli
 
         value = string.Empty;
         return false;
-    }
-
-    private static bool TryParseDesay97Profile(string value, out Desay97Profile profile)
-    {
-        var normalized = value.Trim().Replace('_', '-').ToLowerInvariant();
-        profile = normalized switch
-        {
-            "standard" => Desay97Profile.Standard,
-            "benz" or "benz-palm" => Desay97Profile.BenzPalm,
-            _ => default,
-        };
-        return normalized is "standard" or "benz" or "benz-palm";
     }
 
     private static string ProfileText(Desay97Profile profile) => profile switch
@@ -678,7 +604,7 @@ internal static class ReplayCli
     {
         await output.WriteLineAsync($"Source  {report.SourcePath}");
         await output.WriteLineAsync($"SHA-256 {report.SourceSha256}");
-        await output.WriteLineAsync($"Format  Common {VersionText(report.Version)} (operator selected)");
+        await output.WriteLineAsync($"Format  Common {ExecutableFormatRegistry.CommonVersionText(report.Version)} (operator selected)");
         await output.WriteLineAsync($"Frames  {report.Frames.Count}");
 
         foreach (var frame in report.Frames)
@@ -727,19 +653,6 @@ internal static class ReplayCli
         finger.X == 0xFFFF &&
         finger.Y == 0xFFFF &&
         finger.Reserved.All(value => value == 0xFF);
-
-    private static string VersionText(CommonEventBufferVersion version) => version switch
-    {
-        CommonEventBufferVersion.V82 => "0x82",
-        CommonEventBufferVersion.V83 => "0x83",
-        CommonEventBufferVersion.V84 => "0x84",
-        CommonEventBufferVersion.V85 => "0x85",
-        _ => throw new ArgumentOutOfRangeException(nameof(version)),
-    };
-
-    private static bool IsDesay97Version(string value) =>
-        value.Equals("0x97", StringComparison.OrdinalIgnoreCase) ||
-        value.Equals("97", StringComparison.OrdinalIgnoreCase);
 
     private static Task WriteHelpAsync(TextWriter output)
     {
