@@ -62,16 +62,17 @@ public partial class MainWindow : Window
     private double outputVideoSpeed = 1;
     private ReplayExportClock outputVideoClock = ReplayExportClock.Frame;
     private CaptureAnalysisReport? currentOutputReport;
+    private readonly ReplayPlaybackController playbackController = new();
     private int heatmapMinimumCount = 5;
     private double heatmapLabelThresholdRatio = 0.65;
     private string appliedHeatmapMode = "all";
     private bool outputFullscreenActive;
     private WindowState outputFullscreenPreviousWindowState = WindowState.Normal;
-    private int currentLogicalIndex = -1;
-    private int? loopIn;
-    private int? loopOut;
-    private bool loopEnabled;
-    private double replaySpeed = 1;
+    private int currentLogicalIndex => playbackController.CurrentIndex;
+    private int? loopIn => playbackController.LoopStart;
+    private int? loopOut => playbackController.LoopEnd;
+    private bool loopEnabled => playbackController.LoopEnabled;
+    private double replaySpeed => playbackController.Rate.Multiplier;
     private int trailLength = 10;
     private ReplayTrailMode trailMode = ReplayTrailMode.UntilBreak;
     private bool traceVisible = true;
@@ -84,7 +85,7 @@ public partial class MainWindow : Window
     private bool reverseX;
     private bool reverseY;
     private bool swapAxes;
-    private bool maxReplaySpeed;
+    private bool maxReplaySpeed => playbackController.Rate.IsMaximum;
     private bool synchronizingSelection;
     private bool synchronizingLoopControls;
     private bool configuringEventVersion;
@@ -97,8 +98,6 @@ public partial class MainWindow : Window
     private bool synchronizingAutoPauseControls;
     private bool operationInProgress;
     private bool outputExportInProgress;
-    private int playbackTimingRevision;
-    private int playbackRunGeneration;
     private bool outputWorkspaceActive;
     private bool comboBoxDismissHandlersAttached;
     private int themeMode;
@@ -117,7 +116,6 @@ public partial class MainWindow : Window
     private const double MaximumInspectorRailWidth = 420;
     private const double CollapsedInspectorRailWidth = 58;
     private const double ReplayTransportHeight = 64;
-    private static readonly TimeSpan MinimumPlaybackVisualInterval = TimeSpan.FromMilliseconds(16);
     private static readonly TimeSpan PlaybackDetailPresentationInterval = TimeSpan.FromMilliseconds(100);
     private long lastDetailPresentationTimestamp;
     internal int DetailPresentationCount { get; private set; }
@@ -516,9 +514,10 @@ public partial class MainWindow : Window
                 () => CaptureSession.LoadAsync(path, progress, cancellationToken, adapterId),
                 cancellationToken);
             var projectedActivities = await Task.Run(
-                () => RegisterActivityProjector.Project(nextSession.Records).ToArray(),
+                () => RegisterActivityProjector.Project(nextSession.Records, nextSession.RegisterAnnotations).ToArray(),
                 cancellationToken);
-            var nextDiagnosticRows = nextSession.SourceDiagnostics
+            var nextDiagnostics = SessionDiagnostics(nextSession);
+            var nextDiagnosticRows = nextDiagnostics
                 .Select(diagnostic => new DiagnosticRow(diagnostic))
                 .ToArray();
 
@@ -527,7 +526,7 @@ public partial class MainWindow : Window
             session = nextSession;
             ApplyRawExplorerProjection(projectedActivities);
             diagnosticRows = nextDiagnosticRows;
-            CreateReviewSession(session.SourceDiagnostics);
+            CreateReviewSession(nextDiagnostics);
             CaptureNameText.Text = Path.GetFileName(session.SourcePath).ToUpperInvariant();
             SessionStatusText.Text = $"{session.Records.Count:N0} physical records indexed · {diagnosticRows.Length:N0} source diagnostics · semantic format required";
             SourceAdapterText.Text = session.Probe.DisplayName;
@@ -1564,8 +1563,7 @@ public partial class MainWindow : Window
 
     private void OutputVideoTimeline_OnRangeChanged(object? sender, OutputVideoRangeEventArgs e)
     {
-        loopIn = e.StartLogicalIndex;
-        loopOut = e.EndLogicalIndex;
+        ApplyLoopConfiguration(loopEnabled, e.StartLogicalIndex, e.EndLogicalIndex);
         UpdateLoopText();
     }
 
@@ -1774,10 +1772,12 @@ public partial class MainWindow : Window
         try
         {
             session = await Task.Run(() => loadedSession.WithRegisterProfile(choice.IcFamily));
-            var projected = await Task.Run(() => RegisterActivityProjector.Project(session.Records).ToArray());
+            var projected = await Task.Run(() =>
+                RegisterActivityProjector.Project(session.Records, session.RegisterAnnotations).ToArray());
             ApplyRawExplorerProjection(projected, selectedId);
-            diagnosticRows = session.SourceDiagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
-            CreateReviewSession(session.SourceDiagnostics);
+            var diagnostics = SessionDiagnostics(session);
+            diagnosticRows = diagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
+            CreateReviewSession(diagnostics);
             var ambiguous = registerActivities.Count(item => item.IsAmbiguous);
             ConfigurationHintText.Text = choice.IcFamily is null
                 ? $"IC profile unconfirmed · {ambiguous:N0} collision-prone register events remain raw-only"
@@ -1885,7 +1885,11 @@ public partial class MainWindow : Window
         SetBusy(true, "Exporting readable communication log");
         try
         {
-            var result = await new ReadableCommunicationLogWriter().WriteAsync(directory, session.Records, cancellationToken);
+            var result = await new ReadableCommunicationLogWriter().WriteAsync(
+                directory,
+                session.Records,
+                session.RegisterAnnotations,
+                cancellationToken);
             SessionStatusText.Text =
                 $"Readable log exported · {result.RecordCount:N0} records · {result.AnnotatedRegisterCount:N0} annotated · {result.AmbiguousRegisterCount:N0} ambiguous";
         }
@@ -2107,6 +2111,9 @@ public partial class MainWindow : Window
                 synchronizingAutoPauseControls = false;
             }
         }
+        playbackController.ConfigureAutoPause(new ReplayPlaybackPauseOptions(
+            preferences.PauseOnBreak,
+            preferences.PauseOnAllBreak));
         UpdateAutoPauseIndicator(preferences);
         if (reviewSession is not null)
         {
@@ -2473,7 +2480,7 @@ public partial class MainWindow : Window
 
     private void ShowRecord(SourceRecord record, object? frame, ITouchReplaySnapshot? snapshot = null)
     {
-        var registerReadable = record.SourceFields?.GetValueOrDefault("register_readable");
+        var registerAnnotation = session?.RegisterAnnotations.Find(record.StableId);
         currentInspectorRecord = record;
         currentInspectorFrame = frame;
         currentInspectorSnapshot = snapshot;
@@ -2482,13 +2489,14 @@ public partial class MainWindow : Window
             frame,
             snapshot,
             replaySession?.Count ?? 0,
-            PaintSurface.Mode);
+            PaintSurface.Mode,
+            registerAnnotation);
         if (snapshot is not null)
             currentInspectorPresentation = currentInspectorPresentation with
             {
                 TimestampLabel = FormatClock(SelectedTime(snapshot.Timeline)),
             };
-        ApplyInspectorPresentation(currentInspectorPresentation, frame is null && registerReadable is not null);
+        ApplyInspectorPresentation(currentInspectorPresentation, frame is null && registerAnnotation is not null);
 
         var frameAlerts = reviewSession?.FrameAlerts(record.StableId, record.Location.LineNumber) ?? [];
         var crcFailed = currentInspectorPresentation.CrcFailed;
@@ -2603,12 +2611,18 @@ public partial class MainWindow : Window
         return rows;
     }
 
-    private static string FormatSourceFields(SourceRecord record) =>
-        record.SourceFields is not { Count: > 0 }
+    private string FormatSourceFields(SourceRecord record)
+    {
+        var fields = session?.RegisterAnnotations.EffectiveFields(record) ?? record.SourceFields;
+        return fields is not { Count: > 0 }
             ? "No adapter-specific source fields."
-            : string.Join('\n', record.SourceFields
+            : string.Join('\n', fields
                 .OrderBy(item => item.Key, StringComparer.Ordinal)
                 .Select(field => $"{field.Key}={field.Value}"));
+    }
+
+    private static ReplayDiagnostic[] SessionDiagnostics(CaptureSession capture) =>
+        capture.TransportDiagnostics.Concat(capture.RegisterDiagnostics).ToArray();
 
     private sealed record SourceAdapterChoice(string AdapterId, string DisplayName, ProbeConfidence Confidence)
     {
@@ -2646,16 +2660,13 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.SetMarkerFrames([]);
         decodeConfiguration = null;
         pendingSidecar = null;
-        currentLogicalIndex = -1;
+        playbackController.Clear();
         currentInspectorRecord = null;
         currentInspectorFrame = null;
         currentInspectorSnapshot = null;
         currentInspectorPresentation = null;
         lastDetailPresentationTimestamp = 0;
         DetailPresentationCount = 0;
-        loopIn = null;
-        loopOut = null;
-        loopEnabled = false;
         RawRecordsList.ItemsSource = null;
         RegisterSearchTextBox.Text = string.Empty;
         RegisterFilterComboBox.SelectedIndex = 0;
@@ -2819,6 +2830,13 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.SetMaximum(maximum);
         if (replayFrames is null || trailHistory is null || autoPauseIndex is null)
             throw new InvalidOperationException("Replay workspace must be prepared before it is presented.");
+        playbackController.Load(
+            replaySession.Timeline,
+            autoPauseIndex,
+            (exclusiveStart, inclusiveEnd) => reviewSession?.FirstPauseIndex(exclusiveStart, inclusiveEnd));
+        playbackController.ConfigureAutoPause(new ReplayPlaybackPauseOptions(
+            SettingsPage.PlaybackPreferences.PauseOnBreak,
+            SettingsPage.PlaybackPreferences.PauseOnAllBreak));
         trailVisibilityStart = 0;
         traceVisible = true;
         trailPointsVisible = true;
@@ -2878,9 +2896,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var clampedIndex = Math.Clamp(logicalIndex, 0, replaySession.Count - 1);
+        var clampedIndex = playbackController.Seek(logicalIndex);
         var snapshot = replayFrames?[clampedIndex] ?? replaySession.Seek(clampedIndex);
-        currentLogicalIndex = clampedIndex;
         RenderReplayFrame(snapshot, crossfade);
         UpdateReplayProgress(snapshot);
 
@@ -2993,13 +3010,13 @@ public partial class MainWindow : Window
     private void PreviousFrameButton_OnClick(object? sender, RoutedEventArgs e)
     {
         StopPlayback();
-        SeekReplay(currentLogicalIndex - 1);
+        SeekReplay(playbackController.Step(-1));
     }
 
     private void NextFrameButton_OnClick(object? sender, RoutedEventArgs e)
     {
         StopPlayback();
-        SeekReplay(currentLogicalIndex + 1);
+        SeekReplay(playbackController.Step(1));
     }
 
     private void PlayPauseButton_OnClick(object? sender, RoutedEventArgs e)
@@ -3010,107 +3027,64 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (replaySession is null || replaySession.Count == 0)
-        {
+        var start = playbackController.Play();
+        if (start.Kind == ReplayPlaybackStartKind.Empty)
             return;
-        }
-        if (loopEnabled && loopIn is { } loopStart && loopOut is { } loopEnd && loopStart >= loopEnd)
+        if (start.Kind == ReplayPlaybackStartKind.InvalidLoop)
         {
             TimelineStatusText.Text = "Loop needs at least 2 frames · drag either Loop handle to widen the range";
             return;
         }
-        if (currentLogicalIndex >= replaySession.Count - 1)
-        {
-            SeekReplay(loopEnabled ? loopIn ?? 0 : 0);
-        }
+        SeekReplay(start.LogicalIndex);
         var cancellation = new CancellationTokenSource();
         playbackCancellation = cancellation;
-        var generation = ++playbackRunGeneration;
         SetPlaybackVisualState(playing: true);
         UpdatePlaybackStatus();
-        _ = RunPlaybackAsync(cancellation.Token, generation);
+        _ = RunPlaybackAsync(cancellation.Token, start.Generation);
     }
 
     private async Task RunPlaybackAsync(CancellationToken cancellationToken, int generation)
     {
         var playbackStarted = Stopwatch.GetTimestamp();
-        var scheduledElapsed = TimeSpan.Zero;
-        var timingRevision = playbackTimingRevision;
         try
         {
-            while (replaySession is { Count: > 0 })
+            while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (timingRevision != playbackTimingRevision)
+                var plan = playbackController.PlanNext(generation);
+                switch (plan.Kind)
                 {
-                    playbackStarted = Stopwatch.GetTimestamp();
-                    scheduledElapsed = TimeSpan.Zero;
-                    timingRevision = playbackTimingRevision;
-                }
-
-                var end = loopEnabled ? loopOut ?? replaySession.Count - 1 : replaySession.Count - 1;
-                if (currentLogicalIndex >= end)
-                {
-                    if (loopEnabled && loopIn is { } start && start <= end)
-                    {
-                        if (start >= end)
-                        {
-                            StopPlaybackIfCurrent(
-                                generation,
-                                "Loop needs at least 2 frames · drag either Loop handle to widen the range");
-                            return;
-                        }
-                        SeekReplay(start, crossfade: true, synchronizeLists: false);
+                    case ReplayPlaybackOperationKind.Stale:
+                        return;
+                    case ReplayPlaybackOperationKind.LoopRestart:
+                        SeekReplay(plan.LogicalIndex, crossfade: true, synchronizeLists: false);
                         playbackStarted = Stopwatch.GetTimestamp();
-                        scheduledElapsed = TimeSpan.Zero;
                         continue;
-                    }
-                    StopPlaybackIfCurrent(generation, "Replay complete · use Home, seek, or Play to restart");
+                    case ReplayPlaybackOperationKind.Complete:
+                        StopPlaybackIfCurrent(generation, "Replay complete · use Home, seek, or Play to restart");
+                        return;
+                    case ReplayPlaybackOperationKind.InvalidLoop:
+                        StopPlaybackIfCurrent(
+                            generation,
+                            "Loop needs at least 2 frames · drag either Loop handle to widen the range");
+                        return;
+                }
+
+                await DelayUntilAsync(playbackStarted, plan.DueTime, cancellationToken);
+                var operation = playbackController.Advance(
+                    generation,
+                    Stopwatch.GetElapsedTime(playbackStarted));
+                if (operation.Kind == ReplayPlaybackOperationKind.Stale)
                     return;
-                }
-
-                int next;
-                PlaybackPauseDecision? pauseDecision;
-                if (maxReplaySpeed)
+                if (operation.Kind is ReplayPlaybackOperationKind.Move or ReplayPlaybackOperationKind.Pause)
+                    SeekReplay(operation.LogicalIndex, synchronizeLists: false);
+                if (operation.Kind == ReplayPlaybackOperationKind.Pause)
                 {
-                    var interval = TimeSpan.FromMilliseconds(16);
-                    var firstDue = scheduledElapsed + interval;
-                    await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
-                    var elapsed = Stopwatch.GetElapsedTime(playbackStarted);
-                    var elapsedTicks = Math.Max(interval.Ticks, elapsed.Ticks - scheduledElapsed.Ticks);
-                    var dueSteps = Math.Max(1L, elapsedTicks / interval.Ticks);
-                    var availableSteps = Math.Max(1L, (end - currentLogicalIndex + 49L) / 50L);
-                    var steps = Math.Min(dueSteps, availableSteps);
-                    var frameAdvance = Math.Min((long)end - currentLogicalIndex, steps * 50L);
-                    next = currentLogicalIndex + (int)frameAdvance;
-                    pauseDecision = FirstPlaybackPause(currentLogicalIndex, next);
-                    if (pauseDecision is { } decision) next = decision.LogicalIndex;
-                    scheduledElapsed += TimeSpan.FromTicks(interval.Ticks * steps);
-                }
-                else
-                {
-                    var firstDue = ReplayPlaybackSchedule.NextVisualDue(
-                        scheduledElapsed,
-                        DelayBetween(currentLogicalIndex, currentLogicalIndex + 1),
-                        MinimumPlaybackVisualInterval);
-                    await DelayUntilAsync(playbackStarted, firstDue, cancellationToken);
-                    pauseDecision = FirstPlaybackPause(currentLogicalIndex, end);
-                    var position = ReplayPlaybackSchedule.CatchUp(
-                        currentLogicalIndex,
-                        end,
-                        scheduledElapsed,
-                        Stopwatch.GetElapsedTime(playbackStarted),
-                        DelayBetween,
-                        pauseDecision?.LogicalIndex);
-                    next = position.LogicalIndex;
-                    scheduledElapsed = position.ScheduledElapsed;
-                }
-
-                SeekReplay(next, synchronizeLists: false);
-                if (pauseDecision?.LogicalIndex == next)
-                {
-                    if (pauseDecision.SelectReview) SelectReviewAt(next);
-                    StopPlaybackIfCurrent(generation, $"Paused on {pauseDecision.Reason} · continue when ready");
+                    if (operation.PauseDecision?.SelectReview == true)
+                        SelectReviewAt(operation.LogicalIndex);
+                    StopPlaybackIfCurrent(
+                        generation,
+                        $"Paused on {PauseReasonText(operation.PauseDecision)} · continue when ready");
                     return;
                 }
             }
@@ -3126,9 +3100,16 @@ public partial class MainWindow : Window
 
     private void StopPlaybackIfCurrent(int generation, string status)
     {
-        if (generation == playbackRunGeneration)
+        if (generation == playbackController.Generation)
             StopPlayback(status);
     }
+
+    private static string PauseReasonText(ReplayPlaybackPauseDecision? decision) => decision?.Reason switch
+    {
+        ReplayPlaybackPauseReason.Review => "Alarm / QA Fail",
+        ReplayPlaybackPauseReason.AllBreak => "All Break",
+        _ => "reported Break",
+    };
 
     private static async Task DelayUntilAsync(
         long startedTimestamp,
@@ -3166,49 +3147,9 @@ public partial class MainWindow : Window
         DiagnosticListBox.ScrollIntoView(row);
     }
 
-    private PlaybackPauseDecision? FirstPlaybackPause(int exclusiveStart, int inclusiveEnd)
-    {
-        var reviewIndex = reviewSession?.FirstPauseIndex(exclusiveStart, inclusiveEnd);
-        var preferences = SettingsPage.PlaybackPreferences;
-        var automatic = autoPauseIndex?.FirstAfter(
-            exclusiveStart,
-            inclusiveEnd,
-            preferences.PauseOnBreak,
-            preferences.PauseOnAllBreak);
-        if (reviewIndex is { } review && (automatic is null || review <= automatic.LogicalIndex))
-            return new PlaybackPauseDecision(review, "Alarm / QA Fail", SelectReview: true);
-        return automatic is null
-            ? null
-            : new PlaybackPauseDecision(
-                automatic.LogicalIndex,
-                automatic.Kind == ReplayAutomaticPauseKind.AllBreak ? "All Break" : "reported Break",
-                SelectReview: false);
-    }
-
-    private sealed record PlaybackPauseDecision(int LogicalIndex, string Reason, bool SelectReview);
-
     private TimeSpan DelayBetween(int current, int next)
     {
-        if (replaySession is null)
-        {
-            return TimeSpan.Zero;
-        }
-        var currentEntry = replaySession.Timeline[current];
-        var nextEntry = replaySession.Timeline[next];
-        TimeSpan delay;
-        if (ClockModeComboBox.SelectedIndex == 1)
-        {
-            delay = nextEntry.FrameTime - currentEntry.FrameTime;
-        }
-        else if (CompressIdleCheckBox.IsChecked == true)
-        {
-            delay = nextEntry.DisplayTime - currentEntry.DisplayTime;
-        }
-        else
-        {
-            delay = nextEntry.RecordedTime - currentEntry.RecordedTime;
-        }
-        return TimeSpan.FromTicks(Math.Max(0, (long)(delay.Ticks / replaySpeed)));
+        return playbackController.Count == 0 ? TimeSpan.Zero : playbackController.DelayBetween(current, next);
     }
 
     private void UpdatePlaybackStatus()
@@ -3222,26 +3163,25 @@ public partial class MainWindow : Window
             $"frame interval {replaySession.FrameInterval.TotalMilliseconds:0.###} ms";
     }
 
-    private void RestartPlaybackTimingIfActive()
+    private void RestartPlaybackTimingIfActive(ReplayPlaybackConfigurationChange change)
     {
         var previous = playbackCancellation;
-        if (previous is null || replaySession is null || replaySession.Count == 0)
+        if (!change.RestartRequired || previous is null || replaySession is null || replaySession.Count == 0)
             return;
 
         var replacement = new CancellationTokenSource();
         playbackCancellation = replacement;
-        var generation = ++playbackRunGeneration;
         previous.Cancel();
         previous.Dispose();
         UpdatePlaybackStatus();
-        _ = RunPlaybackAsync(replacement.Token, generation);
+        _ = RunPlaybackAsync(replacement.Token, change.Generation);
     }
 
     private void StopPlayback(string? status = null)
     {
         var cancellation = playbackCancellation;
         playbackCancellation = null;
-        playbackRunGeneration++;
+        playbackController.Pause();
         cancellation?.Cancel();
         cancellation?.Dispose();
         if (cancellation is not null && replaySession is { Count: > 0 } && currentLogicalIndex >= 0)
@@ -3309,9 +3249,9 @@ public partial class MainWindow : Window
             nextSpeed = speed;
         }
         if (nextMaximum == maxReplaySpeed && Math.Abs(nextSpeed - replaySpeed) < 0.0001) return;
-        maxReplaySpeed = nextMaximum;
-        replaySpeed = nextSpeed;
-        NotifyPlaybackTimingChanged();
+        NotifyPlaybackTimingChanged(nextMaximum
+            ? ReplayPlaybackRate.Maximum
+            : ReplayPlaybackRate.FromMultiplier(nextSpeed));
     }
 
     private void ClockModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -3330,10 +3270,16 @@ public partial class MainWindow : Window
 
     private void ReplayTimingOption_OnChanged(object? sender, RoutedEventArgs e) => NotifyPlaybackTimingChanged();
 
-    private void NotifyPlaybackTimingChanged()
+    private void NotifyPlaybackTimingChanged(ReplayPlaybackRate? selectedRate = null)
     {
-        playbackTimingRevision++;
-        RestartPlaybackTimingIfActive();
+        if (ClockModeComboBox is null || CompressIdleCheckBox is null) return;
+        var change = playbackController.ConfigureTiming(
+            ClockModeComboBox.SelectedIndex == 1
+                ? ReplayPlaybackClockDomain.Frame
+                : ReplayPlaybackClockDomain.Recorded,
+            CompressIdleCheckBox.IsChecked == true,
+            selectedRate ?? playbackController.Rate);
+        RestartPlaybackTimingIfActive(change);
     }
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -3533,12 +3479,9 @@ public partial class MainWindow : Window
         {
             return;
         }
-        loopIn = currentLogicalIndex;
-        if (loopOut < loopIn)
-        {
-            loopOut = null;
-        }
-        EnableLoopFromShortcut();
+        var nextStart = currentLogicalIndex;
+        var nextEnd = loopOut < nextStart ? null : loopOut;
+        EnableLoopFromShortcut(nextStart, nextEnd);
         UpdateLoopText();
     }
 
@@ -3548,48 +3491,45 @@ public partial class MainWindow : Window
         {
             return;
         }
-        loopOut = currentLogicalIndex;
-        if (loopIn > loopOut)
-        {
-            loopIn = null;
-        }
-        EnableLoopFromShortcut();
+        var nextEnd = currentLogicalIndex;
+        var nextStart = loopIn > nextEnd ? null : loopIn;
+        EnableLoopFromShortcut(nextStart, nextEnd);
         UpdateLoopText();
     }
 
     private void LoopToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         if (synchronizingLoopControls || ReplayTimelineSurface is null) return;
-        loopEnabled = LoopToggleButton.IsChecked == true;
-        if (loopEnabled && replaySession is { Count: > 1 })
+        var enabled = LoopToggleButton.IsChecked == true;
+        var nextStart = loopIn;
+        var nextEnd = loopOut;
+        if (enabled && replaySession is { Count: > 1 })
         {
-            if (loopIn is null || loopOut is null)
+            if (nextStart is null || nextEnd is null)
             {
                 var range = ReplayLoopRangePlanner.CreateDefault(
                     currentLogicalIndex,
                     replaySession.Count,
                     replaySession.FrameInterval);
-                loopIn = range.StartLogicalIndex;
-                loopOut = range.EndLogicalIndex;
+                nextStart = range.StartLogicalIndex;
+                nextEnd = range.EndLogicalIndex;
             }
         }
-        NotifyPlaybackTimingChanged();
+        ApplyLoopConfiguration(enabled, nextStart, nextEnd);
         UpdateLoopText();
     }
 
     private void ReplayTimelineSurface_OnLoopRangeChanged(object? sender, ReplayTimelineLoopEventArgs e)
     {
-        loopIn = e.StartLogicalIndex;
-        loopOut = e.EndLogicalIndex;
-        loopEnabled = true;
-        NotifyPlaybackTimingChanged();
+        ApplyLoopConfiguration(true, e.StartLogicalIndex, e.EndLogicalIndex);
         UpdateLoopText();
     }
 
-    private void EnableLoopFromShortcut()
+    private void EnableLoopFromShortcut(int? start, int? end)
     {
-        if (loopIn is null || loopOut is null) return;
-        loopEnabled = true;
+        var enabled = start is not null && end is not null;
+        ApplyLoopConfiguration(enabled || loopEnabled, start, end);
+        if (!enabled) return;
         synchronizingLoopControls = true;
         try
         {
@@ -3599,7 +3539,12 @@ public partial class MainWindow : Window
         {
             synchronizingLoopControls = false;
         }
-        NotifyPlaybackTimingChanged();
+    }
+
+    private void ApplyLoopConfiguration(bool enabled, int? start, int? end)
+    {
+        var change = playbackController.ConfigureLoop(enabled, start, end);
+        RestartPlaybackTimingIfActive(change);
     }
 
     private void UpdateLoopText()
@@ -3619,7 +3564,9 @@ public partial class MainWindow : Window
     }
 
     private TimeSpan SelectedTime(ReplayTimelineEntry entry) =>
-        ClockModeComboBox.SelectedIndex == 1 ? entry.FrameTime : entry.RecordedTime;
+        playbackController.ClockDomain == ReplayPlaybackClockDomain.Frame
+            ? entry.FrameTime
+            : entry.RecordedTime;
 
     private TimeSpan SelectedEndTime()
     {
