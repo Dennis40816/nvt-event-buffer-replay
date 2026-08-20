@@ -185,6 +185,26 @@ public sealed class CaptureDecodeControllerTests
     }
 
     [Fact]
+    public async Task Prepared_operation_handle_keeps_its_generation_after_zero_frame_completion()
+    {
+        var cancellationToken = CancellationToken.None;
+        var capture = await CaptureSession.LoadAsync(
+            Fixture("nds-register-map.nds.txt"),
+            cancellationToken: cancellationToken);
+        using var controller = new CaptureDecodeController();
+
+        var operation = controller.StartPrepared(
+            new PreparedCaptureDecodeRequest(capture, new FormatDecodeRequest("0x83", "51927")),
+            cancellationToken: cancellationToken);
+        var result = await operation.Completion;
+
+        Assert.Equal(0, result.Workspace.Frames.Count);
+        Assert.Equal(result.Generation, operation.Generation);
+        Assert.Null(controller.ActiveGeneration);
+        Assert.Same(result, controller.LastSuccessfulResult);
+    }
+
+    [Fact]
     public async Task Prepared_and_path_requests_share_latest_wins_generation_and_publication()
     {
         var cancellationToken = CancellationToken.None;

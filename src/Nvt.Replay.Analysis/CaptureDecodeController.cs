@@ -48,6 +48,19 @@ public sealed record CaptureDecodeResult(
     public ReplayWorkspace Workspace => WorkspaceBuild.Workspace;
 }
 
+public sealed class CaptureDecodeOperation
+{
+    internal CaptureDecodeOperation(long generation, Task<CaptureDecodeResult> completion)
+    {
+        Generation = generation;
+        Completion = completion;
+    }
+
+    public long Generation { get; }
+
+    public Task<CaptureDecodeResult> Completion { get; }
+}
+
 public sealed class CaptureDecodeConfigurationException(string message) : ArgumentException(message);
 
 public sealed class CaptureDecodeSupersededException(long generation)
@@ -102,10 +115,16 @@ public sealed class CaptureDecodeController : IDisposable
                 request.Format,
                 request.WorkspaceProgressInterval,
                 progress,
-                token => LoadCaptureAsync(operation, request, progress, token)));
+                token => LoadCaptureAsync(operation, request, progress, token))).Completion;
     }
 
     public Task<CaptureDecodeResult> RunAsync(
+        PreparedCaptureDecodeRequest request,
+        IProgress<CaptureDecodeProgress>? progress = null,
+        CancellationToken cancellationToken = default) =>
+        StartPrepared(request, progress, cancellationToken).Completion;
+
+    public CaptureDecodeOperation StartPrepared(
         PreparedCaptureDecodeRequest request,
         IProgress<CaptureDecodeProgress>? progress = null,
         CancellationToken cancellationToken = default)
@@ -122,7 +141,7 @@ public sealed class CaptureDecodeController : IDisposable
                 _ => Task.FromResult(request.Capture)));
     }
 
-    private Task<CaptureDecodeResult> StartOperation(
+    private CaptureDecodeOperation StartOperation(
         CancellationToken cancellationToken,
         Func<ActiveOperation, Task<CaptureDecodeResult>> execute)
     {
@@ -141,9 +160,10 @@ public sealed class CaptureDecodeController : IDisposable
         }
 
         TryCancel(superseded);
-        return Task.Run(
+        var completion = Task.Run(
             () => execute(operation),
             CancellationToken.None);
+        return new CaptureDecodeOperation(operation.Generation, completion);
     }
 
     public bool CancelCurrent()
