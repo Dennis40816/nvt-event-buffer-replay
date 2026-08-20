@@ -36,6 +36,31 @@ public sealed class CommonReplaySessionTests
     }
 
     [Fact]
+    public void Linear_snapshot_enumeration_matches_seek_reconstruction()
+    {
+        var replay = new CommonReplaySession(
+        [
+            FingerFrame(1, TouchStatus.Enter, 100, 200, 0),
+            FingerFrame(1, TouchStatus.Move, 120, 220, 1),
+            FingerFrame(1, TouchStatus.Break, 120, 220, 2),
+            AllBreakFrame(3),
+        ], Options(checkpointInterval: 2));
+
+        var sequential = replay.EnumerateSnapshots().ToArray();
+
+        Assert.Equal(replay.Count, sequential.Length);
+        for (var index = 0; index < replay.Count; index++)
+        {
+            var randomAccess = replay.Seek(index);
+            Assert.Equal(randomAccess.LogicalIndex, sequential[index].LogicalIndex);
+            Assert.Equal(randomAccess.ReportedContacts, sequential[index].ReportedContacts);
+            Assert.Equal(randomAccess.HostContacts, sequential[index].HostContacts);
+            Assert.Equal(randomAccess.GlobalPalm, sequential[index].GlobalPalm);
+            Assert.Equal(randomAccess.HostStateUpdated, sequential[index].HostStateUpdated);
+        }
+    }
+
+    [Fact]
     public void Invalid_CRC_leaves_prior_host_state_unchanged()
     {
         var entered = FingerFrame(1, TouchStatus.Enter, 100, 200, 0);

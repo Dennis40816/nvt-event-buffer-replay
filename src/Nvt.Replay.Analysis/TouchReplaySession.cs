@@ -90,6 +90,15 @@ public interface ITouchReplaySession
     IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }
     IReadOnlyList<ReplayContact> AllReportedContacts { get; }
     ITouchReplaySnapshot Seek(int logicalIndex);
+
+    IEnumerable<ITouchReplaySnapshot> EnumerateSnapshots(CancellationToken cancellationToken = default)
+    {
+        for (var index = 0; index < Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return Seek(index);
+        }
+    }
 }
 
 public class TouchReplaySession<TFrame> : ITouchReplaySession
@@ -131,26 +140,30 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
             throw new ArgumentOutOfRangeException(nameof(logicalIndex));
         }
 
-        var checkpointPair = checkpoints.Last(pair => pair.Key <= logicalIndex);
-        var state = checkpointPair.Value;
-        for (var index = checkpointPair.Key + 1; index <= logicalIndex; index++)
+        var checkpointIndex = checkpoints.ContainsKey(logicalIndex)
+            ? logicalIndex
+            : logicalIndex - (logicalIndex % options.CheckpointInterval);
+        var state = checkpoints[checkpointIndex];
+        for (var index = checkpointIndex + 1; index <= logicalIndex; index++)
         {
             state = Apply(state, projections[index]);
         }
 
-        var projection = projections[logicalIndex];
-        return new TouchReplaySnapshot<TFrame>(
-            logicalIndex,
-            frames[logicalIndex],
-            projection,
-            timeline[logicalIndex],
-            projection.ReportedContacts,
-            state.Contacts.Values.OrderBy(contact => contact.Id).ToArray(),
-            state.GlobalPalm,
-            projection.HostStateEligible);
+        return Snapshot(logicalIndex, state);
     }
 
     ITouchReplaySnapshot ITouchReplaySession.Seek(int logicalIndex) => Seek(logicalIndex);
+
+    public IEnumerable<ITouchReplaySnapshot> EnumerateSnapshots(CancellationToken cancellationToken = default)
+    {
+        var state = HostCheckpoint.Empty;
+        for (var index = 0; index < frames.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            state = Apply(state, projections[index]);
+            yield return Snapshot(index, state);
+        }
+    }
 
     public TouchReplaySnapshot<TFrame> Step(int logicalIndex, int delta)
     {
@@ -216,6 +229,20 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
         return new HostCheckpoint(
             frame.HostReportedContacts.GroupBy(contact => contact.Id).ToDictionary(group => group.Key, group => group.Last()),
             frame.GlobalPalm);
+    }
+
+    private TouchReplaySnapshot<TFrame> Snapshot(int logicalIndex, HostCheckpoint state)
+    {
+        var projection = projections[logicalIndex];
+        return new TouchReplaySnapshot<TFrame>(
+            logicalIndex,
+            frames[logicalIndex],
+            projection,
+            timeline[logicalIndex],
+            projection.ReportedContacts,
+            state.Contacts.Values.OrderBy(contact => contact.Id).ToArray(),
+            state.GlobalPalm,
+            projection.HostStateEligible);
     }
 
     private static IReadOnlyList<ReplayTimelineEntry> BuildTimeline(

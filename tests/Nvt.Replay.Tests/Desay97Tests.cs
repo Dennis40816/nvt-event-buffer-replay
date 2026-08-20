@@ -64,6 +64,22 @@ public sealed class Desay97Tests
     }
 
     [Fact]
+    public void Assembler_observes_cancellation_between_physical_records()
+    {
+        using var cancellation = new CancellationTokenSource();
+
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            new Desay97Assembler().Assemble(Records(), cancellation.Token));
+
+        IEnumerable<SourceRecord> Records()
+        {
+            yield return Record(1, [0x01]);
+            cancellation.Cancel();
+            yield return Record(2, Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]));
+        }
+    }
+
+    [Fact]
     public void Orphan_and_duplicate_second_phases_warn_and_drop()
     {
         var full = Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]);

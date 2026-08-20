@@ -42,6 +42,9 @@ public sealed class ReplayAutoPauseIndex
         return new ReplayAutoPauseIndex(breaks.ToArray(), allBreaks.ToArray());
     }
 
+    internal static ReplayAutoPauseIndex FromOwnedSortedIndices(int[] breakIndices, int[] allBreakIndices) =>
+        new(breakIndices, allBreakIndices);
+
     public ReplayAutomaticPause? FirstAfter(
         int exclusiveStart,
         int inclusiveEnd,

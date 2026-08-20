@@ -7,7 +7,9 @@ public sealed class Desay97Assembler(uint eventBufferBase = 0x99000)
 {
     public uint EventBufferBase { get; } = eventBufferBase;
 
-    public Desay97AssemblyResult Assemble(IEnumerable<SourceRecord> records)
+    public Desay97AssemblyResult Assemble(
+        IEnumerable<SourceRecord> records,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(records);
         var packets = new List<Desay97AssembledPacket>();
@@ -16,6 +18,7 @@ public sealed class Desay97Assembler(uint eventBufferBase = 0x99000)
 
         foreach (var record in records)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var isEventRead = IsEventRead(record);
             if (pending is null)
             {

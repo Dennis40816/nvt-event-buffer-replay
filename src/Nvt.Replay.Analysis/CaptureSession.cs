@@ -90,7 +90,9 @@ public sealed class CaptureSession
         return new CaptureSession(SourcePath, SourceSha256, Probe, records, adapterDiagnostics, canonical);
     }
 
-    public CommonInspectionReport DecodeCommon(CommonEventBufferVersion version)
+    public CommonInspectionReport DecodeCommon(
+        CommonEventBufferVersion version,
+        CancellationToken cancellationToken = default)
     {
         var decoder = new CommonEventBufferDecoder();
         var monitor = new CommonStreamMonitor();
@@ -99,6 +101,7 @@ public sealed class CaptureSession
 
         foreach (var record in Records)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var isNdsPaint = record.Operation == BusOperation.Paint && record.Address == 0x01;
             var isDecodedI2cRead = record.Operation == BusOperation.Read && IsEventBufferRead(record);
             if (!isNdsPaint && !isDecodedI2cRead)
@@ -168,18 +171,22 @@ public sealed class CaptureSession
         (record.SourceFields.GetValueOrDefault("register_page_known") == "false" ||
          record.SourceFields.GetValueOrDefault("register_region") == "Event Buffer");
 
-    public Desay97InspectionReport DecodeDesay97(Desay97Profile profile, uint? eventBufferBase = null)
+    public Desay97InspectionReport DecodeDesay97(
+        Desay97Profile profile,
+        uint? eventBufferBase = null,
+        CancellationToken cancellationToken = default)
     {
         var resolvedEventBufferBase = eventBufferBase ??
             NvtRegisterCatalog.FindProfile(RegisterProfile)?.EventBufferBase ??
             0x99000;
-        var assembly = new Desay97Assembler(resolvedEventBufferBase).Assemble(Records);
+        var assembly = new Desay97Assembler(resolvedEventBufferBase).Assemble(Records, cancellationToken);
         var decoder = new Desay97Decoder();
         var frames = new List<Desay97Frame>();
         var diagnostics = new List<ReplayDiagnostic>(SourceDiagnostics);
         diagnostics.AddRange(assembly.Diagnostics);
         foreach (var packet in assembly.Packets)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var decoded = decoder.Decode(packet, profile);
             diagnostics.AddRange(decoded.Diagnostics);
             if (decoded.Frame is { } frame)

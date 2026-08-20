@@ -71,6 +71,22 @@ public sealed class NdsCaptureSessionTests : IDisposable
     }
 
     [Fact]
+    public async Task DecodeCommon_observes_cancellation_without_mutating_the_indexed_session()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var path = WriteLog(Record("Paint", "0x01", packet));
+        var session = await CaptureSession.LoadAsync(path);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            session.DecodeCommon(CommonEventBufferVersion.V83, cancellation.Token));
+
+        Assert.Single(session.Records);
+        Assert.Single(session.DecodeCommon(CommonEventBufferVersion.V83).Frames);
+    }
+
+    [Fact]
     public async Task Colliding_event_buffer_address_decodes_only_after_operator_selects_register_profile()
     {
         var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);

@@ -10,11 +10,14 @@ public sealed class ReplayFrameCache
     public IReadOnlyList<ITouchReplaySnapshot> Snapshots => snapshots;
     public ITouchReplaySnapshot this[int logicalIndex] => snapshots[logicalIndex];
 
-    public static ReplayFrameCache Create(ITouchReplaySession replay)
+    public static ReplayFrameCache Create(
+        ITouchReplaySession replay,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(replay);
-        var snapshots = new ITouchReplaySnapshot[replay.Count];
-        for (var index = 0; index < replay.Count; index++) snapshots[index] = replay.Seek(index);
-        return new ReplayFrameCache(snapshots);
+        return new ReplayFrameCache(replay.EnumerateSnapshots(cancellationToken).ToArray());
     }
+
+    internal static ReplayFrameCache FromOwnedSnapshots(ITouchReplaySnapshot[] snapshots) =>
+        new(snapshots);
 }
