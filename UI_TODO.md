@@ -1,6 +1,6 @@
 # NVT Event Buffer Replay UI TODO
 
-更新日期：2026-08-19
+更新日期：2026-08-20
 
 > 0.0.3 的跨模組穩定化、效能、MainWindow 拆分與 release gate 請以 [`TODO_0.0.3.md`](TODO_0.0.3.md) 為主；本文件繼續追蹤 UI 細節與視覺驗收。
 
@@ -71,7 +71,7 @@
 
 ## 效能 completion gate
 
-- [ ] 最新 KingstVIS golden（4,160 physical / 2,080 logical）在 0.01×、0.1×、1×、10×、MAX 與 Loop 下各播放一輪。
+- [ ] 最新且已驗證身分的 KingstVIS golden `063ad09…`（568 logical frames）在 0.01×、0.1×、1×、10×、MAX 與 Loop 下各播放一輪；失效的 `4bec1b…` 不作為 schema 或效能 gate。
 - [ ] 播放中連續切換速度與 Loop，不可凍結、不可產生多個 playback loop、Play/Pause 狀態不可錯亂。
 - [ ] UI thread 上不逐 frame 重建 Raw/Decoded list selection；Inspector detail 更新維持節流。
 - [ ] 3 分鐘持續 Loop 後記憶體不持續線性成長，速度／Loop／Mark 操作回應時間目標小於 100 ms。
@@ -79,7 +79,7 @@
 
 ## 目前驗證紀錄
 
-- Avalonia UI tests：44 / 44 passed。
-- Core / parser / rendering tests：160 / 160 passed。
-- 長 golden：951,254 bytes，4,160 physical records，2,080 logical frames。
-- 10,000 random seeks：約 15 ms；1,000 個 640×360 raster frames：約 89.6 FPS。這是 renderer benchmark，不等同桌面 Paint 的實際呈現 FPS。
+- Avalonia candidate matrix 所在版本：50 / 50 passed；正式 approved screenshots 尚未核准。
+- Core / parser / rendering tests：221 / 221 passed。
+- 私有 Golden smoke：KingstVIS `063ad09…` 568 frames、DSL `e7e277…` 435 frames、NDS `0e32907…` 518 frames；來源檔均未進 git。
+- 100,003-point trail history 建立 allocation 降低 93.7%；250 次 random seek Build allocation 降低 69.3%。這是資料／幾何層量測，不等同桌面 Paint 的實際呈現 FPS。
