@@ -1198,6 +1198,27 @@ public sealed class MainWindowLayoutTests
             Assert.True(bounds[0].Right < bounds[1].Left);
             Assert.True(bounds[1].Right < bounds[2].Left);
 
+            var timeline = BoundsInside(Required<Control>(window, "ReplayTimelineSurface"), bar);
+            var currentClock = BoundsInside(Required<TextBlock>(window, "ReplayClockText"), bar);
+            var endClock = BoundsInside(Required<TextBlock>(window, "ReplayEndClockText"), bar);
+            var counts = BoundsInside(Required<StackPanel>(window, "TimelineTrackLabels"), bar);
+            Assert.False(Required<TextBlock>(window, "TimelineStatusText").IsVisible);
+            Assert.False(Required<TextBlock>(window, "LoopRangeText").IsVisible);
+            Assert.True(Required<TextBlock>(window, "ReplayClockText").IsVisible);
+            Assert.True(Required<TextBlock>(window, "ReplayEndClockText").IsVisible);
+            Assert.True(Required<StackPanel>(window, "TimelineTrackLabels").IsVisible);
+            Assert.True(currentClock.Right < endClock.Left);
+            Assert.True(endClock.Right < counts.Left);
+            Assert.True(timeline.Right < counts.Left);
+            Assert.True(counts.Right <= bar.Bounds.Width + 0.5);
+
+            var save = Required<Button>(window, "SaveReviewButton");
+            var saveIcon = Required<TextBlock>(window, "SaveActionIcon");
+            Assert.True(save.IsEnabled);
+            Assert.True(saveIcon.IsVisible);
+            Assert.True(saveIcon.Bounds.Width > 0);
+            Assert.False(Required<TextBlock>(window, "SaveActionLabel").IsVisible);
+
             Assert.Equal("38", Required<TextBlock>(window, "TimelinePhysicalCountText").Text);
             Assert.Equal("19", Required<TextBlock>(window, "TimelineLogicalCountText").Text);
             Assert.Equal("0", Required<TextBlock>(window, "TimelineEvidenceCountText").Text);

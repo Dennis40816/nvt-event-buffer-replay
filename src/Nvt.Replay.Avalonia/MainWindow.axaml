@@ -72,22 +72,11 @@
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE70F;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="EditActionLabel" Text="Edit" /></StackPanel>
         </Button>
 
-        <Button x:Name="SaveReviewButton" Grid.Column="9" Classes="headerAction" Theme="{x:Null}" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
-          <Button.Template>
-            <ControlTemplate>
-              <ContentPresenter Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                BorderThickness="0"
-                                Padding="{TemplateBinding Padding}"
-                                HorizontalContentAlignment="Center"
-                                VerticalContentAlignment="Center" />
-            </ControlTemplate>
-          </Button.Template>
-          <Button.Content>
-            <TextBlock x:Name="SaveActionLabel" Text="Save" />
-          </Button.Content>
+        <Button x:Name="SaveReviewButton" Grid.Column="9" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock x:Name="SaveActionIcon" Text="&#xE74E;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
+            <TextBlock x:Name="SaveActionLabel" Text="Save" VerticalAlignment="Center" />
+          </StackPanel>
         </Button>
         <Border Grid.Column="10" Classes="separator" />
         <Button x:Name="LoadReviewButton" Grid.Column="9" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" AutomationProperties.Name="Open review" />
@@ -994,7 +983,7 @@
         </StackPanel>
 
         <Grid Grid.Column="6" RowDefinitions="18,26" MinWidth="220" VerticalAlignment="Center">
-          <Grid ColumnDefinitions="Auto,10,Auto,*,Auto,10,Auto">
+          <Grid x:Name="TimelineStatusGrid" ColumnDefinitions="Auto,10,Auto,*,Auto,10,Auto">
             <TextBlock x:Name="TimelineStatusText" Text="Load a capture" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
             <TextBlock x:Name="ReplayClockText" Grid.Column="2" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
             <TextBlock x:Name="LoopRangeText" Grid.Column="4" Text="Loop: off" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />

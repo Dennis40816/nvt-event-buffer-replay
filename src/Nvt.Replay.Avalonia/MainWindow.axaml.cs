@@ -242,10 +242,14 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveRails(double width)
     {
+        var compactTransport = width < 1300;
         EditActionLabel.IsVisible = width >= 1320;
         SaveActionLabel.IsVisible = width >= 1320;
         OutputActionLabel.IsVisible = width >= 1240;
         SettingsActionLabel.IsVisible = width >= 1240;
+        TimelineStatusText.IsVisible = !compactTransport;
+        LoopRangeText.IsVisible = !compactTransport;
+        TimelineControlBar.Margin = compactTransport ? new Thickness(12, 8) : new Thickness(22, 8);
         if (outputWorkspaceActive)
         {
             SetReviewRailCollapsed(true);
