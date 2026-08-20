@@ -72,8 +72,10 @@ public sealed class ReplayPaintWorkspace
 
     private readonly ITouchReplaySession replay;
     private readonly ReplayTrailHistory trailHistory;
+    private readonly ReplayLegendOccupancySummary legendOccupancy;
     private IReadOnlyList<ReplayDiagnostic> diagnostics;
     private IReadOnlyList<ReplayMarker> markers;
+    private ReplayPaintAnnotationIndex annotationIndex;
 
     public ReplayPaintWorkspace(
         ITouchReplaySession replay,
@@ -89,10 +91,13 @@ public sealed class ReplayPaintWorkspace
 
         this.replay = replay;
         this.trailHistory = trailHistory;
+        var allReportedContacts = replay.AllReportedContacts;
         this.diagnostics = Snapshot(diagnostics ?? replay.Diagnostics);
         this.markers = Snapshot(markers ?? []);
-        Settings = settings ?? ReplayPaintSettings.Default(ReplayExtent.Measure(replay.AllReportedContacts));
+        Settings = settings ?? ReplayPaintSettings.Default(ReplayExtent.Measure(allReportedContacts));
         Validate(Settings, replay.Count);
+        legendOccupancy = ReplayLegendOccupancySummary.Create(allReportedContacts, Settings.PanelExtent);
+        annotationIndex = ReplayPaintAnnotationIndex.Create(this.diagnostics, this.markers, replay.Count);
         ResolvedLegendPosition = ResolveLegendPosition(Settings);
     }
 
@@ -138,8 +143,12 @@ public sealed class ReplayPaintWorkspace
         if (DiagnosticsEqual(this.diagnostics, diagnostics) && MarkersEqual(this.markers, markers))
             return new ReplayPaintAnnotationUpdate(AnnotationRevision, Changed: false);
 
-        this.diagnostics = Snapshot(diagnostics);
-        this.markers = Snapshot(markers);
+        var nextDiagnostics = Snapshot(diagnostics);
+        var nextMarkers = Snapshot(markers);
+        var nextIndex = ReplayPaintAnnotationIndex.Create(nextDiagnostics, nextMarkers, replay.Count);
+        this.diagnostics = nextDiagnostics;
+        this.markers = nextMarkers;
+        annotationIndex = nextIndex;
         AnnotationRevision = checked(AnnotationRevision + 1);
         return new ReplayPaintAnnotationUpdate(AnnotationRevision, Changed: true);
     }
@@ -159,12 +168,13 @@ public sealed class ReplayPaintWorkspace
                 Settings.TrailLength,
                 Settings.TrailVisibilityStart)
             : [];
-        return ReplaySceneFactory.Create(
+        var annotations = annotationIndex.Select(snapshot);
+        return ReplaySceneFactory.CreateProjected(
             snapshot,
             replay.Count,
             Settings.PanelExtent,
-            diagnostics,
-            markers,
+            annotations.Diagnostics,
+            annotations.MarkerLabels,
             trails,
             Settings.ReverseX,
             Settings.ReverseY,
@@ -185,7 +195,7 @@ public sealed class ReplayPaintWorkspace
     private ReplayLegendPosition ResolveLegendPosition(ReplayPaintSettings settings) =>
         settings.LegendPosition == ReplayLegendPosition.Auto
             ? ReplayLegendPositioner.Choose(
-                replay.AllReportedContacts,
+                legendOccupancy,
                 settings.PanelExtent,
                 settings.ReverseX,
                 settings.ReverseY,

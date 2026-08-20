@@ -264,6 +264,130 @@ public sealed class ReplayPaintWorkspaceTests
     }
 
     [Fact]
+    public void Annotation_index_preserves_global_diagnostic_order_deduplicates_source_ids_and_projects_marker_ranges()
+    {
+        var sourceA = Source(0, "source-a");
+        var sourceB = Source(1, "source-b");
+        var snapshot = new MultiSourceSnapshot(
+            0,
+            sourceA,
+            [sourceB, sourceA, sourceB],
+            [new ReplayContact(1, TouchType.Finger, TouchStatus.Move, 10, 20, sourceA.StableId)]);
+        var replay = new FakeReplay([snapshot]);
+        var history = ReplayTrailHistory.Create(new ITouchReplaySnapshot[] { snapshot });
+        var diagnostics = new[]
+        {
+            DiagnosticFor("A1", sourceA.StableId),
+            DiagnosticFor("B1", sourceB.StableId),
+            DiagnosticFor("A2", sourceA.StableId),
+            DiagnosticFor("B2", sourceB.StableId),
+            DiagnosticFor("OTHER", "source-other"),
+        };
+        var markers = new[]
+        {
+            new ReplayMarker("range", "Range marker", -10, 10, DateTimeOffset.UnixEpoch),
+            new ReplayMarker("outside", "Outside", 2, 4, DateTimeOffset.UnixEpoch),
+        };
+        var workspace = new ReplayPaintWorkspace(replay, history, Settings(), diagnostics, markers);
+
+        var scene = workspace.CreateScene(0);
+
+        Assert.Equal(["A1", "B1", "A2", "B2"], scene.Diagnostics.Select(item => item.Code));
+        Assert.Equal(["Range marker"], scene.MarkerLabels);
+    }
+
+    [Fact]
+    public void Repeated_scene_creation_reuses_single_source_annotation_projection_with_bounded_allocations()
+    {
+        const int diagnosticCount = 20_000;
+        const int repetitions = 250;
+        var (replay, history) = Replay();
+        var diagnostics = Enumerable.Range(0, diagnosticCount)
+            .Select(index => DiagnosticFor($"D{index}", "source-0"))
+            .ToArray();
+        var workspace = new ReplayPaintWorkspace(
+            replay,
+            history,
+            Settings() with { TraceVisible = false, TrailPointsVisible = false },
+            diagnostics,
+            [Marker("marker", "Marker", DateTimeOffset.UnixEpoch)]);
+        var first = workspace.CreateScene(0);
+        var second = workspace.CreateScene(0);
+
+        Assert.Same(first.Diagnostics, second.Diagnostics);
+        Assert.Same(first.MarkerLabels, second.MarkerLabels);
+        Assert.Equal(diagnosticCount, first.Diagnostics.Count);
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var index = 0; index < repetitions; index++)
+            _ = workspace.CreateScene(0);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.InRange(allocated, 0, 1_000_000);
+    }
+
+    [Fact]
+    public void Hundred_thousand_contact_legend_updates_use_the_compact_summary_without_reenumerating_contacts()
+    {
+        const int contactCount = 100_000;
+        var contacts = Enumerable.Range(0, contactCount)
+            .Select(index => new ReplayContact(
+                (byte)((index % 10) + 1),
+                TouchType.Finger,
+                index == 0 ? TouchStatus.Enter : TouchStatus.Move,
+                (ushort)(120 + (index % 700)),
+                (ushort)(80 + ((index * 7) % 500)),
+                "source-0"))
+            .ToArray();
+        var countedContacts = new CountingReadOnlyList<ReplayContact>(contacts);
+        var snapshot = new MultiSourceSnapshot(0, Source(0, "source-0"), [], contacts);
+        var replay = new FakeReplay([snapshot], countedContacts);
+        var history = ReplayTrailHistory.Create(new ITouchReplaySnapshot[] { snapshot });
+        var settings = ReplayPaintSettings.Default(new ReplayExtent(4096, 2048)) with
+        {
+            TraceVisible = false,
+            TrailPointsVisible = false,
+        };
+        var workspace = new ReplayPaintWorkspace(replay, history, settings, diagnostics: []);
+        var enumerationsAfterBuild = countedContacts.EnumerationCount;
+
+        foreach (var extent in new[] { new ReplayExtent(4096, 2048), new ReplayExtent(4608, 2304) })
+        foreach (var reverseX in new[] { false, true })
+        foreach (var reverseY in new[] { false, true })
+        foreach (var swapAxes in new[] { false, true })
+        {
+            workspace.Update(workspace.Settings with
+            {
+                PanelExtent = extent,
+                ReverseX = reverseX,
+                ReverseY = reverseY,
+                SwapAxes = swapAxes,
+            });
+            Assert.Equal(
+                ReplayLegendPositioner.Choose(contacts, extent, reverseX, reverseY, swapAxes),
+                workspace.ResolvedLegendPosition);
+        }
+
+        for (var index = 0; index < 250; index++)
+        {
+            var next = workspace.Settings with
+            {
+                PanelExtent = index % 2 == 0 ? new ReplayExtent(4096, 2048) : new ReplayExtent(4608, 2304),
+                ReverseX = (index & 1) != 0,
+                ReverseY = (index & 2) != 0,
+                SwapAxes = (index & 4) != 0,
+            };
+            workspace.Update(next);
+        }
+
+        Assert.Equal(enumerationsAfterBuild, countedContacts.EnumerationCount);
+        Assert.InRange(enumerationsAfterBuild, 1, 2);
+    }
+
+    [Fact]
     public void Rejects_invalid_settings_and_trail_history_from_another_replay()
     {
         var (replay, history) = Replay();
@@ -292,6 +416,9 @@ public sealed class ReplayPaintWorkspaceTests
         IReadOnlyDictionary<string, string>? details = null) =>
         new(severity, code, code, "source-0", new SourceLocation(0, 1), details);
 
+    private static ReplayDiagnostic DiagnosticFor(string code, string sourceId) =>
+        new(DiagnosticSeverity.Warning, code, code, sourceId, new SourceLocation(0, 1));
+
     private static ReplayMarker Marker(
         string id,
         string label,
@@ -314,6 +441,19 @@ public sealed class ReplayPaintWorkspaceTests
 
     private static ReplayContact Contact(int index, TouchStatus status, ushort x, ushort y) =>
         new(1, TouchType.Finger, status, x, y, $"source-{index}");
+
+    private static SourceRecord Source(int index, string stableId) =>
+        new(
+            index,
+            stableId,
+            DateTimeOffset.UnixEpoch + TimeSpan.FromMilliseconds(index * 10),
+            BusOperation.Paint,
+            "TP",
+            1,
+            80,
+            [],
+            string.Empty,
+            new SourceLocation(index * 10, index + 1));
 
     private static FakeSnapshot Snapshot(
         int index,
@@ -360,17 +500,25 @@ public sealed class ReplayPaintWorkspaceTests
         public bool HostStateUpdated => true;
     }
 
-    private sealed class FakeReplay(IReadOnlyList<ITouchReplaySnapshot> snapshots) : ITouchReplaySession
+    private sealed class FakeReplay : ITouchReplaySession
     {
-        private readonly IReadOnlyList<ReplayContact> allReportedContacts =
-            snapshots.SelectMany(snapshot => snapshot.ReportedContacts).ToArray();
+        private readonly IReadOnlyList<ITouchReplaySnapshot> snapshots;
+        private readonly IReadOnlyList<ReplayContact> allReportedContacts;
+
+        public FakeReplay(
+            IReadOnlyList<ITouchReplaySnapshot> snapshots,
+            IReadOnlyList<ReplayContact>? allReportedContacts = null)
+        {
+            this.snapshots = snapshots;
+            this.allReportedContacts = allReportedContacts ?? snapshots.SelectMany(snapshot => snapshot.ReportedContacts).ToArray();
+            Timeline = snapshots.Select(snapshot => snapshot.Timeline).ToArray();
+        }
 
         public int Count => snapshots.Count;
         public int SeekCount { get; private set; }
         public int AllReportedContactsReadCount { get; private set; }
         public TimeSpan FrameInterval => TimeSpan.FromMilliseconds(10);
-        public IReadOnlyList<ReplayTimelineEntry> Timeline { get; } =
-            snapshots.Select(snapshot => snapshot.Timeline).ToArray();
+        public IReadOnlyList<ReplayTimelineEntry> Timeline { get; }
         public IReadOnlyList<ReplayDiagnostic> Diagnostics => [];
         public IReadOnlyList<ReplayContact> AllReportedContacts
         {
@@ -386,5 +534,40 @@ public sealed class ReplayPaintWorkspaceTests
             SeekCount++;
             return snapshots[logicalIndex];
         }
+    }
+
+    private sealed record MultiSourceSnapshot(
+        int LogicalIndex,
+        SourceRecord PrimarySource,
+        IReadOnlyList<SourceRecord> PhysicalRecords,
+        IReadOnlyList<ReplayContact> ReportedContacts) : ITouchReplaySnapshot
+    {
+        public object DecodedFrame => this;
+        public ReplayTimelineEntry Timeline { get; } = new(
+            LogicalIndex,
+            TimeSpan.FromMilliseconds(LogicalIndex),
+            TimeSpan.FromMilliseconds(LogicalIndex),
+            TimeSpan.FromMilliseconds(LogicalIndex),
+            TimeSpan.Zero,
+            false,
+            false);
+        public IReadOnlyList<ReplayContact> HostContacts => ReportedContacts;
+        public bool GlobalPalm => false;
+        public bool HostStateUpdated => true;
+    }
+
+    private sealed class CountingReadOnlyList<T>(IReadOnlyList<T> values) : IReadOnlyList<T>
+    {
+        public int EnumerationCount { get; private set; }
+        public int Count => values.Count;
+        public T this[int index] => values[index];
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            EnumerationCount++;
+            return values.GetEnumerator();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

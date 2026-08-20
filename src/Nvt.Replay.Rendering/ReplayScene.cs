@@ -21,10 +21,17 @@ public sealed record ReplayExtent(double MaximumX, double MaximumY)
 {
     public static ReplayExtent Measure(IEnumerable<ReplayContact> contacts)
     {
-        var captured = contacts.ToArray();
+        ArgumentNullException.ThrowIfNull(contacts);
+        double maximumX = 0;
+        double maximumY = 0;
+        foreach (var contact in contacts)
+        {
+            maximumX = Math.Max(maximumX, contact.X);
+            maximumY = Math.Max(maximumY, contact.Y);
+        }
         return new ReplayExtent(
-            Nice(captured.Select(item => (double)item.X).DefaultIfEmpty(1920).Max(), 1920),
-            Nice(captured.Select(item => (double)item.Y).DefaultIfEmpty(1080).Max(), 1080));
+            Nice(maximumX, 1920),
+            Nice(maximumY, 1080));
     }
 
     private static double Nice(double maximum, double minimum)
@@ -97,6 +104,31 @@ public static class ReplaySceneFactory
             reverseY,
             swapAxes);
     }
+
+    internal static ReplayScene CreateProjected(
+        ITouchReplaySnapshot snapshot,
+        int totalFrames,
+        ReplayExtent extent,
+        IReadOnlyList<ReplayDiagnostic> diagnostics,
+        IReadOnlyList<string> markerLabels,
+        IReadOnlyList<ReplayContactTrail>? contactTrails = null,
+        bool reverseX = false,
+        bool reverseY = false,
+        bool swapAxes = false) =>
+        new(
+            snapshot.LogicalIndex,
+            totalFrames,
+            snapshot.Timeline,
+            snapshot.ReportedContacts,
+            snapshot.HostContacts,
+            snapshot.GlobalPalm,
+            extent,
+            contactTrails ?? [],
+            diagnostics,
+            markerLabels,
+            reverseX,
+            reverseY,
+            swapAxes);
 
     public static IReadOnlyList<ReplayContactTrail> BuildTrails(
         ITouchReplaySession replay,
