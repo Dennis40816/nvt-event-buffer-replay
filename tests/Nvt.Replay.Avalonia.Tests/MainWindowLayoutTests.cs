@@ -2183,6 +2183,181 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Ic_profile_switch_preserves_review_navigation_output_and_source_record_identity()
+    {
+        var capture = await WriteKingstVisCaptureAsync(
+            CommonPacket(asil: 0x00, corruptCrc: false, x: 120),
+            CommonPacket(asil: 0x02, corruptCrc: false, x: 240));
+        var window = ShowWindow();
+        try
+        {
+            await window.OpenCaptureAsync(capture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var originalWorkspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            var marker = originalWorkspace.AddMarker("Profile checkpoint");
+            originalWorkspace.SetReviewOptions(new ReviewSessionOptions(PauseOnAlarm: false, PauseOnQaFail: true));
+            originalWorkspace.SetFilter(ReviewQueueFilter.Alarms);
+            var warning = Assert.Single(originalWorkspace.VisibleGroups);
+            var occurrence = originalWorkspace.SelectFinding(warning.Id, 0);
+            Assert.Equal(1, occurrence.LogicalIndex);
+            typeof(MainWindow).GetMethod(
+                    "SeekReplay",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(window, [1, false, true]);
+            Assert.True(originalWorkspace.SelectContact(1));
+            Assert.Equal((byte)1, originalWorkspace.SelectedContactId);
+
+            var rawRecords = Required<ListBox>(window, "RawRecordsList");
+            var originalSourceRecords = rawRecords.Items.OfType<RawRecordRow>().Select(row => row.Record).ToArray();
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            tabs.SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
+
+            await window.ApplyRegisterProfileForTestingAsync("51927");
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
+
+            var restored = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            Assert.NotSame(originalWorkspace, restored);
+            Assert.Equal(ReviewQueueFilter.Alarms, restored.Filter);
+            Assert.Equal(1, restored.CurrentLogicalIndex);
+            Assert.Equal(warning.Id, restored.SelectedFindingGroupId);
+            Assert.Equal(occurrence.Id, restored.SelectedOccurrenceId);
+            Assert.Equal((byte)1, restored.SelectedContactId);
+            Assert.Equal(new ReviewSessionOptions(PauseOnAlarm: false, PauseOnQaFail: true), restored.ReviewOptions);
+            Assert.Equal(marker.Id, Assert.Single(restored.Markers).Id);
+            Assert.Same(Required<TabItem>(window, "AnalysisTab"), tabs.SelectedItem);
+            Assert.Equal("2 / 2", Required<TextBlock>(window, "InspectorLogicalText").Text);
+            var restoredSourceRecords = rawRecords.Items.OfType<RawRecordRow>().Select(row => row.Record).ToArray();
+            Assert.Equal(originalSourceRecords.Length, restoredSourceRecords.Length);
+            Assert.All(originalSourceRecords.Zip(restoredSourceRecords), pair => Assert.Same(pair.First, pair.Second));
+        }
+        finally
+        {
+            window.Close();
+            File.Delete(capture);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Evidence_attachment_is_discarded_when_a_capture_load_supersedes_the_picker()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var originalWorkspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            originalWorkspace.AddMarker("Old capture marker");
+            var hashRequested = false;
+
+            await window.AttachSelectedMarkerEvidenceAsync(
+                async () =>
+                {
+                    await window.OpenCaptureAsync(fixture);
+                    await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+                    return "ignored-kernel.log";
+                },
+                _ =>
+                {
+                    hashRequested = true;
+                    return Task.FromResult(new string('0', 64));
+                });
+
+            var currentWorkspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            Assert.NotSame(originalWorkspace, currentWorkspace);
+            Assert.Empty(currentWorkspace.Markers);
+            Assert.False(hashRequested);
+            Assert.Contains("discarded", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Sidecar_load_is_discarded_when_a_capture_load_supersedes_the_read()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var originalWorkspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            var marker = originalWorkspace.AddMarker("Stale sidecar marker");
+            var loaded = SidecarResult([marker], sourceMatches: true, configurationMatches: true);
+
+            await window.LoadReviewSidecarAsync(
+                () => Task.FromResult<string?>("ignored.nvtreplay.json"),
+                async (_, _, _) =>
+                {
+                    await window.OpenCaptureAsync(fixture);
+                    await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+                    return loaded;
+                });
+
+            var currentWorkspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            Assert.NotSame(originalWorkspace, currentWorkspace);
+            Assert.Empty(currentWorkspace.Markers);
+            Assert.Contains("discarded", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+            Assert.False(Required<Button>(window, "ApplySidecarButton").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Malformed_sidecar_is_warned_and_never_partially_mutates_canonical_state()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var workspace = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            var existing = workspace.AddMarker("Keep me");
+            var options = new ReviewSessionOptions(PauseOnAlarm: true, PauseOnQaFail: false);
+            workspace.SetReviewOptions(options);
+            var revision = workspace.ReviewSessionRevision;
+            var malformed = new ReplayMarker(
+                "range-marker",
+                "Invalid range",
+                0,
+                1,
+                DateTimeOffset.Parse("2026-08-20T00:00:00Z", CultureInfo.InvariantCulture));
+
+            foreach (var mismatch in new[] { false, true })
+            {
+                var loaded = SidecarResult([malformed], sourceMatches: !mismatch, configurationMatches: !mismatch);
+                await window.LoadReviewSidecarAsync(
+                    () => Task.FromResult<string?>("malformed.nvtreplay.json"),
+                    (_, _, _) => Task.FromResult(loaded));
+                if (mismatch)
+                {
+                    Assert.True(Required<Button>(window, "ApplySidecarButton").IsVisible);
+                    window.ConfirmPendingSidecarForTesting();
+                }
+
+                Assert.Equal(existing.Id, Assert.Single(workspace.Markers).Id);
+                Assert.Equal(options, workspace.ReviewOptions);
+                Assert.Equal(revision, workspace.ReviewSessionRevision);
+                Assert.Contains("invalid sidecar", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+                Assert.False(Required<Button>(window, "ApplySidecarButton").IsVisible);
+                Assert.True(Required<Button>(window, "LoadReviewButton").IsVisible);
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Inspector_summarizes_per_byte_acknowledgements_without_losing_the_transport_data()
     {
         var window = ShowWindow();
@@ -2320,6 +2495,29 @@ public sealed class MainWindowLayoutTests
         packet[79] = CommonCrc8.Compute(packet.AsSpan(0, 79));
         if (corruptCrc) packet[79] ^= 0xFF;
         return packet;
+    }
+
+    private static ReplaySidecarOpenResult SidecarResult(
+        IReadOnlyList<ReplayMarker> markers,
+        bool sourceMatches,
+        bool configurationMatches)
+    {
+        var document = new ReplaySidecarDocument(
+            ReplaySidecarDocument.CurrentSchemaVersion,
+            "test-source",
+            "capture.csv",
+            new ReplayDecodeConfiguration("0x83", null, "kingstvis"),
+            markers,
+            [],
+            new Dictionary<string, bool>
+            {
+                ["pauseOnAlarm"] = false,
+                ["pauseOnBreak"] = true,
+                ["pauseOnAllBreak"] = true,
+                ["compressIdle"] = false,
+            },
+            DateTimeOffset.Parse("2026-08-20T00:00:00Z", CultureInfo.InvariantCulture));
+        return new ReplaySidecarOpenResult(document, sourceMatches, configurationMatches, [], []);
     }
 
     private static byte[] MixedTenContactPacket()

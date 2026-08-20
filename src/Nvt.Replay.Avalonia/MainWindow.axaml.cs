@@ -42,7 +42,7 @@ public partial class MainWindow : Window
     private ReviewInspectorWorkspace? reviewWorkspace;
     private ReviewGroupRow[] reviewRows = [];
     private ReplayDecodeConfiguration? decodeConfiguration;
-    private ReplaySidecarOpenResult? pendingSidecar;
+    private PendingReviewSidecar? pendingSidecar;
     private static readonly ReplayExtent DefaultPaintExtent = new(2304, 1280);
     private CancellationTokenSource? playbackCancellation;
     private CancellationTokenSource? outputPreviewCancellation;
@@ -691,7 +691,10 @@ public partial class MainWindow : Window
         await DecodeSelectedAsync();
     }
 
-    private async Task DecodeSelectedAsync()
+    private async Task DecodeSelectedAsync(
+        bool preserveWorkspaceContext = false,
+        ReviewWorkspaceState? preservedWorkspaceStateOverride = null,
+        TabItem? preservedWorkspaceTabOverride = null)
     {
         if (session is null || operationInProgress)
         {
@@ -732,6 +735,9 @@ public partial class MainWindow : Window
             ConfigurationHintText.Text = "The selected Event Buffer Version is not supported.";
             return;
         }
+
+        var preservedWorkspaceState = preservedWorkspaceStateOverride ?? CaptureReviewWorkspaceState();
+        var preservedWorkspaceTab = preservedWorkspaceTabOverride ?? WorkspaceTabs.SelectedItem as TabItem;
 
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
@@ -779,7 +785,7 @@ public partial class MainWindow : Window
             var nextConfiguration = result.Decode.Configuration;
 
             cancellationToken.ThrowIfCancellationRequested();
-            var preserveReview = decodeConfiguration is null || decodeConfiguration == nextConfiguration;
+            var preserveReview = preserveWorkspaceContext || decodeConfiguration is null || decodeConfiguration == nextConfiguration;
             var preservedMarkers = preserveReview ? reviewWorkspace?.Markers.ToArray() ?? [] : [];
             var preservedReviewState = preserveReview ? reviewWorkspace?.ReviewSession.ExportState() ?? [] : [];
             ResetOutputPlanning();
@@ -795,7 +801,8 @@ public partial class MainWindow : Window
                 diagnosticRows.Select(row => row.Diagnostic).ToArray(),
                 result.Workspace.Frames.Snapshots,
                 preservedMarkers,
-                preservedReviewState);
+                preservedReviewState,
+                preserveReview ? preservedWorkspaceState : null);
             paintWorkspace = new ReplayPaintWorkspace(
                 replaySession,
                 presentation.TrailHistory,
@@ -819,11 +826,24 @@ public partial class MainWindow : Window
             AddMarkerButton.IsEnabled = decodedRows.Length > 0;
             if (decodedRows.Length > 0)
             {
-                WorkspaceTabs.SelectedItem = PaintTab;
-                outputWorkspaceActive = false;
-                SetOutputWorkspaceChrome(false, showReplayTransport: true);
-                SetSourceTransportEnabled(true);
-                SeekReplay(0);
+                var logicalIndex = preserveWorkspaceContext
+                    ? Math.Clamp(preservedWorkspaceState?.CurrentLogicalIndex ?? 0, 0, decodedRows.Length - 1)
+                    : 0;
+                if (preserveWorkspaceContext && preservedWorkspaceTab?.IsEnabled == true)
+                    WorkspaceTabs.SelectedItem = preservedWorkspaceTab;
+                else
+                    WorkspaceTabs.SelectedItem = PaintTab;
+                outputWorkspaceActive = ReferenceEquals(WorkspaceTabs.SelectedItem, AnalysisTab);
+                var paintSelected = ReferenceEquals(WorkspaceTabs.SelectedItem, PaintTab);
+                SetOutputWorkspaceChrome(outputWorkspaceActive, showReplayTransport: paintSelected);
+                SetSourceTransportEnabled(paintSelected && !outputWorkspaceActive);
+                SeekReplay(logicalIndex);
+                if (preserveWorkspaceContext && preservedWorkspaceState?.SelectedContactId is { } contactId)
+                {
+                    reviewWorkspace?.SelectContact(contactId);
+                    if (replayFrames is { } frames) PresentReplayDetails(frames[logicalIndex]);
+                }
+                RefreshOutputPreviewIfVisible();
             }
             else
             {
@@ -859,6 +879,26 @@ public partial class MainWindow : Window
     private bool IsActiveCaptureDecode(long generation, CancellationTokenSource cancellation) =>
         ReferenceEquals(operationCancellation, cancellation) &&
         (generation == 0 || activeCaptureDecodeGeneration == generation);
+
+    private ReviewOperationIdentity CaptureReviewOperationIdentity()
+    {
+        var loadedSession = session ?? throw new InvalidOperationException("A loaded capture is required.");
+        return new ReviewOperationIdentity(
+            loadedSession,
+            reviewWorkspace,
+            decodeConfiguration,
+            loadedSession.SourceSha256,
+            activeCaptureLoadGeneration,
+            activeCaptureDecodeGeneration);
+    }
+
+    private bool IsCurrentReviewOperation(ReviewOperationIdentity identity) =>
+        ReferenceEquals(session, identity.Session) &&
+        ReferenceEquals(reviewWorkspace, identity.Workspace) &&
+        decodeConfiguration == identity.DecodeConfiguration &&
+        string.Equals(session?.SourceSha256, identity.SourceSha256, StringComparison.OrdinalIgnoreCase) &&
+        activeCaptureLoadGeneration == identity.LoadGeneration &&
+        activeCaptureDecodeGeneration == identity.DecodeGeneration;
 
     private void CancelButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -2008,16 +2048,26 @@ public partial class MainWindow : Window
         if (session is null) return;
         var selectedId = (RawRecordsList.SelectedItem as RawRecordRow)?.Record.StableId;
         var loadedSession = session;
+        var operationIdentity = CaptureReviewOperationIdentity();
+        var preservedWorkspaceState = CaptureReviewWorkspaceState();
+        var preservedWorkspaceTab = WorkspaceTabs.SelectedItem as TabItem;
+        CaptureSession? profiledSession = null;
+        var committed = false;
         SetBusy(true, choice.IcFamily is null ? "Removing IC register profile" : $"Applying IC profile {choice.IcFamily}");
         try
         {
-            session = await Task.Run(() => loadedSession.WithRegisterProfile(choice.IcFamily));
+            profiledSession = await Task.Run(() => loadedSession.WithRegisterProfile(choice.IcFamily));
             var projected = await Task.Run(() =>
-                RegisterActivityProjector.Project(session.Records, session.RegisterAnnotations).ToArray());
+                RegisterActivityProjector.Project(profiledSession.Records, profiledSession.RegisterAnnotations).ToArray());
+            if (!IsCurrentReviewOperation(operationIdentity)) return;
+
+            session = profiledSession;
             ApplyRawExplorerProjection(projected, selectedId);
             var diagnostics = SessionDiagnostics(session);
             diagnosticRows = diagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
-            CreateReviewWorkspace(diagnostics);
+            CreateReviewWorkspace(diagnostics, workspaceState: preservedWorkspaceState);
+            SynchronizeReviewWorkspaceConsumers();
+            committed = true;
             var ambiguous = registerActivities.Count(item => item.IsAmbiguous);
             ConfigurationHintText.Text = choice.IcFamily is null
                 ? $"IC profile unconfirmed · {ambiguous:N0} collision-prone register events remain raw-only"
@@ -2032,13 +2082,34 @@ public partial class MainWindow : Window
         }
         finally
         {
-            SetBusy(false, SessionStatusText.Text ?? "Ready");
+            var stillOwnsUi = committed
+                ? ReferenceEquals(session, profiledSession) &&
+                  activeCaptureLoadGeneration == operationIdentity.LoadGeneration &&
+                  activeCaptureDecodeGeneration == operationIdentity.DecodeGeneration
+                : IsCurrentReviewOperation(operationIdentity);
+            if (stillOwnsUi) SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
 
+        if (!committed) return;
         var canDecode = EventVersionComboBox.SelectedIndex >= 0 &&
             (EventVersionComboBox.SelectedIndex != 4 ||
              (choice.IcFamily is not null && Desay97ProfileComboBox.SelectedIndex >= 0));
-        if (canDecode) await DecodeSelectedAsync();
+        if (canDecode)
+            await DecodeSelectedAsync(
+                preserveWorkspaceContext: true,
+                preservedWorkspaceStateOverride: preservedWorkspaceState,
+                preservedWorkspaceTabOverride: preservedWorkspaceTab);
+    }
+
+    internal async Task ApplyRegisterProfileForTestingAsync(string? icFamily)
+    {
+        var choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
+            .FirstOrDefault(item => string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
+        if (choice is null && icFamily is null)
+            choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
+                .FirstOrDefault(item => item.IcFamily is null);
+        if (choice is null) throw new ArgumentException($"Unknown IC profile '{icFamily}'.", nameof(icFamily));
+        await ApplyRegisterProfileAsync(choice);
     }
 
     private void RegisterFilterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) => RefreshRawExplorer();
@@ -2464,8 +2535,10 @@ public partial class MainWindow : Window
         IReadOnlyList<ReplayDiagnostic> diagnostics,
         IReadOnlyList<ITouchReplaySnapshot>? frames = null,
         IReadOnlyList<ReplayMarker>? replacementMarkers = null,
-        IReadOnlyList<ReviewStateSnapshot>? reviewState = null)
+        IReadOnlyList<ReviewStateSnapshot>? reviewState = null,
+        ReviewWorkspaceState? workspaceState = null)
     {
+        workspaceState ??= CaptureReviewWorkspaceState();
         var markers = replacementMarkers ?? reviewWorkspace?.Markers.ToArray() ?? [];
         var state = reviewState ?? reviewWorkspace?.ReviewSession.ExportState() ?? [];
         diagnosticLineNumbers = diagnosticRows
@@ -2478,11 +2551,65 @@ public partial class MainWindow : Window
             session?.RegisterAnnotations,
             markers,
             CurrentPaintMode,
-            reviewOptions: new ReviewSessionOptions(
-                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
-                SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail));
+            reviewOptions: workspaceState?.ReviewOptions ?? new ReviewSessionOptions(
+                    SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
+                    SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail));
         reviewWorkspace.ReplaceMarkersAndImportState(markers, state);
+        RestoreReviewWorkspaceState(reviewWorkspace, workspaceState);
         RefreshReviewQueue();
+    }
+
+    private ReviewWorkspaceState? CaptureReviewWorkspaceState() => reviewWorkspace is null
+        ? null
+        : new ReviewWorkspaceState(
+            reviewWorkspace.Filter,
+            reviewWorkspace.CurrentLogicalIndex,
+            reviewWorkspace.SelectedFindingGroupId,
+            reviewWorkspace.SelectedOccurrenceId,
+            reviewWorkspace.SelectedMarkerId,
+            reviewWorkspace.SelectedContactId,
+            reviewWorkspace.ReviewOptions);
+
+    private static void RestoreReviewWorkspaceState(
+        ReviewInspectorWorkspace workspace,
+        ReviewWorkspaceState? state)
+    {
+        if (state is null) return;
+        workspace.SetReviewOptions(state.ReviewOptions);
+        workspace.SetFilter(state.Filter);
+        var logicalIndex = workspace.Frames.Count == 0
+            ? -1
+            : Math.Clamp(state.CurrentLogicalIndex, 0, workspace.Frames.Count - 1);
+        if (logicalIndex >= 0) workspace.SelectFrame(logicalIndex);
+
+        var finding = state.SelectedFindingGroupId is { } groupId
+            ? workspace.VisibleGroups.FirstOrDefault(group => group.Id.Equals(groupId, StringComparison.Ordinal))
+            : null;
+        if (finding is not null)
+        {
+            var occurrenceIndex = state.SelectedOccurrenceId is { } occurrenceId
+                ? finding.Occurrences.ToList().FindIndex(occurrence =>
+                    occurrence.Id.Equals(occurrenceId, StringComparison.Ordinal))
+                : 0;
+            workspace.SelectFinding(finding.Id, Math.Max(0, occurrenceIndex));
+        }
+        else if (state.SelectedMarkerId is { } markerId)
+        {
+            workspace.SelectMarker(markerId);
+        }
+
+        if (logicalIndex >= 0) workspace.SelectFrame(logicalIndex);
+        if (state.SelectedContactId is { } contactId) workspace.SelectContact(contactId);
+    }
+
+    private void SynchronizeReviewWorkspaceConsumers()
+    {
+        RefreshPaintAnnotations();
+        RefreshOutputPreviewIfVisible();
+        if (reviewWorkspace?.CurrentSnapshot is { } snapshot)
+            ShowRecord(snapshot.PrimarySource, snapshot.DecodedFrame, snapshot);
+        else if (currentInspectorRecord is not null)
+            ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
     }
 
     private void RefreshReviewQueue()
@@ -2581,19 +2708,42 @@ public partial class MainWindow : Window
 
     private async void AttachMarkerEvidenceButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!TryGetSelectedMarker(out var marker)) return;
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        await AttachSelectedMarkerEvidenceAsync(async () =>
         {
-            Title = "Attach raw Kernel / FW log",
-            AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("Raw log evidence") { Patterns = ["*.log", "*.txt", "*.dmesg", "*.trace"] }, FilePickerFileTypes.All],
-        });
-        var path = files.SingleOrDefault()?.TryGetLocalPath();
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Attach raw Kernel / FW log",
+                AllowMultiple = false,
+                FileTypeFilter = [new FilePickerFileType("Raw log evidence") { Patterns = ["*.log", "*.txt", "*.dmesg", "*.trace"] }, FilePickerFileTypes.All],
+            });
+            return files.SingleOrDefault()?.TryGetLocalPath();
+        }, ComputeEvidenceSha256Async);
+    }
+
+    internal async Task AttachSelectedMarkerEvidenceAsync(
+        Func<Task<string?>> selectPath,
+        Func<string, Task<string>> computeSha256)
+    {
+        ArgumentNullException.ThrowIfNull(selectPath);
+        ArgumentNullException.ThrowIfNull(computeSha256);
+        if (!TryGetSelectedMarker(out var marker)) return;
+        var markerId = marker.Id;
+        var operationIdentity = CaptureReviewOperationIdentity();
+        var path = await selectPath();
         if (path is null) return;
+        if (!IsCurrentReviewOperation(operationIdentity))
+        {
+            SessionStatusText.Text = "Evidence attachment discarded · capture changed while selecting evidence";
+            return;
+        }
         try
         {
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024, true);
-            var hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(stream));
+            var hash = await computeSha256(path);
+            if (!IsCurrentReviewOperation(operationIdentity))
+            {
+                SessionStatusText.Text = "Evidence attachment discarded · capture changed while hashing evidence";
+                return;
+            }
             var name = Path.GetFileName(path);
             var lowerName = name.ToLowerInvariant();
             var kind = lowerName.Contains("kernel") || lowerName.Contains("dmesg")
@@ -2601,15 +2751,21 @@ public partial class MainWindow : Window
                 : lowerName.Contains("fw") || lowerName.Contains("firmware")
                     ? ReplayEvidenceKind.FirmwareLog
                     : ReplayEvidenceKind.Other;
-            reviewWorkspace!.AddMarkerEvidence(marker.Id, new ReplayEvidenceReference(
+            reviewWorkspace!.AddMarkerEvidence(markerId, new ReplayEvidenceReference(
                 $"evidence-{Guid.NewGuid():N}", kind, path, hash, name));
             RefreshWorkspaceAfterReviewMutation();
             SessionStatusText.Text = $"Raw evidence attached · {name} · SHA-256 recorded";
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or KeyNotFoundException)
         {
             SessionStatusText.Text = $"Evidence attach failed · {exception.Message}";
         }
+    }
+
+    private static async Task<string> ComputeEvidenceSha256Async(string path)
+    {
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024, true);
+        return Convert.ToHexStringLower(await SHA256.HashDataAsync(stream));
     }
 
     private bool TryGetSelectedMarker(out ReplayMarker marker)
@@ -2665,29 +2821,55 @@ public partial class MainWindow : Window
 
     private async void LoadReviewButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (session is null || decodeConfiguration is null) return;
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        await LoadReviewSidecarAsync(async () =>
         {
-            Title = "Open replay review",
-            AllowMultiple = false,
-            FileTypeFilter = [new FilePickerFileType("NVT replay review") { Patterns = ["*.nvtreplay.json"] }],
-        });
-        var path = files.SingleOrDefault()?.TryGetLocalPath();
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Open replay review",
+                AllowMultiple = false,
+                FileTypeFilter = [new FilePickerFileType("NVT replay review") { Patterns = ["*.nvtreplay.json"] }],
+            });
+            return files.SingleOrDefault()?.TryGetLocalPath();
+        }, (path, sourceSha256, configuration) =>
+            new ReplaySidecarStore().LoadAsync(path, sourceSha256, configuration));
+    }
+
+    internal async Task LoadReviewSidecarAsync(
+        Func<Task<string?>> selectPath,
+        Func<string, string, ReplayDecodeConfiguration, Task<ReplaySidecarOpenResult>> loadSidecar)
+    {
+        ArgumentNullException.ThrowIfNull(selectPath);
+        ArgumentNullException.ThrowIfNull(loadSidecar);
+        if (session is null || decodeConfiguration is null || reviewWorkspace is null) return;
+        var operationIdentity = CaptureReviewOperationIdentity();
+        var configuration = decodeConfiguration;
+        var path = await selectPath();
         if (path is null) return;
+        if (!IsCurrentReviewOperation(operationIdentity))
+        {
+            DiscardPendingSidecar("Review load discarded · capture changed while selecting a sidecar");
+            return;
+        }
         try
         {
-            var loaded = await new ReplaySidecarStore().LoadAsync(path, session.SourceSha256, decodeConfiguration);
+            var loaded = await loadSidecar(path, operationIdentity.SourceSha256, configuration);
+            if (!IsCurrentReviewOperation(operationIdentity))
+            {
+                DiscardPendingSidecar("Review load discarded · capture changed while opening the sidecar");
+                return;
+            }
+            ValidateSidecarOpenResult(loaded);
             if (loaded.RequiresExplicitConfirmation)
             {
-                pendingSidecar = loaded;
+                pendingSidecar = new PendingReviewSidecar(loaded, operationIdentity);
                 ApplySidecarButton.IsVisible = true;
                 LoadReviewButton.IsVisible = false;
                 SessionStatusText.Text = $"Review mismatch not applied · {string.Join(" ", loaded.Warnings)}";
                 return;
             }
-            ApplySidecar(loaded);
+            TryApplySidecar(loaded, operationIdentity);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or JsonException or UnsupportedReplaySidecarVersionException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or JsonException or UnsupportedReplaySidecarVersionException or ArgumentException)
         {
             SessionStatusText.Text = $"Review open failed · {exception.Message}";
         }
@@ -2695,11 +2877,47 @@ public partial class MainWindow : Window
 
     private void ApplySidecarButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (pendingSidecar is { } loaded) ApplySidecar(loaded);
+        if (pendingSidecar is not { } pending) return;
+        if (!IsCurrentReviewOperation(pending.OperationIdentity))
+        {
+            DiscardPendingSidecar("Review confirmation discarded · capture changed after the sidecar was opened");
+            return;
+        }
+        TryApplySidecar(pending.Result, pending.OperationIdentity);
+    }
+
+    internal void ConfirmPendingSidecarForTesting() => ApplySidecarButton_OnClick(null, new RoutedEventArgs());
+
+    private bool TryApplySidecar(ReplaySidecarOpenResult loaded, ReviewOperationIdentity operationIdentity)
+    {
+        if (!IsCurrentReviewOperation(operationIdentity))
+        {
+            DiscardPendingSidecar("Review apply discarded · capture changed before the sidecar could be applied");
+            return false;
+        }
+        try
+        {
+            ApplySidecar(loaded);
+            return true;
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidDataException)
+        {
+            DiscardPendingSidecar($"Review not applied · invalid sidecar · {exception.Message}");
+            return false;
+        }
+    }
+
+    private void DiscardPendingSidecar(string status)
+    {
+        pendingSidecar = null;
+        ApplySidecarButton.IsVisible = false;
+        LoadReviewButton.IsVisible = true;
+        SessionStatusText.Text = status;
     }
 
     private void ApplySidecar(ReplaySidecarOpenResult loaded)
     {
+        ValidateSidecarOpenResult(loaded);
         var resolvedById = loaded.Evidence.ToDictionary(item => item.Reference.Id, item => item.ResolvedPath, StringComparer.Ordinal);
         var resolvedMarkers = loaded.Document.Markers.Select(marker => marker with
         {
@@ -2715,18 +2933,32 @@ public partial class MainWindow : Window
                 : currentPreferences.PauseOnAlarmOrQaFail,
             loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnBreak"),
             loaded.Document.VisibilityPreferences.GetValueOrDefault("pauseOnAllBreak"));
+        var workspace = reviewWorkspace ?? throw new InvalidOperationException("A decoded review workspace is required.");
+        var import = workspace.ReplaceMarkersAndImportState(resolvedMarkers, loaded.Document.ReviewStates);
         SettingsPage.SetPlaybackPreferences(importedPreferences);
         ApplyPlaybackPreferences(importedPreferences, syncTransportControls: true);
         if (loaded.Document.VisibilityPreferences.TryGetValue("compressIdle", out var compress)) CompressIdleCheckBox.IsChecked = compress;
-        var import = reviewWorkspace?.ReplaceMarkersAndImportState(resolvedMarkers, loaded.Document.ReviewStates);
         RefreshWorkspaceAfterReviewMutation();
         pendingSidecar = null;
         ApplySidecarButton.IsVisible = false;
         LoadReviewButton.IsVisible = true;
         SessionStatusText.Text =
-            $"Review opened · {import?.MarkerCount ?? 0} markers · {loaded.Evidence.Count} evidence refs" +
+            $"Review opened · {import.MarkerCount} markers · {loaded.Evidence.Count} evidence refs" +
             (loaded.Warnings.Count > 0 ? $" · {loaded.Warnings.Count} warnings" : string.Empty) +
-            (import?.UnresolvedReviewGroupIds.Count > 0 ? $" · {import.UnresolvedReviewGroupIds.Count} stale review groups" : string.Empty);
+            (import.UnresolvedReviewGroupIds.Count > 0 ? $" · {import.UnresolvedReviewGroupIds.Count} stale review groups" : string.Empty);
+    }
+
+    private static void ValidateSidecarOpenResult(ReplaySidecarOpenResult loaded)
+    {
+        ArgumentNullException.ThrowIfNull(loaded);
+        ArgumentNullException.ThrowIfNull(loaded.Document);
+        ArgumentNullException.ThrowIfNull(loaded.Document.Markers);
+        ArgumentNullException.ThrowIfNull(loaded.Document.ReviewStates);
+        ArgumentNullException.ThrowIfNull(loaded.Document.VisibilityPreferences);
+        ArgumentNullException.ThrowIfNull(loaded.Evidence);
+        ArgumentNullException.ThrowIfNull(loaded.Warnings);
+        if (loaded.Evidence.Any(item => item is null))
+            throw new ArgumentException("Sidecar evidence resolution cannot contain null entries.", nameof(loaded));
     }
 
     private object? FindFrame(string sourceId) =>
@@ -2925,6 +3157,27 @@ public partial class MainWindow : Window
     {
         public override string ToString() => $"{DisplayName} · {Confidence}";
     }
+
+    private sealed record ReviewWorkspaceState(
+        ReviewQueueFilter Filter,
+        int CurrentLogicalIndex,
+        string? SelectedFindingGroupId,
+        string? SelectedOccurrenceId,
+        string? SelectedMarkerId,
+        byte? SelectedContactId,
+        ReviewSessionOptions ReviewOptions);
+
+    private sealed record ReviewOperationIdentity(
+        CaptureSession Session,
+        ReviewInspectorWorkspace? Workspace,
+        ReplayDecodeConfiguration? DecodeConfiguration,
+        string SourceSha256,
+        long LoadGeneration,
+        long DecodeGeneration);
+
+    private sealed record PendingReviewSidecar(
+        ReplaySidecarOpenResult Result,
+        ReviewOperationIdentity OperationIdentity);
 
     private void ClearSession()
     {
