@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -9,7 +8,6 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -1588,8 +1586,17 @@ public sealed class MainWindowLayoutTests
 
     private static MainWindow ShowWindow()
     {
-        var window = new MainWindow { Width = 1480, Height = 840 };
+        if (Application.Current is { } application)
+            application.RequestedThemeVariant = ThemeVariant.Dark;
+
+        var window = new MainWindow
+        {
+            Width = 1480,
+            Height = 840,
+            WindowState = WindowState.Normal
+        };
         window.Show();
+        VisualTestCapture.Stabilize(window);
         return window;
     }
 
@@ -1611,17 +1618,6 @@ public sealed class MainWindowLayoutTests
         Assert.True(predicate(), "Timed out while waiting for the output preview.");
     }
 
-    private static string CaptureHash(Window window, string artifactName)
-    {
-        using var frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("Headless renderer returned no frame.");
-        using var stream = new MemoryStream();
-        frame.Save(stream, PngBitmapEncoderOptions.Default);
-        var artifactDirectory = Environment.GetEnvironmentVariable("NVT_UI_AUDIT_DIR");
-        if (!string.IsNullOrWhiteSpace(artifactDirectory))
-        {
-            Directory.CreateDirectory(artifactDirectory);
-            frame.Save(Path.Combine(artifactDirectory, artifactName), PngBitmapEncoderOptions.Default);
-        }
-        return Convert.ToHexString(SHA256.HashData(stream.ToArray()));
-    }
+    private static string CaptureHash(Window window, string artifactName) =>
+        VisualTestCapture.CaptureHash(window, artifactName);
 }
