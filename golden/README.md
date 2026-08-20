@@ -80,17 +80,27 @@ goldens for deterministic heatmap and replay PNG outputs. Python remains a
 historical demo oracle only; all shipped parser, CLI, UI, simulator, analysis,
 and release logic is C#.
 
-## 0.0.3 refactor smoke verification
+## 0.0.3 final refactor smoke verification
 
-Re-run on 2026-08-20 after `c6132f5`, using the private sources in place and
-without copying them into this repository:
+Re-run on 2026-08-20 after implementation HEAD `022ba60`, using the private
+sources in place and without copying them into this repository. The valid
+KingstVIS CSV was streamed from the archived HackMD recovery record into an
+ignored temporary directory, verified against its SHA-256, inspected, and then
+removed. The obsolete sibling-repository CSV remains `4bec1b…` and was not used.
 
 | Evidence | Explicit configuration | Result |
 | --- | --- | --- |
-| KingstVIS `063ad09…` | Common `0x83`, IC `51929/51932` | 568 frames, 568 CRC-valid, 568 Host-State-eligible, 13 retained diagnostics |
-| DSL `e7e277f…` | Common `0x84`, IC `51929/51932` | 435 frames, 435 CRC-valid, 435 Host-State-eligible, zero diagnostics; all 435 retain unconsumed trailing bytes |
-| NDS `0e32907…` | Common `0x83`, IC `51927` | 518 frames, 518 CRC-valid, 518 Host-State-eligible, zero diagnostics |
+| KingstVIS `063ad09…` | adapter `kingstvis-decoded-i2c`; Common `0x83`; IC `51929/51932` | 568 frames, 568 CRC-valid, 568 Host-State-eligible, 13 retained diagnostics |
+| DSL `e7e277f…` | adapter `dsl-decoded-i2c`; Common `0x84`; IC `51929/51932` | 435 frames, 435 CRC-valid, 435 Host-State-eligible, zero diagnostics; all 435 retain unconsumed trailing bytes |
+| NDS `0e32907…` | adapter `nds-communication-log`; Common `0x83`; IC `51927` | 518 frames, 518 CRC-valid, 518 Host-State-eligible, zero diagnostics |
 
 The obsolete `4bec1b…` transport evidence was also checked only to confirm its
 identity; it remains invalid as KingstVIS schema evidence and was not used as
 the 0.0.3 KingstVIS gate.
+
+The same verification run also completed a Release solution build with zero
+warnings/errors, 289/289 core/parser/rendering/CLI tests, 94/94 Avalonia tests,
+and exact comparison of 20 approved UI snapshots. A private Desay Standard/Benz
+Palm capture has not been supplied; those paths remain covered by public and
+synthetic transaction fixtures and are still an explicit pre-release evidence
+gate.

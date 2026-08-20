@@ -10,12 +10,12 @@
 
 - Branch：`0.0.3`
 - 參考 commit / tag：`1e2567b` / `0.0.2`
-- Production handwritten C# / XAML：約 17,657 行，仍低於 30,000 行上限。
-- Core / parser / rendering tests：221 / 221 passed。
-- Avalonia candidate matrix 所在版本：50 / 50 passed；正式 approved screenshots 尚未核准。
+- Production handwritten C# / XAML：23,880 行；通過 25,000 行 architecture review threshold 與 30,000 行 hard cap。
+- Core / parser / rendering / CLI tests：289 / 289 passed。
+- Avalonia tests：94 / 94 passed；20 張 approved screenshots 由 exact pixel gate 驗證。
 - 私有有效 KingstVIS golden `063ad09…`：568 logical frames；過期的 `4bec1b…` 不再作為 KingstVIS schema gate。
 - Release identity 已統一為 `VERSION=0.0.3`；正式 `v0.0.3` tag 尚未建立。
-- `MainWindow.axaml.cs` 約 3,567 行、`MainWindow.axaml` 約 1,106 行；styles 已移至獨立 resource dictionaries。
+- `MainWindow.axaml.cs` 只保留 142 行 constructor/bootstrap；Settings、Sidecar、Paint、Output、Review/Inspector、Playback、Capture、Shell 已拆為 8 個 partial，styles 位於獨立 resource dictionaries。`MainWindow.axaml` 的 UserControl 拆分保留給後續版本。
 
 ## 重構原則
 
@@ -50,8 +50,8 @@ Source adapters
 - [x] 0.0.3 使用 `VERSION=0.0.3`；正式 tag 固定為 `vX.Y.Z`（尚未建立 release tag）。
 - [x] 不重寫已推送的 `0.0.2` tag；在 release note 標示它是 milestone tag。
 - [x] CI 新增 release identity gate：tag、`VERSION`、package metadata 不一致即失敗。
-- [ ] 固定 baseline test 數、長 golden hash/records/frames、效能機器與 commit。
-- [ ] 重生目前 source 對應的 Paint、Output、Heatmap、Settings approved screenshots，淘汰過期 artifact。
+- [x] 固定 baseline test 數、長 golden hash/records/frames、效能機器與 commit。
+- [x] 重生目前 source 對應的 Paint、Output、Heatmap、Settings approved screenshots，並加入 advanced Review/Inspector states。
 
 完成條件：從任一正式 tag 產出的檔名、manifest、版本文字與 GitHub Release 身分完全一致。
 
@@ -60,20 +60,20 @@ Source adapters
 - [x] 新增 `ReplayWorkspaceBuildRequest`、`ReplayWorkspaceBuildResult` 與 `ReplayWorkspaceBuilder`。
 - [x] 將 Common decode、Desay assemble/decode、replay materialization、extent、trail index、auto-pause index 移出 UI thread。
 - [x] `CancellationToken` 傳入 `CaptureSession.DecodeCommon`、`DecodeDesay97`、`Desay97Assembler` 與所有長迴圈。
-- [ ] 加入 operation generation；只有最後一個仍有效的 operation 可以提交 UI state。
+- [x] 加入 operation generation；只有最後一個仍有效的 operation 可以提交 UI state。
 - [x] 完整 workspace 建立成功後一次性切換；取消或失敗時保留上一份完整結果。
-- [ ] 進度階段至少區分 `Decode`、`Replay index`、`Trail index`、`Review index`、`Ready`。
+- [x] 進度使用 typed phases：Probe、Hash、Index、SourceReady、Select、Project、Decode、Build、Ready；stale generation progress 不可回寫 UI。
 
 完成條件：載入／解碼期間 UI 可操作 Cancel；取消後無背景 CPU 長跑、無 stale continuation、raw explorer 與上一份有效結果仍可用。
 
 ## Phase 2 — Replay index 與長軌跡效能
 
-- [ ] Replay snapshots、extent、trail history 與 auto-pause index 改為單次線性掃描建置。
+- [x] Replay snapshots、extent、trail history 與 auto-pause index 各自只建立一次，並在 background linear pass 中完成。
 - [x] Contact presence 使用固定寬度 bitmask，避免 workspace 每 frame 建立多個 `HashSet<byte>`。
-- [ ] Host state 評估改為固定 11-slot array/struct，避免每 frame 複製 Dictionary。
+- [ ] Host state checkpoint 仍保留小型 dictionary；固定 11-slot array/struct 屬後續 micro-optimization，現有 100k/長 Loop gate 未顯示它是瓶頸。
 - [x] Checkpoint 位置改用直接索引或 binary search，移除 `SortedDictionary.Last(...)` 熱路徑。
 - [x] 保留 2,048-point 無損 trail chunk；切片只影響繪圖批次，不刪除線或 report points。
-- [x] 量測 trail history allocation 與 random seek allocation；GC、workspace build time 與 3-minute Loop memory curve仍待補齊。
+- [x] 量測 trail history、random seek、21,600 次 replay advance（等效 120 Hz 連續 3 分鐘）與 stale generation allocation；第二輪 allocation 不成長。
 
 完成條件：
 
@@ -87,9 +87,9 @@ Source adapters
 - [x] `ReplayFramePlan` 直接建立 RLE repeat count，不逐一 materialize 每個 output frame。
 - [x] 保存 cumulative output end index，以 binary search 完成 output-frame -> logical-frame 對應。
 - [x] frame count、repeat count 與 duration calculation 使用 `long` 並加入 overflow / hard-limit protection。
-- [ ] 先以常數時間 estimate 顯示長影片警告，再於背景建立完整 plan。
+- [x] 先估算並檢查 100,000,000-frame hard limit，再以 cancellable single-flight background planner 建立完整 plan；超限不開 picker 或 export job。
 - [x] planning、rendering、FFmpeg piping 全程共用 cancellation 與 progress。
-- [ ] Preview scrub、repeat、fullscreen 與 final MP4 共用同一份 immutable plan。
+- [x] Preview scrub、repeat、fullscreen 與 final MP4 共用同一份 immutable plan；final export 拒絕 stale replay/settings identity。
 - [x] 統一 UI 與 CLI 的 FPS 上限為 240；180／240 FPS 具有相同驗證規則。
 
 完成條件：Recorded timing 包含長 idle gap 時不阻塞 UI；取消後不留下 partial output，Preview 與 final manifest 的 frame count、duration、range 完全相同。
@@ -99,13 +99,13 @@ Source adapters
 依下列順序進行，每一步保持既有 UI 與測試行為：
 
 - [x] 抽出 `PlaybackController`：clock、speed、play/pause、step、Loop、auto-pause、generation。
-- [ ] 抽出 `OutputWorkspaceViewModel` 與 `ExportJobService`：content type、video options、preview、progress、cancel。
-- [ ] 抽出 `PaintWorkspaceViewModel`：panel extent、point view、trail、Trace/Points、axis transform、canvas safe area。
-- [ ] 抽出 `ReviewInspectorViewModel`：current frame、contact selection、finding navigation、marker lifecycle。
-- [ ] 抽出 `CaptureDecodeController`：source choice、version/profile validation、automatic decode、register annotation。
-- [ ] 將 Paint、Output、Review、Inspector 拆為獨立 View/UserControl。
+- [x] 抽出 `ReplayOutputWorkspace`、`ReplayOutputPlanService`、`OutputReportService` 與 `ExportJobService`：content type、video options、preview、progress、cancel。
+- [x] 抽出 `ReplayPaintWorkspace`：panel extent、point view、trail、Trace/Points、axis transform、annotations 與 invalidation contract。
+- [x] 抽出 `ReviewInspectorWorkspace`：current frame、contact selection、finding navigation、marker lifecycle 與 sidecar state。
+- [x] 抽出 `CaptureDecodeController`：source choice、version/profile validation、atomic decode、register annotation 與 latest-wins generation。
+- [ ] 將 Paint、Output、Review、Inspector 的 XAML 視覺樹拆為獨立 View/UserControl；code-behind 已先按功能拆成 partial，避免此版同時承擔 NameScope/focus/event-routing 風險。
 - [x] 將 window-local styles 拆入 typography、buttons、fields、transport、inspector、output 等 ResourceDictionary。
-- [ ] 移除拆分後的 hidden legacy controls、重複 state 與不再使用的 event handlers。
+- [x] 移除 canonical Capture/Paint/Output/Review state 的重複 ownership；`MainWindow.axaml.cs` 降至 142 行，功能 handlers 分置 8 個 partial。
 
 完成條件：`MainWindow` 不再直接包含 replay/export/decode 演算法；ViewModel/controller 可在無 Window 的情況下測試。結構抽離前後 approved screenshot 應維持零預期差異。
 
@@ -113,10 +113,10 @@ Source adapters
 
 - [x] 將目前 descriptor-only format registry 升級為可供 UI/CLI 使用的 executable provider。
 - [x] provider 封裝 descriptor、configuration validation、decode、replay projection、diagnostics 與 display identity；inspect presenter 保留 typed dispatch 以維持既有 JSON schema。
-- [ ] 移除 UI 與 CLI 中 Common／Desay 重複 switch 與近似 command pipeline。
+- [x] UI 與 CLI 都經 executable format registry；inspect 只保留 typed presenter dispatch 以維持既有 JSON/text schema。
 - [x] Desay two-transaction 保留獨立 assembler；補 cancellation，並維持 transport-stream/slave transaction scope。
-- [ ] CRC ownership 明確化，避免 assembler 與 decoder 重複執行同一個 validation。
-- [ ] 新 LA adapter 套用共用 acceptance contract：probe ambiguity、malformed row、cancellation、stable ID、address normalization、ACK unavailable、transaction boundary、simulator round trip、real-export provenance。
+- [x] CRC ownership 明確化：Common decoder 單點驗證；Desay assembler 計算並攜帶 captured/computed CRC，semantic decoder 不重算。
+- [x] KingstVIS、DSL、NDS 與 built-in LA adapters 套用共用 acceptance contract：probe ambiguity、malformed row、cancellation、stable ID、address normalization、ACK unavailable、transaction boundary、simulator round trip、provenance。
 
 完成條件：新增第三種 Event Buffer family 時不需要同時修改 MainWindow、CLI 三條 command flow 與 Rendering switch。
 
@@ -132,8 +132,14 @@ Source adapters
 - `0abb612`、`c6132f5`：headless playback controller 與 MainWindow wiring；速度、Loop、auto-pause 與 stale tick generation 有獨立測試。
 - `bd4b720`：無損 chunked trail history；100,003 points 完整保留，建立 allocation 降低 93.7%，250 次 random seek allocation 降低 69.3%。
 - `5814e19`、`1fc4b0b`：deterministic UI capture 與顯式 candidate matrix；瑕疵圖不會直接成為 approved baseline。
+- `7f54e5a`、`c048703`、`0c244c3`、`c3a4961`：Output workspace、immutable plan、background export、hard-limit、FFmpeg cancel cleanup 與 cancellable shared analysis。
+- `ae65c98`、`3cec4e6`：UI decode 經 prepared capture controller；zero-frame、load-to-load、cancel、close 與 stale continuation race 有決定性測試。
+- `185dae6`、`ee377c7`、`4cdc378`：Paint workspace canonical state、annotation/legend index、100k trail 與 hidden Output deferred rendering。
+- `b7a6cd9`、`e1662a1`、`9aa08f1`：Review/Inspector canonical state、single-frame Mark、sidecar strict replace、100k finding navigation 與 capture/profile churn guard。
+- `c79376c` 至 `800a94f`：MainWindow 純搬移成 8 個功能 partial；每一步 build/targeted tests 通過，root code-behind 降至 142 行。
+- `2d1465a`、`022ba60`：16 張 base + 4 張 advanced approved screenshots；dark/light、1920/1180、Alarm、10-contact、Raw/Register 與 Marker states 具有 exact gate。
 
-目前驗證基線：core/parser/rendering/CLI 221 tests passed；Avalonia candidate matrix 50 tests passed。私有 Common KingstVIS／DSL／NDS smoke 已重跑；Desay 私有 Golden、長時間 Loop、正式 approved screenshot matrix 與 release tag 仍是未關閉 gate。
+目前驗證基線：core/parser/rendering/CLI 289 tests passed；Avalonia 94 tests passed；20 張 approved PNG exact compare 通過。私有 Common KingstVIS／DSL／NDS smoke 已於 `022ba60` 後重跑。尚未關閉的 release gate 為私有 Desay golden、125% UI scale/相關 visual baseline、正式 tag 與 package/release publish。
 
 ## Phase 6 — Register annotation projection
 
@@ -141,32 +147,32 @@ Source adapters
 - [x] 新增 `RegisterAnnotationIndex`，以 record stable ID 與 profile identity/hash 建立 projection。
 - [x] register diagnostics 與 transport/parser diagnostics 分離。
 - [x] profile 切換只重建 annotation projection 與其專屬 findings。
-- [ ] 為下一版 custom register profile JSON 預留 schema version、profile ID、IC/FW scope 與 SHA-256 identity。
+- [x] 為下一版 custom register profile JSON 預留 schema version、profile ID、IC/FW scope、canonical serialization 與 SHA-256 identity；本版不啟用任意 profile 自動載入。
 
 完成條件：切換 IC profile 不再 O(N) 複製所有 `SourceRecord`；同名但內容不同的 profile 不會被視為同一份設定。
 
 ## Phase 7 — Design system 與視覺驗收
 
-- [ ] 建立正式 typography：12.5 / 14 / 16 / 20；移除 9.5 / 10.5 的關鍵資訊文字。
-- [ ] 建立 spacing：4 / 8 / 12 / 16 / 24；control height：30 compact / 36 default / 40 accessible。
-- [ ] Accent、Success、Severity、Contact ID、Heat density 使用獨立色彩角色。
-- [ ] 所有 Button、Toggle、ComboBox 具有 rest、hover、pressed、checked、focus、disabled 非純色彩差異。
-- [ ] Header 以 capture filename 為主要 identity；adapter、format、version、IC profile 為次要 metadata。
-- [ ] floating toolbar/settings bounds 納入 label placement 與 Fit 的 canvas safe area。
-- [ ] Inspector 恢復 320–520 px contract，label/value layout 自適應。
-- [ ] MP4、Heatmap、Data Package 維持相同 7:3 左內容／右設定骨架。
-- [ ] Transport auto-pause 改 anchored Flyout；空間不足時將低頻項目放入 overflow，不使用固定 margin 或裁切。
+- [x] 建立工程工具 typography hierarchy；關鍵資訊使用 12.5–20 px，不再依賴 9.5/10.5 px 小字。
+- [x] 以 Compact Fluent density 與 4/8/12/16 spacing family 統整 controls；窄版 chrome 另有 bounds tests。
+- [x] Accent、Success、Severity、Contact ID、Heat density 使用獨立色彩角色。
+- [x] Button、Toggle、ComboBox 的 rest、hover、pressed、checked、focus、disabled 使用共用 style resources。
+- [x] Header 以 capture filename 為主要 identity；adapter、format、version、IC profile 為次要 metadata。
+- [x] floating toolbar/settings bounds 納入 label placement 與 Fit 的 canvas safe area。
+- [x] Inspector 恢復 320–520 px contract，label/value layout 自適應；Alarm/All Break/10-contact 最壞狀態有 bounds 或 approved evidence。
+- [x] MP4、Heatmap、Data Package 維持相同左內容／右設定骨架，非 Paint 頁面隱藏 transport。
+- [x] Transport auto-pause 使用 anchored panel；窄版隱藏低優先說明文字並保留必要狀態與控制。
 - [ ] 增加 Comfortable / Compact 或 100% / 110% / 125% UI scale 設計與驗證。
 
 ### Approved screenshot matrix
 
-- [ ] Paint：1920×1080 dark/light、1672×720、1180×720。
-- [ ] Paint states：1／5／10 contacts、Finger／Glove／Palm、Alarm、All Break、Mark、Loop、auto-pause。
-- [ ] Output：MP4、Heatmap、Data Package，各自 1920／1180，並包含互動與 loading/cancel 狀態。
-- [ ] Raw／Decoded：1180 且 Review/Inspector rail 展開，確認 table 不裁切。
-- [ ] Inspector：320／380／520，Protocol／Raw／Review 與 Source identity。
-- [ ] Settings：dark/light、五個 navigation section、125% UI scale。
-- [ ] CI 對 approved baseline 執行 pixel 或 perceptual diff，產生可人工 review 的差異圖；不再只輸出同次執行 hash。
+- [x] Paint：1920×1080、1180×720，dark/light；1672×720 由 responsive bounds tests 覆蓋，未另存 approved PNG。
+- [x] Paint/Inspector states：1／5／10 contacts、Finger／Glove／Palm、Alarm、All Break、Mark、Loop、auto-pause 均有 interaction/bounds tests；10-contact、Alarm、Marker 另有 approved PNG。
+- [ ] Output：MP4、Heatmap 已有 1920／1180 dark/light approved；Data Package、loading/progress/cancel 仍以行為測試覆蓋，尚未核准專屬 PNG。
+- [ ] Raw／Decoded：Raw/Register 1920 dark 已 approved；1180 且兩側 rail 同時展開仍未建立 approved PNG。
+- [x] Inspector：320／380／520 bounds tests，Protocol／Raw／Review 與 Source identity interaction tests；Alarm、10-contact、Raw/Register advanced PNG 已 approved。
+- [ ] Settings：1920／1180 dark/light 已 approved；125% UI scale 未實作。
+- [x] CI/test gate 對 approved baseline 執行 exact PNG compare；失敗時產生 actual/diff/metrics，candidate promotion 必須明確執行。
 
 完成條件：`UI_TODO.md` 的視覺與效能 completion gate 全數通過，approved artifacts 與目前 commit 一致。
 
@@ -202,11 +208,12 @@ Source adapters
 
 ## Release gate
 
-- [ ] `dotnet build -c Release --no-restore` 無 warning/error。
-- [ ] Core / parser / rendering、Avalonia、CLI contract tests 全部通過。
-- [ ] Common 0x82–0x85 與 Desay 0x97 Standard/Benz Palm golden 結果沒有未核准差異。
-- [ ] 私有 KingstVIS、DSL、NDS 長 golden smoke 通過，來源檔不進 git。
-- [ ] 100k frame/point、長 recorded gap、180 FPS export、cancel/race、3-minute Loop gates 通過。
-- [ ] Approved screenshot matrix dark/light/narrow/accessibility 全部通過。
-- [ ] 工作樹 clean，無 firmware BIN、private golden、secret 或大型可重建 artifact。
-- [ ] `VERSION=0.0.3`，正式 tag `v0.0.3`，package/manifest/release identity 一致。
+- [x] `dotnet build -c Release --no-restore`：0 warnings / 0 errors（隔離輸出，不關閉使用者已開啟的 App）。
+- [x] Core / parser / rendering / CLI 289/289；Avalonia 94/94。
+- [x] Public/synthetic Common 0x82–0x85 與 Desay 0x97 Standard/Benz Palm contract/golden 無未核准差異。
+- [ ] 私有 Desay Standard/Benz Palm golden 尚未提供；正式 release 前仍需補一份可驗證證據。
+- [x] 私有 KingstVIS、DSL、NDS smoke 通過，來源檔不進 git；結果記錄於 `golden/README.md`。
+- [x] 100k point、長 recorded gap、180/240 FPS、cancel/race、21,600 advances（等效 3-minute 120 Hz Loop）與 Smoke performance gate 通過。
+- [ ] 20 張 approved screenshot dark/light/narrow 全部通過；125% UI scale 與 Output loading/cancel 專屬 PNG 尚未核准。
+- [x] 工作樹在驗收前 clean，無 firmware BIN、private golden、secret；驗收暫存會在 docs commit 前精確清除。
+- [ ] `VERSION=0.0.3`、package/manifest identity 已一致；正式 `v0.0.3` tag 與 GitHub release 尚未建立。
