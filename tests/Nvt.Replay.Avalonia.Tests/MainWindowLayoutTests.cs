@@ -718,6 +718,149 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Prepared_common_decode_keeps_the_raw_first_flow_and_source_object_identity()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            var raw = Required<ListBox>(window, "RawRecordsList");
+            var before = raw.Items.OfType<RawRecordRow>().Select(row => row.Record).ToArray();
+
+            Assert.NotEmpty(before);
+            Assert.Equal(0, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.False(Required<TabItem>(window, "PaintTab").IsEnabled);
+
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var after = raw.Items.OfType<RawRecordRow>().Select(row => row.Record).ToArray();
+
+            Assert.Equal(19, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.Equal(before.Length, after.Length);
+            for (var index = 0; index < before.Length; index++)
+            {
+                Assert.Same(before[index], after[index]);
+                Assert.Same(before[index].Data, after[index].Data);
+                Assert.Same(before[index].SourceFields, after[index].SourceFields);
+                Assert.Equal(before[index].StableId, after[index].StableId);
+                Assert.Equal(before[index].RawText, after[index].RawText);
+                Assert.Equal(before[index].Location, after[index].Location);
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Desay_decode_waits_for_explicit_IC_and_Benz_Palm_then_uses_the_typed_path()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "desay97-full-reread.nds.txt");
+            await window.OpenCaptureAsync(fixture);
+
+            await window.ApplyStartupDecodeAsync("0x97", "benz-palm");
+
+            Assert.Equal(0, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.Contains("requires --register-profile", Required<TextBlock>(window, "ConfigurationHintText").Text);
+
+            await window.ApplyStartupDecodeAsync("0x97", "benz-palm", "51927");
+
+            Assert.Equal(2, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.Contains("Desay 0x97 / Benz Palm", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Contains("raw source remains unchanged", Required<TextBlock>(window, "ConfigurationHintText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Cancelling_a_new_decode_keeps_the_previous_replay_markers_and_ignores_late_progress()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<Button>(window, "AddMarkerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal([0], Required<ReplayTimelineSurface>(window, "ReplayTimelineSurface").MarkerFrames);
+
+            window.CaptureDecodeProgressObserver = progress =>
+            {
+                if (progress.Phase != CaptureDecodePhase.SelectingFormat || entered.IsSet) return;
+                entered.Set();
+                release.Wait(cancellationToken);
+            };
+            var cancelledDecode = window.ApplyStartupDecodeAsync("0x84", palmProfile: null);
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            Required<Button>(window, "CancelButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            release.Set();
+            await cancelledDecode;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(19, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.Equal([0], Required<ReplayTimelineSurface>(window, "ReplayTimelineSurface").MarkerFrames);
+            Assert.Contains("previous complete result was preserved", Required<TextBlock>(window, "SessionStatusText").Text);
+            var retained = Assert.IsType<CommonEventBufferFrame>(
+                Required<ListBox>(window, "DecodedFramesList").Items.OfType<DecodedFrameRow>().First().Frame);
+            Assert.Equal(CommonEventBufferVersion.V83, retained.Version);
+        }
+        finally
+        {
+            release.Set();
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Opening_another_capture_supersedes_an_inflight_decode_without_a_stale_commit()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var firstFixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            var secondFixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "desay97-full-reread.nds.txt");
+            await window.OpenCaptureAsync(firstFixture);
+            window.CaptureDecodeProgressObserver = progress =>
+            {
+                if (progress.Phase != CaptureDecodePhase.SelectingFormat || entered.IsSet) return;
+                entered.Set();
+                release.Wait(cancellationToken);
+            };
+
+            var staleDecode = window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            await window.OpenCaptureAsync(secondFixture);
+            release.Set();
+            await staleDecode;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("DESAY97-FULL-REREAD.NDS.TXT", Required<TextBlock>(window, "CaptureNameText").Text);
+            Assert.Equal(0, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.False(Required<TabItem>(window, "PaintTab").IsEnabled);
+            Assert.Contains("semantic format required", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Contains("Confirm the version", Required<TextBlock>(window, "ConfigurationHintText").Text);
+        }
+        finally
+        {
+            release.Set();
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Output_controls_project_one_workspace_and_no_op_custom_input_keeps_the_plan()
     {
         var window = ShowWindow();

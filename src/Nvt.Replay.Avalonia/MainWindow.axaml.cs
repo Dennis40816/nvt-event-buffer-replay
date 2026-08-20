@@ -59,6 +59,8 @@ public partial class MainWindow : Window
     private int outputPreviewPlanBuildCount;
     private CaptureAnalysisReport? currentOutputReport;
     private readonly ReplayPlaybackController playbackController = new();
+    private readonly CaptureDecodeController captureDecodeController = new();
+    private long activeCaptureDecodeGeneration;
     private int heatmapMinimumCount = 5;
     private double heatmapLabelThresholdRatio = 0.65;
     private string appliedHeatmapMode = "all";
@@ -113,6 +115,7 @@ public partial class MainWindow : Window
     private const double ReplayTransportHeight = 64;
     private static readonly TimeSpan PlaybackDetailPresentationInterval = TimeSpan.FromMilliseconds(100);
     private long lastDetailPresentationTimestamp;
+    internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get; set; }
     internal int DetailPresentationCount { get; private set; }
     internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
     internal long OutputSettingsRevision => outputWorkspace.Revision;
@@ -503,6 +506,8 @@ public partial class MainWindow : Window
 
     internal async Task OpenCaptureAsync(string path, string? adapterId = null)
     {
+        captureDecodeController.CancelCurrent();
+        activeCaptureDecodeGeneration = 0;
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
@@ -705,72 +710,59 @@ public partial class MainWindow : Window
         operationCancellation = new CancellationTokenSource();
         var cancellationToken = operationCancellation.Token;
         SetBusy(true, $"Decoding {(isDesay97 ? "Desay" : "Common")} {versionText}");
+        long operationGeneration = 0;
 
         try
         {
-            IReadOnlyList<ReplayDiagnostic> decodeDiagnostics;
-            ITouchReplaySession nextReplaySession;
-            DecodedFrameRow[] nextDecodedRows;
-            string formatLabel;
-            if (isDesay97)
+            var loadedSession = session;
+            var request = new PreparedCaptureDecodeRequest(
+                loadedSession,
+                new FormatDecodeRequest(
+                    versionText,
+                    loadedSession.RegisterProfile,
+                    isDesay97
+                        ? desayProfile == Desay97Profile.BenzPalm ? "benz-palm" : "standard"
+                        : null));
+            var progress = new InlineProgress<CaptureDecodeProgress>(item =>
             {
-                var profile = desayProfile ?? throw new InvalidOperationException("Desay profile was validated before decoding.");
-                var eventBufferBase = registerProfile?.EventBufferBase ??
-                    throw new InvalidOperationException("Desay IC profile was validated before decoding.");
-                var report = await Task.Run(
-                    () => session.DecodeDesay97(profile, eventBufferBase, cancellationToken),
-                    cancellationToken);
-                nextReplaySession = await Task.Run(() => new Desay97ReplaySession(report.Frames), cancellationToken);
-                nextDecodedRows = report.Frames.Select((frame, index) => DecodedFrameRow.FromDesay97(index, frame)).ToArray();
-                decodeDiagnostics = report.Diagnostics;
-                formatLabel = $"Desay 0x97 / {ProfileText(profile)}";
-            }
-            else
-            {
-                CommonEventBufferDecoder.TryParseVersion(versionText, out var version);
-                var report = await Task.Run(() => session.DecodeCommon(version, cancellationToken), cancellationToken);
-                nextReplaySession = await Task.Run(() => new CommonReplaySession(report.Frames), cancellationToken);
-                nextDecodedRows = report.Frames.Select((frame, index) => DecodedFrameRow.FromCommon(index, frame)).ToArray();
-                decodeDiagnostics = report.Diagnostics;
-                formatLabel = $"Common {versionText}";
-            }
-
-            var preparedWorkspace = await PrepareReplayWorkspaceAsync(nextReplaySession, cancellationToken);
-
-            var nextConfiguration = new ReplayDecodeConfiguration(
-                versionText,
-                isDesay97 ? ProfileText(desayProfile!.Value) : null,
-                session.Probe.AdapterId,
-                registerProfile?.EventBufferBase ?? 0,
-                session.RegisterProfile);
-            var nextDecodedRowsBySourceId = nextDecodedRows
-                .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, Row: row)))
-                .GroupBy(item => item.StableId, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.Last().Row, StringComparer.Ordinal);
-            var nextDiagnosticRows = await Task.Run(
-                () => decodeDiagnostics
-                    .Concat(nextReplaySession.Diagnostics)
-                    .Select(diagnostic => new DiagnosticRow(diagnostic))
-                    .ToArray(),
+                CaptureDecodeProgressObserver?.Invoke(item);
+                Dispatcher.UIThread.Post(() => PresentCaptureDecodeProgress(item));
+            });
+            var decodeTask = captureDecodeController.RunAsync(request, progress, cancellationToken);
+            operationGeneration = captureDecodeController.ActiveGeneration ??
+                throw new InvalidOperationException("Capture decode generation was not published.");
+            activeCaptureDecodeGeneration = operationGeneration;
+            var result = await decodeTask;
+            var presentation = await Task.Run(
+                () => BuildCaptureDecodePresentation(result, cancellationToken),
                 cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (activeCaptureDecodeGeneration != result.Generation ||
+                !ReferenceEquals(captureDecodeController.LastSuccessfulResult, result) ||
+                !ReferenceEquals(session, loadedSession))
+                throw new CaptureDecodeSupersededException(result.Generation);
+
+            var nextConfiguration = result.Decode.Configuration;
 
             cancellationToken.ThrowIfCancellationRequested();
             if (decodeConfiguration is not null && decodeConfiguration != nextConfiguration)
                 markers.Clear();
+            session = result.Capture;
             decodeConfiguration = nextConfiguration;
-            replaySession = nextReplaySession;
-            decodedRows = nextDecodedRows;
-            decodedRowsBySourceId = nextDecodedRowsBySourceId;
-            diagnosticRows = nextDiagnosticRows;
-            replayFrames = preparedWorkspace.Workspace.Frames;
-            replayExtent = preparedWorkspace.Extent;
-            trailHistory = preparedWorkspace.TrailHistory;
-            autoPauseIndex = preparedWorkspace.Workspace.AutoPauseIndex;
+            replaySession = presentation.Replay;
+            decodedRows = presentation.DecodedRows;
+            decodedRowsBySourceId = presentation.DecodedRowsBySourceId;
+            diagnosticRows = presentation.DiagnosticRows;
+            replayFrames = result.Workspace.Frames;
+            replayExtent = presentation.Extent;
+            trailHistory = presentation.TrailHistory;
+            autoPauseIndex = result.Workspace.AutoPauseIndex;
             CreateReviewSession(diagnosticRows.Select(row => row.Diagnostic).ToArray());
 
             DecodedFramesList.ItemsSource = decodedRows;
-            SessionStatusText.Text = $"{formatLabel} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
-            ConfigurationHintText.Text = $"{formatLabel} confirmed · decoded automatically · raw source remains unchanged";
+            SessionStatusText.Text = $"{result.Decode.DisplayIdentity} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
+            ConfigurationHintText.Text = $"{result.Decode.DisplayIdentity} confirmed · decoded automatically · raw source remains unchanged";
             SetTimelineCounts(session.Records.Count, decodedRows.Length, diagnosticRows.Length);
             TimelineStatusText.Text = decodedRows.Length > 0
                 ? "Logical replay ready · Space play/pause · ←/→ step · drag Loop handles"
@@ -797,22 +789,31 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SessionStatusText.Text = "Decode cancelled; previous complete result was preserved";
+            if (operationGeneration == 0 || activeCaptureDecodeGeneration == operationGeneration)
+                SessionStatusText.Text = "Decode cancelled; previous complete result was preserved";
         }
         catch (Exception exception) when (exception is InvalidDataException or ArgumentException or InvalidOperationException)
         {
-            SessionStatusText.Text = $"Decode failed · {exception.Message}";
-            ConfigurationHintText.Text = "Raw records remain available; verify version/profile and try again.";
+            if (operationGeneration == 0 || activeCaptureDecodeGeneration == operationGeneration)
+            {
+                SessionStatusText.Text = $"Decode failed · {exception.Message}";
+                ConfigurationHintText.Text = "Raw records remain available; verify version/profile and try again.";
+            }
         }
         finally
         {
-            SetBusy(false, SessionStatusText.Text ?? "Ready");
+            if (operationGeneration == 0 || activeCaptureDecodeGeneration == operationGeneration)
+            {
+                activeCaptureDecodeGeneration = 0;
+                SetBusy(false, SessionStatusText.Text ?? "Ready");
+            }
         }
     }
 
     private void CancelButton_OnClick(object? sender, RoutedEventArgs e)
     {
         operationCancellation?.Cancel();
+        captureDecodeController.CancelCurrent();
     }
 
     private void OutputContentComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -2964,34 +2965,73 @@ public partial class MainWindow : Window
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
     }
 
-    private async Task<PreparedReplayWorkspace> PrepareReplayWorkspaceAsync(
-        ITouchReplaySession nextReplaySession,
+    private static CaptureDecodePresentation BuildCaptureDecodePresentation(
+        CaptureDecodeResult result,
         CancellationToken cancellationToken)
     {
-        var progress = new Progress<ReplayWorkspaceBuildProgress>(item =>
+        cancellationToken.ThrowIfCancellationRequested();
+        var rows = result.Decode switch
         {
-            if (cancellationToken.IsCancellationRequested) return;
-            SessionStatusText.Text = item.TotalFrames == 0
-                ? item.Phase
-                : $"{item.Phase} · {item.CompletedFrames:N0}/{item.TotalFrames:N0}";
-        });
-        var result = await new ReplayWorkspaceBuilder().BuildAsync(
-            new ReplayWorkspaceBuildRequest(nextReplaySession),
-            progress,
-            cancellationToken);
-        var history = await Task.Run(
-            () => ReplayTrailHistory.Create(result.Workspace.Frames.Snapshots, cancellationToken),
-            cancellationToken);
+            CommonFormatDecodeResult common => common.Report.Frames
+                .Select((frame, index) => DecodedFrameRow.FromCommon(index, frame))
+                .ToArray(),
+            Desay97FormatDecodeResult desay => desay.Report.Frames
+                .Select((frame, index) => DecodedFrameRow.FromDesay97(index, frame))
+                .ToArray(),
+            _ => throw new InvalidDataException(
+                $"Unsupported executable format result '{result.Decode.GetType().Name}'."),
+        };
+        cancellationToken.ThrowIfCancellationRequested();
+        var rowsBySourceId = rows
+            .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, Row: row)))
+            .GroupBy(item => item.StableId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Last().Row, StringComparer.Ordinal);
+        var diagnostics = result.Decode.Diagnostics
+            .Select(diagnostic => new DiagnosticRow(diagnostic))
+            .ToArray();
+        var history = ReplayTrailHistory.Create(result.Workspace.Frames.Snapshots, cancellationToken);
         var extent = new ReplayExtent(
             result.Workspace.Extent.MaximumX,
             result.Workspace.Extent.MaximumY);
-        return new PreparedReplayWorkspace(result.Workspace, extent, history);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new CaptureDecodePresentation(
+            result.Decode.Replay,
+            rows,
+            rowsBySourceId,
+            diagnostics,
+            extent,
+            history);
     }
 
-    private sealed record PreparedReplayWorkspace(
-        ReplayWorkspace Workspace,
+    private void PresentCaptureDecodeProgress(CaptureDecodeProgress progress)
+    {
+        if (progress.Generation != activeCaptureDecodeGeneration) return;
+        var phase = progress.Phase switch
+        {
+            CaptureDecodePhase.SelectingFormat => "Selecting Event Buffer format",
+            CaptureDecodePhase.ProjectingRegisters => "Applying IC register profile",
+            CaptureDecodePhase.DecodingFrames => "Decoding Event Buffer frames",
+            CaptureDecodePhase.BuildingWorkspace => "Building replay workspace",
+            CaptureDecodePhase.Ready => "Replay workspace ready",
+            _ => progress.Phase.ToString(),
+        };
+        SessionStatusText.Text = progress.TotalItems is > 0
+            ? $"{phase} · {progress.CompletedItems:N0}/{progress.TotalItems:N0}"
+            : phase;
+    }
+
+    private sealed record CaptureDecodePresentation(
+        ITouchReplaySession Replay,
+        DecodedFrameRow[] DecodedRows,
+        Dictionary<string, DecodedFrameRow> DecodedRowsBySourceId,
+        DiagnosticRow[] DiagnosticRows,
         ReplayExtent Extent,
         ReplayTrailHistory TrailHistory);
+
+    private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
+    }
 
     private void SetSourceTransportEnabled(bool enabled)
     {
@@ -3880,6 +3920,7 @@ public partial class MainWindow : Window
         outputPreviewCancellation?.Dispose();
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
+        captureDecodeController.Dispose();
         outputExportJobs.Cancel();
         if (Application.Current is { } application) application.ActualThemeVariantChanged -= Application_OnActualThemeVariantChanged;
         base.OnClosed(e);
