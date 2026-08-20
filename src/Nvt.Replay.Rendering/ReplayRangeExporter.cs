@@ -78,69 +78,117 @@ public sealed record ReplayExportProgress(
 
 public static class ReplayFramePlan
 {
-    public static IReadOnlyList<ReplayFramePlanEntry> Build(ITouchReplaySession replay, ReplayExportOptions options)
+    public const int MaximumFrameRate = 240;
+    public const long MaximumOutputFrames = 100_000_000;
+
+    public static IReadOnlyList<ReplayFramePlanEntry> Build(ITouchReplaySession replay, ReplayExportOptions options) =>
+        Build(replay, options, CancellationToken.None);
+
+    public static IReadOnlyList<ReplayFramePlanEntry> Build(
+        ITouchReplaySession replay,
+        ReplayExportOptions options,
+        CancellationToken cancellationToken,
+        IProgress<ReplayExportProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(replay);
         Validate(replay, options);
-        var scaledDurations = new List<double>();
+        var logicalFrameCount = checked(options.Range.EndLogicalIndex - options.Range.StartLogicalIndex + 1);
+        var progressStep = Math.Max(1, logicalFrameCount / 200);
+        progress?.Report(new ReplayExportProgress(0, logicalFrameCount, "Planning duration"));
+        var totalSeconds = 0d;
         for (var index = options.Range.StartLogicalIndex; index <= options.Range.EndLogicalIndex; index++)
         {
-            var duration = options.Clock == ReplayExportClock.Frame
-                ? replay.FrameInterval
-                : index < options.Range.EndLogicalIndex
-                    ? replay.Timeline[index + 1].RecordedTime - replay.Timeline[index].RecordedTime
-                    : replay.FrameInterval;
-            if (duration <= TimeSpan.Zero) duration = replay.FrameInterval;
-            scaledDurations.Add(duration.TotalSeconds / options.Speed);
+            cancellationToken.ThrowIfCancellationRequested();
+            totalSeconds = AddDurationChecked(totalSeconds, ScaledDurationSeconds(replay, options, index));
+            var completed = index - options.Range.StartLogicalIndex + 1;
+            if (completed == logicalFrameCount || completed % progressStep == 0)
+                progress?.Report(new ReplayExportProgress(completed, logicalFrameCount, "Planning duration"));
         }
 
-        var outputFrameCount = Math.Max(1, (int)Math.Round(
-            scaledDurations.Sum() * options.FrameRate,
-            MidpointRounding.AwayFromZero));
-        var result = new List<ReplayFramePlanEntry>();
-        var sourceOffset = 0;
-        var sourceEndTime = scaledDurations[0];
-        for (var outputIndex = 0; outputIndex < outputFrameCount; outputIndex++)
+        var outputFrameCount = CalculateOutputFrameCount(totalSeconds, options.FrameRate);
+        var entries = new List<ReplayFramePlanEntry>(Math.Min(logicalFrameCount, checked((int)outputFrameCount)));
+        var cumulativeOutputEnds = new List<long>(entries.Capacity);
+        var outputCursor = 0L;
+        var cumulativeSeconds = 0d;
+        progress?.Report(new ReplayExportProgress(0, logicalFrameCount, "Planning frame map"));
+        for (var index = options.Range.StartLogicalIndex; index <= options.Range.EndLogicalIndex; index++)
         {
-            var sampleTime = outputIndex / (double)options.FrameRate;
-            while (sourceOffset < scaledDurations.Count - 1 && sampleTime >= sourceEndTime)
+            cancellationToken.ThrowIfCancellationRequested();
+            cumulativeSeconds = AddDurationChecked(cumulativeSeconds, ScaledDurationSeconds(replay, options, index));
+            long outputEnd;
+            if (index == options.Range.EndLogicalIndex)
             {
-                sourceOffset++;
-                sourceEndTime += scaledDurations[sourceOffset];
+                outputEnd = outputFrameCount;
+            }
+            else
+            {
+                outputEnd = FirstOutputIndexAtOrAfter(
+                    cumulativeSeconds,
+                    options.FrameRate,
+                    outputCursor,
+                    outputFrameCount);
+                // Preserve the final source boundary whenever the output has enough frames,
+                // matching the previous sampler's last-frame rule without materializing it.
+                if (outputFrameCount > 1) outputEnd = Math.Min(outputEnd, outputFrameCount - 1);
             }
 
-            // Preserve both boundaries when the output has enough frames. This does not
-            // invent coordinates; it chooses the last captured frame for the last sample.
-            if (outputFrameCount > 1 && outputIndex == outputFrameCount - 1)
-                sourceOffset = scaledDurations.Count - 1;
-
-            var logicalIndex = options.Range.StartLogicalIndex + sourceOffset;
-            if (result.Count > 0 && result[^1].LogicalIndex == logicalIndex)
-                result[^1] = result[^1] with { RepeatCount = result[^1].RepeatCount + 1 };
-            else
-                result.Add(new ReplayFramePlanEntry(logicalIndex, 1));
+            var repeatCount = outputEnd - outputCursor;
+            if (repeatCount > 0)
+            {
+                entries.Add(new ReplayFramePlanEntry(index, checked((int)repeatCount)));
+                cumulativeOutputEnds.Add(outputEnd);
+            }
+            outputCursor = outputEnd;
+            var completed = index - options.Range.StartLogicalIndex + 1;
+            if (completed == logicalFrameCount || completed % progressStep == 0)
+                progress?.Report(new ReplayExportProgress(completed, logicalFrameCount, "Planning frame map"));
         }
-        return result;
+
+        return new IndexedEntries(entries.ToArray(), cumulativeOutputEnds.ToArray(), outputFrameCount);
     }
 
     public static int OutputFrameCount(IReadOnlyList<ReplayFramePlanEntry> plan)
     {
-        ArgumentNullException.ThrowIfNull(plan);
-        return plan.Sum(item => item.RepeatCount);
+        var count = OutputFrameCount64(plan);
+        if (count > int.MaxValue)
+            throw new InvalidOperationException($"Replay frame plan contains {count:N0} output frames, which exceeds the supported 32-bit preview index.");
+        return (int)count;
     }
 
-    public static int LogicalIndexAt(IReadOnlyList<ReplayFramePlanEntry> plan, int outputFrameIndex)
+    public static long OutputFrameCount64(IReadOnlyList<ReplayFramePlanEntry> plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        if (outputFrameIndex < 0 || outputFrameIndex >= OutputFrameCount(plan))
-            throw new ArgumentOutOfRangeException(nameof(outputFrameIndex));
-        var remaining = outputFrameIndex;
+        if (plan is IndexedEntries indexed) return indexed.OutputFrameCount;
+        var total = 0L;
         foreach (var entry in plan)
         {
-            if (remaining < entry.RepeatCount) return entry.LogicalIndex;
-            remaining -= entry.RepeatCount;
+            if (entry.RepeatCount < 0)
+                throw new ArgumentException("Replay frame plan repeat counts cannot be negative.", nameof(plan));
+            total = checked(total + entry.RepeatCount);
+            EnsureWithinHardLimit(total);
         }
-        throw new InvalidOperationException("Replay frame plan contains no sample for the requested output frame.");
+        return total;
+    }
+
+    public static int LogicalIndexAt(IReadOnlyList<ReplayFramePlanEntry> plan, int outputFrameIndex) =>
+        LogicalIndexAt(plan, (long)outputFrameIndex);
+
+    public static int LogicalIndexAt(IReadOnlyList<ReplayFramePlanEntry> plan, long outputFrameIndex)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var outputFrameCount = OutputFrameCount64(plan);
+        if (outputFrameIndex < 0 || outputFrameIndex >= outputFrameCount)
+            throw new ArgumentOutOfRangeException(nameof(outputFrameIndex));
+
+        if (plan is IndexedEntries indexed) return indexed.LogicalIndexAt(outputFrameIndex);
+        var cumulativeEnds = new long[plan.Count];
+        var cumulative = 0L;
+        for (var index = 0; index < plan.Count; index++)
+        {
+            cumulative = checked(cumulative + plan[index].RepeatCount);
+            cumulativeEnds[index] = cumulative;
+        }
+        return plan[FindCumulativeEntry(cumulativeEnds, outputFrameIndex)].LogicalIndex;
     }
 
     private static void Validate(ITouchReplaySession replay, ReplayExportOptions options)
@@ -150,8 +198,109 @@ public static class ReplayFramePlan
             throw new ArgumentOutOfRangeException(nameof(options), "Export range must be within a non-empty replay.");
         if (options.Width < 320 || options.Height < 180 || options.Width % 2 != 0 || options.Height % 2 != 0)
             throw new ArgumentOutOfRangeException(nameof(options), "Export dimensions must be even and at least 320x180.");
-        if (options.FrameRate is < 1 or > 240 || options.Speed is <= 0 or > 100)
-            throw new ArgumentOutOfRangeException(nameof(options), "Frame rate must be 1-240 and speed must be >0 and <=100.");
+        if (options.FrameRate is < 1 or > MaximumFrameRate || options.Speed is <= 0 or > 100 || !double.IsFinite(options.Speed))
+            throw new ArgumentOutOfRangeException(nameof(options), $"Frame rate must be 1-{MaximumFrameRate} and speed must be finite, >0, and <=100.");
+        if (replay.FrameInterval <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(replay), "Replay frame interval must be positive.");
+    }
+
+    private static double ScaledDurationSeconds(ITouchReplaySession replay, ReplayExportOptions options, int index)
+    {
+        TimeSpan duration;
+        try
+        {
+            duration = options.Clock == ReplayExportClock.Frame
+                ? replay.FrameInterval
+                : index < options.Range.EndLogicalIndex
+                    ? replay.Timeline[index + 1].RecordedTime - replay.Timeline[index].RecordedTime
+                    : replay.FrameInterval;
+        }
+        catch (OverflowException exception)
+        {
+            throw new InvalidOperationException("Recorded replay duration overflowed while planning the export.", exception);
+        }
+        if (duration <= TimeSpan.Zero) duration = replay.FrameInterval;
+        var seconds = duration.TotalSeconds / options.Speed;
+        if (!double.IsFinite(seconds) || seconds <= 0)
+            throw new InvalidOperationException("Replay duration is not finite at the selected export speed.");
+        return seconds;
+    }
+
+    private static double AddDurationChecked(double total, double duration)
+    {
+        var result = total + duration;
+        if (!double.IsFinite(result))
+            throw new InvalidOperationException("Replay duration overflowed while planning the export.");
+        return result;
+    }
+
+    private static long CalculateOutputFrameCount(double totalSeconds, int frameRate)
+    {
+        var unrounded = totalSeconds * frameRate;
+        if (!double.IsFinite(unrounded))
+            throw new InvalidOperationException("Output frame count overflowed while planning the export.");
+        var rounded = Math.Max(1d, Math.Round(unrounded, MidpointRounding.AwayFromZero));
+        if (rounded > long.MaxValue)
+            throw new InvalidOperationException("Output frame count exceeds the supported 64-bit range.");
+        var count = checked((long)rounded);
+        EnsureWithinHardLimit(count);
+        return count;
+    }
+
+    private static void EnsureWithinHardLimit(long count)
+    {
+        if (count > MaximumOutputFrames)
+            throw new InvalidOperationException(
+                $"Export would require {count:N0} frames, exceeding the safety limit of {MaximumOutputFrames:N0}. Reduce the range, frame rate, or Recorded-time gaps, or increase speed.");
+    }
+
+    private static long FirstOutputIndexAtOrAfter(
+        double sourceEndSeconds,
+        int frameRate,
+        long minimum,
+        long outputFrameCount)
+    {
+        var low = minimum;
+        var high = outputFrameCount;
+        while (low < high)
+        {
+            var middle = low + ((high - low) / 2);
+            if (middle / (double)frameRate >= sourceEndSeconds) high = middle;
+            else low = middle + 1;
+        }
+        return low;
+    }
+
+    private static int FindCumulativeEntry(IReadOnlyList<long> cumulativeEnds, long outputFrameIndex)
+    {
+        var target = checked(outputFrameIndex + 1);
+        var low = 0;
+        var high = cumulativeEnds.Count - 1;
+        while (low < high)
+        {
+            var middle = low + ((high - low) / 2);
+            if (cumulativeEnds[middle] >= target) high = middle;
+            else low = middle + 1;
+        }
+        return low;
+    }
+
+    private sealed class IndexedEntries(
+        ReplayFramePlanEntry[] entries,
+        long[] cumulativeOutputEnds,
+        long outputFrameCount) : IReadOnlyList<ReplayFramePlanEntry>
+    {
+        public long OutputFrameCount { get; } = outputFrameCount;
+        public int Count => entries.Length;
+        public ReplayFramePlanEntry this[int index] => entries[index];
+
+        public int LogicalIndexAt(long outputFrameIndex) =>
+            entries[FindCumulativeEntry(cumulativeOutputEnds, outputFrameIndex)].LogicalIndex;
+
+        public IEnumerator<ReplayFramePlanEntry> GetEnumerator() =>
+            ((IEnumerable<ReplayFramePlanEntry>)entries).GetEnumerator();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => entries.GetEnumerator();
     }
 }
 
@@ -172,7 +321,7 @@ public sealed class ReplayRangeExporter
         IProgress<ReplayExportProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(sceneFactory);
-        var plan = ReplayFramePlan.Build(replay, options);
+        var plan = ReplayFramePlan.Build(replay, options, cancellationToken, progress);
         var totalFrames = ReplayFramePlan.OutputFrameCount(plan);
         progress?.Report(new ReplayExportProgress(0, totalFrames, "Preparing encoder"));
         var fullOutputPath = Path.GetFullPath(options.OutputPath);

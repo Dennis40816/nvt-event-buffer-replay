@@ -67,6 +67,96 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public void Frame_plan_builds_compact_RLE_for_a_day_of_recorded_idle_time()
+    {
+        var replay = Replay(TimeSpan.FromDays(1));
+        var options = Options(Path.Combine(directory, "day.mp4"), frameRate: 240);
+
+        var plan = ReplayFramePlan.Build(replay, options);
+
+        Assert.Equal(2, plan.Count);
+        Assert.Equal([20_736_000, 2], plan.Select(item => item.RepeatCount));
+        Assert.Equal(20_736_002, ReplayFramePlan.OutputFrameCount(plan));
+        Assert.Equal(0, ReplayFramePlan.LogicalIndexAt(plan, 20_735_999L));
+        Assert.Equal(1, ReplayFramePlan.LogicalIndexAt(plan, 20_736_000L));
+        Assert.Equal(1, ReplayFramePlan.LogicalIndexAt(plan, 20_736_001L));
+    }
+
+    [Fact]
+    public void Frame_plan_RLE_matches_the_previous_sampler_for_irregular_recorded_times()
+    {
+        var replay = ReplayAt(
+            TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(7),
+            TimeSpan.FromMilliseconds(17),
+            TimeSpan.FromMilliseconds(150),
+            TimeSpan.FromMilliseconds(151),
+            TimeSpan.FromMilliseconds(500));
+        var options = new ReplayExportOptions(
+            Path.Combine(directory, "irregular.mp4"),
+            new AnalysisRange(0, replay.Count - 1),
+            320,
+            180,
+            180,
+            1.5,
+            ReplayExportClock.Recorded);
+
+        var expected = LegacyFramePlan(replay, options);
+        var actual = ReplayFramePlan.Build(replay, options);
+
+        Assert.Equal(expected, actual);
+        for (var outputIndex = 0; outputIndex < ReplayFramePlan.OutputFrameCount(actual); outputIndex++)
+            Assert.Equal(LegacyLogicalIndexAt(expected, outputIndex), ReplayFramePlan.LogicalIndexAt(actual, outputIndex));
+    }
+
+    [Fact]
+    public void Frame_plan_rejects_runaway_output_before_materializing_frames()
+    {
+        var replay = Replay(TimeSpan.FromDays(10));
+        var options = Options(Path.Combine(directory, "unsafe.mp4"), frameRate: 240);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => ReplayFramePlan.Build(replay, options));
+
+        Assert.Contains("safety limit", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"{ReplayFramePlan.MaximumOutputFrames:N0}", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Frame_plan_planning_observes_cancellation_and_reports_both_passes()
+    {
+        var replay = UniformReplay(1_000, TimeSpan.FromSeconds(1d / 120));
+        var options = new ReplayExportOptions(
+            Path.Combine(directory, "planning.mp4"),
+            new AnalysisRange(0, replay.Count - 1),
+            320,
+            180,
+            30,
+            1,
+            ReplayExportClock.Frame);
+        var updates = new List<ReplayExportProgress>();
+        var completed = ReplayFramePlan.Build(
+            replay,
+            options,
+            CancellationToken.None,
+            new InlineProgress<ReplayExportProgress>(updates.Add));
+
+        Assert.NotEmpty(completed);
+        Assert.Contains(updates, item => item.Stage == "Planning duration" && item.Percent == 100);
+        Assert.Contains(updates, item => item.Stage == "Planning frame map" && item.Percent == 100);
+
+        using var cancellation = new CancellationTokenSource();
+        var cancellingProgress = new InlineProgress<ReplayExportProgress>(update =>
+        {
+            if (update.Stage == "Planning duration") cancellation.Cancel();
+        });
+        Assert.ThrowsAny<OperationCanceledException>(() => ReplayFramePlan.Build(
+            replay,
+            options,
+            cancellation.Token,
+            cancellingProgress));
+    }
+
+    [Fact]
     public async Task Missing_encoder_atomically_exports_a_headless_PNG_sequence_and_manifest()
     {
         var replay = Replay(TimeSpan.FromMilliseconds(10));
@@ -110,7 +200,9 @@ public sealed class ReplayExportTests : IDisposable
 
         Assert.Equal(ReplayExportKind.PngSequence, result.Kind);
         Assert.NotEmpty(updates);
-        Assert.Equal("Preparing encoder", updates[0].Stage);
+        Assert.Equal("Planning duration", updates[0].Stage);
+        Assert.Contains(updates, item => item.Stage == "Planning frame map");
+        Assert.Contains(updates, item => item.Stage == "Preparing encoder");
         Assert.Contains(updates, item => item.Stage == "Writing PNG fallback");
         Assert.Equal(updates[^1].TotalFrames, updates[^1].CompletedFrames);
         Assert.Equal(100, updates[^1].Percent);
@@ -391,6 +483,74 @@ public sealed class ReplayExportTests : IDisposable
             })
             .ToArray();
         return new FakeReplay(snapshots, interval);
+    }
+
+    private static FakeReplay ReplayAt(params TimeSpan[] times)
+    {
+        var interval = TimeSpan.FromSeconds(1d / 120);
+        var snapshots = times.Select((time, index) =>
+        {
+            var source = Source(index, $"source-{index}", time);
+            return Snapshot(
+                index,
+                source,
+                time,
+                new ReplayContact(1, TouchType.Finger, index == 0 ? TouchStatus.Enter : TouchStatus.Move,
+                    (ushort)(600 + index), 300, source.StableId));
+        }).ToArray();
+        return new FakeReplay(snapshots, interval);
+    }
+
+    private static IReadOnlyList<ReplayFramePlanEntry> LegacyFramePlan(
+        ITouchReplaySession replay,
+        ReplayExportOptions options)
+    {
+        var scaledDurations = new List<double>();
+        for (var index = options.Range.StartLogicalIndex; index <= options.Range.EndLogicalIndex; index++)
+        {
+            var duration = options.Clock == ReplayExportClock.Frame
+                ? replay.FrameInterval
+                : index < options.Range.EndLogicalIndex
+                    ? replay.Timeline[index + 1].RecordedTime - replay.Timeline[index].RecordedTime
+                    : replay.FrameInterval;
+            if (duration <= TimeSpan.Zero) duration = replay.FrameInterval;
+            scaledDurations.Add(duration.TotalSeconds / options.Speed);
+        }
+
+        var outputFrameCount = Math.Max(1, (int)Math.Round(
+            scaledDurations.Sum() * options.FrameRate,
+            MidpointRounding.AwayFromZero));
+        var result = new List<ReplayFramePlanEntry>();
+        var sourceOffset = 0;
+        var sourceEndTime = scaledDurations[0];
+        for (var outputIndex = 0; outputIndex < outputFrameCount; outputIndex++)
+        {
+            var sampleTime = outputIndex / (double)options.FrameRate;
+            while (sourceOffset < scaledDurations.Count - 1 && sampleTime >= sourceEndTime)
+            {
+                sourceOffset++;
+                sourceEndTime += scaledDurations[sourceOffset];
+            }
+            if (outputFrameCount > 1 && outputIndex == outputFrameCount - 1)
+                sourceOffset = scaledDurations.Count - 1;
+            var logicalIndex = options.Range.StartLogicalIndex + sourceOffset;
+            if (result.Count > 0 && result[^1].LogicalIndex == logicalIndex)
+                result[^1] = result[^1] with { RepeatCount = result[^1].RepeatCount + 1 };
+            else
+                result.Add(new ReplayFramePlanEntry(logicalIndex, 1));
+        }
+        return result;
+    }
+
+    private static int LegacyLogicalIndexAt(IReadOnlyList<ReplayFramePlanEntry> plan, int outputFrameIndex)
+    {
+        var remaining = outputFrameIndex;
+        foreach (var entry in plan)
+        {
+            if (remaining < entry.RepeatCount) return entry.LogicalIndex;
+            remaining -= entry.RepeatCount;
+        }
+        throw new ArgumentOutOfRangeException(nameof(outputFrameIndex));
     }
 
     private static SourceRecord Source(int index, string id, TimeSpan time) =>
