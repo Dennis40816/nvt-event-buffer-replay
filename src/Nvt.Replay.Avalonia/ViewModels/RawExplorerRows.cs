@@ -90,6 +90,7 @@ public sealed record DiagnosticRow(ReplayDiagnostic Diagnostic)
 public sealed record ReviewGroupRow(ReviewEventGroup Group)
 {
     public string Code => Group.Code;
+    public string DisplayCode => EngineeringDisplayText.AddBreakOpportunities(Group.Code);
     public string Severity => Group.Severity.ToString().ToUpperInvariant();
     public string Message => Group.Message;
     public string Count => Group.Occurrences.Count == 1 ? "1 occurrence" : $"{Group.Occurrences.Count} occurrences";
@@ -101,6 +102,28 @@ public sealed record ReviewGroupRow(ReviewEventGroup Group)
 
 public sealed record ReviewOccurrenceRow(int Number, ReviewOccurrence Occurrence)
 {
-    public override string ToString() =>
-        $"#{Number} · L{Occurrence.Diagnostic.Location.LineNumber} · {Occurrence.CapturedAlarmState}";
+    public string FrameAndSourceLabel => Occurrence.LogicalIndex is { } logicalIndex
+        ? $"Frame {logicalIndex + 1} · source line {Occurrence.Diagnostic.Location.LineNumber}"
+        : $"Physical source · line {Occurrence.Diagnostic.Location.LineNumber}";
+
+    public override string ToString() => $"#{Number} · {FrameAndSourceLabel}";
+}
+
+public static class EngineeringDisplayText
+{
+    private const char ZeroWidthSpace = '\u200B';
+
+    public static string AddBreakOpportunities(string value) => value
+        .Replace("_", $"_{ZeroWidthSpace}", StringComparison.Ordinal)
+        .Replace("=", $"={ZeroWidthSpace}", StringComparison.Ordinal);
+
+    public static string FormatKeyValue(string key, string value, int maximumInlineLength = 30)
+    {
+        var pair = $"{key}={value}";
+        return pair.Length <= maximumInlineLength
+            ? AddBreakOpportunities(pair)
+            : $"{AddBreakOpportunities(key)}=\n  {AddBreakOpportunities(value)}";
+    }
+
+    public static string RemoveBreakOpportunities(string value) => value.Replace(ZeroWidthSpace.ToString(), string.Empty, StringComparison.Ordinal);
 }

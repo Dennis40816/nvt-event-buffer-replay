@@ -361,6 +361,7 @@ public partial class MainWindow : Window
     private void PresentReviewSelection(ReviewEventGroup group, string? occurrenceId)
     {
         var marker = reviewWorkspace?.SelectedMarker;
+        var isMarker = marker is not null;
         AnnotationMetadataPanel.IsVisible = marker is not null;
         MarkerNameTextBox.Text = marker?.Label ?? string.Empty;
         MarkerQaCaseTextBox.Text = marker is null
@@ -382,8 +383,21 @@ public partial class MainWindow : Window
         {
             synchronizingReviewSelection = false;
         }
-        ComboBoxAutoSizer.Fit(ReviewOccurrenceComboBox);
-        UpdateReviewState(group);
+        ReviewSelectionTitleText.Text = isMarker ? "MARKER FRAME" : "SELECTED FINDING";
+        ReviewOccurrenceComboBox.IsVisible = !isMarker;
+        MarkerOccurrenceText.IsVisible = isMarker;
+        MarkerOccurrenceText.Text = isMarker ? occurrences.FirstOrDefault()?.FrameAndSourceLabel ?? string.Empty : string.Empty;
+        FindingWorkflowActionsPanel.IsVisible = !isMarker;
+        ReviewStateText.IsVisible = !isMarker;
+        if (!isMarker)
+        {
+            ComboBoxAutoSizer.Fit(ReviewOccurrenceComboBox);
+            UpdateReviewState(group);
+        }
+        else
+        {
+            ReviewStateText.Text = string.Empty;
+        }
     }
 
     private void ClearReviewSelectionPresentation()
@@ -391,6 +405,13 @@ public partial class MainWindow : Window
         ReviewActionsPanel.IsVisible = false;
         ReviewEmptyText.IsVisible = true;
         AnnotationMetadataPanel.IsVisible = false;
+        ReviewSelectionTitleText.Text = "SELECTED FINDING";
+        ReviewOccurrenceComboBox.IsVisible = true;
+        MarkerOccurrenceText.IsVisible = false;
+        MarkerOccurrenceText.Text = string.Empty;
+        FindingWorkflowActionsPanel.IsVisible = true;
+        ReviewStateText.IsVisible = true;
+        ReviewStateText.Text = string.Empty;
         MarkerNameTextBox.Text = string.Empty;
         MarkerQaCaseTextBox.Text = string.Empty;
         ReviewOccurrenceComboBox.ItemsSource = null;
@@ -648,7 +669,7 @@ public partial class MainWindow : Window
         var asilAlarm = currentInspectorPresentation.AsilAlarm;
         InspectorAlertBorder.IsVisible = frameAlerts.Count > 0 || crcFailed || asilAlarm;
         InspectorAlertText.Text = frameAlerts.Count > 0
-            ? string.Join(" · ", frameAlerts.Select(item => item.Code))
+            ? string.Join(" · ", frameAlerts.Select(item => EngineeringDisplayText.AddBreakOpportunities(item.Code)))
             : crcFailed ? "CRC validation failed" : asilAlarm ? "ASIL alarm active" : string.Empty;
         var hasNavigableFindings = reviewWorkspace?.ReviewSession.HasNavigableFindings == true;
         PreviousFindingButton.IsVisible = hasNavigableFindings;
@@ -765,7 +786,7 @@ public partial class MainWindow : Window
             ? "No adapter-specific source fields."
             : string.Join('\n', fields
                 .OrderBy(item => item.Key, StringComparer.Ordinal)
-                .Select(field => $"{field.Key}={field.Value}"));
+                .Select(field => EngineeringDisplayText.FormatKeyValue(field.Key, field.Value)));
     }
 
     private sealed record ReviewWorkspaceState(

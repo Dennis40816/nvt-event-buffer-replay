@@ -144,7 +144,7 @@
                         ContextRequested="ReviewGroupBorder_OnContextRequested">
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="*,Auto">
-                      <TextBlock Text="{Binding Code}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding DisplayCode}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
                       <TextBlock Grid.Column="1" Text="{Binding Severity}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
                     </Grid>
                     <TextBlock Text="{Binding Message}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" MaxHeight="58" />
@@ -919,9 +919,10 @@
                     </Button>
                     <TextBlock x:Name="ReviewEmptyText" Text="No finding is selected. Choose one from the Review queue or use the alert arrows." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
                     <StackPanel x:Name="ReviewActionsPanel" Spacing="7" IsVisible="False">
-                      <TextBlock Classes="section" Text="SELECTED FINDING" />
+                      <TextBlock x:Name="ReviewSelectionTitleText" Classes="section" Text="SELECTED FINDING" />
                       <ComboBox x:Name="ReviewOccurrenceComboBox" PlaceholderText="Occurrence" SelectionChanged="ReviewOccurrenceComboBox_OnSelectionChanged" />
-                      <WrapPanel>
+                      <TextBlock x:Name="MarkerOccurrenceText" IsVisible="False" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                      <WrapPanel x:Name="FindingWorkflowActionsPanel">
                         <Button Classes="ghost" Content="Acknowledge" Margin="0,0,5,5" Click="AcknowledgeReviewButton_OnClick" />
                         <Button Classes="ghost" Content="Resolve" Margin="0,0,5,5" Click="ResolveReviewButton_OnClick" />
                         <Button Classes="ghost" Content="Expected" Margin="0,0,5,5" Tag="Expected" Click="DispositionReviewButton_OnClick" />
