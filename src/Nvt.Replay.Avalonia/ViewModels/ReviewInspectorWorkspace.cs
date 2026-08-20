@@ -38,6 +38,11 @@ public sealed class ReviewInspectorWorkspace
     private readonly TimeProvider timeProvider;
     private readonly Func<string, bool> evidenceExists;
     private ReviewEventGroup[] visibleGroups = [];
+    private IReadOnlyDictionary<string, ReviewEventGroup> visibleGroupsById =
+        new Dictionary<string, ReviewEventGroup>(StringComparer.Ordinal);
+    private NavigableOccurrence[] navigableOccurrences = [];
+    private IReadOnlyDictionary<string, int> navigablePositionByOccurrenceId =
+        new Dictionary<string, int>(StringComparer.Ordinal);
     private ReviewSession reviewSession = null!;
     private ReviewSessionOptions reviewOptions;
     private ReplayRenderMode renderMode;
@@ -59,7 +64,7 @@ public sealed class ReviewInspectorWorkspace
         this.timeProvider = timeProvider ?? TimeProvider.System;
         this.reviewOptions = reviewOptions ?? ReviewSessionOptions.Default;
         this.evidenceExists = evidenceExists ?? File.Exists;
-        if (markers is not null) this.markers.AddRange(MaterializeMarkers(markers, nameof(markers)));
+        if (markers is not null) this.markers.AddRange(MaterializeMarkers(markers, nameof(markers), frames.Count));
         markerView = this.markers.AsReadOnly();
         logicalIndexBySourceId = BuildLogicalIndex();
         CurrentLogicalIndex = frames.Count == 0 ? -1 : 0;
@@ -78,6 +83,8 @@ public sealed class ReviewInspectorWorkspace
     public ReviewSessionOptions ReviewOptions => reviewSession.Options;
 
     public long ReviewSessionRevision { get; private set; }
+
+    internal long NavigationIndexRevision { get; private set; }
 
     public ReviewQueueFilter Filter { get; private set; }
 
@@ -102,9 +109,10 @@ public sealed class ReviewInspectorWorkspace
 
     public string? SelectedOccurrenceId { get; private set; }
 
-    public ReviewEventGroup? SelectedFinding => SelectedFindingGroupId is { } id
-        ? visibleGroups.FirstOrDefault(group => group.Id.Equals(id, StringComparison.Ordinal))
-        : null;
+    public ReviewEventGroup? SelectedFinding => SelectedFindingGroupId is { } id &&
+        visibleGroupsById.TryGetValue(id, out var group)
+            ? group
+            : null;
 
     public ReviewOccurrence? SelectedOccurrence => SelectedFinding?.Occurrences
         .FirstOrDefault(occurrence => occurrence.Id.Equals(SelectedOccurrenceId, StringComparison.Ordinal));
@@ -163,8 +171,8 @@ public sealed class ReviewInspectorWorkspace
     public ReviewOccurrence SelectFinding(string groupId, int occurrenceIndex = 0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
-        var group = visibleGroups.FirstOrDefault(item => item.Id.Equals(groupId, StringComparison.Ordinal))
-            ?? throw new KeyNotFoundException($"Review group '{groupId}' is not visible under filter {Filter}.");
+        if (!visibleGroupsById.TryGetValue(groupId, out var group))
+            throw new KeyNotFoundException($"Review group '{groupId}' is not visible under filter {Filter}.");
         if ((uint)occurrenceIndex >= (uint)group.Occurrences.Count)
             throw new ArgumentOutOfRangeException(nameof(occurrenceIndex));
         return ApplyOccurrence(group, group.Occurrences[occurrenceIndex]);
@@ -180,11 +188,13 @@ public sealed class ReviewInspectorWorkspace
 
     public ReviewOccurrence? NavigateFinding(ReviewFindingDirection direction)
     {
-        var candidates = NavigableOccurrences();
+        var candidates = navigableOccurrences;
         if (candidates.Length == 0) return null;
 
-        var selectedIndex = Array.FindIndex(candidates, item =>
-            item.Occurrence.Id.Equals(SelectedOccurrenceId, StringComparison.Ordinal));
+        var selectedIndex = SelectedOccurrenceId is { } occurrenceId &&
+            navigablePositionByOccurrenceId.TryGetValue(occurrenceId, out var position)
+                ? position
+                : -1;
         int targetIndex;
         if (selectedIndex >= 0)
         {
@@ -194,12 +204,12 @@ public sealed class ReviewInspectorWorkspace
         }
         else if (direction == ReviewFindingDirection.Next)
         {
-            targetIndex = Array.FindIndex(candidates, item => item.Occurrence.LogicalIndex > CurrentLogicalIndex);
-            if (targetIndex < 0) targetIndex = 0;
+            targetIndex = FirstOccurrenceAfter(CurrentLogicalIndex);
+            if (targetIndex == candidates.Length) targetIndex = 0;
         }
         else
         {
-            targetIndex = Array.FindLastIndex(candidates, item => item.Occurrence.LogicalIndex < CurrentLogicalIndex);
+            targetIndex = FirstOccurrenceAtOrAfter(CurrentLogicalIndex) - 1;
             if (targetIndex < 0) targetIndex = candidates.Length - 1;
         }
 
@@ -280,6 +290,7 @@ public sealed class ReviewInspectorWorkspace
     public ReplayMarker AddMarkerEvidence(string markerId, ReplayEvidenceReference evidence)
     {
         ArgumentNullException.ThrowIfNull(evidence);
+        ValidateEvidence(evidence, nameof(evidence));
         if (markers.SelectMany(marker => marker.Evidence ?? []).Any(item =>
                 item.Id.Equals(evidence.Id, StringComparison.Ordinal)))
         {
@@ -321,31 +332,32 @@ public sealed class ReviewInspectorWorkspace
         IEnumerable<ReplayMarker> replacementMarkers,
         IEnumerable<ReviewStateSnapshot> reviewStates)
     {
-        var replacement = MaterializeMarkers(replacementMarkers, nameof(replacementMarkers));
+        var replacement = MaterializeMarkers(replacementMarkers, nameof(replacementMarkers), frames.Count);
         ArgumentNullException.ThrowIfNull(reviewStates);
         var importedState = reviewStates.ToArray();
+        if (importedState.Any(state => state is null))
+            throw new ArgumentException("Review state collections cannot contain null entries.", nameof(reviewStates));
         var priorState = reviewSession.ExportState();
         var markersChanged = !MarkerSequencesEqual(markers, replacement);
-        IReadOnlyList<string> unresolved;
+        var replacementSession = CreateReviewSession(replacement);
+        var unresolved = replacementSession.ImportState(importedState);
+        var replacementState = replacementSession.ExportState();
+        var reviewStateChanged = !StateSequencesEqual(priorState, replacementState);
+        if (!markersChanged && !reviewStateChanged)
+            return new ReviewWorkspaceImportResult(markers.Count, unresolved, false, false);
 
+        var priorGroupId = SelectedFindingGroupId;
+        var priorOccurrenceId = SelectedOccurrenceId;
+        var priorMarkerId = SelectedMarkerId;
         if (markersChanged)
         {
             markers.Clear();
             markers.AddRange(replacement);
-            if (SelectedMarkerId is { } markerId &&
-                markers.All(marker => !marker.Id.Equals(markerId, StringComparison.Ordinal)))
-            {
-                SelectedMarkerId = null;
-            }
-            unresolved = RebuildReviewSession(importState: importedState);
         }
-        else
-        {
-            unresolved = reviewSession.ImportState(importedState);
-            if (!StateSequencesEqual(priorState, reviewSession.ExportState())) RefreshVisibleGroups();
-        }
-
-        var reviewStateChanged = !StateSequencesEqual(priorState, reviewSession.ExportState());
+        reviewSession = replacementSession;
+        ReviewSessionRevision++;
+        RefreshVisibleGroups();
+        RestoreSelection(priorGroupId, priorOccurrenceId, priorMarkerId);
         return new ReviewWorkspaceImportResult(markers.Count, unresolved, markersChanged, reviewStateChanged);
     }
 
@@ -456,35 +468,44 @@ public sealed class ReviewInspectorWorkspace
     }
 
     private IReadOnlyList<string> RebuildReviewSession(
-        string? preferredGroupId = null,
-        IEnumerable<ReviewStateSnapshot>? importState = null)
+        string? preferredGroupId = null)
     {
         var priorState = reviewSession?.ExportState() ?? [];
         if (reviewSession is not null) reviewOptions = reviewSession.Options;
         var priorGroupId = preferredGroupId ?? SelectedFindingGroupId;
         var priorOccurrenceId = SelectedOccurrenceId;
-        var markerDiagnostics = markers.Select(MarkerDiagnostic).ToArray();
-        reviewSession = new ReviewSession(
+        var priorMarkerId = SelectedMarkerId;
+        reviewSession = CreateReviewSession(markers);
+        reviewSession.ImportState(priorState);
+        ReviewSessionRevision++;
+        RefreshVisibleGroups();
+        RestoreSelection(priorGroupId, priorOccurrenceId, priorMarkerId);
+        return [];
+    }
+
+    private ReviewSession CreateReviewSession(IReadOnlyList<ReplayMarker> sourceMarkers)
+    {
+        var markerDiagnostics = sourceMarkers.Select(MarkerDiagnostic).ToArray();
+        return new ReviewSession(
             new CompositeReadOnlyList<ReplayDiagnostic>(baseDiagnostics, markerDiagnostics),
             logicalIndexBySourceId,
             reviewOptions);
-        reviewSession.ImportState(priorState);
-        var unresolved = importState is null ? [] : reviewSession.ImportState(importState);
-        ReviewSessionRevision++;
-        RefreshVisibleGroups();
-        if (priorGroupId is null) return unresolved;
-        var group = visibleGroups.FirstOrDefault(item => item.Id.Equals(priorGroupId, StringComparison.Ordinal));
-        if (group is null)
-        {
-            ClearFindingSelection();
-            return unresolved;
-        }
-        var occurrence = group.Occurrences.FirstOrDefault(item => item.Id.Equals(priorOccurrenceId, StringComparison.Ordinal))
+    }
+
+    private void RestoreSelection(string? groupId, string? occurrenceId, string? markerId)
+    {
+        SelectedFindingGroupId = null;
+        SelectedOccurrenceId = null;
+        SelectedMarkerId = markerId is not null &&
+            markers.Any(marker => marker.Id.Equals(markerId, StringComparison.Ordinal))
+                ? markerId
+                : null;
+        if (groupId is null || !visibleGroupsById.TryGetValue(groupId, out var group)) return;
+        var occurrence = group.Occurrences.FirstOrDefault(item => item.Id.Equals(occurrenceId, StringComparison.Ordinal))
             ?? group.Occurrences[0];
         SelectedFindingGroupId = group.Id;
         SelectedOccurrenceId = occurrence.Id;
         SelectedMarkerId = occurrence.Diagnostic.Details?.GetValueOrDefault("marker_id");
-        return unresolved;
     }
 
     private IReadOnlyDictionary<string, int> BuildLogicalIndex()
@@ -524,17 +545,43 @@ public sealed class ReviewInspectorWorkspace
             });
     }
 
-    private static ReplayMarker[] MaterializeMarkers(IEnumerable<ReplayMarker> source, string parameterName)
+    private static ReplayMarker[] MaterializeMarkers(
+        IEnumerable<ReplayMarker> source,
+        string parameterName,
+        int frameCount)
     {
         ArgumentNullException.ThrowIfNull(source, parameterName);
         var result = source.ToArray();
         if (result.Any(marker => marker is null))
             throw new ArgumentException("Marker collections cannot contain null entries.", parameterName);
+        foreach (var marker in result)
+        {
+            if (string.IsNullOrWhiteSpace(marker.Id))
+                throw new ArgumentException("Marker IDs cannot be empty.", parameterName);
+            if (string.IsNullOrWhiteSpace(marker.Label))
+                throw new ArgumentException($"Marker '{marker.Id}' has an empty label.", parameterName);
+            if (marker.StartLogicalIndex != marker.EndLogicalIndex)
+                throw new ArgumentException($"Marker '{marker.Id}' is a range; only single-frame markers are supported.", parameterName);
+            if ((uint)marker.StartLogicalIndex >= (uint)frameCount)
+                throw new ArgumentException($"Marker '{marker.Id}' points outside the replay frame range.", parameterName);
+            ValidateQaCaseIds(marker, parameterName);
+            foreach (var evidence in marker.Evidence ?? [])
+            {
+                if (evidence is null)
+                    throw new ArgumentException($"Marker '{marker.Id}' contains null evidence.", parameterName);
+                ValidateEvidence(evidence, parameterName);
+            }
+        }
         var duplicateMarkerId = result
             .GroupBy(marker => marker.Id, StringComparer.Ordinal)
             .FirstOrDefault(group => group.Count() > 1)?.Key;
         if (duplicateMarkerId is not null)
             throw new ArgumentException($"Duplicate marker ID '{duplicateMarkerId}'.", parameterName);
+        var duplicateMarkerLabel = result
+            .GroupBy(marker => marker.Label.Trim(), StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1)?.Key;
+        if (duplicateMarkerLabel is not null)
+            throw new ArgumentException($"Duplicate marker label '{duplicateMarkerLabel}'.", parameterName);
         var duplicateEvidenceId = result
             .SelectMany(marker => marker.Evidence ?? [])
             .GroupBy(evidence => evidence.Id, StringComparer.Ordinal)
@@ -542,6 +589,33 @@ public sealed class ReviewInspectorWorkspace
         if (duplicateEvidenceId is not null)
             throw new ArgumentException($"Duplicate evidence ID '{duplicateEvidenceId}'.", parameterName);
         return result;
+    }
+
+    private static void ValidateQaCaseIds(ReplayMarker marker, string parameterName)
+    {
+        var values = marker.QaCaseIds ?? [];
+        if (values.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException($"Marker '{marker.Id}' contains an empty QA case ID.", parameterName);
+        var duplicate = values
+            .GroupBy(value => value.Trim(), StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1)?.Key;
+        if (duplicate is not null)
+            throw new ArgumentException($"Marker '{marker.Id}' contains duplicate QA case ID '{duplicate}'.", parameterName);
+    }
+
+    private static void ValidateEvidence(ReplayEvidenceReference evidence, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(evidence.Id))
+            throw new ArgumentException("Evidence IDs cannot be empty.", parameterName);
+        if (string.IsNullOrWhiteSpace(evidence.Path))
+            throw new ArgumentException($"Evidence '{evidence.Id}' has an empty path.", parameterName);
+        if (evidence.Label is not null && string.IsNullOrWhiteSpace(evidence.Label))
+            throw new ArgumentException($"Evidence '{evidence.Id}' has an empty label.", parameterName);
+        if (evidence.Sha256 is not null &&
+            (evidence.Sha256.Length != 64 || evidence.Sha256.Any(value => !Uri.IsHexDigit(value))))
+        {
+            throw new ArgumentException($"Evidence '{evidence.Id}' has an invalid SHA-256 value.", parameterName);
+        }
     }
 
     private static bool MarkerSequencesEqual(IReadOnlyList<ReplayMarker> left, IReadOnlyList<ReplayMarker> right) =>
@@ -569,19 +643,49 @@ public sealed class ReviewInspectorWorkspace
                 group.IsAsil ||
                 group.Category is ReviewEventCategory.QaResult or ReviewEventCategory.Annotation)
             .ToArray();
+        visibleGroupsById = visibleGroups.ToDictionary(group => group.Id, StringComparer.Ordinal);
+        navigableOccurrences = visibleGroups
+            .SelectMany(group => group.Occurrences.Select((occurrence, index) =>
+                new NavigableOccurrence(group, occurrence, index)))
+            .Where(item => item.Occurrence.LogicalIndex is not null)
+            .OrderBy(item => item.Occurrence.LogicalIndex)
+            .ThenBy(item => item.Group.Id, StringComparer.Ordinal)
+            .ThenBy(item => item.OccurrenceIndex)
+            .ToArray();
+        navigablePositionByOccurrenceId = navigableOccurrences
+            .Select((item, index) => (item.Occurrence.Id, Index: index))
+            .ToDictionary(item => item.Id, item => item.Index, StringComparer.Ordinal);
+        NavigationIndexRevision++;
         if (SelectedFindingGroupId is not { } id ||
-            visibleGroups.Any(group => group.Id.Equals(id, StringComparison.Ordinal))) return;
+            visibleGroupsById.ContainsKey(id)) return;
         ClearFindingSelection();
     }
 
-    private NavigableOccurrence[] NavigableOccurrences() => visibleGroups
-        .SelectMany(group => group.Occurrences.Select((occurrence, index) =>
-            new NavigableOccurrence(group, occurrence, index)))
-        .Where(item => item.Occurrence.LogicalIndex is not null)
-        .OrderBy(item => item.Occurrence.LogicalIndex)
-        .ThenBy(item => item.Group.Id, StringComparer.Ordinal)
-        .ThenBy(item => item.OccurrenceIndex)
-        .ToArray();
+    private int FirstOccurrenceAfter(int logicalIndex)
+    {
+        var low = 0;
+        var high = navigableOccurrences.Length;
+        while (low < high)
+        {
+            var middle = low + (high - low) / 2;
+            if (navigableOccurrences[middle].Occurrence.LogicalIndex!.Value <= logicalIndex) low = middle + 1;
+            else high = middle;
+        }
+        return low;
+    }
+
+    private int FirstOccurrenceAtOrAfter(int logicalIndex)
+    {
+        var low = 0;
+        var high = navigableOccurrences.Length;
+        while (low < high)
+        {
+            var middle = low + (high - low) / 2;
+            if (navigableOccurrences[middle].Occurrence.LogicalIndex!.Value < logicalIndex) low = middle + 1;
+            else high = middle;
+        }
+        return low;
+    }
 
     private sealed record NavigableOccurrence(
         ReviewEventGroup Group,

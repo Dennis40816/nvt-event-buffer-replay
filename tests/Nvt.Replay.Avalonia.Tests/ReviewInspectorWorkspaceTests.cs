@@ -299,6 +299,109 @@ public sealed class ReviewInspectorWorkspaceTests
         Assert.Equal(["marker-loaded"], workspace.Markers.Select(marker => marker.Id));
     }
 
+    [Fact]
+    public void Sidecar_review_state_is_replaced_instead_of_merged_and_empty_replace_is_a_no_op()
+    {
+        var frames = Frames(2);
+        var diagnostics = new[]
+        {
+            Diagnostic("FIRST_WARNING", frames[0].PrimarySource, DiagnosticSeverity.Warning),
+            Diagnostic("SECOND_WARNING", frames[1].PrimarySource, DiagnosticSeverity.Warning),
+        };
+        var workspace = new ReviewInspectorWorkspace(frames, diagnostics);
+        var first = Assert.Single(workspace.VisibleGroups, group => group.Code == "FIRST_WARNING");
+        var second = Assert.Single(workspace.VisibleGroups, group => group.Code == "SECOND_WARNING");
+        workspace.AcknowledgeFinding(first.Id);
+        workspace.SetFindingDisposition(first.Id, ReviewDisposition.Expected);
+        workspace.AcknowledgeFinding(second.Id);
+        var revision = workspace.ReviewSessionRevision;
+
+        var replaced = workspace.ReplaceMarkersAndImportState(
+            [],
+            [new ReviewStateSnapshot(first.Id, ReviewWorkflowState.Acknowledged, ReviewDisposition.FalsePositive)]);
+
+        Assert.True(replaced.ReviewStateChanged);
+        Assert.False(replaced.MarkersChanged);
+        Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+        Assert.Equal(ReviewWorkflowState.Acknowledged, workspace.ReviewSession.Find(first.Id).WorkflowState);
+        Assert.Equal(ReviewDisposition.FalsePositive, workspace.ReviewSession.Find(first.Id).Disposition);
+        Assert.Equal(ReviewWorkflowState.Open, workspace.ReviewSession.Find(second.Id).WorkflowState);
+        Assert.Equal(ReviewDisposition.None, workspace.ReviewSession.Find(second.Id).Disposition);
+
+        revision = workspace.ReviewSessionRevision;
+        var cleared = workspace.ReplaceMarkersAndImportState([], []);
+        Assert.True(cleared.ReviewStateChanged);
+        Assert.Equal(ReviewWorkflowState.Open, workspace.ReviewSession.Find(first.Id).WorkflowState);
+        Assert.Empty(workspace.ReviewSession.ExportState());
+        Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+
+        revision = workspace.ReviewSessionRevision;
+        var noOp = workspace.ReplaceMarkersAndImportState([], []);
+        Assert.False(noOp.Changed);
+        Assert.Equal(revision, workspace.ReviewSessionRevision);
+    }
+
+    [Fact]
+    public void Malformed_sidecar_markers_are_rejected_atomically()
+    {
+        var frames = Frames(2);
+        var workspace = new ReviewInspectorWorkspace(frames, []);
+        var original = workspace.AddMarker("Original");
+        var revision = workspace.ReviewSessionRevision;
+        var createdAt = DateTimeOffset.UnixEpoch;
+        var invalid = new IReadOnlyList<ReplayMarker>[]
+        {
+            [new ReplayMarker("range", "Range", 0, 1, createdAt)],
+            [new ReplayMarker("negative", "Negative", -1, -1, createdAt)],
+            [new ReplayMarker("outside", "Outside", frames.Length, frames.Length, createdAt)],
+            [new ReplayMarker("", "Empty ID", 0, 0, createdAt)],
+            [new ReplayMarker("empty-label", " ", 0, 0, createdAt)],
+            [new ReplayMarker("duplicate", "One", 0, 0, createdAt), new ReplayMarker("duplicate", "Two", 1, 1, createdAt)],
+            [new ReplayMarker("one", "Duplicate", 0, 0, createdAt), new ReplayMarker("two", " duplicate ", 1, 1, createdAt)],
+            [new ReplayMarker("qa-empty", "QA empty", 0, 0, createdAt, QaCaseIds: [" "])],
+            [new ReplayMarker("qa-duplicate", "QA duplicate", 0, 0, createdAt, QaCaseIds: ["QA-1", "qa-1"])],
+            [new ReplayMarker("evidence-id", "Evidence ID", 0, 0, createdAt, Evidence:
+                [new ReplayEvidenceReference("", ReplayEvidenceKind.Other, "trace.log")])],
+            [new ReplayMarker("evidence-path", "Evidence path", 0, 0, createdAt, Evidence:
+                [new ReplayEvidenceReference("evidence", ReplayEvidenceKind.Other, " ")])],
+            [new ReplayMarker("evidence-hash", "Evidence hash", 0, 0, createdAt, Evidence:
+                [new ReplayEvidenceReference("evidence", ReplayEvidenceKind.Other, "trace.log", "not-a-sha")])],
+            [new ReplayMarker("evidence-one", "Evidence one", 0, 0, createdAt, Evidence:
+                [new ReplayEvidenceReference("duplicate-evidence", ReplayEvidenceKind.Other, "one.log")]),
+             new ReplayMarker("evidence-two", "Evidence two", 1, 1, createdAt, Evidence:
+                [new ReplayEvidenceReference("duplicate-evidence", ReplayEvidenceKind.Other, "two.log")])],
+        };
+
+        foreach (var replacement in invalid)
+        {
+            Assert.Throws<ArgumentException>(() => workspace.ReplaceMarkersAndImportState(replacement, []));
+            Assert.Equal(revision, workspace.ReviewSessionRevision);
+            Assert.Same(original, Assert.Single(workspace.Markers));
+            Assert.Equal(original.Id, workspace.SelectedMarkerId);
+        }
+    }
+
+    [Fact]
+    public void Navigation_uses_one_cached_index_for_one_hundred_thousand_occurrences()
+    {
+        var frames = Frames(1);
+        var diagnostic = Diagnostic("REPEATED_WARNING", frames[0].PrimarySource, DiagnosticSeverity.Warning);
+        var diagnostics = Enumerable.Repeat(diagnostic, 100_000).ToArray();
+        var workspace = new ReviewInspectorWorkspace(frames, diagnostics);
+        var revision = workspace.NavigationIndexRevision;
+        Assert.Equal(100_000, Assert.Single(workspace.VisibleGroups).Occurrences.Count);
+
+        workspace.NavigateFinding(ReviewFindingDirection.Next);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var index = 0; index < 250; index++)
+            Assert.NotNull(workspace.NavigateFinding(ReviewFindingDirection.Next));
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(revision, workspace.NavigationIndexRevision);
+        Assert.True(allocated < 16_000_000,
+            $"Cached navigation allocated {allocated:N0} bytes for 250 operations.");
+    }
+
     private static ITouchReplaySnapshot[] Frames(int count) => Enumerable.Range(0, count)
         .Select(index => (ITouchReplaySnapshot)Snapshot(index, [Contact((byte)(index + 1))]))
         .ToArray();
