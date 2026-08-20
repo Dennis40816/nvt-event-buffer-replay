@@ -4,7 +4,7 @@
 
 0.0.3 定位為穩定化與模組化版本。本版本先降低 UI freeze、取消失效、狀態互相干擾與視覺回歸風險，再為 custom register profile、raw waveform、kernel log 與 live input 建立可持續擴充的落點。
 
-> 核准門檻：本文件先供 owner review。未取得確認前，不修改 production code、release tag 或既有 `0.0.2` 歷史。
+> Owner 已核准 0.0.3 重構方向。既有 `0.0.2` 歷史保持不變；以下勾選項只代表已有 commit 與測試證據，不等同正式 release gate 已關閉。
 
 ## Baseline
 
@@ -46,10 +46,10 @@ Source adapters
 
 ## Phase 0 — Release identity 與可重現 baseline
 
-- [ ] 將 `VERSION`、正式 tag、package name、assembly metadata 與 manifest 的版本策略統一。
-- [ ] 0.0.3 使用 `VERSION=0.0.3`；正式 tag 固定為 `vX.Y.Z`。
-- [ ] 不重寫已推送的 `0.0.2` tag；在 release note 標示它是 milestone tag。
-- [ ] CI 新增 release identity gate：tag、`VERSION`、package metadata 不一致即失敗。
+- [x] 將 `VERSION`、package name、assembly metadata 與 manifest 的版本策略統一。
+- [x] 0.0.3 使用 `VERSION=0.0.3`；正式 tag 固定為 `vX.Y.Z`（尚未建立 release tag）。
+- [x] 不重寫已推送的 `0.0.2` tag；在 release note 標示它是 milestone tag。
+- [x] CI 新增 release identity gate：tag、`VERSION`、package metadata 不一致即失敗。
 - [ ] 固定 baseline test 數、長 golden hash/records/frames、效能機器與 commit。
 - [ ] 重生目前 source 對應的 Paint、Output、Heatmap、Settings approved screenshots，淘汰過期 artifact。
 
@@ -57,11 +57,11 @@ Source adapters
 
 ## Phase 1 — 可取消的 ReplayWorkspaceBuilder
 
-- [ ] 新增 `ReplayWorkspaceBuildRequest`、`ReplayWorkspaceBuildResult` 與 `ReplayWorkspaceBuilder`。
-- [ ] 將 Common decode、Desay assemble/decode、replay materialization、extent、trail index、auto-pause index 移出 UI thread。
-- [ ] `CancellationToken` 傳入 `CaptureSession.DecodeCommon`、`DecodeDesay97`、`Desay97Assembler` 與所有長迴圈。
+- [x] 新增 `ReplayWorkspaceBuildRequest`、`ReplayWorkspaceBuildResult` 與 `ReplayWorkspaceBuilder`。
+- [x] 將 Common decode、Desay assemble/decode、replay materialization、extent、trail index、auto-pause index 移出 UI thread。
+- [x] `CancellationToken` 傳入 `CaptureSession.DecodeCommon`、`DecodeDesay97`、`Desay97Assembler` 與所有長迴圈。
 - [ ] 加入 operation generation；只有最後一個仍有效的 operation 可以提交 UI state。
-- [ ] 完整 workspace 建立成功後一次性切換；取消或失敗時保留上一份完整結果。
+- [x] 完整 workspace 建立成功後一次性切換；取消或失敗時保留上一份完整結果。
 - [ ] 進度階段至少區分 `Decode`、`Replay index`、`Trail index`、`Review index`、`Ready`。
 
 完成條件：載入／解碼期間 UI 可操作 Cancel；取消後無背景 CPU 長跑、無 stale continuation、raw explorer 與上一份有效結果仍可用。
@@ -69,10 +69,10 @@ Source adapters
 ## Phase 2 — Replay index 與長軌跡效能
 
 - [ ] Replay snapshots、extent、trail history 與 auto-pause index 改為單次線性掃描建置。
-- [ ] 十點 contact presence 優先使用 `ushort` bitmask，避免每 frame 建立多個 `HashSet<byte>`。
+- [x] Contact presence 使用固定寬度 bitmask，避免 workspace 每 frame 建立多個 `HashSet<byte>`。
 - [ ] Host state 評估改為固定 11-slot array/struct，避免每 frame 複製 Dictionary。
-- [ ] Checkpoint 位置改用直接索引或 binary search，移除 `SortedDictionary.Last(...)` 熱路徑。
-- [ ] 保留 2,048-point 無損 trail chunk 與完成 chunk cache；切片只影響繪圖批次，不刪除線或 report points。
+- [x] Checkpoint 位置改用直接索引或 binary search，移除 `SortedDictionary.Last(...)` 熱路徑。
+- [x] 保留 2,048-point 無損 trail chunk；切片只影響繪圖批次，不刪除線或 report points。
 - [ ] 量測 allocation、GC、workspace build time、random seek 與 3-minute Loop memory curve。
 
 完成條件：
@@ -84,13 +84,13 @@ Source adapters
 
 ## Phase 3 — MP4 Preview / Export frame plan
 
-- [ ] `ReplayFramePlan` 直接建立 RLE repeat count，不逐一 materialize 每個 output frame。
-- [ ] 保存 cumulative output end index，以 binary search 完成 output-frame -> logical-frame 對應。
-- [ ] frame count、repeat count 與 duration calculation 使用 `long` 並加入 overflow / hard-limit protection。
+- [x] `ReplayFramePlan` 直接建立 RLE repeat count，不逐一 materialize 每個 output frame。
+- [x] 保存 cumulative output end index，以 binary search 完成 output-frame -> logical-frame 對應。
+- [x] frame count、repeat count 與 duration calculation 使用 `long` 並加入 overflow / hard-limit protection。
 - [ ] 先以常數時間 estimate 顯示長影片警告，再於背景建立完整 plan。
-- [ ] planning、rendering、FFmpeg piping 全程共用 cancellation 與 progress。
+- [x] planning、rendering、FFmpeg piping 全程共用 cancellation 與 progress。
 - [ ] Preview scrub、repeat、fullscreen 與 final MP4 共用同一份 immutable plan。
-- [ ] 統一 UI 與 CLI 的 FPS 上限；180 FPS 必須在兩邊具有相同結果與驗證。
+- [x] 統一 UI 與 CLI 的 FPS 上限為 240；180／240 FPS 具有相同驗證規則。
 
 完成條件：Recorded timing 包含長 idle gap 時不阻塞 UI；取消後不留下 partial output，Preview 與 final manifest 的 frame count、duration、range 完全相同。
 
@@ -104,21 +104,32 @@ Source adapters
 - [ ] 抽出 `ReviewInspectorViewModel`：current frame、contact selection、finding navigation、marker lifecycle。
 - [ ] 抽出 `CaptureDecodeController`：source choice、version/profile validation、automatic decode、register annotation。
 - [ ] 將 Paint、Output、Review、Inspector 拆為獨立 View/UserControl。
-- [ ] 將 window-local styles 拆入 typography、buttons、fields、transport、inspector、output 等 ResourceDictionary。
+- [x] 將 window-local styles 拆入 typography、buttons、fields、transport、inspector、output 等 ResourceDictionary。
 - [ ] 移除拆分後的 hidden legacy controls、重複 state 與不再使用的 event handlers。
 
 完成條件：`MainWindow` 不再直接包含 replay/export/decode 演算法；ViewModel/controller 可在無 Window 的情況下測試。結構抽離前後 approved screenshot 應維持零預期差異。
 
 ## Phase 5 — 共用 format / application pipeline
 
-- [ ] 將目前 descriptor-only format registry 升級為 UI/CLI 共用的 executable provider。
+- [x] 將目前 descriptor-only format registry 升級為可供 UI/CLI 使用的 executable provider。
 - [ ] provider 封裝 descriptor、configuration validation、decode、replay projection 與 inspector/raw presentation。
 - [ ] 移除 UI 與 CLI 中 Common／Desay 重複 switch 與近似 command pipeline。
-- [ ] Desay two-transaction 保留獨立 assembler；補 cancellation 與 transport-stream/slave scope。
+- [x] Desay two-transaction 保留獨立 assembler；補 cancellation，並維持 transport-stream/slave transaction scope。
 - [ ] CRC ownership 明確化，避免 assembler 與 decoder 重複執行同一個 validation。
 - [ ] 新 LA adapter 套用共用 acceptance contract：probe ambiguity、malformed row、cancellation、stable ID、address normalization、ACK unavailable、transaction boundary、simulator round trip、real-export provenance。
 
 完成條件：新增第三種 Event Buffer family 時不需要同時修改 MainWindow、CLI 三條 command flow 與 Rendering switch。
+
+## 已落地 commits 與證據
+
+- `ab2264b`：0.0.3 release identity 與 CI gate。
+- `47862f5`：可取消、線性建立的 replay workspace；含 100k-frame、取消與 Common/Desay 測試。
+- `fdc148a`、`2f82531`：compact frame plan、長時段 overflow/hard-limit 與 240 FPS CLI contract。
+- `4d27309`、`d2d6080`：executable format registry 與 CLI 共用 decode pipeline；Common 0x82–0x85、Desay Standard/Benz Palm 均有契約測試。
+- `6eb350c`：MainWindow styles 拆為獨立資源；selector 數與順序一致，Avalonia 48/48 tests passed。
+- `96aa3db`：load/decode 完整建置後原子切換；取消或失敗保留上一份結果。
+
+目前驗證基線：core/parser/rendering/CLI 207 tests passed；Avalonia 48 tests passed。正式 Golden、長時間 Loop、approved screenshot matrix 與 release tag 仍是未關閉 gate。
 
 ## Phase 6 — Register annotation projection
 
@@ -195,4 +206,3 @@ Source adapters
 - [ ] Approved screenshot matrix dark/light/narrow/accessibility 全部通過。
 - [ ] 工作樹 clean，無 firmware BIN、private golden、secret 或大型可重建 artifact。
 - [ ] `VERSION=0.0.3`，正式 tag `v0.0.3`，package/manifest/release identity 一致。
-
