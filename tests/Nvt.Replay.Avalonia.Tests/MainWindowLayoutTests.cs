@@ -801,6 +801,28 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Immediate_zero_frame_decode_uses_the_stable_prepared_operation_generation()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "nds-register-map.nds.txt");
+            await window.OpenCaptureAsync(fixture);
+
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            Assert.Equal(0, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.Contains("Common 0x83", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.DoesNotContain("failed", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("raw source remains unchanged", Required<TextBlock>(window, "ConfigurationHintText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Prepared_common_decode_keeps_the_raw_first_flow_and_source_object_identity()
     {
         var window = ShowWindow();
@@ -905,6 +927,44 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Closing_the_window_cancels_an_inflight_decode_without_late_UI_updates()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        var closed = false;
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            window.CaptureDecodeProgressObserver = progress =>
+            {
+                if (progress.Phase != CaptureDecodePhase.SelectingFormat || entered.IsSet) return;
+                entered.Set();
+                release.Wait(cancellationToken);
+            };
+
+            var inflightDecode = window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            var statusAtClose = Required<TextBlock>(window, "SessionStatusText").Text;
+            window.Close();
+            closed = true;
+            release.Set();
+            await inflightDecode;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.False(window.IsVisible);
+            Assert.Equal(statusAtClose, Required<TextBlock>(window, "SessionStatusText").Text);
+        }
+        finally
+        {
+            release.Set();
+            if (!closed) window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Opening_another_capture_supersedes_an_inflight_decode_without_a_stale_commit()
     {
         var window = ShowWindow();
@@ -935,6 +995,44 @@ public sealed class MainWindowLayoutTests
             Assert.False(Required<TabItem>(window, "PaintTab").IsEnabled);
             Assert.Contains("semantic format required", Required<TextBlock>(window, "SessionStatusText").Text);
             Assert.Contains("Confirm the version", Required<TextBlock>(window, "ConfigurationHintText").Text);
+        }
+        finally
+        {
+            release.Set();
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task A_stale_cancelled_load_cannot_overwrite_the_newer_capture_or_busy_state()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        try
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var firstFixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            var secondFixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "desay97-full-reread.nds.txt");
+            window.CaptureLoadProgressObserver = progress =>
+            {
+                if (progress.Phase != "Probing source" || entered.IsSet) return;
+                entered.Set();
+                release.Wait(cancellationToken);
+            };
+
+            var staleLoad = window.OpenCaptureAsync(firstFixture);
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            await window.OpenCaptureAsync(secondFixture);
+            release.Set();
+            await staleLoad;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("DESAY97-FULL-REREAD.NDS.TXT", Required<TextBlock>(window, "CaptureNameText").Text);
+            Assert.Equal(0, Required<ListBox>(window, "DecodedFramesList").ItemCount);
+            Assert.Contains("semantic format required", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.True(Required<Button>(window, "LoadButton").IsVisible);
+            Assert.False(Required<Button>(window, "CancelButton").IsVisible);
         }
         finally
         {

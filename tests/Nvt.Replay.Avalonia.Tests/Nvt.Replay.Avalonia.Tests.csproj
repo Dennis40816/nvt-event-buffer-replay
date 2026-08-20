@@ -19,6 +19,7 @@
   <ItemGroup>
     <None Include="..\fixtures\kingstvis-common-0x83.csv" Link="fixtures\kingstvis-common-0x83.csv" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\fixtures\desay97-full-reread.nds.txt" Link="fixtures\desay97-full-reread.nds.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\fixtures\nds-register-map.nds.txt" Link="fixtures\nds-register-map.nds.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="ApprovedSnapshots\*.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

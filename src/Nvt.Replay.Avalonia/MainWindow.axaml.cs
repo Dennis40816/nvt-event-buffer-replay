@@ -61,6 +61,8 @@ public partial class MainWindow : Window
     private readonly ReplayPlaybackController playbackController = new();
     private readonly CaptureDecodeController captureDecodeController = new();
     private ReplayPaintWorkspace? paintWorkspace;
+    private long nextCaptureLoadGeneration;
+    private long activeCaptureLoadGeneration;
     private long activeCaptureDecodeGeneration;
     private int heatmapMinimumCount = 5;
     private double heatmapLabelThresholdRatio = 0.65;
@@ -107,6 +109,7 @@ public partial class MainWindow : Window
     private const double ReplayTransportHeight = 64;
     private static readonly TimeSpan PlaybackDetailPresentationInterval = TimeSpan.FromMilliseconds(100);
     private long lastDetailPresentationTimestamp;
+    internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get; set; }
     internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get; set; }
     internal int DetailPresentationCount { get; private set; }
     internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
@@ -506,21 +509,30 @@ public partial class MainWindow : Window
 
     internal async Task OpenCaptureAsync(string path, string? adapterId = null)
     {
+        var loadGeneration = checked(++nextCaptureLoadGeneration);
+        activeCaptureLoadGeneration = loadGeneration;
         captureDecodeController.CancelCurrent();
         activeCaptureDecodeGeneration = 0;
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
-        operationCancellation = new CancellationTokenSource();
-        var cancellationToken = operationCancellation.Token;
+        var loadCancellation = new CancellationTokenSource();
+        operationCancellation = loadCancellation;
+        var cancellationToken = loadCancellation.Token;
         SetBusy(true, "Opening capture");
 
         try
         {
-            var progress = new Progress<CaptureLoadProgress>(item =>
+            var progress = new InlineProgress<CaptureLoadProgress>(item =>
             {
-                if (cancellationToken.IsCancellationRequested) return;
-                var count = item.RecordsRead > 0 ? $" · {item.RecordsRead:N0} records" : string.Empty;
-                SessionStatusText.Text = item.Phase + count;
+                CaptureLoadProgressObserver?.Invoke(item);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (cancellationToken.IsCancellationRequested ||
+                        !IsActiveCaptureLoad(loadGeneration, loadCancellation))
+                        return;
+                    var count = item.RecordsRead > 0 ? $" · {item.RecordsRead:N0} records" : string.Empty;
+                    SessionStatusText.Text = item.Phase + count;
+                });
             });
             var nextSession = await Task.Run(
                 () => CaptureSession.LoadAsync(path, progress, cancellationToken, adapterId),
@@ -534,6 +546,8 @@ public partial class MainWindow : Window
                 .ToArray();
 
             cancellationToken.ThrowIfCancellationRequested();
+            if (!IsActiveCaptureLoad(loadGeneration, loadCancellation))
+                throw new OperationCanceledException(cancellationToken);
             ClearSession();
             session = nextSession;
             ApplyRawExplorerProjection(projectedActivities);
@@ -565,32 +579,43 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SessionStatusText.Text = "Load cancelled; no partial session was committed";
+            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+                SessionStatusText.Text = "Load cancelled; no partial session was committed";
         }
         catch (SourceSelectionRequiredException exception)
         {
-            pendingSourcePath = path;
-            configuringSourceChoice = true;
-            SourceAdapterComboBox.ItemsSource = exception.Candidates
-                .Select(candidate => new SourceAdapterChoice(candidate.AdapterId, candidate.DisplayName, candidate.Confidence))
-                .ToArray();
-            ComboBoxAutoSizer.Fit(SourceAdapterComboBox);
-            SourceAdapterComboBox.SelectedIndex = -1;
-            SourceAdapterComboBox.IsVisible = true;
-            SourceAdapterText.IsVisible = false;
-            configuringSourceChoice = false;
-            SessionStatusText.Text = "Source selection required; no adapter was chosen automatically";
-            SourceConfidenceText.Text = "The highest-confidence probe is tied";
-            ConfigurationHintText.Text = "Choose the correct source adapter; Event Buffer Version remains a separate decision.";
+            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            {
+                pendingSourcePath = path;
+                configuringSourceChoice = true;
+                SourceAdapterComboBox.ItemsSource = exception.Candidates
+                    .Select(candidate => new SourceAdapterChoice(candidate.AdapterId, candidate.DisplayName, candidate.Confidence))
+                    .ToArray();
+                ComboBoxAutoSizer.Fit(SourceAdapterComboBox);
+                SourceAdapterComboBox.SelectedIndex = -1;
+                SourceAdapterComboBox.IsVisible = true;
+                SourceAdapterText.IsVisible = false;
+                configuringSourceChoice = false;
+                SessionStatusText.Text = "Source selection required; no adapter was chosen automatically";
+                SourceConfidenceText.Text = "The highest-confidence probe is tied";
+                ConfigurationHintText.Text = "Choose the correct source adapter; Event Buffer Version remains a separate decision.";
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            SessionStatusText.Text = $"Load failed · {exception.Message}";
-            ConfigurationHintText.Text = "Choose another file, inspect its schema, or select a supported adapter explicitly.";
+            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            {
+                SessionStatusText.Text = $"Load failed · {exception.Message}";
+                ConfigurationHintText.Text = "Choose another file, inspect its schema, or select a supported adapter explicitly.";
+            }
         }
         finally
         {
-            SetBusy(false, SessionStatusText.Text ?? "Ready");
+            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            {
+                activeCaptureLoadGeneration = 0;
+                SetBusy(false, SessionStatusText.Text ?? "Ready");
+            }
         }
     }
 
@@ -707,8 +732,9 @@ public partial class MainWindow : Window
 
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
-        operationCancellation = new CancellationTokenSource();
-        var cancellationToken = operationCancellation.Token;
+        var decodeCancellation = new CancellationTokenSource();
+        operationCancellation = decodeCancellation;
+        var cancellationToken = decodeCancellation.Token;
         SetBusy(true, $"Decoding {(isDesay97 ? "Desay" : "Common")} {versionText}");
         long operationGeneration = 0;
 
@@ -726,19 +752,23 @@ public partial class MainWindow : Window
             var progress = new InlineProgress<CaptureDecodeProgress>(item =>
             {
                 CaptureDecodeProgressObserver?.Invoke(item);
-                Dispatcher.UIThread.Post(() => PresentCaptureDecodeProgress(item));
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (ReferenceEquals(operationCancellation, decodeCancellation))
+                        PresentCaptureDecodeProgress(item);
+                });
             });
-            var decodeTask = captureDecodeController.RunAsync(request, progress, cancellationToken);
-            operationGeneration = captureDecodeController.ActiveGeneration ??
-                throw new InvalidOperationException("Capture decode generation was not published.");
+            var operation = captureDecodeController.StartPrepared(request, progress, cancellationToken);
+            operationGeneration = operation.Generation;
             activeCaptureDecodeGeneration = operationGeneration;
-            var result = await decodeTask;
+            var result = await operation.Completion;
             var presentation = await Task.Run(
                 () => BuildCaptureDecodePresentation(result, cancellationToken),
                 cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
             if (activeCaptureDecodeGeneration != result.Generation ||
+                !ReferenceEquals(operationCancellation, decodeCancellation) ||
                 !ReferenceEquals(captureDecodeController.LastSuccessfulResult, result) ||
                 !ReferenceEquals(session, loadedSession))
                 throw new CaptureDecodeSupersededException(result.Generation);
@@ -793,12 +823,12 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            if (operationGeneration == 0 || activeCaptureDecodeGeneration == operationGeneration)
+            if (IsActiveCaptureDecode(operationGeneration, decodeCancellation))
                 SessionStatusText.Text = "Decode cancelled; previous complete result was preserved";
         }
         catch (Exception exception) when (exception is InvalidDataException or ArgumentException or InvalidOperationException)
         {
-            if (operationGeneration == 0 || activeCaptureDecodeGeneration == operationGeneration)
+            if (IsActiveCaptureDecode(operationGeneration, decodeCancellation))
             {
                 SessionStatusText.Text = $"Decode failed · {exception.Message}";
                 ConfigurationHintText.Text = "Raw records remain available; verify version/profile and try again.";
@@ -806,13 +836,20 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (operationGeneration == 0 || activeCaptureDecodeGeneration == operationGeneration)
+            if (IsActiveCaptureDecode(operationGeneration, decodeCancellation))
             {
                 activeCaptureDecodeGeneration = 0;
                 SetBusy(false, SessionStatusText.Text ?? "Ready");
             }
         }
     }
+
+    private bool IsActiveCaptureLoad(long generation, CancellationTokenSource cancellation) =>
+        activeCaptureLoadGeneration == generation && ReferenceEquals(operationCancellation, cancellation);
+
+    private bool IsActiveCaptureDecode(long generation, CancellationTokenSource cancellation) =>
+        ReferenceEquals(operationCancellation, cancellation) &&
+        (generation == 0 || activeCaptureDecodeGeneration == generation);
 
     private void CancelButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -3989,13 +4026,17 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        activeCaptureLoadGeneration = 0;
+        activeCaptureDecodeGeneration = 0;
         ExitOutputFullscreen();
         StopPlayback();
         StopOutputVideoPreviewPlayback();
         outputPreviewCancellation?.Cancel();
         outputPreviewCancellation?.Dispose();
-        operationCancellation?.Cancel();
-        operationCancellation?.Dispose();
+        var activeOperationCancellation = operationCancellation;
+        operationCancellation = null;
+        activeOperationCancellation?.Cancel();
+        activeOperationCancellation?.Dispose();
         captureDecodeController.Dispose();
         outputExportJobs.Cancel();
         if (Application.Current is { } application) application.ActualThemeVariantChanged -= Application_OnActualThemeVariantChanged;
