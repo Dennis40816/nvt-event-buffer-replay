@@ -58,17 +58,24 @@ public sealed class ReplayPaintWorkspaceTests
             TrailLength = 2,
         });
         var swap = workspace.Update(workspace.Settings with { SwapAxes = true });
+        var pointView = workspace.Update(workspace.Settings with { PointView = ReplayRenderMode.Compare });
 
-        Assert.All([grid, extent, reverse, trail], update =>
-        {
-            Assert.Equal(ReplayPaintChangeImpact.SceneOnly, update.Impact);
-            Assert.False(update.RequiresGeometryCacheInvalidation);
-            Assert.False(update.RequiresWorkspaceRebuild);
-        });
+        Assert.Equal(ReplayPaintChangeImpact.Surface, grid.Impact);
+        Assert.True(grid.RequiresSurfaceUpdate);
+        Assert.False(grid.RequiresSceneRebuild);
+        Assert.Equal(
+            ReplayPaintChangeImpact.Surface | ReplayPaintChangeImpact.Scene | ReplayPaintChangeImpact.Fit,
+            extent.Impact);
+        Assert.True(extent.RequiresSceneRebuild);
+        Assert.True(extent.RequiresFit);
+        Assert.All([reverse, trail], update => Assert.Equal(ReplayPaintChangeImpact.SceneOnly, update.Impact));
         Assert.Equal(ReplayPaintChangeImpact.GeometryCacheInvalidation, swap.Impact);
         Assert.True(swap.RequiresGeometryCacheInvalidation);
         Assert.False(swap.RequiresWorkspaceRebuild);
-        Assert.Equal(5, workspace.Revision);
+        Assert.Equal(ReplayPaintChangeImpact.Surface | ReplayPaintChangeImpact.Inspector, pointView.Impact);
+        Assert.True(pointView.RequiresInspectorRefresh);
+        Assert.False(pointView.RequiresSceneRebuild);
+        Assert.Equal(6, workspace.Revision);
         Assert.Equal(1, workspace.GeometryRevision);
     }
 

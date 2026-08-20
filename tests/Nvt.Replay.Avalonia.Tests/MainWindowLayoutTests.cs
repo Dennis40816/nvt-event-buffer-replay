@@ -822,6 +822,7 @@ public sealed class MainWindowLayoutTests
             await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
             tabs.SelectedItem = Required<TabItem>(window, "PaintTab");
             Dispatcher.UIThread.RunJobs();
+            var outputRenderCount = window.OutputVideoRenderCount;
 
             Assert.Equal(workspace.Settings.PointView, paint.Mode);
             Assert.Equal(workspace.Settings.TraceVisible, paint.TrailLinesVisible);
@@ -847,6 +848,8 @@ public sealed class MainWindowLayoutTests
             Assert.True(paint.StrongGrid);
             Assert.Equal(sceneCount, paint.ScenePresentationCount);
             Assert.Equal(planBuildCount, window.OutputPreviewPlanBuildCount);
+            Assert.Equal(outputRenderCount, window.OutputVideoRenderCount);
+            Assert.True(window.OutputVideoPreviewDirty);
 
             var trailMode = Required<ComboBox>(window, "TrailModeComboBox");
             trailMode.SelectedItem = trailMode.Items
@@ -855,6 +858,7 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(ReplayTrailMode.Recent, workspace.Settings.TrailRetention);
             Assert.Equal(++sceneCount, paint.ScenePresentationCount);
+            Assert.Equal(outputRenderCount, window.OutputVideoRenderCount);
 
             Required<ToggleButton>(window, "TraceToggleButton").IsChecked = false;
             Dispatcher.UIThread.RunJobs();
@@ -878,6 +882,59 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(workspace.Settings.PanelExtent, Assert.IsType<ReplayScene>(paint.CurrentScene).Extent);
             Assert.Equal(1, paint.ZoomFactor);
             Assert.Same(history, workspace.TrailHistory);
+            Assert.Equal(outputRenderCount, window.OutputVideoRenderCount);
+
+            Required<Button>(window, "AddMarkerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(outputRenderCount, window.OutputVideoRenderCount);
+
+            tabs.SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => !window.OutputVideoPreviewDirty);
+            Assert.Equal(outputRenderCount + 1, window.OutputVideoRenderCount);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Redecode_preserves_every_Paint_setting_while_refreshing_session_owned_state()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var original = Assert.IsType<ReplayPaintWorkspace>(window.PaintWorkspace);
+            var currentTheme = original.Settings.Theme;
+            var requested = original.Settings with
+            {
+                PanelExtent = new ReplayExtent(2816, 1536),
+                PointView = ReplayRenderMode.Compare,
+                TrailRetention = ReplayTrailMode.Persistent,
+                TrailLength = 120,
+                TrailVisibilityStart = 7,
+                TraceVisible = false,
+                TrailPointsVisible = true,
+                ReverseX = true,
+                ReverseY = true,
+                SwapAxes = true,
+                StrongGrid = true,
+                LegendVisible = false,
+                LegendCollapsed = false,
+                LegendPosition = ReplayLegendPosition.BottomLeft,
+                Theme = currentTheme == ReplayRenderTheme.Dark ? ReplayRenderTheme.Light : ReplayRenderTheme.Dark,
+            };
+            original.Update(requested);
+
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var rebuilt = Assert.IsType<ReplayPaintWorkspace>(window.PaintWorkspace);
+            Assert.NotSame(original, rebuilt);
+            Assert.Equal(requested with { Theme = currentTheme }, rebuilt.Settings);
+            Assert.NotSame(original.TrailHistory, rebuilt.TrailHistory);
         }
         finally
         {

@@ -16,6 +16,8 @@ public sealed class ReplayVideoPreviewSurface : Control
     private byte[]? rgbBuffer;
     private byte[]? rgbaBuffer;
 
+    internal int RgbRenderCount { get; private set; }
+
     public ReplayVideoPreviewSurface()
     {
         RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.HighQuality);
@@ -23,6 +25,7 @@ public sealed class ReplayVideoPreviewSurface : Control
 
     public void Show(ReplayScene scene, ReplayRenderSettings settings, int width, int height)
     {
+        RgbRenderCount++;
         EnsureBitmap(width, height);
         ReplayFrameRenderer.RenderRgb(scene, width, height, settings, rgbBuffer!);
         for (int source = 0, destination = 0; source < rgbBuffer!.Length; source += 3, destination += 4)

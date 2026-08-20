@@ -52,6 +52,7 @@ public partial class MainWindow : Window
     private readonly ExportJobService outputExportJobs = new();
     private ReplayOutputPreviewPlan? outputVideoPreviewPlan;
     private int outputVideoFrameIndex;
+    private bool outputVideoPreviewDirty;
     private long outputPreviewGeneration;
     private bool outputPreviewPlanPending;
     private string? outputPreviewPlanError;
@@ -119,6 +120,8 @@ public partial class MainWindow : Window
     internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => outputVideoPreviewPlan?.FramePlan;
     internal int OutputPreviewPlanBuildCount => outputPlanService.BuildCount;
     internal int OutputReportBuildCount => outputReportBuildCount;
+    internal int OutputVideoRenderCount => OutputVideoPreview.RgbRenderCount;
+    internal bool OutputVideoPreviewDirty => outputVideoPreviewDirty;
     internal string OutputReplayIdentityForTesting => OutputReplayIdentity();
     internal void ReplaceOutputPlanServiceForTesting(ReplayOutputPlanService replacement)
     {
@@ -401,9 +404,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { Theme = CurrentReplayTheme() },
-            rebuildScene: false);
+        ApplyPaintSettings(paintWorkspace.Settings with { Theme = CurrentReplayTheme() });
     }
 
     private void CommandPaletteButton_OnClick(object? sender, RoutedEventArgs e) => ToggleCommandPalette();
@@ -738,6 +739,7 @@ public partial class MainWindow : Window
 
         var preservedWorkspaceState = preservedWorkspaceStateOverride ?? CaptureReviewWorkspaceState();
         var preservedWorkspaceTab = preservedWorkspaceTabOverride ?? WorkspaceTabs.SelectedItem as TabItem;
+        var preservedPaintSettings = paintWorkspace?.Settings;
 
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
@@ -806,7 +808,7 @@ public partial class MainWindow : Window
             paintWorkspace = new ReplayPaintWorkspace(
                 replaySession,
                 presentation.TrailHistory,
-                CreateInitialPaintSettings(presentation.Extent),
+                CreateInitialPaintSettings(presentation.Extent, preservedPaintSettings, replaySession.Count),
                 reviewWorkspace?.ReviewSession.Diagnostics,
                 reviewWorkspace?.Markers);
 
@@ -1808,6 +1810,7 @@ public partial class MainWindow : Window
         OutputPreviewPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputFullscreenPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputPreviewFullscreenButton.IsEnabled = outputVideoFrameCount > 0;
+        outputVideoPreviewDirty = true;
         ShowOutputVideoFrame(outputVideoFrameIndex);
         OutputConfigurationText.Text += $"\nvideo    {clockName} / {settings.FrameRate} FPS / {speed}";
     }
@@ -1823,6 +1826,7 @@ public partial class MainWindow : Window
         OutputVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
         if (outputFullscreenActive)
             OutputFullscreenVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
+        outputVideoPreviewDirty = false;
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
         OutputFullscreenTimeline.SetPosition(outputVideoFrameIndex);
         var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)outputSettings.FrameRate);
@@ -1955,6 +1959,7 @@ public partial class MainWindow : Window
         StopOutputVideoPreviewPlayback();
         outputVideoPreviewPlan = null;
         outputVideoFrameIndex = 0;
+        outputVideoPreviewDirty = false;
         OutputVideoBadgeText.Text = outputPreviewPlanError ?? "Preview unavailable";
         OutputClockText.Text = "-";
         OutputVideoPreview.Clear();
@@ -1971,10 +1976,18 @@ public partial class MainWindow : Window
         OutputFullscreenFrameText.Text = "0 / 0";
     }
 
+    private void InvalidateCurrentOutputVideoFrame()
+    {
+        outputVideoPreviewDirty = true;
+        RefreshCurrentOutputVideoFrame();
+    }
+
     private void RefreshCurrentOutputVideoFrame()
     {
-        if (outputVideoFrameCount > 0 && outputVideoPreviewPlan is not null)
-            ShowOutputVideoFrame(outputVideoFrameIndex);
+        var visible = outputFullscreenActive || outputWorkspaceActive && OutputVideoPanel.IsVisible;
+        if (!visible || !outputVideoPreviewDirty || outputVideoFrameCount == 0 || outputVideoPreviewPlan is null)
+            return;
+        ShowOutputVideoFrame(outputVideoFrameIndex);
     }
 
     private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -3847,8 +3860,20 @@ public partial class MainWindow : Window
         RestartPlaybackTimingIfActive(change);
     }
 
-    private ReplayPaintSettings CreateInitialPaintSettings(ReplayExtent extent)
+    private ReplayPaintSettings CreateInitialPaintSettings(
+        ReplayExtent extent,
+        ReplayPaintSettings? preserved = null,
+        int replayCount = 0)
     {
+        if (preserved is not null)
+        {
+            return preserved with
+            {
+                Theme = CurrentReplayTheme(),
+                TrailVisibilityStart = Math.Clamp(preserved.TrailVisibilityStart, 0, replayCount),
+            };
+        }
+
         var settings = ReplayPaintSettings.Default(extent) with { Theme = CurrentReplayTheme() };
         if (PaintModeComboBox.SelectedItem is SelectOption pointView &&
             Enum.TryParse<ReplayRenderMode>(pointView.Value, out var mode))
@@ -3862,27 +3887,24 @@ public partial class MainWindow : Window
         return settings;
     }
 
-    private ReplayPaintUpdate ApplyPaintSettings(
-        ReplayPaintSettings settings,
-        bool rebuildScene,
-        bool fit = false,
-        bool refreshInspector = false)
+    private ReplayPaintUpdate ApplyPaintSettings(ReplayPaintSettings settings)
     {
         if (synchronizingPaintControls || paintWorkspace is null) return default;
         var previous = paintWorkspace.Settings;
         var update = paintWorkspace.Update(settings);
         if (!update.Changed) return update;
 
-        ApplyPaintSurfaceSettings(previous, paintWorkspace.Settings);
-        if (fit)
+        if (update.RequiresSurfaceUpdate)
+            ApplyPaintSurfaceSettings(previous, paintWorkspace.Settings);
+        if (update.RequiresFit)
         {
             PaintSurface.Fit();
             UpdatePaintZoomText();
         }
-        if (rebuildScene) RenderCurrentPaintScene();
-        if (refreshInspector && currentInspectorRecord is not null)
+        if (update.RequiresSceneRebuild) RenderCurrentPaintScene();
+        if (update.RequiresInspectorRefresh && currentInspectorRecord is not null)
             ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
-        RefreshCurrentOutputVideoFrame();
+        InvalidateCurrentOutputVideoFrame();
         return update;
     }
 
@@ -3960,7 +3982,7 @@ public partial class MainWindow : Window
             reviewWorkspace.Markers);
         if (!update.Changed) return;
         RenderCurrentPaintScene();
-        RefreshCurrentOutputVideoFrame();
+        InvalidateCurrentOutputVideoFrame();
     }
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -3970,10 +3992,7 @@ public partial class MainWindow : Window
             !Enum.TryParse<ReplayRenderMode>(option.Value, out var mode))
             return;
         reviewWorkspace?.SetRenderMode(mode);
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { PointView = mode },
-            rebuildScene: false,
-            refreshInspector: true);
+        ApplyPaintSettings(paintWorkspace.Settings with { PointView = mode });
     }
 
     private void PanelResolutionTextBox_OnKeyDown(object? sender, KeyEventArgs e)
@@ -3997,9 +4016,7 @@ public partial class MainWindow : Window
 
         if (paintWorkspace is null) return;
         var update = ApplyPaintSettings(
-            paintWorkspace.Settings with { PanelExtent = new ReplayExtent(width, height) },
-            rebuildScene: true,
-            fit: true);
+            paintWorkspace.Settings with { PanelExtent = new ReplayExtent(width, height) });
         if (!update.Changed) return;
         if (SyncOutputResolutionWithPanel())
             RefreshOutputPreviewIfVisible();
@@ -4041,9 +4058,7 @@ public partial class MainWindow : Window
             TrailLengthComboBox.IsVisible = true;
         if (TrailLengthLabel is not null)
             TrailLengthLabel.IsVisible = true;
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { TrailRetention = selectedMode },
-            rebuildScene: true);
+        ApplyPaintSettings(paintWorkspace.Settings with { TrailRetention = selectedMode });
     }
 
     private void TrailLengthComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -4052,20 +4067,14 @@ public partial class MainWindow : Window
         if ((sender as ComboBox)?.SelectedItem is not ComboBoxItem item ||
             !int.TryParse(item.Tag?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var selectedLength))
             return;
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { TrailLength = selectedLength },
-            rebuildScene: true);
+        ApplyPaintSettings(paintWorkspace.Settings with { TrailLength = selectedLength });
     }
 
     private void TraceToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         if (synchronizingPaintControls || paintWorkspace is null) return;
         var visible = TraceToggleButton.IsChecked == true;
-        var hadTrails = paintWorkspace.Settings.TraceVisible || paintWorkspace.Settings.TrailPointsVisible;
-        var hasTrails = visible || paintWorkspace.Settings.TrailPointsVisible;
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { TraceVisible = visible },
-            rebuildScene: hadTrails != hasTrails);
+        ApplyPaintSettings(paintWorkspace.Settings with { TraceVisible = visible });
         SessionStatusText.Text = visible
             ? "Touch traces visible"
             : "Touch traces hidden · source data unchanged";
@@ -4075,11 +4084,7 @@ public partial class MainWindow : Window
     {
         if (synchronizingPaintControls || paintWorkspace is null) return;
         var visible = TrailPointsToggleButton.IsChecked == true;
-        var hadTrails = paintWorkspace.Settings.TraceVisible || paintWorkspace.Settings.TrailPointsVisible;
-        var hasTrails = paintWorkspace.Settings.TraceVisible || visible;
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { TrailPointsVisible = visible },
-            rebuildScene: hadTrails != hasTrails);
+        ApplyPaintSettings(paintWorkspace.Settings with { TrailPointsVisible = visible });
         SessionStatusText.Text = visible
             ? "Every reported trail point is visible"
             : "Reported trail points hidden · trajectory line unchanged";
@@ -4097,25 +4102,21 @@ public partial class MainWindow : Window
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayLegendPosition>(option.Value, out var selectedPosition))
             return;
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { LegendPosition = selectedPosition },
-            rebuildScene: false);
+        ApplyPaintSettings(paintWorkspace.Settings with { LegendPosition = selectedPosition });
     }
 
     private void LegendVisibleToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         if (synchronizingPaintControls || paintWorkspace is null) return;
         ApplyPaintSettings(
-            paintWorkspace.Settings with { LegendVisible = LegendVisibleToggleButton.IsChecked == true },
-            rebuildScene: false);
+            paintWorkspace.Settings with { LegendVisible = LegendVisibleToggleButton.IsChecked == true });
     }
 
     private void LegendCompactToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
         if (synchronizingPaintControls || paintWorkspace is null) return;
         ApplyPaintSettings(
-            paintWorkspace.Settings with { LegendCollapsed = LegendCompactToggleButton.IsChecked == true },
-            rebuildScene: false);
+            paintWorkspace.Settings with { LegendCollapsed = LegendCompactToggleButton.IsChecked == true });
     }
 
     private void PaintSurface_OnLegendCollapsedChanged(object? sender, EventArgs e)
@@ -4133,8 +4134,7 @@ public partial class MainWindow : Window
                 ReverseX = ReverseXToggleButton.IsChecked == true,
                 ReverseY = ReverseYToggleButton.IsChecked == true,
                 SwapAxes = SwapAxesToggleButton.IsChecked == true,
-            },
-            rebuildScene: true);
+            });
     }
 
     private void GridStrengthToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
@@ -4142,9 +4142,7 @@ public partial class MainWindow : Window
         if (synchronizingPaintControls || paintWorkspace is null) return;
         var strong = GridStrengthToggleButton.IsChecked == true;
         GridStrengthToggleButton.Content = strong ? "Grid +" : "Grid";
-        ApplyPaintSettings(
-            paintWorkspace.Settings with { StrongGrid = strong },
-            rebuildScene: false);
+        ApplyPaintSettings(paintWorkspace.Settings with { StrongGrid = strong });
     }
 
     private void LoopInButton_OnClick(object? sender, RoutedEventArgs e)

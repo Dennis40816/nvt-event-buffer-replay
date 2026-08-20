@@ -3,12 +3,22 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
 
+[Flags]
 public enum ReplayPaintChangeImpact
 {
-    None,
-    SceneOnly,
-    GeometryCacheInvalidation,
-    WorkspaceRebuild,
+    None = 0,
+    Surface = 1 << 0,
+    Scene = 1 << 1,
+    Geometry = 1 << 2,
+    Fit = 1 << 3,
+    Inspector = 1 << 4,
+    Workspace = 1 << 5,
+
+    // Named compound values keep the public 0.0.x contract readable while allowing the UI to
+    // consume orthogonal work requirements instead of maintaining parallel boolean guesses.
+    SceneOnly = Surface | Scene,
+    GeometryCacheInvalidation = Surface | Scene | Geometry,
+    WorkspaceRebuild = Surface | Scene | Geometry | Fit | Workspace,
 }
 
 public readonly record struct ReplayPaintUpdate(
@@ -17,9 +27,13 @@ public readonly record struct ReplayPaintUpdate(
     ReplayPaintChangeImpact Impact)
 {
     public bool Changed => Impact != ReplayPaintChangeImpact.None;
+    public bool RequiresSurfaceUpdate => (Impact & ReplayPaintChangeImpact.Surface) != 0;
+    public bool RequiresSceneRebuild => (Impact & ReplayPaintChangeImpact.Scene) != 0;
     public bool RequiresGeometryCacheInvalidation =>
-        Impact is ReplayPaintChangeImpact.GeometryCacheInvalidation or ReplayPaintChangeImpact.WorkspaceRebuild;
-    public bool RequiresWorkspaceRebuild => Impact == ReplayPaintChangeImpact.WorkspaceRebuild;
+        (Impact & ReplayPaintChangeImpact.Geometry) != 0;
+    public bool RequiresFit => (Impact & ReplayPaintChangeImpact.Fit) != 0;
+    public bool RequiresInspectorRefresh => (Impact & ReplayPaintChangeImpact.Inspector) != 0;
+    public bool RequiresWorkspaceRebuild => (Impact & ReplayPaintChangeImpact.Workspace) != 0;
 }
 
 public readonly record struct ReplayPaintAnnotationUpdate(
@@ -121,7 +135,7 @@ public sealed class ReplayPaintWorkspace
         var previous = Settings;
         var impact = Classify(previous, settings);
         var nextRevision = checked(Revision + 1);
-        var nextGeometryRevision = impact == ReplayPaintChangeImpact.GeometryCacheInvalidation
+        var nextGeometryRevision = (impact & ReplayPaintChangeImpact.Geometry) != 0
             ? checked(GeometryRevision + 1)
             : GeometryRevision;
         var nextLegendPosition = LegendPlacementChanged(previous, settings)
@@ -204,10 +218,30 @@ public sealed class ReplayPaintWorkspace
 
     private static ReplayPaintChangeImpact Classify(
         ReplayPaintSettings previous,
-        ReplayPaintSettings next) =>
-        previous.SwapAxes != next.SwapAxes
-            ? ReplayPaintChangeImpact.GeometryCacheInvalidation
-            : ReplayPaintChangeImpact.SceneOnly;
+        ReplayPaintSettings next)
+    {
+        var impact = ReplayPaintChangeImpact.Surface;
+        if (previous.PointView != next.PointView)
+            impact |= ReplayPaintChangeImpact.Inspector;
+
+        var previousHasTrails = previous.TraceVisible || previous.TrailPointsVisible;
+        var nextHasTrails = next.TraceVisible || next.TrailPointsVisible;
+        if (previous.PanelExtent != next.PanelExtent ||
+            previous.TrailRetention != next.TrailRetention ||
+            previous.TrailLength != next.TrailLength ||
+            previous.TrailVisibilityStart != next.TrailVisibilityStart ||
+            previous.ReverseX != next.ReverseX ||
+            previous.ReverseY != next.ReverseY ||
+            previous.SwapAxes != next.SwapAxes ||
+            previousHasTrails != nextHasTrails)
+            impact |= ReplayPaintChangeImpact.Scene;
+
+        if (previous.SwapAxes != next.SwapAxes)
+            impact |= ReplayPaintChangeImpact.Geometry;
+        if (previous.PanelExtent != next.PanelExtent)
+            impact |= ReplayPaintChangeImpact.Fit;
+        return impact;
+    }
 
     private static bool LegendPlacementChanged(
         ReplayPaintSettings previous,
