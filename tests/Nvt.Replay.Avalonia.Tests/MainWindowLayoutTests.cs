@@ -781,6 +781,44 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Candidate_snapshot_matrix_covers_primary_workspaces_themes_and_widths()
+    {
+        if (!VisualTestCapture.CandidateMatrixEnabled) return;
+
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var frames = Required<ListBox>(window, "DecodedFramesList");
+            frames.SelectedItem = frames.Items.OfType<DecodedFrameRow>().First(row => row.Touches == 3);
+            Dispatcher.UIThread.RunJobs();
+
+            CaptureCandidateMatrix(window, "paint");
+
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => Required<TextBlock>(window, "OutputPreviewFrameText").Text != "output 0/0");
+            Dispatcher.UIThread.RunJobs();
+            CaptureCandidateMatrix(window, "output");
+
+            Required<ComboBox>(window, "OutputContentComboBox").SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
+            CaptureCandidateMatrix(window, "heatmap");
+
+            Required<Button>(window, "SettingsButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Control>(window, "SettingsPage").IsVisible);
+            CaptureCandidateMatrix(window, "settings");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public void Playback_shortcuts_are_mapped_and_disclosed_on_transport_controls()
     {
         var window = ShowWindow();
@@ -1616,6 +1654,26 @@ public sealed class MainWindowLayoutTests
             await Task.Delay(10);
         }
         Assert.True(predicate(), "Timed out while waiting for the output preview.");
+    }
+
+    private static void CaptureCandidateMatrix(MainWindow window, string workspace)
+    {
+        var application = Assert.IsType<App>(Application.Current);
+        foreach (var snapshot in new[]
+                 {
+                     (Width: 1920d, Height: 1080d, Theme: ThemeVariant.Dark, ThemeName: "dark"),
+                     (Width: 1920d, Height: 1080d, Theme: ThemeVariant.Light, ThemeName: "light"),
+                     (Width: 1180d, Height: 720d, Theme: ThemeVariant.Dark, ThemeName: "dark"),
+                     (Width: 1180d, Height: 720d, Theme: ThemeVariant.Light, ThemeName: "light")
+                 })
+        {
+            window.Width = snapshot.Width;
+            window.Height = snapshot.Height;
+            application.RequestedThemeVariant = snapshot.Theme;
+            VisualTestCapture.ProcessCandidate(
+                window,
+                $"{workspace}-{snapshot.Width:0}x{snapshot.Height:0}-{snapshot.ThemeName}.png");
+        }
     }
 
     private static string CaptureHash(Window window, string artifactName) =>
