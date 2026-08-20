@@ -2933,6 +2933,16 @@ public sealed class MainWindowLayoutTests
             var recorded = SettingsControl<RadioButton>(window, "DefaultRecordedTimingRadioButton");
             Assert.InRange(Math.Abs(framePaced.Bounds.Width - recorded.Bounds.Width), 0, 1);
             Assert.Equal(framePaced.Bounds.Height, recorded.Bounds.Height);
+            var frameIndicator = framePaced.GetVisualDescendants()
+                .OfType<Border>()
+                .Single(control => control.Name == "SelectionIndicator");
+            var recordedIndicator = recorded.GetVisualDescendants()
+                .OfType<Border>()
+                .Single(control => control.Name == "SelectionIndicator");
+            var frameIndicatorBounds = BoundsInside(frameIndicator, framePaced);
+            var recordedIndicatorBounds = BoundsInside(recordedIndicator, recorded);
+            Assert.InRange(Math.Abs((frameIndicatorBounds.Y + (frameIndicatorBounds.Height / 2)) - (framePaced.Bounds.Height / 2)), 0, 0.5);
+            Assert.InRange(Math.Abs((recordedIndicatorBounds.Y + (recordedIndicatorBounds.Height / 2)) - (recorded.Bounds.Height / 2)), 0, 0.5);
             Assert.Equal("120 Hz", SettingsControl<TextBlock>(window, "DefaultFrameRateText").Text);
             var playbackNav = SettingsControl<Button>(window, "PlaybackNavButton");
             playbackNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -2950,6 +2960,45 @@ public sealed class MainWindowLayoutTests
             window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.None, null);
             Dispatcher.UIThread.RunJobs();
             Assert.False(settings.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Paint_trace_length_is_only_shown_for_recent_trails()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var mode = Required<ComboBox>(window, "TrailModeComboBox");
+            var group = Required<Border>(window, "TrailLengthGroup");
+            var length = Required<ComboBox>(window, "TrailLengthComboBox");
+            Assert.Equal("Trace length", Required<TextBlock>(window, "TrailLengthLabel").Text);
+            Assert.False(group.IsVisible);
+
+            mode.SelectedItem = mode.Items.OfType<SelectOption>()
+                .Single(option => option.Value == nameof(ReplayTrailMode.Recent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(group.IsVisible);
+            var selectedLength = length.SelectedItem;
+
+            mode.SelectedItem = mode.Items.OfType<SelectOption>()
+                .Single(option => option.Value == nameof(ReplayTrailMode.Persistent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(group.IsVisible);
+
+            mode.SelectedItem = mode.Items.OfType<SelectOption>()
+                .Single(option => option.Value == nameof(ReplayTrailMode.Recent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(group.IsVisible);
+            Assert.Same(selectedLength, length.SelectedItem);
         }
         finally
         {

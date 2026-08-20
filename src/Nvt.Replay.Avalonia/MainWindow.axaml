@@ -314,9 +314,9 @@
                         </ComboBox>
                       </Grid>
                     </Border>
-                    <Border Classes="liveSettingGroup">
+                    <Border x:Name="TrailLengthGroup" Classes="liveSettingGroup" IsVisible="False">
                       <Grid ColumnDefinitions="Auto,1,Auto">
-                        <TextBlock x:Name="TrailLengthLabel" Margin="12,0" Text="Length" Classes="liveSettingLabel" VerticalAlignment="Center" />
+                        <TextBlock x:Name="TrailLengthLabel" Margin="12,0" Text="Trace length" Classes="liveSettingLabel" VerticalAlignment="Center" />
                         <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderBrush}" />
                         <ComboBox x:Name="TrailLengthComboBox" Grid.Column="2" Classes="canvasControl" Height="34" BorderThickness="0" Background="Transparent" SelectedIndex="5" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
                         <ComboBoxItem Content="2" Tag="2" />

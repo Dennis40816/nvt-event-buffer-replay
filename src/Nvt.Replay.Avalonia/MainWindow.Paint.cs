@@ -150,8 +150,7 @@ public partial class MainWindow : Window
             TrailLengthComboBox.SelectedItem = TrailLengthComboBox.Items
                 .OfType<ComboBoxItem>()
                 .First(item => item.Tag?.ToString() == settings.TrailLength.ToString(CultureInfo.InvariantCulture));
-            TrailLengthComboBox.IsVisible = true;
-            TrailLengthLabel.IsVisible = true;
+            TrailLengthGroup.IsVisible = settings.TrailRetention == ReplayTrailMode.Recent;
             PanelWidthTextBox.Text = settings.PanelExtent.MaximumX.ToString("0", CultureInfo.InvariantCulture);
             PanelHeightTextBox.Text = settings.PanelExtent.MaximumY.ToString("0", CultureInfo.InvariantCulture);
             TraceToggleButton.IsChecked = settings.TraceVisible;
@@ -265,10 +264,7 @@ public partial class MainWindow : Window
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayTrailMode>(option.Value, out var selectedMode))
             return;
-        if (TrailLengthComboBox is not null)
-            TrailLengthComboBox.IsVisible = true;
-        if (TrailLengthLabel is not null)
-            TrailLengthLabel.IsVisible = true;
+        TrailLengthGroup.IsVisible = selectedMode == ReplayTrailMode.Recent;
         ApplyPaintSettings(paintWorkspace.Settings with { TrailRetention = selectedMode });
     }
 
