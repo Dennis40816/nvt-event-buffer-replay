@@ -138,6 +138,123 @@ public sealed class CaptureDecodeControllerTests
         }
     }
 
+    [Fact]
+    public async Task Prepared_capture_skips_loading_and_preserves_every_source_reference()
+    {
+        var cancellationToken = CancellationToken.None;
+        var capture = await CaptureSession.LoadAsync(
+            Fixture("common-0x83-asil-lifecycle.nds.txt"),
+            cancellationToken: cancellationToken);
+        using var controller = new CaptureDecodeController();
+        var updates = new List<CaptureDecodeProgress>();
+
+        var result = await controller.RunAsync(
+            new PreparedCaptureDecodeRequest(
+                capture,
+                new FormatDecodeRequest("0x83", "51927")),
+            new InlineProgress<CaptureDecodeProgress>(updates.Add),
+            cancellationToken);
+
+        Assert.Same(capture, result.LoadedCapture);
+        Assert.Same(capture.Records, result.Capture.Records);
+        Assert.Equal(
+            [
+                CaptureDecodePhase.SelectingFormat,
+                CaptureDecodePhase.ProjectingRegisters,
+                CaptureDecodePhase.DecodingFrames,
+                CaptureDecodePhase.BuildingWorkspace,
+                CaptureDecodePhase.Ready,
+            ],
+            updates.Select(update => update.Phase).Distinct());
+        Assert.DoesNotContain(updates, update => update.Phase is
+            CaptureDecodePhase.ProbingSource or
+            CaptureDecodePhase.HashingSource or
+            CaptureDecodePhase.IndexingRecords or
+            CaptureDecodePhase.SourceReady);
+        for (var index = 0; index < capture.Records.Count; index++)
+        {
+            var loaded = capture.Records[index];
+            var projected = result.Capture.Records[index];
+            Assert.Same(loaded, projected);
+            Assert.Same(loaded.Data, projected.Data);
+            Assert.Same(loaded.SourceFields, projected.SourceFields);
+            Assert.Equal(loaded.RawText, projected.RawText);
+            Assert.Equal(loaded.StableId, projected.StableId);
+            Assert.Equal(loaded.Location, projected.Location);
+        }
+    }
+
+    [Fact]
+    public async Task Prepared_and_path_requests_share_latest_wins_generation_and_publication()
+    {
+        var cancellationToken = CancellationToken.None;
+        var capture = await CaptureSession.LoadAsync(
+            Fixture("common-0x83-asil-lifecycle.nds.txt"),
+            cancellationToken: cancellationToken);
+        using var controller = new CaptureDecodeController();
+        using var blockingProgress = new BlockingProgress(
+            cancellationToken,
+            CaptureDecodePhase.Ready);
+
+        var pathRequest = controller.RunAsync(CommonRequest(), blockingProgress, cancellationToken);
+        Assert.True(blockingProgress.Entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+
+        CaptureDecodeResult prepared;
+        try
+        {
+            prepared = await controller.RunAsync(
+                new PreparedCaptureDecodeRequest(capture, new FormatDecodeRequest("0x83")),
+                cancellationToken: cancellationToken);
+        }
+        finally
+        {
+            blockingProgress.Release.Set();
+        }
+
+        var stale = await Assert.ThrowsAsync<CaptureDecodeSupersededException>(() => pathRequest);
+        Assert.Equal(1, stale.Generation);
+        Assert.Equal(2, prepared.Generation);
+        Assert.Same(prepared, controller.LastSuccessfulResult);
+        Assert.Null(controller.ActiveGeneration);
+    }
+
+    [Fact]
+    public async Task Prepared_capture_cancellation_and_failure_keep_the_last_successful_result()
+    {
+        var cancellationToken = CancellationToken.None;
+        var capture = await CaptureSession.LoadAsync(
+            Fixture("common-0x83-asil-lifecycle.nds.txt"),
+            cancellationToken: cancellationToken);
+        using var controller = new CaptureDecodeController();
+        var baseline = await controller.RunAsync(
+            new PreparedCaptureDecodeRequest(capture, new FormatDecodeRequest("0x83")),
+            cancellationToken: cancellationToken);
+
+        using (var blockingProgress = new BlockingProgress(
+                   cancellationToken,
+                   CaptureDecodePhase.SelectingFormat))
+        {
+            var cancelled = controller.RunAsync(
+                new PreparedCaptureDecodeRequest(capture, new FormatDecodeRequest("0x83")),
+                blockingProgress,
+                cancellationToken);
+            Assert.True(blockingProgress.Entered.Wait(TimeSpan.FromSeconds(10), cancellationToken));
+            Assert.True(controller.CancelCurrent());
+            blockingProgress.Release.Set();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled);
+        }
+        Assert.Same(baseline, controller.LastSuccessfulResult);
+
+        var error = await Assert.ThrowsAsync<CaptureDecodeConfigurationException>(() =>
+            controller.RunAsync(
+                new PreparedCaptureDecodeRequest(capture, new FormatDecodeRequest("0x86")),
+                cancellationToken: cancellationToken));
+
+        Assert.Contains("Unsupported Event Buffer Version", error.Message, StringComparison.Ordinal);
+        Assert.Same(baseline, controller.LastSuccessfulResult);
+        Assert.Null(controller.ActiveGeneration);
+    }
+
     private static CaptureDecodeRequest CommonRequest() => new(
         Fixture("common-0x83-asil-lifecycle.nds.txt"),
         new FormatDecodeRequest("0x83"));

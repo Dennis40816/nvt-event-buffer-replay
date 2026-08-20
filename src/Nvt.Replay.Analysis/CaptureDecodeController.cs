@@ -6,6 +6,11 @@ public sealed record CaptureDecodeRequest(
     string? SourceAdapterId = null,
     int WorkspaceProgressInterval = 1024);
 
+public sealed record PreparedCaptureDecodeRequest(
+    CaptureSession Capture,
+    FormatDecodeRequest Format,
+    int WorkspaceProgressInterval = 1024);
+
 public enum CaptureDecodePhase
 {
     ProbingSource,
@@ -90,6 +95,39 @@ public sealed class CaptureDecodeController : IDisposable
     {
         Validate(request);
 
+        return StartOperation(
+            cancellationToken,
+            operation => ExecuteAsync(
+                operation,
+                request.Format,
+                request.WorkspaceProgressInterval,
+                progress,
+                token => LoadCaptureAsync(operation, request, progress, token)));
+    }
+
+    public Task<CaptureDecodeResult> RunAsync(
+        PreparedCaptureDecodeRequest request,
+        IProgress<CaptureDecodeProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        Validate(request);
+
+        return StartOperation(
+            cancellationToken,
+            operation => ExecuteAsync(
+                operation,
+                request.Format,
+                request.WorkspaceProgressInterval,
+                progress,
+                _ => Task.FromResult(request.Capture)));
+    }
+
+    private Task<CaptureDecodeResult> StartOperation(
+        CancellationToken cancellationToken,
+        Func<ActiveOperation, Task<CaptureDecodeResult>> execute)
+    {
+        ArgumentNullException.ThrowIfNull(execute);
+
         ActiveOperation operation;
         ActiveOperation? superseded;
         lock (gate)
@@ -104,7 +142,7 @@ public sealed class CaptureDecodeController : IDisposable
 
         TryCancel(superseded);
         return Task.Run(
-            () => ExecuteAsync(operation, request, progress),
+            () => execute(operation),
             CancellationToken.None);
     }
 
@@ -137,27 +175,19 @@ public sealed class CaptureDecodeController : IDisposable
 
     private async Task<CaptureDecodeResult> ExecuteAsync(
         ActiveOperation operation,
-        CaptureDecodeRequest request,
-        IProgress<CaptureDecodeProgress>? progress)
+        FormatDecodeRequest format,
+        int workspaceProgressInterval,
+        IProgress<CaptureDecodeProgress>? progress,
+        Func<CancellationToken, Task<CaptureSession>> captureProvider)
     {
         var cancellationToken = operation.Cancellation.Token;
         try
         {
-            var loadProgress = progress is null
-                ? null
-                : new ForwardingProgress<CaptureLoadProgress>(item => progress.Report(new CaptureDecodeProgress(
-                    operation.Generation,
-                    LoadPhase(item.Phase),
-                    item.RecordsRead)));
-            var loadedCapture = await CaptureSession.LoadAsync(
-                request.SourcePath,
-                loadProgress,
-                cancellationToken,
-                request.SourceAdapterId).ConfigureAwait(false);
+            var loadedCapture = await captureProvider(cancellationToken).ConfigureAwait(false);
 
             cancellationToken.ThrowIfCancellationRequested();
             Report(progress, operation.Generation, CaptureDecodePhase.SelectingFormat);
-            if (!ExecutableFormatRegistry.TryResolve(request.Format, out var selection, out var error))
+            if (!ExecutableFormatRegistry.TryResolve(format, out var selection, out var error))
                 throw new CaptureDecodeConfigurationException(error);
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -179,7 +209,7 @@ public sealed class CaptureDecodeController : IDisposable
                         item.CompletedFrames,
                         item.TotalFrames)));
             var workspaceBuild = await workspaceBuilder.BuildAsync(
-                new ReplayWorkspaceBuildRequest(decoded.Replay, request.WorkspaceProgressInterval),
+                new ReplayWorkspaceBuildRequest(decoded.Replay, workspaceProgressInterval),
                 workspaceProgress,
                 cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
@@ -232,6 +262,36 @@ public sealed class CaptureDecodeController : IDisposable
             throw new ArgumentOutOfRangeException(
                 nameof(request),
                 "Workspace progress interval must be positive.");
+    }
+
+    private static void Validate(PreparedCaptureDecodeRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Capture);
+        ArgumentNullException.ThrowIfNull(request.Format);
+        if (request.WorkspaceProgressInterval <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(request),
+                "Workspace progress interval must be positive.");
+    }
+
+    private static Task<CaptureSession> LoadCaptureAsync(
+        ActiveOperation operation,
+        CaptureDecodeRequest request,
+        IProgress<CaptureDecodeProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        var loadProgress = progress is null
+            ? null
+            : new ForwardingProgress<CaptureLoadProgress>(item => progress.Report(new CaptureDecodeProgress(
+                operation.Generation,
+                LoadPhase(item.Phase),
+                item.RecordsRead)));
+        return CaptureSession.LoadAsync(
+            request.SourcePath,
+            loadProgress,
+            cancellationToken,
+            request.SourceAdapterId);
     }
 
     private static CaptureDecodePhase LoadPhase(string phase) => phase switch
