@@ -1550,6 +1550,14 @@ public sealed class MainWindowLayoutTests
             Assert.True(Required<Button>(window, "OutputExportCancelButton").IsEnabled);
             Assert.False(Required<Button>(window, "LoadButton").IsEnabled);
             Assert.Contains("12%", Required<TextBlock>(window, "OutputExportProgressText").Text);
+            var outputInfo = Required<Border>(window, "OutputInfoPanel");
+            Assert.Contains(
+                Required<Border>(window, "OutputExportActivityPanel"),
+                outputInfo.GetVisualDescendants());
+            Assert.Equal("\uE711", Required<Button>(window, "OutputExportCancelButton").Content);
+            var outputLayout = Required<Grid>(window, "OutputPageLayout");
+            Assert.Equal(GridUnitType.Pixel, outputLayout.ColumnDefinitions[2].Width.GridUnitType);
+            Assert.Equal(372, outputLayout.ColumnDefinitions[2].Width.Value);
 
             tabs.SelectedItem = Required<TabItem>(window, "PaintTab");
             Dispatcher.UIThread.RunJobs();
@@ -1576,6 +1584,72 @@ public sealed class MainWindowLayoutTests
         finally
         {
             window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Paint_mark_quick_rail_shows_time_and_frame_seeks_and_removes_exact_mark()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var mark = Required<Button>(window, "AddMarkerButton");
+            mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            for (var index = 0; index < 5; index++)
+                Required<Button>(window, "NextFrameButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            var rail = Required<Border>(window, "PaintMarkerRailBorder");
+            var list = Required<ListBox>(window, "PaintMarkerListBox");
+            var rows = list.Items.OfType<PaintMarkerRow>().ToArray();
+            Assert.True(rail.IsVisible);
+            Assert.Equal(2, rows.Length);
+            Assert.Equal("Frame 1", rows[0].FrameLabel);
+            Assert.Equal("00:00.000", rows[0].TimeLabel);
+            Assert.Equal("Frame 6", rows[1].FrameLabel);
+
+            list.SelectedItem = rows[0];
+            Dispatcher.UIThread.RunJobs();
+            Assert.StartsWith("1 /", Required<TextBlock>(window, "InspectorLogicalText").Text, StringComparison.Ordinal);
+
+            var remove = window.GetVisualDescendants()
+                .OfType<Button>()
+                .Single(button => button.Classes.Contains("paintMarkerRemove") && Equals(button.Tag, rows[0].MarkerId));
+            remove.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Single(list.Items.OfType<PaintMarkerRow>());
+            Assert.DoesNotContain(rows[0].MarkerId, window.ReviewWorkspace!.Markers.Select(marker => marker.Id));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Successful_export_reveal_opens_the_containing_output_folder()
+    {
+        var window = ShowWindow();
+        var directory = Path.Combine(Path.GetTempPath(), $"nvt-reveal-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var output = Path.Combine(directory, "replay.mp4");
+            File.WriteAllText(output, "test");
+            string? revealed = null;
+            window.OutputFolderRevealActionForTesting = path => revealed = path;
+
+            Assert.True(window.RevealOutputFolder(output));
+            Assert.Equal(Path.GetFullPath(directory), revealed);
+        }
+        finally
+        {
+            window.Close();
+            Directory.Delete(directory, recursive: true);
         }
     }
 
@@ -1867,7 +1941,11 @@ public sealed class MainWindowLayoutTests
             var outputLayout = Required<Grid>(window, "OutputPageLayout");
             var settingsRail = Required<Border>(window, "OutputSettingsRailBorder");
             var railFraction = settingsRail.Bounds.Width / outputLayout.Bounds.Width;
-            Assert.InRange(railFraction, 0.27, 0.32);
+            Assert.Equal(372, settingsRail.Bounds.Width);
+            Assert.InRange(railFraction, 0.18, 0.22);
+            Assert.True(
+                Required<ReplayVideoPreviewSurface>(window, "OutputVideoPreview").Bounds.Width > settingsRail.Bounds.Width * 3,
+                "Output preview should remain the dominant workspace instead of yielding empty width to settings.");
             Assert.False(Required<Border>(window, "ReplayTransportBorder").IsVisible);
             Assert.False(Required<Border>(window, "InspectorRailBorder").IsVisible);
             CaptureHash(window, "35-contract-output-1920x1080-dark.png");

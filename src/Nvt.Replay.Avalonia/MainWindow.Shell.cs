@@ -176,6 +176,7 @@ public partial class MainWindow : Window
                 TimelineStatusText.Text = "Paused · Space play/pause · ←/→ step · drag Loop handles to set range";
             ApplyResponsiveRails(Bounds.Width);
         }
+        RefreshPaintMarkerRailVisibility();
     }
 
     private void SetBusy(bool busy, string status)

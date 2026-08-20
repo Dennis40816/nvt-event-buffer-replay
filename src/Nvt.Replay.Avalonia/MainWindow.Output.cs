@@ -59,6 +59,7 @@ public partial class MainWindow : Window
     internal int OutputVideoRenderCount => OutputVideoPreview.RgbRenderCount;
     internal bool OutputVideoPreviewDirty => outputVideoPreviewDirty;
     internal CaptureAnalysisReport? CurrentOutputReport => currentOutputReport;
+    internal Action<string>? OutputFolderRevealActionForTesting { get; set; }
     internal OutputReportInputs CaptureCurrentOutputReportInputsForTesting(AnalysisRange range) =>
         CaptureOutputReportInputs(range);
     internal string OutputReplayIdentityForTesting => OutputReplayIdentity();
@@ -505,6 +506,7 @@ public partial class MainWindow : Window
             SessionStatusText.Text = result.Kind == ReplayExportKind.Mp4
                 ? "Replay MP4 exported"
                 : "FFmpeg unavailable · PNG sequence exported safely";
+            RevealOutputFolder(result.OutputPath);
         }
         else if (completed.Status == ExportJobStatus.Cancelled)
         {
@@ -513,6 +515,38 @@ public partial class MainWindow : Window
         else if (completed.Status == ExportJobStatus.Failed)
         {
             SessionStatusText.Text = $"Replay export failed · {completed.Error?.Message ?? "Unknown export error"}";
+        }
+    }
+
+    internal bool RevealOutputFolder(string outputPath)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(outputPath);
+            var directory = Directory.Exists(fullPath)
+                ? fullPath
+                : Path.GetDirectoryName(fullPath);
+            if (directory is null || !Directory.Exists(directory)) return false;
+            if (OutputFolderRevealActionForTesting is { } reveal)
+            {
+                reveal(directory);
+                return true;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = directory,
+                UseShellExecute = true,
+            });
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is IOException or
+            UnauthorizedAccessException or
+            InvalidOperationException or
+            System.ComponentModel.Win32Exception)
+        {
+            return false;
         }
     }
 
@@ -544,6 +578,7 @@ public partial class MainWindow : Window
         var exporting = snapshot.IsActive;
         LoadButton.IsEnabled = !exporting && !operationInProgress;
         OutputExportActivityPanel.IsVisible = exporting;
+        ExportSelectedOutputButton.IsVisible = !exporting;
         OutputExportCancelButton.IsEnabled = snapshot.Status == ExportJobStatus.Running;
         if (exporting)
         {

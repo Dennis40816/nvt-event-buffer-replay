@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.Styling;
@@ -181,6 +182,82 @@ public sealed class AdvancedWorkspaceSnapshotTests
         }
     }
 
+    [AvaloniaFact]
+    public async Task Paint_marker_quick_navigation_stays_compact_and_actionable()
+    {
+        var window = ShowWindow(1920, 1080, ThemeVariant.Dark);
+        try
+        {
+            await window.OpenCaptureAsync(Fixture("kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            RaiseClick(Required<Button>(window, "AddMarkerButton"));
+            for (var index = 0; index < 6; index++)
+                RaiseClick(Required<Button>(window, "NextFrameButton"));
+            RaiseClick(Required<Button>(window, "AddMarkerButton"));
+            Stabilize(window);
+
+            var rail = Required<Border>(window, "PaintMarkerRailBorder");
+            var rows = Required<ListBox>(window, "PaintMarkerListBox").Items.OfType<PaintMarkerRow>().ToArray();
+            Assert.True(rail.IsVisible);
+            Assert.False(Required<Border>(window, "ReviewRailBorder").IsVisible);
+            Assert.Equal(2, rows.Length);
+            Assert.Equal(["Frame 1", "Frame 7"], rows.Select(row => row.FrameLabel));
+            Assert.Equal(["00:00.000", "00:00.600"], rows.Select(row => row.TimeLabel));
+            Assert.Equal(212, rail.Bounds.Width);
+            AssertInside(Required<ListBox>(window, "PaintMarkerListBox"), rail);
+
+            VisualTestCapture.ProcessSnapshot(window, "paint-markers-1920x1080-dark.png");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Output_export_progress_uses_the_info_rail_without_reducing_preview_controls()
+    {
+        var window = ShowWindow(1920, 1080, ThemeVariant.Dark);
+        ExportJobHandle? handle = null;
+        try
+        {
+            await window.OpenCaptureAsync(Fixture("kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
+            var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            handle = window.StartOutputExportJob(async (cancellationToken, progress) =>
+            {
+                progress.Report(new ReplayExportProgress(46, 120, "Rendering and encoding MP4"));
+                started.SetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                throw new InvalidOperationException("Unreachable");
+            });
+            await started.Task;
+            await WaitUntilAsync(() => Required<Border>(window, "OutputExportActivityPanel").IsVisible);
+            Stabilize(window);
+
+            var info = Required<Border>(window, "OutputInfoPanel");
+            AssertInside(Required<Border>(window, "OutputExportActivityPanel"), info);
+            AssertInside(Required<Button>(window, "OutputExportCancelButton"), info);
+            Assert.False(Required<Button>(window, "ExportSelectedOutputButton").IsVisible);
+            Assert.Equal("\uE711", Required<Button>(window, "OutputExportCancelButton").Content);
+            Assert.True(Required<ReplayVideoPreviewSurface>(window, "OutputVideoPreview").Bounds.Width > info.Bounds.Width * 3);
+
+            // The Fluent progress indicator intentionally animates its highlight.
+            // Keep this state under semantic layout assertions instead of an exact-pixel gate.
+        }
+        finally
+        {
+            if (handle is not null)
+            {
+                window.CancelOutputExportJob();
+                await handle.Completion;
+            }
+            window.Close();
+        }
+    }
+
     private static string Fixture(string fileName) => Path.Combine(AppContext.BaseDirectory, "fixtures", fileName);
 
     private static MainWindow ShowWindow(double width, double height, ThemeVariant theme)
@@ -217,8 +294,20 @@ public sealed class AdvancedWorkspaceSnapshotTests
 
     private static void Stabilize(Window window)
     {
+        window.MouseMove(new Point(4, 88));
         Dispatcher.UIThread.RunJobs();
         VisualTestCapture.Stabilize(window);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> predicate)
+    {
+        for (var attempt = 0; attempt < 400; attempt++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            if (predicate()) return;
+            await Task.Delay(10);
+        }
+        throw new TimeoutException("The expected UI state did not become available.");
     }
 
     private static void AssertInside(Control control, Visual ancestor)

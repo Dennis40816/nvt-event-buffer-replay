@@ -190,6 +190,12 @@ public sealed record ReviewOccurrenceRow(int Number, ReviewOccurrence Occurrence
     public override string ToString() => $"#{Number} · {FrameAndSourceLabel}";
 }
 
+public sealed record PaintMarkerRow(
+    string MarkerId,
+    int LogicalIndex,
+    string FrameLabel,
+    string TimeLabel);
+
 public static class EngineeringDisplayText
 {
     private const char ZeroWidthSpace = '\u200B';

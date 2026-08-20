@@ -335,7 +335,50 @@
                   </StackPanel>
                 </Border>
 
-                <Grid Grid.Row="1">
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+                <Border x:Name="PaintMarkerRailBorder"
+                        Grid.Column="0"
+                        Width="212"
+                        IsVisible="False"
+                        Background="{DynamicResource PanelBrush}"
+                        BorderBrush="{DynamicResource StrongBorderBrush}"
+                        BorderThickness="0,0,1,0">
+                  <Grid RowDefinitions="44,*">
+                    <Grid Margin="14,0,10,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                      <TextBlock Text="MARKS" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.45" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                      <TextBlock x:Name="PaintMarkerCountText" Grid.Column="1" Text="0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                    <ListBox x:Name="PaintMarkerListBox"
+                             Classes="paintMarkerList"
+                             Grid.Row="1"
+                             SelectionChanged="PaintMarkerListBox_OnSelectionChanged"
+                             AutomationProperties.Name="Paint marker quick navigation">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PaintMarkerRow">
+                          <Grid Classes="paintMarkerRow" ColumnDefinitions="34,*" MinHeight="54">
+                            <Button Grid.Column="0"
+                                    Classes="paintMarkerRemove"
+                                    Width="30"
+                                    Height="30"
+                                    Padding="0"
+                                    Content="&#xE733;"
+                                    FontFamily="Segoe Fluent Icons"
+                                    FontSize="15"
+                                    Tag="{Binding MarkerId}"
+                                    Click="PaintMarkerRemoveButton_OnClick"
+                                    ToolTip.Tip="Remove this mark"
+                                    AutomationProperties.Name="Remove mark" />
+                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding FrameLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                              <TextBlock Text="{Binding TimeLabel}" FontFamily="Cascadia Mono" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                            </StackPanel>
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+                <Grid Grid.Column="1">
                 <Border Background="{DynamicResource CanvasBrush}">
                   <controls:ReplayPaintSurface x:Name="PaintSurface" ZoomChanged="PaintSurface_OnZoomChanged" AutomationProperties.Name="Touch replay Paint surface" />
                 </Border>
@@ -385,6 +428,7 @@
                   <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
                 </Border>
                 </Grid>
+                </Grid>
             </Grid>
           </TabItem>
 
@@ -395,7 +439,7 @@
                 <TextBlock Text="OUTPUT" VerticalAlignment="Center" />
               </StackPanel>
             </TabItem.Header>
-            <Grid Margin="0" ColumnDefinitions="7*,12,3*">
+            <Grid Margin="0" ColumnDefinitions="*,12,372">
                 <Grid x:Name="OutputVideoPanel" Grid.ColumnSpan="3">
                   <Border Background="{DynamicResource CanvasBrush}" BorderThickness="0" Padding="0">
                     <Grid RowDefinitions="0,0,*">
@@ -406,7 +450,7 @@
                         </StackPanel>
                         <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Text="2304 × 1280  /  120 FPS  /  1×" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
                       </Grid>
-                      <Grid x:Name="OutputPageLayout" Grid.Row="2" ColumnDefinitions="7*,12,3*">
+                      <Grid x:Name="OutputPageLayout" Grid.Row="2" ColumnDefinitions="*,12,372">
                         <Grid RowDefinitions="*,8,60,8,Auto">
                           <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
                             <Grid MinHeight="360">
@@ -461,16 +505,6 @@
                                 </StackPanel>
                                 <Button x:Name="OutputExportContinueButton" Grid.Column="2" Classes="primary" Content="Export anyway" Click="OutputExportContinueButton_OnClick" AutomationProperties.Name="Confirm long MP4 export" />
                                 <Button x:Name="OutputExportDismissButton" Grid.Column="4" Classes="ghost" Content="Cancel" Click="OutputExportDismissButton_OnClick" AutomationProperties.Name="Dismiss long MP4 export warning" />
-                              </Grid>
-                            </Border>
-                            <Border x:Name="OutputExportActivityPanel" IsVisible="False" Padding="12" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" CornerRadius="4">
-                              <Grid RowDefinitions="Auto,8,5" ColumnDefinitions="*,12,Auto">
-                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                  <TextBlock x:Name="OutputExportStatusText" Text="Preparing MP4 export" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                                  <TextBlock x:Name="OutputExportProgressText" Text="0%" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <Button x:Name="OutputExportCancelButton" Grid.Column="2" Grid.RowSpan="3" Classes="ghost" Content="Cancel" Click="OutputExportCancelButton_OnClick" AutomationProperties.Name="Cancel MP4 export" />
-                                <ProgressBar x:Name="OutputExportProgressBar" Grid.Row="2" Grid.ColumnSpan="2" Minimum="0" Maximum="100" Value="0" IsIndeterminate="False" />
                               </Grid>
                             </Border>
                           </Grid>
@@ -544,7 +578,7 @@
                   </Border>
                 </Grid>
 
-                <Grid x:Name="OutputHeatmapPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="7*,12,3*">
+                <Grid x:Name="OutputHeatmapPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="*,12,372">
                   <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
                     <Grid RowDefinitions="Auto,14,*,12,Auto">
                       <Grid ColumnDefinitions="*,Auto">
@@ -626,7 +660,7 @@
                   </Border>
                 </Grid>
 
-                <Grid x:Name="OutputPointPlotPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="7*,12,3*">
+                <Grid x:Name="OutputPointPlotPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="*,12,372">
                   <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
                     <Grid RowDefinitions="Auto,14,*,12,Auto">
                       <Grid ColumnDefinitions="*,Auto">
@@ -677,7 +711,7 @@
                   </Border>
                 </Grid>
 
-                <Grid x:Name="OutputPackagePanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="7*,12,3*">
+                <Grid x:Name="OutputPackagePanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="*,12,372">
                   <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
                     <StackPanel Spacing="12">
                       <StackPanel Spacing="4">
@@ -745,7 +779,8 @@
                   </Grid>
                 </Border>
 
-                <Border Grid.Column="2"
+                <Border x:Name="OutputInfoPanel"
+                        Grid.Column="2"
                         ZIndex="10"
                         Height="204"
                         VerticalAlignment="Bottom"
@@ -753,7 +788,7 @@
                         BorderBrush="{DynamicResource StrongBorderBrush}"
                         BorderThickness="1,1,0,0"
                         Padding="14,12,10,10">
-                  <Grid RowDefinitions="Auto,8,Auto,6,Auto,12,*">
+                  <Grid RowDefinitions="Auto,8,Auto,6,Auto,12,Auto,12,*">
                     <TextBlock Text="OUTPUT INFO" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.45" Foreground="{DynamicResource MutedTextBrush}" />
                     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" RowDefinitions="Auto,5,Auto,5,Auto">
                       <TextBlock Text="Format" Classes="outputInfoLabel" />
@@ -764,7 +799,29 @@
                       <TextBlock x:Name="OutputInfoSizeText" Grid.Row="4" Grid.Column="1" Text="Waiting for preview" Classes="outputInfoValue" ToolTip.Tip="H.264 and PNG sizes vary with image content and encoder settings. Exact size appears after export." />
                     </Grid>
                     <TextBlock x:Name="OutputInfoDetailText" Grid.Row="4" Text="120 FPS · range - · duration -" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                    <Button x:Name="ExportSelectedOutputButton" Grid.Row="6" Classes="primary" Height="36" MinWidth="132" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
+                    <Border x:Name="OutputExportActivityPanel" Grid.Row="6" IsVisible="False" Padding="0,10,0,0" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
+                      <Grid RowDefinitions="Auto,7,4" ColumnDefinitions="*,8,32">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock x:Name="OutputExportStatusText" Text="Preparing MP4 export" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <TextBlock x:Name="OutputExportProgressText" Grid.Column="1" Margin="8,0,0,0" Text="0%" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                        </Grid>
+                        <Button x:Name="OutputExportCancelButton"
+                                Grid.Column="2"
+                                Grid.RowSpan="3"
+                                Classes="inspectorIcon"
+                                Width="32"
+                                Height="32"
+                                Padding="0"
+                                Content="&#xE711;"
+                                FontFamily="Segoe Fluent Icons"
+                                FontSize="14"
+                                Click="OutputExportCancelButton_OnClick"
+                                ToolTip.Tip="Cancel MP4 export"
+                                AutomationProperties.Name="Cancel MP4 export" />
+                        <ProgressBar x:Name="OutputExportProgressBar" Grid.Row="2" Minimum="0" Maximum="100" Value="0" IsIndeterminate="False" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BorderBrush}" />
+                      </Grid>
+                    </Border>
+                    <Button x:Name="ExportSelectedOutputButton" Grid.Row="8" Classes="primary" Height="36" MinWidth="132" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
                   </Grid>
                 </Border>
             </Grid>

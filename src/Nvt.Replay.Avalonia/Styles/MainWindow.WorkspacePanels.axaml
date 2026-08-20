@@ -21,4 +21,32 @@
       <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <Style Selector="Grid.paintMarkerRow">
+      <Setter Property="Margin" Value="8,0" />
+    </Style>
+    <Style Selector="ListBox.paintMarkerList ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.paintMarkerList ListBoxItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+    </Style>
+    <Style Selector="ListBox.paintMarkerList ListBoxItem:selected">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+    </Style>
+    <Style Selector="ListBox.paintMarkerList ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.paintMarkerRemove">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+      <Setter Property="CornerRadius" Value="3" />
+    </Style>
+    <Style Selector="Button.paintMarkerRemove:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerBrush}" />
+    </Style>
 </Styles>

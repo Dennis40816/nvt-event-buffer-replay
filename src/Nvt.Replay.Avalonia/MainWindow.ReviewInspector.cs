@@ -30,6 +30,7 @@ public partial class MainWindow : Window
 {
     private ReviewInspectorWorkspace? reviewWorkspace;
     private ReviewGroupRow[] reviewRows = [];
+    private PaintMarkerRow[] paintMarkerRows = [];
     private bool reviewRailCollapsed;
     private bool inspectorRailCollapsed;
     private bool? reviewRailUserPreference;
@@ -39,6 +40,7 @@ public partial class MainWindow : Window
     private ITouchReplaySnapshot? currentInspectorSnapshot;
     private InspectorFramePresentation? currentInspectorPresentation;
     private bool synchronizingReviewSelection;
+    private bool synchronizingPaintMarkerSelection;
     private double expandedInspectorRailWidth = 286;
     private const double ExpandedReviewRailWidth = 260;
     private const double DefaultInspectorRailWidth = 286;
@@ -108,6 +110,25 @@ public partial class MainWindow : Window
         ReviewRailContent.IsVisible = !collapsed;
         ReviewRailToggleButton.Content = collapsed ? "\uE76C" : "\uE76B";
         ToolTip.SetTip(ReviewRailToggleButton, collapsed ? "Open review queue" : "Collapse review queue");
+        RefreshPaintMarkerRailVisibility();
+    }
+
+    private void PaintMarkerListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (synchronizingPaintMarkerSelection ||
+            PaintMarkerListBox.SelectedItem is not PaintMarkerRow row ||
+            reviewWorkspace is null)
+            return;
+
+        StopPlayback();
+        reviewWorkspace.SelectMarker(row.MarkerId);
+        SeekReplay(row.LogicalIndex);
+    }
+
+    private void PaintMarkerRemoveButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (sender is Button { Tag: string markerId }) RemoveMarker(markerId);
     }
 
     private void SetInspectorRailCollapsed(bool collapsed)
@@ -543,11 +564,55 @@ public partial class MainWindow : Window
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
         ClearMarkersButton.IsEnabled = reviewWorkspace?.Markers.Count > 0;
         ReplayTimelineSurface.SetMarkerFrames(reviewWorkspace?.Markers.Select(marker => marker.StartLogicalIndex) ?? []);
+        RefreshPaintMarkerRows();
         if (DiagnosticListBox.SelectedItem is ReviewGroupRow selectedRow)
             PresentReviewSelection(selectedRow.Group, reviewWorkspace?.SelectedOccurrenceId);
         else
             ClearReviewSelectionPresentation();
         if (Bounds.Width > 0) ApplyResponsiveRails(Bounds.Width);
+    }
+
+    private void RefreshPaintMarkerRows()
+    {
+        paintMarkerRows = reviewWorkspace?.Markers
+            .OrderBy(marker => marker.StartLogicalIndex)
+            .Select(marker =>
+            {
+                var time = replaySession is not null && marker.StartLogicalIndex < replaySession.Timeline.Count
+                    ? FormatClock(replaySession.Timeline[marker.StartLogicalIndex].RecordedTime)
+                    : "--:--.---";
+                return new PaintMarkerRow(
+                    marker.Id,
+                    marker.StartLogicalIndex,
+                    $"Frame {marker.StartLogicalIndex + 1}",
+                    time);
+            })
+            .ToArray() ?? [];
+
+        synchronizingPaintMarkerSelection = true;
+        try
+        {
+            PaintMarkerListBox.ItemsSource = paintMarkerRows;
+            PaintMarkerListBox.SelectedItem = reviewWorkspace?.SelectedMarkerId is { } markerId
+                ? paintMarkerRows.FirstOrDefault(row => row.MarkerId == markerId)
+                : null;
+        }
+        finally
+        {
+            synchronizingPaintMarkerSelection = false;
+        }
+        PaintMarkerCountText.Text = paintMarkerRows.Length.ToString(CultureInfo.InvariantCulture);
+        RefreshPaintMarkerRailVisibility();
+    }
+
+    private void RefreshPaintMarkerRailVisibility()
+    {
+        if (PaintMarkerRailBorder is null || PaintTab is null) return;
+        PaintMarkerRailBorder.IsVisible =
+            paintMarkerRows.Length > 0 &&
+            PaintTab.IsSelected &&
+            reviewRailCollapsed &&
+            !SettingsPage.IsVisible;
     }
 
     private void AddMarkerButton_OnClick(object? sender, RoutedEventArgs e)
