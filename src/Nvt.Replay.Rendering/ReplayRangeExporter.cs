@@ -84,6 +84,9 @@ public sealed class ReplayFramePlanSnapshot : IReadOnlyList<ReplayFramePlanEntry
         return entries[FindCumulativeEntry(cumulativeOutputEnds, outputFrameIndex)].LogicalIndex;
     }
 
+    internal bool IsFor(ITouchReplaySession expectedReplay, ReplayFramePlanIdentity expectedIdentity) =>
+        ReferenceEquals(replay, expectedReplay) && Identity == expectedIdentity;
+
     internal void ValidateFor(
         ITouchReplaySession expectedReplay,
         ReplayFramePlanIdentity expectedIdentity,
@@ -607,16 +610,80 @@ public sealed class ReplayRangeExporter
             await WriteManifestAsync(manifestPath, manifest, cancellationToken);
             return Result(ReplayExportKind.Mp4, outputPath, manifestPath, plan, options.FrameRate, null);
         }
-        catch
+        catch (Exception exception)
         {
-            if (started && !process.HasExited)
+            Exception? cleanupError = null;
+            try
             {
-                try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+                await StopEncoderAsync(process, started).ConfigureAwait(false);
+                await DeleteFileWithRetryAsync(temporaryPath).ConfigureAwait(false);
+                if (outputCreated)
+                    await DeleteFileWithRetryAsync(outputPath).ConfigureAwait(false);
             }
-            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
-            if (outputCreated && File.Exists(outputPath)) File.Delete(outputPath);
+            catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+            {
+                cleanupError = cleanupException;
+            }
+
+            // Cancellation is a user outcome, never an encoder failure. Cleanup is best-effort
+            // after bounded process termination, but must not rewrite Cancelled as Failed.
+            if (exception is OperationCanceledException && cancellationToken.IsCancellationRequested)
+                throw;
+            if (cleanupError is not null)
+                throw new IOException("FFmpeg stopped but its partial output could not be removed.", cleanupError);
             throw;
         }
+    }
+
+    private static async Task StopEncoderAsync(Process process, bool started)
+    {
+        if (!started) return;
+        try { process.StandardInput.Close(); } catch { }
+        try
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+            // File cleanup below retries Windows handle release and reports a bounded failure.
+        }
+    }
+
+    internal static async Task DeleteFileWithRetryAsync(
+        string path,
+        int maximumAttempts = 40,
+        TimeSpan? retryDelay = null)
+    {
+        if (maximumAttempts < 1) throw new ArgumentOutOfRangeException(nameof(maximumAttempts));
+        var delay = retryDelay ?? TimeSpan.FromMilliseconds(50);
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= maximumAttempts; attempt++)
+        {
+            try
+            {
+                if (!File.Exists(path)) return;
+                File.Delete(path);
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                lastError = exception;
+                if (attempt < maximumAttempts)
+                    await Task.Delay(delay).ConfigureAwait(false);
+            }
+        }
+        throw new IOException($"Could not remove partial output after {maximumAttempts} attempts: {path}", lastError);
     }
 
     private static async Task<ReplayExportResult> ExportPngSequenceAsync(

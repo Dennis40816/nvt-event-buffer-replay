@@ -38,7 +38,30 @@ public sealed record ReplayOutputPlanIdentity(
     string ReplayIdentity,
     int ReplayFrameCount,
     TimeSpan ReplayFrameInterval,
-    ReplayOutputSettings Settings);
+    ReplayOutputSettings Settings)
+{
+    public ReplayOutputSamplingIdentity SamplingIdentity => new(
+        ReplayIdentity,
+        ReplayFrameCount,
+        ReplayFrameInterval,
+        Settings.Clock,
+        Settings.Speed,
+        Settings.FrameRate,
+        Settings.Range);
+}
+
+/// <summary>
+/// The complete set of inputs that changes replay frame sampling. Presentation-only settings,
+/// including output dimensions and Paint rendering options, deliberately do not participate.
+/// </summary>
+public sealed record ReplayOutputSamplingIdentity(
+    string ReplayIdentity,
+    int ReplayFrameCount,
+    TimeSpan ReplayFrameInterval,
+    ReplayExportClock Clock,
+    double Speed,
+    int FrameRate,
+    AnalysisRange Range);
 
 public sealed record ReplayOutputEstimate(
     int OutputFrameCount,
@@ -128,6 +151,26 @@ public sealed class ReplayOutputWorkspace
 
         var options = CreateExportOptions("preview.mp4");
         var entries = ReplayFramePlan.BuildSnapshot(replay, options, cancellationToken, progress);
+        return CreateVideoPreview(replay, replayIdentity, entries);
+    }
+
+    internal ReplayOutputPreviewPlan CreateVideoPreview(
+        ITouchReplaySession replay,
+        string replayIdentity,
+        ReplayFramePlanSnapshot entries)
+    {
+        ArgumentNullException.ThrowIfNull(replay);
+        ArgumentNullException.ThrowIfNull(entries);
+        var expectedPlanIdentity = new ReplayFramePlanIdentity(
+            replay.Count,
+            replay.FrameInterval,
+            Settings.Range,
+            Settings.Clock,
+            Settings.FrameRate,
+            Settings.Speed);
+        if (!entries.IsFor(replay, expectedPlanIdentity))
+            throw new ArgumentException("Replay frame plan is stale for the selected replay sampling settings.", nameof(entries));
+
         var outputFrameCount = ReplayFramePlan.OutputFrameCount(entries);
         var duration = TimeSpan.FromSeconds(outputFrameCount / (double)Settings.FrameRate);
         var pixelFrameWork = MultiplySaturated(outputFrameCount, Settings.Width, Settings.Height);

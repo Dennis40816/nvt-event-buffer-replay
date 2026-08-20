@@ -311,6 +311,25 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public async Task Encoder_cleanup_waits_for_a_released_Windows_file_lock()
+    {
+        var temporary = Path.Combine(directory, ".locked.tmp.mp4");
+        await File.WriteAllTextAsync(temporary, "partial");
+        using var locked = new FileStream(temporary, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        var cleanup = ReplayRangeExporter.DeleteFileWithRetryAsync(
+            temporary,
+            maximumAttempts: 50,
+            retryDelay: TimeSpan.FromMilliseconds(10));
+        await Task.Delay(75);
+        Assert.False(cleanup.IsCompleted);
+        locked.Dispose();
+
+        await cleanup;
+        Assert.False(File.Exists(temporary));
+    }
+
+    [Fact]
     public async Task Missing_encoder_atomically_exports_a_headless_PNG_sequence_and_manifest()
     {
         var replay = Replay(TimeSpan.FromMilliseconds(10));

@@ -168,6 +168,70 @@ public sealed class ReplayOutputWorkspaceTests
         Assert.Equal("Planning duration", updates[0].Stage);
     }
 
+    [Fact]
+    public async Task Plan_service_is_non_blocking_single_flight_and_reuses_sampling_for_resolution_changes()
+    {
+        var replay = new FakeReplay(120);
+        var settings = ReplayOutputSettings.Default with
+        {
+            FrameRate = 30,
+            Range = new AnalysisRange(0, 119),
+        };
+        using var plannerStarted = new ManualResetEventSlim();
+        using var releasePlanner = new ManualResetEventSlim();
+        using var service = new ReplayOutputPlanService((candidate, requested, cancellationToken, progress) =>
+        {
+            plannerStarted.Set();
+            releasePlanner.Wait(cancellationToken);
+            return ReplayFramePlan.BuildSnapshot(
+                candidate,
+                new ReplayOutputWorkspace(requested).CreateExportOptions("preview.mp4"),
+                cancellationToken,
+                progress);
+        });
+
+        var first = service.GetPreviewAsync(replay, "capture/config", settings);
+        Assert.True(plannerStarted.Wait(TimeSpan.FromSeconds(5)));
+        Assert.False(first.IsCompleted);
+        var resized = service.GetPreviewAsync(
+            replay,
+            "capture/config",
+            settings with { Width = 2560, Height = 1280 });
+        Assert.False(resized.IsCompleted);
+        Assert.Equal(1, service.BuildCount);
+
+        releasePlanner.Set();
+        var firstPreview = await first;
+        var resizedPreview = await resized;
+
+        Assert.Same(firstPreview.FramePlan, resizedPreview.FramePlan);
+        Assert.Equal((1920, 1080), (firstPreview.Identity.Settings.Width, firstPreview.Identity.Settings.Height));
+        Assert.Equal((2560, 1280), (resizedPreview.Identity.Settings.Width, resizedPreview.Identity.Settings.Height));
+        Assert.Equal(firstPreview.Identity.SamplingIdentity, resizedPreview.Identity.SamplingIdentity);
+    }
+
+    [Fact]
+    public async Task Plan_service_surfaces_the_recorded_gap_hard_limit_without_retrying_same_identity()
+    {
+        var replay = new FakeReplay(2, recordedInterval: TimeSpan.FromDays(10));
+        var settings = ReplayOutputSettings.Default with
+        {
+            Clock = ReplayExportClock.Recorded,
+            FrameRate = ReplayFramePlan.MaximumFrameRate,
+            Range = new AnalysisRange(0, 1),
+        };
+        using var service = new ReplayOutputPlanService();
+
+        var first = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.GetPreviewAsync(replay, "large-gap/config", settings));
+        var second = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.GetPreviewAsync(replay, "large-gap/config", settings));
+
+        Assert.Contains("safety limit", first.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(first.Message, second.Message);
+        Assert.Equal(1, service.BuildCount);
+    }
+
     private sealed class FakeReplay : ITouchReplaySession
     {
         public FakeReplay(int count, TimeSpan? frameInterval = null, TimeSpan? recordedInterval = null)
