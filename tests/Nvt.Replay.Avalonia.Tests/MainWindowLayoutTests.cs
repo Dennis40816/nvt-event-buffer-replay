@@ -1142,6 +1142,21 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(3, Required<ComboBox>(window, "OutputFrameRateComboBox").SelectedIndex);
             Assert.Contains("120 FPS", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
             Assert.Contains("Frame-paced", Required<TextBlock>(window, "OutputClockDescriptionText").Text);
+            Assert.Contains("kingstvis", window.OutputReplayIdentityForTesting, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("0x00000000", window.OutputReplayIdentityForTesting, StringComparison.Ordinal);
+
+            var initialPlan = window.OutputPreviewFramePlan;
+            var initialPlanBuilds = window.OutputPreviewPlanBuildCount;
+            var initialReportBuilds = window.OutputReportBuildCount;
+            var frozenFinalOptions = window.CreateCurrentOutputExportOptions("frozen.mp4");
+            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 1;
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity?.Settings.Width == 1280);
+            Assert.Contains("1280 × 720", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
+            Assert.Same(initialPlan, window.OutputPreviewFramePlan);
+            Assert.Equal(initialPlanBuilds, window.OutputPreviewPlanBuildCount);
+            Assert.Equal(initialReportBuilds, window.OutputReportBuildCount);
+            Assert.NotEqual(frozenFinalOptions.Width, window.OutputSettings.Width);
+            Assert.Equal(initialPlan?.Identity.Range, frozenFinalOptions.Range);
 
             var frameRate = Required<ComboBox>(window, "OutputFrameRateComboBox");
             var customFrameRate = Required<TextBox>(window, "OutputCustomFrameRateTextBox");
@@ -1233,7 +1248,74 @@ public sealed class MainWindowLayoutTests
             var completed = await handle.Completion;
             Assert.Equal(ExportJobStatus.Cancelled, completed.Status);
             await WaitUntilAsync(() => !Required<Border>(window, "OutputExportActivityPanel").IsVisible);
+            window.PresentOutputExportSnapshot(new ExportJobSnapshot(
+                completed.JobId,
+                ExportJobStatus.Running,
+                new ReplayExportProgress(99, 100, "Late progress")));
+            Assert.False(Required<Border>(window, "OutputExportActivityPanel").IsVisible);
             Assert.True(Required<Button>(window, "LoadButton").IsEnabled);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Slow_output_planning_is_single_flight_and_does_not_block_tab_navigation()
+    {
+        var window = ShowWindow();
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var planner = new ReplayOutputPlanService((replay, settings, cancellationToken, progress) =>
+            {
+                entered.Set();
+                release.Wait(cancellationToken);
+                return ReplayFramePlan.BuildSnapshot(
+                    replay,
+                    new ReplayOutputWorkspace(settings).CreateExportOptions("preview.mp4"),
+                    cancellationToken,
+                    progress);
+            });
+            window.ReplaceOutputPlanServiceForTesting(planner);
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            tabs.SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => entered.IsSet);
+
+            tabs.SelectedItem = Required<TabItem>(window, "PaintTab");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(Required<TabItem>(window, "PaintTab").IsSelected);
+            Assert.Equal(1, planner.BuildCount);
+        }
+        finally
+        {
+            release.Set();
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Output_plan_hard_limit_disables_export_without_crashing_the_workspace()
+    {
+        var window = ShowWindow();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            window.ReplaceOutputPlanServiceForTesting(new ReplayOutputPlanService(
+                (_, _, _, _) => throw new InvalidOperationException("Export exceeds the safety limit.")));
+
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => Required<TextBlock>(window, "AnalysisSummaryText").Text == "Output preview unavailable");
+
+            Assert.False(Required<Button>(window, "ExportSelectedOutputButton").IsEnabled);
+            Assert.Contains("safety limit", Required<TextBlock>(window, "OutputHotspotText").Text, StringComparison.OrdinalIgnoreCase);
+            Assert.True(Required<TabItem>(window, "AnalysisTab").IsSelected);
         }
         finally
         {

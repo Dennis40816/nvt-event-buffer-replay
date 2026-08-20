@@ -48,10 +48,15 @@ public partial class MainWindow : Window
     private CancellationTokenSource? outputPreviewCancellation;
     private CancellationTokenSource? outputVideoPlaybackCancellation;
     private readonly ReplayOutputWorkspace outputWorkspace = new();
+    private ReplayOutputPlanService outputPlanService = new();
     private readonly ExportJobService outputExportJobs = new();
     private ReplayOutputPreviewPlan? outputVideoPreviewPlan;
     private int outputVideoFrameIndex;
-    private int outputPreviewPlanBuildCount;
+    private long outputPreviewGeneration;
+    private bool outputPreviewPlanPending;
+    private string? outputPreviewPlanError;
+    private OutputReportRequest? outputReportRequest;
+    private int outputReportBuildCount;
     private CaptureAnalysisReport? currentOutputReport;
     private readonly ReplayPlaybackController playbackController = new();
     private readonly CaptureDecodeController captureDecodeController = new();
@@ -112,7 +117,17 @@ public partial class MainWindow : Window
     internal long OutputSettingsRevision => outputWorkspace.Revision;
     internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => outputVideoPreviewPlan?.Identity;
     internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => outputVideoPreviewPlan?.FramePlan;
-    internal int OutputPreviewPlanBuildCount => outputPreviewPlanBuildCount;
+    internal int OutputPreviewPlanBuildCount => outputPlanService.BuildCount;
+    internal int OutputReportBuildCount => outputReportBuildCount;
+    internal string OutputReplayIdentityForTesting => OutputReplayIdentity();
+    internal void ReplaceOutputPlanServiceForTesting(ReplayOutputPlanService replacement)
+    {
+        ArgumentNullException.ThrowIfNull(replacement);
+        ResetOutputPlanning();
+        outputPlanService.Dispose();
+        outputPlanService = replacement;
+        ClearOutputVideoPreview();
+    }
     internal ReplayPaintWorkspace? PaintWorkspace => paintWorkspace;
     internal ReviewInspectorWorkspace? ReviewWorkspace => reviewWorkspace;
     private int outputVideoFrameCount => outputVideoPreviewPlan?.Estimate.OutputFrameCount ?? 0;
@@ -767,6 +782,7 @@ public partial class MainWindow : Window
             var preserveReview = decodeConfiguration is null || decodeConfiguration == nextConfiguration;
             var preservedMarkers = preserveReview ? reviewWorkspace?.Markers.ToArray() ?? [] : [];
             var preservedReviewState = preserveReview ? reviewWorkspace?.ReviewSession.ExportState() ?? [] : [];
+            ResetOutputPlanning();
             session = result.Capture;
             decodeConfiguration = nextConfiguration;
             replaySession = presentation.Replay;
@@ -1073,7 +1089,46 @@ public partial class MainWindow : Window
             ContentType = ReplayOutputContentType.Mp4Video,
             Range = SelectedOutputRange(),
         });
-        var preview = EnsureOutputVideoPreviewPlan();
+        ReplayOutputPreviewPlan preview;
+        try
+        {
+            outputPreviewPlanPending = true;
+            outputPreviewPlanError = null;
+            UpdateOutputExportButtonAvailability();
+            preview = await outputPlanService.GetPreviewAsync(
+                replaySession,
+                OutputReplayIdentity(),
+                outputWorkspace.Settings,
+                outputPreviewCancellation?.Token ?? CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+            SessionStatusText.Text = "MP4 planning was cancelled; no output was created";
+            return;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
+        {
+            outputPreviewPlanError = exception.Message;
+            AnalysisSummaryText.Text = "Output preview unavailable";
+            OutputHotspotText.Text = exception.Message;
+            SessionStatusText.Text = $"MP4 export unavailable · {exception.Message}";
+            ClearOutputVideoPreview();
+            return;
+        }
+        finally
+        {
+            outputPreviewPlanPending = false;
+            UpdateOutputExportButtonAvailability();
+        }
+        if (preview.Identity.Settings != outputWorkspace.Settings)
+        {
+            SessionStatusText.Text = "Output settings changed; review the refreshed MP4 preview before exporting.";
+            RefreshOutputPreviewIfVisible();
+            return;
+        }
+        if (!ReferenceEquals(outputVideoPreviewPlan?.FramePlan, preview.FramePlan) ||
+            outputVideoPreviewPlan.Identity != preview.Identity)
+            PrepareOutputVideoPreview(preview, PreviewClockName(preview.Identity.Settings), $"{preview.Identity.Settings.Speed:0.##}×");
         var estimate = preview.Estimate;
         var settings = preview.Identity.Settings;
         if (!longExportConfirmed && estimate.RequiresConfirmation)
@@ -1099,13 +1154,6 @@ public partial class MainWindow : Window
         if (path is null) return;
 
         var options = CreateReplayExportOptions(path);
-        if (preview.Identity.Settings != outputWorkspace.Settings)
-        {
-            SessionStatusText.Text = "Output settings changed; review the refreshed MP4 preview before exporting.";
-            RefreshOutputPreviewIfVisible();
-            return;
-        }
-
         if (paintWorkspace is null)
             throw new InvalidOperationException("A decoded Paint workspace is required for MP4 output.");
         var exportPaintWorkspace = new ReplayPaintWorkspace(
@@ -1168,9 +1216,11 @@ public partial class MainWindow : Window
         return cancelled;
     }
 
-    private void PresentOutputExportSnapshot(ExportJobSnapshot snapshot)
+    internal void PresentOutputExportSnapshot(ExportJobSnapshot snapshot)
     {
-        if (snapshot.JobId != outputExportJobs.Snapshot.JobId) return;
+        var authoritative = outputExportJobs.Snapshot;
+        if (snapshot.JobId != authoritative.JobId) return;
+        snapshot = authoritative;
         var exporting = snapshot.IsActive;
         LoadButton.IsEnabled = !exporting && !operationInProgress;
         OutputExportActivityPanel.IsVisible = exporting;
@@ -1194,8 +1244,12 @@ public partial class MainWindow : Window
     {
         if (ExportSelectedOutputButton is null) return;
         var mp4Selected = (OutputContentComboBox.SelectedItem as SelectOption)?.Value == "mp4";
+        var previewReady = !outputPreviewPlanPending && outputPreviewPlanError is null &&
+                           replaySession is not null &&
+                           MatchingOutputVideoPreviewPlan(outputWorkspace.Settings, OutputReplayIdentityOrEmpty()) is not null;
         ExportSelectedOutputButton.IsEnabled =
-            !operationInProgress && replaySession is { Count: > 0 } && (!mp4Selected || !outputExportJobs.IsActive);
+            !operationInProgress && replaySession is { Count: > 0 } &&
+            (!mp4Selected || !outputExportJobs.IsActive && previewReady);
     }
 
     private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1257,7 +1311,7 @@ public partial class MainWindow : Window
         OutputCustomResolutionPanel.IsVisible = customResolution;
         if (resolutionTag == "panel")
         {
-            SyncOutputResolutionWithPanel();
+            SyncOutputResolutionWithPanel(updateWorkspace: false);
         }
         else if (!customResolution && TryParseOutputResolution(resolutionTag, out var width, out var height))
         {
@@ -1379,16 +1433,16 @@ public partial class MainWindow : Window
                int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out height);
     }
 
-    private void SyncOutputResolutionWithPanel()
+    private bool SyncOutputResolutionWithPanel(bool updateWorkspace = true)
     {
         var width = NormalizeVideoDimension(CurrentPaintExtent.MaximumX, 320, ReplayOutputWorkspace.MaximumWidth);
         var height = NormalizeVideoDimension(CurrentPaintExtent.MaximumY, 180, ReplayOutputWorkspace.MaximumHeight);
         OutputPanelResolutionItem.Content = $"Paint · {width} × {height}";
         if (OutputResolutionComboBox.SelectedItem is not ComboBoxItem item || item.Tag?.ToString() != "panel")
-            return;
+            return false;
         OutputWidthTextBox.Text = width.ToString(CultureInfo.InvariantCulture);
         OutputHeightTextBox.Text = height.ToString(CultureInfo.InvariantCulture);
-        outputWorkspace.Update(outputWorkspace.Settings with { Width = width, Height = height });
+        return updateWorkspace && outputWorkspace.Update(outputWorkspace.Settings with { Width = width, Height = height });
     }
 
     private static int NormalizeVideoDimension(double value, int minimum, int maximum)
@@ -1425,6 +1479,8 @@ public partial class MainWindow : Window
             {
                 ExitOutputFullscreen();
                 StopOutputVideoPreviewPlayback();
+                outputPreviewCancellation?.Cancel();
+                if (outputPreviewPlanPending) outputPlanService.Invalidate();
             }
             SetOutputWorkspaceChrome(false, paintSelected && !SettingsPage.IsVisible);
             SetSourceTransportEnabled(paintSelected && !SettingsPage.IsVisible);
@@ -1458,21 +1514,6 @@ public partial class MainWindow : Window
 
     internal ReplayExportOptions CreateCurrentOutputExportOptions(string path) => CreateReplayExportOptions(path);
 
-    private ReplayOutputPreviewPlan EnsureOutputVideoPreviewPlan()
-    {
-        if (replaySession is null)
-            throw new InvalidOperationException("A decoded replay is required for MP4 output.");
-        var replayIdentity = OutputReplayIdentity();
-        if (MatchingOutputVideoPreviewPlan(outputWorkspace.Settings, replayIdentity) is { } current)
-            return current;
-
-        var preview = outputWorkspace.BuildVideoPreview(replaySession, replayIdentity);
-        outputVideoPreviewPlan = preview;
-        outputPreviewPlanBuildCount++;
-        outputVideoFrameIndex = 0;
-        return preview;
-    }
-
     private ReplayOutputPreviewPlan? MatchingOutputVideoPreviewPlan(
         ReplayOutputSettings settings,
         string replayIdentity) =>
@@ -1492,10 +1533,18 @@ public partial class MainWindow : Window
         return string.Join(
             '/',
             session.SourceSha256,
+            decodeConfiguration.SourceAdapterId,
+            $"0x{decodeConfiguration.EventBufferBase:X8}",
             decodeConfiguration.EventBufferVersion,
             decodeConfiguration.Desay97Profile ?? string.Empty,
             decodeConfiguration.RegisterProfile ?? string.Empty);
     }
+
+    private string OutputReplayIdentityOrEmpty() =>
+        session is null || decodeConfiguration is null ? string.Empty : OutputReplayIdentity();
+
+    private static string PreviewClockName(ReplayOutputSettings settings) =>
+        settings.Clock == ReplayExportClock.Frame ? "Frame-paced 120 Hz" : "Recorded gaps";
 
     private ReplayExtent CurrentPaintExtent => paintWorkspace?.Settings.PanelExtent ?? DefaultPaintExtent;
 
@@ -1549,6 +1598,46 @@ public partial class MainWindow : Window
             snapshots: replayFrames?.Snapshots);
     }
 
+    private Task<CaptureAnalysisReport> GetOutputReportAsync(
+        AnalysisRange range,
+        string replayIdentity,
+        CancellationToken cancellationToken)
+    {
+        if (replaySession is null || reviewWorkspace is null)
+            throw new InvalidOperationException("A decoded replay is required for output preview.");
+        if (outputReportRequest is { } current &&
+            ReferenceEquals(current.Replay, replaySession) &&
+            current.ReplayIdentity == replayIdentity &&
+            current.Range == range &&
+            current.ReviewRevision == reviewWorkspace.ReviewSessionRevision)
+            return current.Task.WaitAsync(cancellationToken);
+
+        var superseded = outputReportRequest;
+        var reportCancellation = new CancellationTokenSource();
+        var task = Task.Run(
+            () => BuildOutputReport(range, reportCancellation.Token),
+            CancellationToken.None);
+        outputReportRequest = new OutputReportRequest(
+            replaySession,
+            replayIdentity,
+            range,
+            reviewWorkspace.ReviewSessionRevision,
+            reportCancellation,
+            task);
+        outputReportBuildCount++;
+        if (superseded is not null)
+        {
+            superseded.Cancellation.Cancel();
+            _ = superseded.Task.ContinueWith(
+                (_, state) => ((CancellationTokenSource)state!).Dispose(),
+                superseded.Cancellation,
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
+        return task.WaitAsync(cancellationToken);
+    }
+
     private async Task RefreshOutputPreviewAsync()
     {
         if (session is null || replaySession is null || decodeConfiguration is null || reviewWorkspace is null || replaySession.Count == 0)
@@ -1559,32 +1648,34 @@ public partial class MainWindow : Window
         outputPreviewCancellation?.Dispose();
         outputPreviewCancellation = new CancellationTokenSource();
         var cancellationToken = outputPreviewCancellation.Token;
+        var generation = checked(++outputPreviewGeneration);
         var range = SelectedOutputRange();
         outputWorkspace.Update(outputWorkspace.Settings with { Range = range });
         var settings = outputWorkspace.Settings;
         var replayIdentity = OutputReplayIdentity();
         AnalysisSummaryText.Text = $"Preparing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}...";
         OutputHotspotText.Text = "Analyzing coordinates";
+        outputPreviewPlanPending = settings.ContentType == ReplayOutputContentType.Mp4Video;
+        outputPreviewPlanError = null;
+        UpdateOutputExportButtonAvailability();
         try
         {
-            var reportTask = Task.Run(() => BuildOutputReport(range, cancellationToken), cancellationToken);
+            var reportTask = GetOutputReportAsync(range, replayIdentity, cancellationToken);
             Task<ReplayOutputPreviewPlan>? previewTask = null;
             if (settings.ContentType == ReplayOutputContentType.Mp4Video)
             {
-                var existingPreview = MatchingOutputVideoPreviewPlan(settings, replayIdentity);
-                previewTask = existingPreview is not null
-                    ? Task.FromResult(existingPreview)
-                    : Task.Run(
-                        () => new ReplayOutputWorkspace(settings).BuildVideoPreview(
-                            replaySession,
-                            replayIdentity,
-                            cancellationToken),
-                        cancellationToken);
+                previewTask = outputPlanService.GetPreviewAsync(
+                    replaySession,
+                    replayIdentity,
+                    settings,
+                    cancellationToken);
             }
+            if (previewTask is null) await reportTask;
+            else await Task.WhenAll(reportTask, previewTask);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (generation != outputPreviewGeneration || settings != outputWorkspace.Settings) return;
             var report = await reportTask;
             var preview = previewTask is null ? null : await previewTask;
-            cancellationToken.ThrowIfCancellationRequested();
-            if (settings != outputWorkspace.Settings) return;
             ApplyOutputPreview(report, preview);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -1592,11 +1683,21 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
+            if (generation != outputPreviewGeneration) return;
             currentOutputReport = null;
+            outputPreviewPlanError = exception.Message;
             AnalysisSummaryText.Text = "Output preview unavailable";
             OutputHotspotText.Text = exception.Message;
             AnalysisHeatmapPreview.Show(null);
             ClearOutputVideoPreview();
+        }
+        finally
+        {
+            if (generation == outputPreviewGeneration)
+            {
+                outputPreviewPlanPending = false;
+                UpdateOutputExportButtonAvailability();
+            }
         }
     }
 
@@ -1606,8 +1707,7 @@ public partial class MainWindow : Window
         currentOutputReport = report;
         var range = report.Manifest.Range;
         var settings = outputWorkspace.Settings;
-        var clockIsFrame = settings.Clock == ReplayExportClock.Frame;
-        var clockName = clockIsFrame ? "Frame-paced 120 Hz" : "Recorded gaps";
+        var clockName = PreviewClockName(settings);
         var profile = string.IsNullOrWhiteSpace(decodeConfiguration.Desay97Profile)
             ? string.Empty
             : $" / {decodeConfiguration.Desay97Profile}";
@@ -1653,10 +1753,11 @@ public partial class MainWindow : Window
     private void PrepareOutputVideoPreview(ReplayOutputPreviewPlan preview, string clockName, string speed)
     {
         if (replaySession is null) return;
-        if (!ReferenceEquals(outputVideoPreviewPlan, preview))
-            outputPreviewPlanBuildCount++;
+        var framePlanChanged = !ReferenceEquals(outputVideoPreviewPlan?.FramePlan, preview.FramePlan);
         outputVideoPreviewPlan = preview;
-        outputVideoFrameIndex = 0;
+        outputVideoFrameIndex = framePlanChanged
+            ? 0
+            : Math.Clamp(outputVideoFrameIndex, 0, Math.Max(0, preview.Estimate.OutputFrameCount - 1));
         var settings = preview.Identity.Settings;
         var duration = preview.Estimate.Duration;
         OutputClockText.Text = $"{FormatClock(duration)}\n{outputVideoFrameCount:N0} frames at {settings.FrameRate} FPS";
@@ -1667,7 +1768,7 @@ public partial class MainWindow : Window
         OutputPreviewPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputFullscreenPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputPreviewFullscreenButton.IsEnabled = outputVideoFrameCount > 0;
-        ShowOutputVideoFrame(0);
+        ShowOutputVideoFrame(outputVideoFrameIndex);
         OutputConfigurationText.Text += $"\nvideo    {clockName} / {settings.FrameRate} FPS / {speed}";
     }
 
@@ -1814,10 +1915,13 @@ public partial class MainWindow : Window
         StopOutputVideoPreviewPlayback();
         outputVideoPreviewPlan = null;
         outputVideoFrameIndex = 0;
+        OutputVideoBadgeText.Text = outputPreviewPlanError ?? "Preview unavailable";
+        OutputClockText.Text = "-";
         OutputVideoPreview.Clear();
         OutputFullscreenVideoPreview.Clear();
         OutputVideoTimeline.SetFrameCount(0, outputVideoFrameRate);
         OutputFullscreenTimeline.SetFrameCount(0, outputVideoFrameRate);
+        UpdateOutputExportButtonAvailability();
         OutputPreviewPlayPauseButton.IsEnabled = false;
         OutputFullscreenPlayPauseButton.IsEnabled = false;
         OutputPreviewFullscreenButton.IsEnabled = false;
@@ -2794,6 +2898,29 @@ public partial class MainWindow : Window
     private static ReplayDiagnostic[] SessionDiagnostics(CaptureSession capture) =>
         capture.TransportDiagnostics.Concat(capture.RegisterDiagnostics).ToArray();
 
+    private void ResetOutputPlanning()
+    {
+        checked { outputPreviewGeneration++; }
+        outputPreviewCancellation?.Cancel();
+        outputPreviewCancellation?.Dispose();
+        outputPreviewCancellation = null;
+        outputPlanService.Invalidate();
+        outputPreviewPlanPending = false;
+        outputPreviewPlanError = null;
+        var report = outputReportRequest;
+        outputReportRequest = null;
+        if (report is not null)
+        {
+            report.Cancellation.Cancel();
+            _ = report.Task.ContinueWith(
+                (_, state) => ((CancellationTokenSource)state!).Dispose(),
+                report.Cancellation,
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
+    }
+
     private sealed record SourceAdapterChoice(string AdapterId, string DisplayName, ProbeConfidence Confidence)
     {
         public override string ToString() => $"{DisplayName} · {Confidence}";
@@ -2802,6 +2929,7 @@ public partial class MainWindow : Window
     private void ClearSession()
     {
         StopPlayback();
+        ResetOutputPlanning();
         session = null;
         replaySession = null;
         replayFrames = null;
@@ -2862,9 +2990,6 @@ public partial class MainWindow : Window
         ExportAnalysisButton.IsEnabled = false;
         ExportSelectedOutputButton.IsEnabled = false;
         AnalysisTab.IsEnabled = false;
-        outputPreviewCancellation?.Cancel();
-        outputPreviewCancellation?.Dispose();
-        outputPreviewCancellation = null;
         currentOutputReport = null;
         ClearOutputVideoPreview();
         AnalysisHeatmapPreview.Show(null);
@@ -3623,7 +3748,8 @@ public partial class MainWindow : Window
             rebuildScene: true,
             fit: true);
         if (!update.Changed) return;
-        SyncOutputResolutionWithPanel();
+        if (SyncOutputResolutionWithPanel())
+            RefreshOutputPreviewIfVisible();
         StopOutputVideoPreviewPlayback();
         SessionStatusText.Text = $"Panel coordinate space · {width:0} × {height:0} · fit to canvas";
     }
@@ -4054,6 +4180,14 @@ public partial class MainWindow : Window
                visual.FindAncestorOfType<Slider>() is not null;
     }
 
+    private sealed record OutputReportRequest(
+        ITouchReplaySession Replay,
+        string ReplayIdentity,
+        AnalysisRange Range,
+        long ReviewRevision,
+        CancellationTokenSource Cancellation,
+        Task<CaptureAnalysisReport> Task);
+
     protected override void OnClosed(EventArgs e)
     {
         activeCaptureLoadGeneration = 0;
@@ -4061,8 +4195,8 @@ public partial class MainWindow : Window
         ExitOutputFullscreen();
         StopPlayback();
         StopOutputVideoPreviewPlayback();
-        outputPreviewCancellation?.Cancel();
-        outputPreviewCancellation?.Dispose();
+        ResetOutputPlanning();
+        outputPlanService.Dispose();
         var activeOperationCancellation = operationCancellation;
         operationCancellation = null;
         activeOperationCancellation?.Cancel();
