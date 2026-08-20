@@ -134,6 +134,146 @@ public sealed class ReviewInspectorWorkspaceTests
         Assert.Same(diagnostics, workspace.BaseDiagnostics);
     }
 
+    [Fact]
+    public void Review_options_update_in_place_and_survive_marker_session_rebuilds()
+    {
+        var frames = Frames(2);
+        var workspace = new ReviewInspectorWorkspace(
+            frames,
+            [Diagnostic("ALARM", frames[1].PrimarySource, DiagnosticSeverity.Alarm)],
+            reviewOptions: new ReviewSessionOptions(PauseOnAlarm: true, PauseOnQaFail: false));
+        var originalSession = workspace.ReviewSession;
+        var originalRevision = workspace.ReviewSessionRevision;
+
+        Assert.True(workspace.SetReviewOptions(new ReviewSessionOptions(PauseOnAlarm: false, PauseOnQaFail: true)));
+        Assert.Same(originalSession, workspace.ReviewSession);
+        Assert.Equal(originalRevision, workspace.ReviewSessionRevision);
+        Assert.Equal(new ReviewSessionOptions(false, true), workspace.ReviewOptions);
+        Assert.False(workspace.SetReviewOptions(new ReviewSessionOptions(false, true)));
+        Assert.Equal(originalRevision, workspace.ReviewSessionRevision);
+
+        workspace.SelectFrame(1);
+        workspace.AddMarker();
+
+        Assert.NotSame(originalSession, workspace.ReviewSession);
+        Assert.Equal(originalRevision + 1, workspace.ReviewSessionRevision);
+        Assert.Equal(new ReviewSessionOptions(false, true), workspace.ReviewOptions);
+    }
+
+    [Fact]
+    public void Marker_metadata_rebuilds_once_per_change_and_keeps_evidence_availability_semantics()
+    {
+        var workspace = new ReviewInspectorWorkspace(
+            Frames(1),
+            [],
+            evidenceExists: path => path.Equals("present.log", StringComparison.Ordinal));
+        var markerView = workspace.Markers;
+        var marker = workspace.AddMarker();
+        var revision = workspace.ReviewSessionRevision;
+
+        var withQa = workspace.SetMarkerQaCaseIds(marker.Id, [" QA-17 ", "qa-17", "QA-22"]);
+
+        Assert.Equal(["QA-17", "QA-22"], withQa.QaCaseIds);
+        Assert.Same(markerView, workspace.Markers);
+        Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+        revision = workspace.ReviewSessionRevision;
+
+        workspace.SetMarkerQaCaseIds(marker.Id, ["QA-17", "QA-22"]);
+        Assert.Equal(revision, workspace.ReviewSessionRevision);
+
+        workspace.AddMarkerEvidence(marker.Id, new ReplayEvidenceReference(
+            "evidence-present",
+            ReplayEvidenceKind.KernelLog,
+            "present.log",
+            Label: "Kernel"));
+        Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+        revision = workspace.ReviewSessionRevision;
+        workspace.AddMarkerEvidence(marker.Id, new ReplayEvidenceReference(
+            "evidence-missing",
+            ReplayEvidenceKind.FirmwareLog,
+            "missing.log",
+            Label: "FW"));
+        Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+
+        var group = Assert.Single(workspace.VisibleGroups);
+        var details = Assert.Single(group.Occurrences).Diagnostic.Details;
+        Assert.Equal("QA-17, QA-22", details?.GetValueOrDefault("qa_case_ids"));
+        Assert.Equal(
+            "KernelLog:Kernel:available; FirmwareLog:FW:missing",
+            details?.GetValueOrDefault("evidence"));
+        revision = workspace.ReviewSessionRevision;
+        Assert.Throws<ArgumentException>(() => workspace.AddMarkerEvidence(marker.Id, new ReplayEvidenceReference(
+            "evidence-present",
+            ReplayEvidenceKind.Other,
+            "another.log")));
+        Assert.Equal(revision, workspace.ReviewSessionRevision);
+    }
+
+    [Fact]
+    public void Sidecar_marker_replace_imports_state_once_and_preserves_only_stable_selection()
+    {
+        var frames = Frames(3);
+        var createdAt = DateTimeOffset.UnixEpoch;
+        var selected = new ReplayMarker("marker-stable", "Before", 1, 1, createdAt);
+        var removed = new ReplayMarker("marker-removed", "Removed", 2, 2, createdAt.AddSeconds(1));
+        var workspace = new ReviewInspectorWorkspace(
+            frames,
+            [],
+            markers: [selected, removed],
+            reviewOptions: new ReviewSessionOptions(false, true));
+        var markerView = workspace.Markers;
+        Assert.True(workspace.SelectMarker(selected.Id));
+        var revision = workspace.ReviewSessionRevision;
+        var replacement = new[]
+        {
+            selected with { Label = "Loaded stable" },
+            new ReplayMarker("marker-loaded", "Loaded new", 0, 0, createdAt.AddSeconds(2)),
+        };
+        var selectedGroupId = $"ANNOTATION_MARKER:{selected.Id}";
+        var importedState = new[]
+        {
+            new ReviewStateSnapshot(selectedGroupId, ReviewWorkflowState.Acknowledged, ReviewDisposition.Expected),
+            new ReviewStateSnapshot("STALE_GROUP", ReviewWorkflowState.Resolved, ReviewDisposition.FalsePositive),
+        };
+
+        var result = workspace.ReplaceMarkersAndImportState(replacement, importedState);
+
+        Assert.True(result.Changed);
+        Assert.True(result.MarkersChanged);
+        Assert.True(result.ReviewStateChanged);
+        Assert.Equal(2, result.MarkerCount);
+        Assert.Equal(["STALE_GROUP"], result.UnresolvedReviewGroupIds);
+        Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+        Assert.Same(markerView, workspace.Markers);
+        Assert.Equal(["marker-stable", "marker-loaded"], workspace.Markers.Select(marker => marker.Id));
+        Assert.Equal("Loaded stable", workspace.SelectedMarker?.Label);
+        Assert.Equal(selectedGroupId, workspace.SelectedFindingGroupId);
+        Assert.Equal(ReviewWorkflowState.Acknowledged, workspace.SelectedFinding?.WorkflowState);
+        Assert.Equal(ReviewDisposition.Expected, workspace.SelectedFinding?.Disposition);
+        Assert.Equal(new ReviewSessionOptions(false, true), workspace.ReviewOptions);
+
+        revision = workspace.ReviewSessionRevision;
+        var noOp = workspace.ReplaceMarkersAndImportState(replacement, importedState);
+        Assert.False(noOp.Changed);
+        Assert.False(noOp.MarkersChanged);
+        Assert.False(noOp.ReviewStateChanged);
+        Assert.Equal(["STALE_GROUP"], noOp.UnresolvedReviewGroupIds);
+        Assert.Equal(revision, workspace.ReviewSessionRevision);
+
+        var withoutSelection = workspace.ReplaceMarkersAndImportState([replacement[1]], []);
+        Assert.True(withoutSelection.MarkersChanged);
+        Assert.Null(workspace.SelectedMarkerId);
+        Assert.Null(workspace.SelectedFindingGroupId);
+        Assert.Equal(revision + 1, workspace.ReviewSessionRevision);
+        revision = workspace.ReviewSessionRevision;
+
+        Assert.Throws<ArgumentException>(() => workspace.ReplaceMarkersAndImportState(
+            [replacement[1], replacement[1]],
+            []));
+        Assert.Equal(revision, workspace.ReviewSessionRevision);
+        Assert.Equal(["marker-loaded"], workspace.Markers.Select(marker => marker.Id));
+    }
+
     private static ITouchReplaySnapshot[] Frames(int count) => Enumerable.Range(0, count)
         .Select(index => (ITouchReplaySnapshot)Snapshot(index, [Contact((byte)(index + 1))]))
         .ToArray();
