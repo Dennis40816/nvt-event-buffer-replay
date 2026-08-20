@@ -115,6 +115,53 @@ public sealed class NdsCommunicationLogAdapterTests : IDisposable
         Assert.Equal([0x69], records[2].Data);
     }
 
+    [Fact]
+    public async Task Malformed_record_is_warned_dropped_and_cannot_absorb_continuation_bytes()
+    {
+        var path = WriteCapture(
+            """
+            2026-07-29 14:52:41:241 Read TP 0x99060 1 0xA3
+            2026-99-29 14:52:41:243 Read TP 0x99061 1 0xEE
+              0xDD
+            2026-07-29 14:52:41:245 Read TP 0x99062 1 0xB4
+            """);
+        var diagnostics = new List<ReplayDiagnostic>();
+
+        var records = new List<SourceRecord>();
+        await foreach (var record in new NdsCommunicationLogAdapter().ReadAsync(
+            new SourceOpenContext(path, "malformed", diagnostics.Add)))
+        {
+            records.Add(record);
+        }
+
+        Assert.Equal(2, records.Count);
+        Assert.Equal([0xA3], records[0].Data);
+        Assert.Equal([0xB4], records[1].Data);
+        Assert.Equal("malformed:L1", records[0].StableId);
+        Assert.Equal("malformed:L4", records[1].StableId);
+        var warning = Assert.Single(diagnostics);
+        Assert.Equal(DiagnosticSeverity.Warning, warning.Severity);
+        Assert.Equal("NDS_MALFORMED_RECORD", warning.Code);
+        Assert.Equal(2, warning.Location.LineNumber);
+    }
+
+    [Fact]
+    public async Task Reader_observes_cancellation_before_publishing_a_record()
+    {
+        var path = WriteCapture("2026-07-29 14:52:41:241 Read TP 0x99060 1 0xA3");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        {
+            await foreach (var _ in new NdsCommunicationLogAdapter().ReadAsync(
+                new SourceOpenContext(path, "cancelled"),
+                cancellation.Token))
+            {
+            }
+        });
+    }
+
     public void Dispose()
     {
         Directory.Delete(temporaryDirectory, recursive: true);

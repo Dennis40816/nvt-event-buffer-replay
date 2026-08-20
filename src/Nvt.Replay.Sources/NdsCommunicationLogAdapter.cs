@@ -74,6 +74,7 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
 
         while (await reader.ReadLineAsync(cancellationToken) is { } line)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             lineNumber++;
             var lineOffset = byteOffset;
             byteOffset += layout.Advance(line);
@@ -86,11 +87,42 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
                     yield return pending.ToSourceRecord(recordIndex++, context.SourceId);
                 }
 
-                pending = PendingRecord.FromHeader(match, line, lineNumber, lineOffset);
+                try
+                {
+                    pending = PendingRecord.FromHeader(match, line, lineNumber, lineOffset);
+                }
+                catch (Exception exception) when (exception is FormatException or OverflowException)
+                {
+                    pending = null;
+                    SourceDiagnostics.Report(
+                        context,
+                        DiagnosticSeverity.Warning,
+                        "NDS_MALFORMED_RECORD",
+                        $"Invalid NDS record at line {lineNumber}: {exception.Message}",
+                        lineNumber,
+                        lineOffset);
+                }
                 continue;
             }
 
-            if (pending is not null && ByteTokenPattern().IsMatch(line))
+            if (HeaderCandidatePattern().IsMatch(line))
+            {
+                if (pending is not null)
+                {
+                    yield return pending.ToSourceRecord(recordIndex++, context.SourceId);
+                    pending = null;
+                }
+                SourceDiagnostics.Report(
+                    context,
+                    DiagnosticSeverity.Warning,
+                    "NDS_MALFORMED_RECORD",
+                    $"Invalid NDS record header at line {lineNumber}; the row was discarded.",
+                    lineNumber,
+                    lineOffset);
+                continue;
+            }
+
+            if (pending is not null && ContinuationPattern().IsMatch(line))
             {
                 pending.Append(line);
             }
@@ -107,8 +139,18 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
         RegexOptions.CultureInvariant)]
     private static partial Regex HeaderPattern();
 
+    [GeneratedRegex(
+        @"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}:\d{3}\s+(?:Paint|Read|Write)\b",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex HeaderCandidatePattern();
+
     [GeneratedRegex(@"0x[0-9A-Fa-f]{2}", RegexOptions.CultureInvariant)]
     private static partial Regex ByteTokenPattern();
+
+    [GeneratedRegex(
+        @"^\s*0x[0-9A-Fa-f]{2}(?:\s+0x[0-9A-Fa-f]{2})*\s*$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex ContinuationPattern();
 
     private sealed class PendingRecord
     {
