@@ -84,6 +84,12 @@ public sealed class ReviewInspectorWorkspace
 
     public long ReviewSessionRevision { get; private set; }
 
+    /// <summary>
+    /// Changes whenever diagnostics, markers, or exported human-review state changes.
+    /// Filtering and selection do not affect report content and therefore leave this revision unchanged.
+    /// </summary>
+    public long ReportRevision { get; private set; }
+
     internal long NavigationIndexRevision { get; private set; }
 
     public ReviewQueueFilter Filter { get; private set; }
@@ -356,6 +362,7 @@ public sealed class ReviewInspectorWorkspace
         }
         reviewSession = replacementSession;
         ReviewSessionRevision++;
+        ReportRevision++;
         RefreshVisibleGroups();
         RestoreSelection(priorGroupId, priorOccurrenceId, priorMarkerId);
         return new ReviewWorkspaceImportResult(markers.Count, unresolved, markersChanged, reviewStateChanged);
@@ -395,7 +402,10 @@ public sealed class ReviewInspectorWorkspace
         Func<string, ReviewEventGroup> mutation)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        var previous = reviewSession.Find(groupId);
         var updated = mutation(groupId);
+        if (previous.WorkflowState != updated.WorkflowState || previous.Disposition != updated.Disposition)
+            ReportRevision++;
         RefreshVisibleGroups();
         return visibleGroups.FirstOrDefault(group => group.Id.Equals(groupId, StringComparison.Ordinal)) ?? updated;
     }
@@ -478,6 +488,7 @@ public sealed class ReviewInspectorWorkspace
         reviewSession = CreateReviewSession(markers);
         reviewSession.ImportState(priorState);
         ReviewSessionRevision++;
+        ReportRevision++;
         RefreshVisibleGroups();
         RestoreSelection(priorGroupId, priorOccurrenceId, priorMarkerId);
         return [];

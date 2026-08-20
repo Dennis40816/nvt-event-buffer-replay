@@ -1255,6 +1255,120 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Output_report_cache_tracks_effective_human_review_changes_only()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var tabs = Required<TabControl>(window, "WorkspaceTabs");
+            var paintTab = Required<TabItem>(window, "PaintTab");
+            var outputTab = Required<TabItem>(window, "AnalysisTab");
+            Required<Button>(window, "AddMarkerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var review = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            var markerGroup = Assert.Single(
+                review.VisibleGroups,
+                group => group.Category == ReviewEventCategory.Annotation);
+
+            tabs.SelectedItem = outputTab;
+            await WaitUntilAsync(() => window.CurrentOutputReport is not null);
+            var initialBuildCount = window.OutputReportBuildCount;
+            var initialReportRevision = review.ReportRevision;
+
+            tabs.SelectedItem = paintTab;
+            review.AcknowledgeFinding(markerGroup.Id);
+            Assert.Equal(initialReportRevision + 1, review.ReportRevision);
+            tabs.SelectedItem = outputTab;
+            await WaitUntilAsync(() => window.OutputReportBuildCount == initialBuildCount + 1);
+
+            tabs.SelectedItem = paintTab;
+            review.AcknowledgeFinding(markerGroup.Id);
+            Assert.Equal(initialReportRevision + 1, review.ReportRevision);
+            tabs.SelectedItem = outputTab;
+            await Task.Delay(30, TestContext.Current.CancellationToken);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(initialBuildCount + 1, window.OutputReportBuildCount);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Frozen_output_report_inputs_do_not_observe_later_review_or_redecode_state()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<Button>(window, "AddMarkerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+            var originalPaint = Assert.IsType<ReplayPaintWorkspace>(window.PaintWorkspace);
+            var originalReview = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+            var markerGroup = Assert.Single(
+                originalReview.VisibleGroups,
+                group => group.Category == ReviewEventCategory.Annotation);
+            var frozen = window.CaptureCurrentOutputReportInputsForTesting(
+                new AnalysisRange(0, originalPaint.Replay.Count - 1));
+            Assert.All(frozen.Capture.Records.Zip(
+                Required<ListBox>(window, "RawRecordsList").Items.OfType<RawRecordRow>().Select(row => row.Record)),
+                pair => Assert.Same(pair.First, pair.Second));
+
+            originalReview.AcknowledgeFinding(markerGroup.Id);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            var replacementPaint = Assert.IsType<ReplayPaintWorkspace>(window.PaintWorkspace);
+            var replacementReview = Assert.IsType<ReviewInspectorWorkspace>(window.ReviewWorkspace);
+
+            Assert.NotSame(frozen.Replay, replacementPaint.Replay);
+            Assert.Equal(ReviewWorkflowState.Open, frozen.Review.Find(markerGroup.Id).WorkflowState);
+            Assert.Equal(ReviewWorkflowState.Acknowledged, replacementReview.ReviewSession.Find(markerGroup.Id).WorkflowState);
+            var report = await Task.Run(
+                () => frozen.Build(TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
+            Assert.Equal(
+                ReviewWorkflowState.Open,
+                Assert.Single(report.DiagnosticAggregates, item => item.Code == "ANNOTATION_MARKER").WorkflowState);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Redecode_clears_the_previous_output_surface_report_and_identity()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null && window.CurrentOutputReport is not null);
+            Assert.True(Required<ReplayVideoPreviewSurface>(window, "OutputVideoPreview").HasBitmap);
+
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            Assert.Null(window.OutputPreviewPlanIdentity);
+            Assert.Null(window.OutputPreviewFramePlan);
+            Assert.Null(window.CurrentOutputReport);
+            Assert.False(Required<ReplayVideoPreviewSurface>(window, "OutputVideoPreview").HasBitmap);
+            Assert.False(window.OutputVideoPreviewDirty);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Background_output_job_reports_progress_allows_navigation_and_cancels_without_blocking()
     {
         var window = ShowWindow();

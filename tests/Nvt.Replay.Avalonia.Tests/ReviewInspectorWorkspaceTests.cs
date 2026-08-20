@@ -171,15 +171,28 @@ public sealed class ReviewInspectorWorkspaceTests
         workspace.SelectFinding(group.Id);
         var session = workspace.ReviewSession;
         var revision = workspace.ReviewSessionRevision;
+        var reportRevision = workspace.ReportRevision;
 
         var acknowledged = workspace.AcknowledgeFinding(group.Id);
         Assert.Equal(ReviewWorkflowState.Acknowledged, acknowledged.WorkflowState);
         Assert.Equal(ReviewWorkflowState.Acknowledged, workspace.SelectedFinding?.WorkflowState);
+        Assert.Equal(reportRevision + 1, workspace.ReportRevision);
+        reportRevision = workspace.ReportRevision;
+        workspace.AcknowledgeFinding(group.Id);
+        Assert.Equal(reportRevision, workspace.ReportRevision);
 
         var expected = workspace.SetFindingDisposition(group.Id, ReviewDisposition.Expected);
         Assert.Equal(ReviewDisposition.Expected, expected.Disposition);
+        Assert.Equal(reportRevision + 1, workspace.ReportRevision);
+        reportRevision = workspace.ReportRevision;
+        workspace.SetFindingDisposition(group.Id, ReviewDisposition.Expected);
+        Assert.Equal(reportRevision, workspace.ReportRevision);
         var resolved = workspace.ResolveFinding(group.Id);
         Assert.Equal(ReviewWorkflowState.Resolved, resolved.WorkflowState);
+        Assert.Equal(reportRevision + 1, workspace.ReportRevision);
+        reportRevision = workspace.ReportRevision;
+        Assert.Throws<InvalidOperationException>(() => workspace.ResolveFinding(group.Id));
+        Assert.Equal(reportRevision, workspace.ReportRevision);
         Assert.Same(session, workspace.ReviewSession);
         Assert.Equal(revision, workspace.ReviewSessionRevision);
         Assert.Equal(group.Id, workspace.SelectedFindingGroupId);

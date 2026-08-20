@@ -17,6 +17,7 @@ public sealed class ReplayVideoPreviewSurface : Control
     private byte[]? rgbaBuffer;
 
     internal int RgbRenderCount { get; private set; }
+    internal bool HasBitmap => bitmap is not null;
 
     public ReplayVideoPreviewSurface()
     {
