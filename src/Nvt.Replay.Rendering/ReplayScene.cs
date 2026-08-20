@@ -24,14 +24,16 @@ public sealed record ReplayExtent(double MaximumX, double MaximumY)
         ArgumentNullException.ThrowIfNull(contacts);
         double maximumX = 0;
         double maximumY = 0;
+        var any = false;
         foreach (var contact in contacts)
         {
+            any = true;
             maximumX = Math.Max(maximumX, contact.X);
             maximumY = Math.Max(maximumY, contact.Y);
         }
         return new ReplayExtent(
-            Nice(maximumX, 1920),
-            Nice(maximumY, 1080));
+            Nice(any ? maximumX : 1920, 1920),
+            Nice(any ? maximumY : 1080, 1080));
     }
 
     private static double Nice(double maximum, double minimum)

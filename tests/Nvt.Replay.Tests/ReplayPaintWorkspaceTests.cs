@@ -24,6 +24,12 @@ public sealed class ReplayPaintWorkspaceTests
     }
 
     [Fact]
+    public void Empty_capture_extent_keeps_the_existing_default_measurement()
+    {
+        Assert.Equal(new ReplayExtent(2304, 1280), ReplayExtent.Measure([]));
+    }
+
+    [Fact]
     public void Equal_updates_do_not_change_revision_or_request_work()
     {
         var (replay, history) = Replay();
