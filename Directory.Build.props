@@ -1,5 +1,10 @@
 <Project>
   <PropertyGroup>
+    <NvtVersionFile>$(MSBuildThisFileDirectory)VERSION</NvtVersionFile>
+    <NvtProductVersion>$([System.IO.File]::ReadAllText('$(NvtVersionFile)').Trim())</NvtProductVersion>
+    <Version>$(NvtProductVersion)</Version>
+    <AssemblyVersion>$(NvtProductVersion).0</AssemblyVersion>
+    <FileVersion>$(NvtProductVersion).0</FileVersion>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

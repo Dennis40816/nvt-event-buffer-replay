@@ -1,12 +1,15 @@
 [CmdletBinding()]
 param(
-    [switch]$SkipPerformanceSmoke
+    [switch]$SkipPerformanceSmoke,
+
+    [string]$ExpectedTag
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $RepoRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 
+& (Join-Path $PSScriptRoot 'verify-release-identity.ps1') -ExpectedTag $ExpectedTag
 dotnet restore (Join-Path $RepoRoot 'Nvt.EventBufferReplay.sln') --locked-mode
 if ($LASTEXITCODE -ne 0) { throw 'Locked restore failed.' }
 dotnet build (Join-Path $RepoRoot 'Nvt.EventBufferReplay.sln') --configuration Release --no-restore

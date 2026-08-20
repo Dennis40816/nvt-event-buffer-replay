@@ -62,7 +62,7 @@ jobs:
 
       - name: Verify source and quality gates
         shell: pwsh
-        run: ./scripts/verify.ps1
+        run: ./scripts/verify.ps1 -ExpectedTag '${{ steps.identity.outputs.tag }}'
 
       - name: Build and smoke candidate
         shell: pwsh
