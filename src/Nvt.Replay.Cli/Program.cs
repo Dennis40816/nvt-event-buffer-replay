@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Runtime.CompilerServices;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats;
@@ -7,6 +8,8 @@ using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Rendering;
 using Nvt.Replay.Sources;
+
+[assembly: InternalsVisibleTo("Nvt.Replay.Tests")]
 
 return await ReplayCli.RunAsync(args, Console.Out, Console.Error);
 
@@ -125,7 +128,7 @@ internal static class ReplayCli
             !TryReadOption(operands, "--event-buffer-version", out var versionText) ||
             !TryReadOption(operands, "--output", out var outputPath))
         {
-            await error.WriteLineAsync("Usage: nvt-replay export <file> --event-buffer-version <version> --output <file.mp4> [--range <first:last>] [--size <width>x<height>] [--fps <1-120>] [--speed <value>] [--clock <recorded|frame>] [--ffmpeg <path>] [--review <sidecar>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay export <file> --event-buffer-version <version> --output <file.mp4> [--range <first:last>] [--size <width>x<height>] [--fps <1-240>] [--speed <value>] [--clock <recorded|frame>] [--ffmpeg <path>] [--review <sidecar>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
         var path = operands[0];
@@ -202,9 +205,9 @@ internal static class ReplayCli
             return UsageError;
         }
         var frameRate = 30;
-        if (TryReadOption(operands, "--fps", out var fpsText) && (!int.TryParse(fpsText, out frameRate) || frameRate is < 1 or > 120))
+        if (TryReadOption(operands, "--fps", out var fpsText) && !TryParseExportFrameRate(fpsText, out frameRate))
         {
-            await error.WriteLineAsync("--fps must be between 1 and 120.");
+            await error.WriteLineAsync($"--fps must be between 1 and {ReplayFramePlan.MaximumFrameRate}.");
             return UsageError;
         }
         var speed = 1d;
@@ -388,6 +391,9 @@ internal static class ReplayCli
         }
         return 0;
     }
+
+    internal static bool TryParseExportFrameRate(string text, out int frameRate) =>
+        int.TryParse(text, out frameRate) && frameRate is >= 1 and <= ReplayFramePlan.MaximumFrameRate;
 
     private static bool TryParseRange(string value, int count, out AnalysisRange? range)
     {
@@ -767,7 +773,7 @@ internal static class ReplayCli
                                            Export a paired readable CSV/JSONL without decoding events
               nvt-replay export <file> --event-buffer-version <version>
                                 --output <file.mp4> [--range <first:last>]
-                                [--size <width>x<height>] [--fps <1-120>]
+                                [--size <width>x<height>] [--fps <1-240>]
                                 [--speed <value>] [--clock <recorded|frame>]
                                 [--ffmpeg <path>] [--review <sidecar>]
                                 [--source-adapter <id>]
