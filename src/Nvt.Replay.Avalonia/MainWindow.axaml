@@ -6,6 +6,7 @@
         xmlns:rendering="using:Nvt.Replay.Rendering"
         x:Class="Nvt.Replay.Avalonia.MainWindow"
         Title="NVT Event Buffer Replay"
+        Icon="/Assets/NvtReplayIcon.ico"
         Width="1480"
         Height="840"
         WindowState="Maximized"

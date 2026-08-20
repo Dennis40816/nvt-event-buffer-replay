@@ -71,6 +71,7 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(32, profile.Bounds.Height);
             Assert.Equal(34, panelWidth.Height);
             Assert.Equal(32, load.Bounds.Height);
+            Assert.NotNull(window.Icon);
             Assert.Contains("headerPrimary", load.Classes);
             Assert.Equal(VerticalAlignment.Center, version.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, panelWidth.VerticalAlignment);
