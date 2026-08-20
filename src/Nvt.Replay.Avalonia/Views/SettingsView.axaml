@@ -22,16 +22,27 @@
       <Setter Property="BorderThickness" Value="0,0,0,1" />
     </Style>
     <Style Selector="RadioButton.settingsChoice">
-      <Setter Property="MinHeight" Value="58" />
-      <Setter Property="Padding" Value="8,9" />
+      <Setter Property="MinHeight" Value="82" />
+      <Setter Property="Padding" Value="12" />
       <Setter Property="Margin" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="RadioButton.settingsChoice:pointerover">
+      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:checked">
       <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="RadioButton.settingsChoice:checked:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Button.settingsNav">
       <Setter Property="Height" Value="38" />
@@ -118,18 +129,21 @@
           <StackPanel x:Name="OutputDefaultsSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="Output defaults" />
             <TextBlock Classes="settingsSectionDescription" Text="These are startup defaults only. Timing, speed, FPS and range remain adjustable on Output; resolution follows Paint." />
-            <RadioButton x:Name="DefaultFramePacedRadioButton" Classes="settingsChoice" GroupName="DefaultOutputClock" IsChecked="True">
-              <StackPanel Spacing="2">
-                <TextBlock Text="Frame-paced · 120 Hz" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                <TextBlock Text="Skip missing-record gaps while preserving original timestamps in the rendered frame." Classes="settingsSectionDescription" />
-              </StackPanel>
-            </RadioButton>
-            <RadioButton Classes="settingsChoice" GroupName="DefaultOutputClock">
-              <StackPanel Spacing="2">
-                <TextBlock Text="Recorded timing" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                <TextBlock Text="Reproduce elapsed time between captured transactions." Classes="settingsSectionDescription" />
-              </StackPanel>
-            </RadioButton>
+            <Grid x:Name="DefaultOutputTimingGrid" ColumnDefinitions="*,12,*">
+              <RadioButton x:Name="DefaultFramePacedRadioButton" Grid.Column="0" Classes="settingsChoice" GroupName="DefaultOutputClock" IsChecked="True">
+                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+                  <TextBlock Text="Frame-paced" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock x:Name="DefaultFrameRateText" Grid.Column="1" Text="120 Hz" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                  <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0" Text="Skip long recorded gaps while keeping original REC timestamps visible." Classes="settingsSectionDescription" />
+                </Grid>
+              </RadioButton>
+              <RadioButton x:Name="DefaultRecordedTimingRadioButton" Grid.Column="2" Classes="settingsChoice" GroupName="DefaultOutputClock">
+                <Grid RowDefinitions="Auto,Auto">
+                  <TextBlock Text="Recorded timing" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Grid.Row="1" Margin="0,4,0,0" Text="Reproduce elapsed time between captured transactions." Classes="settingsSectionDescription" />
+                </Grid>
+              </RadioButton>
+            </Grid>
           </StackPanel>
 
           <StackPanel x:Name="ShortcutsSection" Spacing="10">

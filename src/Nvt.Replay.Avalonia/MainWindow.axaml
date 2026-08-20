@@ -39,7 +39,7 @@
 
         <Grid Grid.Column="2" VerticalAlignment="Center">
           <Button x:Name="CancelButton" Classes="ghost" Height="32" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
-          <Button x:Name="LoadButton" Classes="headerAction" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
+          <Button x:Name="LoadButton" Classes="headerAction headerPrimary" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
               <TextBlock x:Name="LoadActionLabel" Text="Load" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -54,9 +54,9 @@
           <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
         </Grid>
 
-        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-          <TextBlock Text="Common" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-          <ComboBox x:Name="EventVersionComboBox" Classes="headerInlineSelect" MinWidth="72" PlaceholderText="Version" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
+        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+          <TextBlock x:Name="EventVersionLabel" Text="Event Buffer Version" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+          <ComboBox x:Name="EventVersionComboBox" Classes="headerInlineSelect" MinWidth="72" PlaceholderText="Select" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
               <ComboBoxItem Content="0x82" />
               <ComboBoxItem Content="0x83" />
               <ComboBoxItem Content="0x84" />

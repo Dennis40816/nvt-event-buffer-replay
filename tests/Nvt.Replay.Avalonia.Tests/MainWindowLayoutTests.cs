@@ -65,11 +65,13 @@ public sealed class MainWindowLayoutTests
             var save = Required<Button>(window, "SaveReviewButton");
 
             Assert.Null(window.FindControl<Button>("DecodeButton"));
-            Assert.Equal("Version", version.PlaceholderText);
+            Assert.Equal("Event Buffer Version", Required<TextBlock>(window, "EventVersionLabel").Text);
+            Assert.Equal("Select", version.PlaceholderText);
             Assert.Equal(32, version.Bounds.Height);
             Assert.Equal(32, profile.Bounds.Height);
             Assert.Equal(34, panelWidth.Height);
             Assert.Equal(32, load.Bounds.Height);
+            Assert.Contains("headerPrimary", load.Classes);
             Assert.Equal(VerticalAlignment.Center, version.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, panelWidth.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, load.VerticalContentAlignment);
@@ -2927,6 +2929,11 @@ public sealed class MainWindowLayoutTests
             Assert.True(SettingsControl<ItemsControl>(window, "SettingsShortcutModulesItemsControl").ItemCount > 0);
             Assert.True(SettingsControl<CheckBox>(window, "PauseOnAlarmCheckBox").IsChecked);
             Assert.True(SettingsControl<RadioButton>(window, "DefaultFramePacedRadioButton").IsChecked);
+            var framePaced = SettingsControl<RadioButton>(window, "DefaultFramePacedRadioButton");
+            var recorded = SettingsControl<RadioButton>(window, "DefaultRecordedTimingRadioButton");
+            Assert.InRange(Math.Abs(framePaced.Bounds.Width - recorded.Bounds.Width), 0, 1);
+            Assert.Equal(framePaced.Bounds.Height, recorded.Bounds.Height);
+            Assert.Equal("120 Hz", SettingsControl<TextBlock>(window, "DefaultFrameRateText").Text);
             var playbackNav = SettingsControl<Button>(window, "PlaybackNavButton");
             playbackNav.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();
