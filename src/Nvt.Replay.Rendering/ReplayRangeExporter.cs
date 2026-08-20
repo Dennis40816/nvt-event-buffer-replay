@@ -567,12 +567,7 @@ public sealed class ReplayRangeExporter
                 CreateNoWindow = true,
             },
         };
-        var arguments = new[]
-        {
-            "-hide_banner", "-loglevel", "error", "-f", "rawvideo", "-pixel_format", "rgb24",
-            "-video_size", $"{options.Width}x{options.Height}", "-framerate", options.FrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            "-i", "pipe:0", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-y", temporaryPath,
-        };
+        var arguments = BuildFfmpegArguments(options, temporaryPath);
         foreach (var argument in arguments) process.StartInfo.ArgumentList.Add(argument);
         var started = false;
         var outputCreated = false;
@@ -581,22 +576,14 @@ public sealed class ReplayRangeExporter
             if (!process.Start()) throw new InvalidOperationException("FFmpeg did not start.");
             started = true;
             var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+            await StreamRenderedFramesAsync(
+                sceneFactory,
+                options,
+                plan,
+                (rgb, token) => process.StandardInput.BaseStream.WriteAsync(rgb, token),
+                cancellationToken,
+                progress);
             var totalFrames = ReplayFramePlan.OutputFrameCount(plan);
-            var completedFrames = 0;
-            var progressStep = Math.Max(1, totalFrames / 200);
-            progress?.Report(new ReplayExportProgress(0, totalFrames, "Encoding MP4"));
-            foreach (var entry in plan)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var rgb = ReplayFrameRenderer.RenderRgb(sceneFactory(entry.LogicalIndex), options.Width, options.Height, options.ResolvedRenderSettings);
-                for (var repeat = 0; repeat < entry.RepeatCount; repeat++)
-                {
-                    await process.StandardInput.BaseStream.WriteAsync(rgb, cancellationToken);
-                    completedFrames++;
-                    if (completedFrames == totalFrames || completedFrames % progressStep == 0)
-                        progress?.Report(new ReplayExportProgress(completedFrames, totalFrames, "Encoding MP4"));
-                }
-            }
             await process.StandardInput.BaseStream.FlushAsync(cancellationToken);
             process.StandardInput.Close();
             progress?.Report(new ReplayExportProgress(totalFrames, totalFrames, "Finalizing MP4"));
@@ -632,6 +619,55 @@ public sealed class ReplayRangeExporter
             if (cleanupError is not null)
                 throw new IOException("FFmpeg stopped but its partial output could not be removed.", cleanupError);
             throw;
+        }
+    }
+
+    internal static string[] BuildFfmpegArguments(ReplayExportOptions options, string outputPath) =>
+    [
+        "-hide_banner", "-loglevel", "error", "-f", "rawvideo", "-pixel_format", "rgb24",
+        "-video_size", $"{options.Width}x{options.Height}",
+        "-framerate", options.FrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        "-i", "pipe:0", "-an", "-c:v", "libx264", "-preset", "veryfast",
+        "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-y", outputPath,
+    ];
+
+    /// <summary>
+    /// Renders each distinct logical frame into one reusable RGB buffer, then writes its planned
+    /// repeats in order. The writer must consume the supplied memory before its ValueTask completes.
+    /// </summary>
+    internal static async Task StreamRenderedFramesAsync(
+        Func<int, ReplayScene> sceneFactory,
+        ReplayExportOptions options,
+        IReadOnlyList<ReplayFramePlanEntry> plan,
+        Func<ReadOnlyMemory<byte>, CancellationToken, ValueTask> writer,
+        CancellationToken cancellationToken,
+        IProgress<ReplayExportProgress>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(sceneFactory);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(writer);
+        var totalFrames = ReplayFramePlan.OutputFrameCount(plan);
+        var completedFrames = 0;
+        var progressStep = Math.Max(1, totalFrames / 200);
+        var rgb = new byte[checked(options.Width * options.Height * 3)];
+        progress?.Report(new ReplayExportProgress(0, totalFrames, "Rendering and encoding MP4"));
+        foreach (var entry in plan)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            ReplayFrameRenderer.RenderRgb(
+                sceneFactory(entry.LogicalIndex),
+                options.Width,
+                options.Height,
+                options.ResolvedRenderSettings,
+                rgb);
+            for (var repeat = 0; repeat < entry.RepeatCount; repeat++)
+            {
+                await writer(rgb, cancellationToken).ConfigureAwait(false);
+                completedFrames++;
+                if (completedFrames == totalFrames || completedFrames % progressStep == 0)
+                    progress?.Report(new ReplayExportProgress(completedFrames, totalFrames, "Rendering and encoding MP4"));
+            }
         }
     }
 

@@ -311,6 +311,47 @@ public sealed class ReplayExportTests : IDisposable
     }
 
     [Fact]
+    public async Task MP4_stream_reuses_one_RGB_buffer_and_uses_the_fast_software_preset()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(100));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var options = Options(Path.Combine(directory, "fast.mp4"), frameRate: 30);
+        IReadOnlyList<ReplayFramePlanEntry> plan =
+        [
+            new ReplayFramePlanEntry(0, 2),
+            new ReplayFramePlanEntry(1, 1),
+        ];
+        byte[]? sharedBuffer = null;
+        var writes = 0;
+        var sceneCalls = 0;
+
+        await ReplayRangeExporter.StreamRenderedFramesAsync(
+            index =>
+            {
+                sceneCalls++;
+                return ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent);
+            },
+            options,
+            plan,
+            (memory, _) =>
+            {
+                Assert.True(System.Runtime.InteropServices.MemoryMarshal.TryGetArray(memory, out var segment));
+                sharedBuffer ??= segment.Array;
+                Assert.Same(sharedBuffer, segment.Array);
+                writes++;
+                return ValueTask.CompletedTask;
+            },
+            CancellationToken.None);
+
+        Assert.Equal(2, sceneCalls);
+        Assert.Equal(3, writes);
+        var arguments = ReplayRangeExporter.BuildFfmpegArguments(options, "out.mp4");
+        var preset = Array.IndexOf(arguments, "-preset");
+        Assert.True(preset >= 0);
+        Assert.Equal("veryfast", arguments[preset + 1]);
+    }
+
+    [Fact]
     public async Task Encoder_cleanup_waits_for_a_released_Windows_file_lock()
     {
         var temporary = Path.Combine(directory, ".locked.tmp.mp4");
