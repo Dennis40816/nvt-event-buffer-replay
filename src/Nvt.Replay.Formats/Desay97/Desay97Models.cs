@@ -26,6 +26,19 @@ public sealed record Desay97AssembledPacket(
     byte CapturedCrc,
     byte ComputedCrc)
 {
+    public Desay97AssembledPacket(
+        SourceRecord probe,
+        SourceRecord payloadRead,
+        IReadOnlyList<byte> data)
+        : this(
+            probe,
+            payloadRead,
+            data,
+            data.Count == 0 ? (byte)0 : data[^1],
+            Crc8Poly1D.Compute(data.Take(Math.Max(0, data.Count - 1)).ToArray()))
+    {
+    }
+
     public IReadOnlyList<SourceRecord> PhysicalRecords => [Probe, PayloadRead];
 
     public string StableId => $"{Probe.StableId}+{PayloadRead.StableId}";

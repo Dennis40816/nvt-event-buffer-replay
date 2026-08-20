@@ -47,6 +47,21 @@ public sealed class Desay97Tests
     }
 
     [Fact]
+    public void Three_parameter_packet_constructor_remains_compatible_and_prevalidates_crc()
+    {
+        var full = Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]);
+
+        var packet = new Desay97AssembledPacket(Record(1, [0x01]), Record(2, full), full);
+        var decoded = new Desay97Decoder().Decode(packet, Desay97Profile.Standard);
+
+        Assert.Equal(full[^1], packet.CapturedCrc);
+        Assert.Equal(Crc8Poly1D.Compute(full.AsSpan(0, full.Length - 1)), packet.ComputedCrc);
+        Assert.True(packet.CrcValid);
+        Assert.True(Assert.IsType<Desay97Frame>(decoded.Frame).CrcValid);
+        Assert.DoesNotContain(decoded.Diagnostics, item => item.Code == "DESAY97_CRC_MISMATCH");
+    }
+
+    [Fact]
     public void Invalid_crc_is_reported_once_and_dropped_at_the_assembly_boundary()
     {
         var corrupt = Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]);
