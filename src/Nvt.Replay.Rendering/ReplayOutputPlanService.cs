@@ -57,7 +57,7 @@ public sealed class ReplayOutputPlanService : IDisposable
             settings);
         var samplingIdentity = identity.SamplingIdentity;
         ActivePlan request;
-        CancellationTokenSource? superseded = null;
+        ActivePlan? superseded = null;
         lock (gate)
         {
             ObjectDisposedException.ThrowIf(disposed, this);
@@ -69,7 +69,7 @@ public sealed class ReplayOutputPlanService : IDisposable
             }
             else
             {
-                superseded = active?.Cancellation;
+                superseded = active;
                 var generation = checked(++nextGeneration);
                 var planningCancellation = new CancellationTokenSource();
                 var planningTask = Task.Run(
@@ -85,32 +85,32 @@ public sealed class ReplayOutputPlanService : IDisposable
                 Interlocked.Increment(ref buildCount);
             }
         }
-        CancelAndDisposeWhenComplete(superseded, requestToIgnore: request);
+        CancelAndDisposeWhenComplete(superseded);
         return AwaitPreviewAsync(request, replayIdentity, settings, cancellationToken);
     }
 
     public void Invalidate()
     {
-        CancellationTokenSource? cancellation;
+        ActivePlan? request;
         lock (gate)
         {
-            cancellation = active?.Cancellation;
+            request = active;
             active = null;
         }
-        CancelAndDisposeWhenComplete(cancellation);
+        CancelAndDisposeWhenComplete(request);
     }
 
     public void Dispose()
     {
-        CancellationTokenSource? cancellation;
+        ActivePlan? request;
         lock (gate)
         {
             if (disposed) return;
             disposed = true;
-            cancellation = active?.Cancellation;
+            request = active;
             active = null;
         }
-        CancelAndDisposeWhenComplete(cancellation);
+        CancelAndDisposeWhenComplete(request);
     }
 
     private async Task<ReplayOutputPreviewPlan> AwaitPreviewAsync(
@@ -139,28 +139,16 @@ public sealed class ReplayOutputPlanService : IDisposable
             cancellationToken,
             progress);
 
-    private void CancelAndDisposeWhenComplete(
-        CancellationTokenSource? cancellation,
-        ActivePlan? requestToIgnore = null)
+    private static void CancelAndDisposeWhenComplete(ActivePlan? request)
     {
-        if (cancellation is null || ReferenceEquals(cancellation, requestToIgnore?.Cancellation)) return;
-        try
-        {
-            cancellation.Cancel();
-        }
-        finally
-        {
-            ActivePlan? owner;
-            lock (gate) owner = active is { Cancellation: var current } && ReferenceEquals(current, cancellation)
-                ? active
-                : null;
-            if (owner is null)
-            {
-                // CancellationTokenSource may still be observed by a superseded builder. Dispose
-                // only after that builder has left its task.
-                cancellation.Dispose();
-            }
-        }
+        if (request is null) return;
+        request.Cancellation.Cancel();
+        _ = request.Task.ContinueWith(
+            (_, state) => ((CancellationTokenSource)state!).Dispose(),
+            request.Cancellation,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private sealed record ActivePlan(
