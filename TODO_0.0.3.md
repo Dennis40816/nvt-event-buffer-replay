@@ -10,12 +10,12 @@
 
 - Branch：`0.0.3`
 - 參考 commit / tag：`1e2567b` / `0.0.2`
-- Production handwritten C# / XAML：約 18,662 行，仍在 18,000–22,000 目標區間內。
-- Core / parser / rendering tests：168 / 168 passed。
-- Avalonia tests：47 / 47 passed。
-- 私有長 KingstVIS golden：4,160 physical records / 2,080 logical frames。
-- 已知 release identity 不一致：git tag `0.0.2`、branch `0.0.3`，但 `VERSION` 為 `0.1.0`。
-- `MainWindow.axaml.cs` 約 3,874 行、`MainWindow.axaml` 約 1,910 行；兩者合計約占 production 31%。
+- Production handwritten C# / XAML：約 17,657 行，仍低於 30,000 行上限。
+- Core / parser / rendering tests：221 / 221 passed。
+- Avalonia candidate matrix 所在版本：50 / 50 passed；正式 approved screenshots 尚未核准。
+- 私有有效 KingstVIS golden `063ad09…`：568 logical frames；過期的 `4bec1b…` 不再作為 KingstVIS schema gate。
+- Release identity 已統一為 `VERSION=0.0.3`；正式 `v0.0.3` tag 尚未建立。
+- `MainWindow.axaml.cs` 約 3,567 行、`MainWindow.axaml` 約 1,106 行；styles 已移至獨立 resource dictionaries。
 
 ## 重構原則
 
@@ -73,7 +73,7 @@ Source adapters
 - [ ] Host state 評估改為固定 11-slot array/struct，避免每 frame 複製 Dictionary。
 - [x] Checkpoint 位置改用直接索引或 binary search，移除 `SortedDictionary.Last(...)` 熱路徑。
 - [x] 保留 2,048-point 無損 trail chunk；切片只影響繪圖批次，不刪除線或 report points。
-- [ ] 量測 allocation、GC、workspace build time、random seek 與 3-minute Loop memory curve。
+- [x] 量測 trail history allocation 與 random seek allocation；GC、workspace build time 與 3-minute Loop memory curve仍待補齊。
 
 完成條件：
 
@@ -98,7 +98,7 @@ Source adapters
 
 依下列順序進行，每一步保持既有 UI 與測試行為：
 
-- [ ] 抽出 `PlaybackController`：clock、speed、play/pause、step、Loop、auto-pause、generation。
+- [x] 抽出 `PlaybackController`：clock、speed、play/pause、step、Loop、auto-pause、generation。
 - [ ] 抽出 `OutputWorkspaceViewModel` 與 `ExportJobService`：content type、video options、preview、progress、cancel。
 - [ ] 抽出 `PaintWorkspaceViewModel`：panel extent、point view、trail、Trace/Points、axis transform、canvas safe area。
 - [ ] 抽出 `ReviewInspectorViewModel`：current frame、contact selection、finding navigation、marker lifecycle。
@@ -112,7 +112,7 @@ Source adapters
 ## Phase 5 — 共用 format / application pipeline
 
 - [x] 將目前 descriptor-only format registry 升級為可供 UI/CLI 使用的 executable provider。
-- [ ] provider 封裝 descriptor、configuration validation、decode、replay projection 與 inspector/raw presentation。
+- [x] provider 封裝 descriptor、configuration validation、decode、replay projection、diagnostics 與 display identity；inspect presenter 保留 typed dispatch 以維持既有 JSON schema。
 - [ ] 移除 UI 與 CLI 中 Common／Desay 重複 switch 與近似 command pipeline。
 - [x] Desay two-transaction 保留獨立 assembler；補 cancellation，並維持 transport-stream/slave transaction scope。
 - [ ] CRC ownership 明確化，避免 assembler 與 decoder 重複執行同一個 validation。
@@ -128,15 +128,19 @@ Source adapters
 - `4d27309`、`d2d6080`：executable format registry 與 CLI 共用 decode pipeline；Common 0x82–0x85、Desay Standard/Benz Palm 均有契約測試。
 - `6eb350c`：MainWindow styles 拆為獨立資源；selector 數與順序一致，Avalonia 48/48 tests passed。
 - `96aa3db`：load/decode 完整建置後原子切換；取消或失敗保留上一份結果。
+- `3998683`、`7f65a6b`：register annotation 改為 profile projection；source records 不複製，Raw、Inspector 與 readable log 使用相同 projected semantics。
+- `0abb612`、`c6132f5`：headless playback controller 與 MainWindow wiring；速度、Loop、auto-pause 與 stale tick generation 有獨立測試。
+- `bd4b720`：無損 chunked trail history；100,003 points 完整保留，建立 allocation 降低 93.7%，250 次 random seek allocation 降低 69.3%。
+- `5814e19`、`1fc4b0b`：deterministic UI capture 與顯式 candidate matrix；瑕疵圖不會直接成為 approved baseline。
 
-目前驗證基線：core/parser/rendering/CLI 207 tests passed；Avalonia 48 tests passed。正式 Golden、長時間 Loop、approved screenshot matrix 與 release tag 仍是未關閉 gate。
+目前驗證基線：core/parser/rendering/CLI 221 tests passed；Avalonia candidate matrix 50 tests passed。私有 Common KingstVIS／DSL／NDS smoke 已重跑；Desay 私有 Golden、長時間 Loop、正式 approved screenshot matrix 與 release tag 仍是未關閉 gate。
 
 ## Phase 6 — Register annotation projection
 
-- [ ] `SourceRecord` 只保存 transport normalization 與原始 provenance，不因 IC profile 切換而複製整份 capture。
-- [ ] 新增 `RegisterAnnotationIndex`，以 record stable ID 與 profile identity/hash 建立 projection。
-- [ ] register diagnostics 與 transport/parser diagnostics 分離。
-- [ ] profile 切換只重建 annotation projection 與其專屬 findings。
+- [x] `SourceRecord` 只保存 transport normalization 與原始 provenance，不因 IC profile 切換而複製整份 capture。
+- [x] 新增 `RegisterAnnotationIndex`，以 record stable ID 與 profile identity/hash 建立 projection。
+- [x] register diagnostics 與 transport/parser diagnostics 分離。
+- [x] profile 切換只重建 annotation projection 與其專屬 findings。
 - [ ] 為下一版 custom register profile JSON 預留 schema version、profile ID、IC/FW scope 與 SHA-256 identity。
 
 完成條件：切換 IC profile 不再 O(N) 複製所有 `SourceRecord`；同名但內容不同的 profile 不會被視為同一份設定。

@@ -79,3 +79,18 @@ Common and Desay packets, decoded-I2C adapter fixtures, and fixed SHA-256
 goldens for deterministic heatmap and replay PNG outputs. Python remains a
 historical demo oracle only; all shipped parser, CLI, UI, simulator, analysis,
 and release logic is C#.
+
+## 0.0.3 refactor smoke verification
+
+Re-run on 2026-08-20 after `c6132f5`, using the private sources in place and
+without copying them into this repository:
+
+| Evidence | Explicit configuration | Result |
+| --- | --- | --- |
+| KingstVIS `063ad09…` | Common `0x83`, IC `51929/51932` | 568 frames, 568 CRC-valid, 568 Host-State-eligible, 13 retained diagnostics |
+| DSL `e7e277f…` | Common `0x84`, IC `51929/51932` | 435 frames, 435 CRC-valid, 435 Host-State-eligible, zero diagnostics; all 435 retain unconsumed trailing bytes |
+| NDS `0e32907…` | Common `0x83`, IC `51927` | 518 frames, 518 CRC-valid, 518 Host-State-eligible, zero diagnostics |
+
+The obsolete `4bec1b…` transport evidence was also checked only to confirm its
+identity; it remains invalid as KingstVIS schema evidence and was not used as
+the 0.0.3 KingstVIS gate.
