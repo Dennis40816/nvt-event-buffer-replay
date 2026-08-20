@@ -2,12 +2,14 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -1213,11 +1215,36 @@ public sealed class MainWindowLayoutTests
             Assert.True(counts.Right <= bar.Bounds.Width + 0.5);
 
             var save = Required<Button>(window, "SaveReviewButton");
+            var loadReview = Required<Button>(window, "LoadReviewButton");
             var saveIcon = Required<TextBlock>(window, "SaveActionIcon");
+            var loadReviewIcon = Required<TextBlock>(window, "LoadReviewActionIcon");
             Assert.True(save.IsEnabled);
+            Assert.True(loadReview.IsEnabled);
             Assert.True(saveIcon.IsVisible);
+            Assert.True(loadReviewIcon.IsVisible);
             Assert.True(saveIcon.Bounds.Width > 0);
+            Assert.True(loadReviewIcon.Bounds.Width > 0);
             Assert.False(Required<TextBlock>(window, "SaveActionLabel").IsVisible);
+            Assert.False(Required<TextBlock>(window, "LoadReviewActionLabel").IsVisible);
+            var reviewActions = Required<StackPanel>(window, "ReviewHeaderActions");
+            var saveBounds = BoundsInside(save, reviewActions);
+            var loadReviewBounds = BoundsInside(loadReview, reviewActions);
+            Assert.True(saveBounds.Right <= loadReviewBounds.Left);
+            Assert.True(loadReviewBounds.Right <= reviewActions.Bounds.Width + 0.5);
+
+            save.IsEnabled = false;
+            loadReview.IsEnabled = false;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(IsTransparent(save.Background), $"Disabled Save background must be transparent, got {save.Background}.");
+            Assert.True(IsTransparent(loadReview.Background), $"Disabled Open review background must be transparent, got {loadReview.Background}.");
+            Assert.All(
+                new[] { save, loadReview },
+                button => Assert.True(
+                    IsTransparent(button.GetVisualDescendants().OfType<ContentPresenter>().Single().Background),
+                    $"Disabled {button.Name} presenter must remain transparent."));
+            save.IsEnabled = true;
+            loadReview.IsEnabled = true;
+            Dispatcher.UIThread.RunJobs();
 
             Assert.Equal("38", Required<TextBlock>(window, "TimelinePhysicalCountText").Text);
             Assert.Equal("19", Required<TextBlock>(window, "TimelineLogicalCountText").Text);
@@ -1676,6 +1703,9 @@ public sealed class MainWindowLayoutTests
         }
         Assert.True(predicate(), "Timed out while waiting for the output preview.");
     }
+
+    private static bool IsTransparent(IBrush? brush) =>
+        brush is null || brush is ISolidColorBrush { Color.A: 0 };
 
     private static void CaptureCandidateMatrix(MainWindow window, string workspace)
     {

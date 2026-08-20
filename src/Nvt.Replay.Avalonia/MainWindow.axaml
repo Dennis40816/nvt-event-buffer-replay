@@ -72,15 +72,22 @@
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE70F;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="EditActionLabel" Text="Edit" /></StackPanel>
         </Button>
 
-        <Button x:Name="SaveReviewButton" Grid.Column="9" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock x:Name="SaveActionIcon" Text="&#xE74E;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
-            <TextBlock x:Name="SaveActionLabel" Text="Save" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
+        <StackPanel x:Name="ReviewHeaderActions" Grid.Column="9" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+          <Button x:Name="SaveReviewButton" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock x:Name="SaveActionIcon" Text="&#xE74E;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
+              <TextBlock x:Name="SaveActionLabel" Text="Save" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="LoadReviewButton" Classes="headerAction" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock x:Name="LoadReviewActionIcon" Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
+              <TextBlock x:Name="LoadReviewActionLabel" Text="Review" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ApplySidecarButton" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
+        </StackPanel>
         <Border Grid.Column="10" Classes="separator" />
-        <Button x:Name="LoadReviewButton" Grid.Column="9" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" AutomationProperties.Name="Open review" />
-        <Button x:Name="ApplySidecarButton" Grid.Column="9" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
         <Button x:Name="ExportAnalysisButton" Grid.Column="11" Classes="headerAction" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview">
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE72D;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="OutputActionLabel" Text="Output" /></StackPanel>
         </Button>

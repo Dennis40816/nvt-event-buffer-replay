@@ -245,6 +245,7 @@ public partial class MainWindow : Window
         var compactTransport = width < 1300;
         EditActionLabel.IsVisible = width >= 1320;
         SaveActionLabel.IsVisible = width >= 1320;
+        LoadReviewActionLabel.IsVisible = width >= 1320;
         OutputActionLabel.IsVisible = width >= 1240;
         SettingsActionLabel.IsVisible = width >= 1240;
         TimelineStatusText.IsVisible = !compactTransport;
