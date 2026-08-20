@@ -117,6 +117,10 @@ public sealed class ExecutableFormatRegistryTests
         Assert.Equal(0x99000u, result.Configuration.EventBufferBase);
         Assert.Equal("Desay 0x97 / Benz Palm", result.DisplayIdentity);
         Assert.Same(result.Report, result.InspectionReport);
+        Assert.Same(capture.Records, result.Capture.Records);
+        var eventRead = result.Capture.Records.First(record => record.Address == 0x99000);
+        Assert.True(result.Capture.RegisterAnnotations.TryGet(eventRead, out var annotation));
+        Assert.Equal("Event Buffer", annotation.Description.Region);
     }
 
     [Fact]

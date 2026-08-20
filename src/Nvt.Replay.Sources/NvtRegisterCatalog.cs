@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
@@ -7,7 +8,10 @@ public sealed record NvtRegisterProfile(
     string IcFamily,
     uint EventBufferBase,
     uint CommonBufferBase,
-    uint HistoryBase);
+    uint HistoryBase)
+{
+    public NvtRegisterProfileIdentity Identity => NvtRegisterProfileIdentity.Create(this);
+}
 
 public sealed record NvtRegisterDescription(
     string Profiles,
@@ -22,6 +26,8 @@ public sealed record NvtRegisterDescription(
     string Readable,
     NvtFwCommand? FwCommand = null)
 {
+    public string StableName => NvtRegisterCatalog.StableName(Name);
+
     public IReadOnlyDictionary<string, string> ToSourceFields()
     {
         var fields = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -29,7 +35,7 @@ public sealed record NvtRegisterDescription(
             ["register_profile"] = Profiles,
             ["register_profile_resolution"] = ProfileResolution,
             ["register_region"] = Region,
-            ["register_name"] = NvtRegisterCatalog.StableName(Name),
+            ["register_name"] = StableName,
             ["register_display_name"] = Name,
             ["register_address"] = $"0x{Address:X}",
             ["register_base"] = $"0x{BaseAddress:X}",
@@ -76,6 +82,8 @@ public static class NvtRegisterCatalog
         new("51950/51951", 0x80800, 0xAAD8C, 0xA445C),
     ];
 
+    public static NvtRegisterProfileIdentity AutomaticProfileIdentity { get; } = CreateAutomaticProfileIdentity();
+
     public static SourceRecord Annotate(SourceRecord record, string? icFamily = null)
     {
         if (record.Address is not { } address || Describe(address, record.Operation, record.Data, icFamily) is not { } description)
@@ -112,22 +120,7 @@ public static class NvtRegisterCatalog
         string? icFamily = null)
     {
         var raw = Raw(payload);
-        if (address == 0xFF0FE)
-        {
-            var confirmedReset = operation == BusOperation.Write && payload.Count > 0 && payload[0] == 0x69;
-            var resetMeaning = confirmedReset ? "Software Reset" : "raw_only";
-            return new NvtRegisterDescription(
-                "Common", "common", "Control", "Reset Control", address, address, 0, raw, resetMeaning,
-                confirmedReset ? "Reset Control · Software Reset" : $"Reset Control · {raw}");
-        }
-
-        if (address is >= 0xFF000 and <= 0xFF003)
-        {
-            var offset = address - 0xFF000;
-            return new NvtRegisterDescription(
-                "Common", "common", "Identification", "Chip ID", address, 0xFF000, offset, raw, "raw_only",
-                $"Chip ID +0x{offset:X2} · {raw}");
-        }
+        if (DescribeCommon(address, operation, payload, raw) is { } common) return common;
 
         var matches = MatchProfiles(address)
             .Where(match => icFamily is null || match.Profile.IcFamily.Equals(icFamily, StringComparison.OrdinalIgnoreCase))
@@ -166,6 +159,34 @@ public static class NvtRegisterCatalog
             command);
     }
 
+    public static NvtRegisterDescription? DescribeForProfile(
+        uint address,
+        BusOperation operation,
+        IReadOnlyList<byte> payload,
+        NvtRegisterProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        var raw = Raw(payload);
+        if (DescribeCommon(address, operation, payload, raw) is { } common) return common;
+
+        var match = MatchProfiles(address, [profile]).FirstOrDefault();
+        if (match is null) return null;
+        var (name, meaning, command) = DescribeRegion(match.Region, match.Offset, operation, payload);
+        var readable = meaning == "raw_only" ? $"{name} · {raw}" : $"{name} · {meaning}";
+        return new NvtRegisterDescription(
+            profile.IcFamily,
+            "resolved",
+            match.Region,
+            name,
+            address,
+            match.BaseAddress,
+            match.Offset,
+            raw,
+            meaning,
+            readable,
+            command);
+    }
+
     public static string EventBufferOffsetName(byte offset) => StableName(DescribeEventBufferOffset(offset).Name);
 
     internal static string StableName(string value)
@@ -188,9 +209,13 @@ public static class NvtRegisterCatalog
         return result.ToString();
     }
 
-    private static IEnumerable<ProfileMatch> MatchProfiles(uint address)
+    private static IEnumerable<ProfileMatch> MatchProfiles(uint address) => MatchProfiles(address, Profiles);
+
+    private static IEnumerable<ProfileMatch> MatchProfiles(
+        uint address,
+        IEnumerable<NvtRegisterProfile> profiles)
     {
-        foreach (var profile in Profiles)
+        foreach (var profile in profiles)
         {
             if (address >= profile.EventBufferBase && address < profile.EventBufferBase + EventBufferLength)
                 yield return new ProfileMatch(profile, "Event Buffer", profile.EventBufferBase, address - profile.EventBufferBase);
@@ -242,6 +267,39 @@ public static class NvtRegisterCatalog
         payload.Count == 0
             ? "—"
             : string.Join(' ', payload.Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
+
+    private static NvtRegisterProfileIdentity CreateAutomaticProfileIdentity()
+    {
+        var canonical = string.Join('\n', Profiles.Select(profile => profile.Identity.ContentHash));
+        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(canonical));
+        return new NvtRegisterProfileIdentity("AUTOMATIC", Convert.ToHexStringLower(hash));
+    }
+
+    private static NvtRegisterDescription? DescribeCommon(
+        uint address,
+        BusOperation operation,
+        IReadOnlyList<byte> payload,
+        string raw)
+    {
+        if (address == 0xFF0FE)
+        {
+            var confirmedReset = operation == BusOperation.Write && payload.Count > 0 && payload[0] == 0x69;
+            var resetMeaning = confirmedReset ? "Software Reset" : "raw_only";
+            return new NvtRegisterDescription(
+                "Common", "common", "Control", "Reset Control", address, address, 0, raw, resetMeaning,
+                confirmedReset ? "Reset Control · Software Reset" : $"Reset Control · {raw}");
+        }
+
+        if (address is >= 0xFF000 and <= 0xFF003)
+        {
+            var offset = address - 0xFF000;
+            return new NvtRegisterDescription(
+                "Common", "common", "Identification", "Chip ID", address, 0xFF000, offset, raw, "raw_only",
+                $"Chip ID +0x{offset:X2} · {raw}");
+        }
+
+        return null;
+    }
 
     private sealed record ProfileMatch(NvtRegisterProfile Profile, string Region, uint BaseAddress, uint Offset);
 }

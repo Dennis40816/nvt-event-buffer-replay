@@ -222,7 +222,8 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         var read = Assert.Single(session.Records, record => record.Operation == BusOperation.Read);
         Assert.Equal(0x80800u, read.Address);
         Assert.Equal("0x00", read.SourceFields?["register_offset"]);
-        Assert.Equal("Event Buffer", read.SourceFields?["register_region"]);
+        Assert.True(session.RegisterAnnotations.TryGet(read, out var annotation));
+        Assert.Equal("Event Buffer", annotation.Description.Region);
         Assert.Equal(packet.Length + trailing.Length, read.Data.Count);
 
         var report = session.DecodeCommon(CommonEventBufferVersion.V84);

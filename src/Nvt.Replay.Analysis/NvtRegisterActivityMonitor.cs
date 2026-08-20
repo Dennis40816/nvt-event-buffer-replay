@@ -10,35 +10,55 @@ public sealed class NvtRegisterActivityMonitor
     public IReadOnlyList<ReplayDiagnostic> Observe(IEnumerable<SourceRecord> records)
     {
         var diagnostics = new List<ReplayDiagnostic>();
-        foreach (var source in records.Where(item => item.Operation == BusOperation.Read && item.Address is not null))
+        foreach (var source in records)
         {
-            var record = source.SourceFields?.ContainsKey("register_readable") == true
-                ? source
-                : NvtRegisterCatalog.Annotate(source);
-            var name = record.SourceFields?.GetValueOrDefault("register_name");
-            if (name is not ("fw_state" or "frame_counter" or "dp_version" or "tp_fw_version")) continue;
-            var address = record.Address!.Value;
-            var raw = record.Data.ToArray();
-            if (raw.Length == 0) continue;
-            var key = $"{record.SourceFields?.GetValueOrDefault("register_profile") ?? "unknown"}:{address:X}";
-            var changed = !previousByRegister.TryGetValue(key, out var previous) || !raw.SequenceEqual(previous);
-            previousByRegister[key] = raw;
-            diagnostics.Add(new ReplayDiagnostic(
-                DiagnosticSeverity.Info,
-                Code(name),
-                Message(name, raw),
-                record.StableId,
-                record.Location,
-                new Dictionary<string, string>
+            RegisterAnnotation? annotation = null;
+            if (source.Address is { } address)
+            {
+                var selectedProfile = NvtRegisterCatalog.FindProfile(
+                    source.SourceFields?.GetValueOrDefault("register_profile"));
+                var description = selectedProfile is null
+                    ? NvtRegisterCatalog.Describe(address, source.Operation, source.Data)
+                    : NvtRegisterCatalog.DescribeForProfile(address, source.Operation, source.Data, selectedProfile);
+                if (description is not null)
                 {
-                    ["register_address"] = $"0x{address:X}",
-                    ["raw"] = string.Join(' ', raw.Select(value => value.ToString("X2", System.Globalization.CultureInfo.InvariantCulture))),
-                    ["changed_from_previous_sample"] = changed.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    ["meaning"] = Meaning(name, raw),
-                    ["register_profile"] = record.SourceFields?.GetValueOrDefault("register_profile") ?? "unknown",
-                }));
+                    annotation = new RegisterAnnotation(
+                        source.StableId,
+                        selectedProfile?.Identity ?? NvtRegisterCatalog.AutomaticProfileIdentity,
+                        description);
+                }
+            }
+            if (Observe(source, annotation) is { } diagnostic) diagnostics.Add(diagnostic);
         }
         return diagnostics;
+    }
+
+    internal ReplayDiagnostic? Observe(SourceRecord record, RegisterAnnotation? annotation)
+    {
+        if (record.Operation != BusOperation.Read || record.Address is not { } address || annotation is null)
+            return null;
+        var name = annotation.Description.StableName;
+        if (name is not ("fw_state" or "frame_counter" or "dp_version" or "tp_fw_version")) return null;
+        var raw = record.Data.ToArray();
+        if (raw.Length == 0) return null;
+        var key = $"{annotation.ProfileIdentity.ContentHash}:{address:X}";
+        var changed = !previousByRegister.TryGetValue(key, out var previous) || !raw.SequenceEqual(previous);
+        previousByRegister[key] = raw;
+        return new ReplayDiagnostic(
+            DiagnosticSeverity.Info,
+            Code(name),
+            Message(name, raw),
+            record.StableId,
+            record.Location,
+            new Dictionary<string, string>
+            {
+                ["register_address"] = $"0x{address:X}",
+                ["raw"] = string.Join(' ', raw.Select(value => value.ToString("X2", System.Globalization.CultureInfo.InvariantCulture))),
+                ["changed_from_previous_sample"] = changed.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["meaning"] = Meaning(name, raw),
+                ["register_profile"] = annotation.Description.Profiles,
+                ["register_profile_hash"] = annotation.ProfileIdentity.ContentHash,
+            });
     }
 
     private static string Code(string name) => name switch

@@ -34,12 +34,14 @@ public abstract class ExecutableFormatSelection
         CaptureSession capture,
         CancellationToken cancellationToken = default);
 
-    protected CaptureSession ConfigureCapture(CaptureSession capture)
+    protected CaptureSession ConfigureCapture(
+        CaptureSession capture,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(capture);
         return string.Equals(capture.RegisterProfile, RegisterProfile, StringComparison.OrdinalIgnoreCase)
             ? capture
-            : capture.WithRegisterProfile(RegisterProfile);
+            : capture.WithRegisterProfile(RegisterProfile, cancellationToken);
     }
 }
 
@@ -58,7 +60,7 @@ public sealed class CommonFormatSelection : ExecutableFormatSelection
         CaptureSession capture,
         CancellationToken cancellationToken = default)
     {
-        var configured = ConfigureCapture(capture);
+        var configured = ConfigureCapture(capture, cancellationToken);
         var report = configured.DecodeCommon(Version, cancellationToken);
         var replay = new CommonReplaySession(report.Frames);
         var eventBufferBase = NvtRegisterCatalog.FindProfile(configured.RegisterProfile)?.EventBufferBase ?? 0;
@@ -93,7 +95,7 @@ public sealed class Desay97FormatSelection : ExecutableFormatSelection
         CaptureSession capture,
         CancellationToken cancellationToken = default)
     {
-        var configured = ConfigureCapture(capture);
+        var configured = ConfigureCapture(capture, cancellationToken);
         var report = configured.DecodeDesay97(Profile, EventBufferBase, cancellationToken);
         var replay = new Desay97ReplaySession(report.Frames);
         var configuration = new ReplayDecodeConfiguration(

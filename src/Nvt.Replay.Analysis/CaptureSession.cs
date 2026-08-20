@@ -11,23 +11,23 @@ public sealed record CaptureLoadProgress(string Phase, int RecordsRead);
 
 public sealed class CaptureSession
 {
-    private readonly IReadOnlyList<ReplayDiagnostic> adapterDiagnostics;
-
     private CaptureSession(
         string sourcePath,
         string sourceSha256,
         SourceProbeResult probe,
         IReadOnlyList<SourceRecord> records,
-        IReadOnlyList<ReplayDiagnostic> adapterDiagnostics,
-        string? registerProfile = null)
+        IReadOnlyList<ReplayDiagnostic> transportDiagnostics,
+        RegisterAnnotationIndex registerAnnotationIndex,
+        RegisterAnnotationProjection registerAnnotations)
     {
         SourcePath = sourcePath;
         SourceSha256 = sourceSha256;
         Probe = probe;
         Records = records;
-        this.adapterDiagnostics = adapterDiagnostics;
-        RegisterProfile = registerProfile;
-        SourceDiagnostics = adapterDiagnostics.Concat(new NvtRegisterActivityMonitor().Observe(records)).ToArray();
+        TransportDiagnostics = transportDiagnostics;
+        RegisterAnnotationIndex = registerAnnotationIndex;
+        RegisterAnnotations = registerAnnotations;
+        RegisterProfile = registerAnnotations.Profile?.IcFamily;
     }
 
     public string SourcePath { get; }
@@ -38,7 +38,15 @@ public sealed class CaptureSession
 
     public IReadOnlyList<SourceRecord> Records { get; }
 
-    public IReadOnlyList<ReplayDiagnostic> SourceDiagnostics { get; }
+    public IReadOnlyList<ReplayDiagnostic> TransportDiagnostics { get; }
+
+    public IReadOnlyList<ReplayDiagnostic> SourceDiagnostics => TransportDiagnostics;
+
+    public IReadOnlyList<ReplayDiagnostic> RegisterDiagnostics => RegisterAnnotations.Diagnostics;
+
+    public RegisterAnnotationIndex RegisterAnnotationIndex { get; }
+
+    public RegisterAnnotationProjection RegisterAnnotations { get; }
 
     public string? RegisterProfile { get; }
 
@@ -77,17 +85,38 @@ public sealed class CaptureSession
         }
 
         progress?.Report(new CaptureLoadProgress("Ready for configuration", records.Count));
-        return new CaptureSession(fullPath, sourceHash, probe, records, sourceDiagnostics);
+        var recordIndex = records.ToArray();
+        var registerAnnotationIndex = new RegisterAnnotationIndex(recordIndex);
+        var registerAnnotations = registerAnnotationIndex.Project(null, cancellationToken);
+        return new CaptureSession(
+            fullPath,
+            sourceHash,
+            probe,
+            recordIndex,
+            sourceDiagnostics.ToArray(),
+            registerAnnotationIndex,
+            registerAnnotations);
     }
 
-    public CaptureSession WithRegisterProfile(string? icFamily)
+    public CaptureSession WithRegisterProfile(
+        string? icFamily,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var profile = NvtRegisterCatalog.FindProfile(icFamily);
         if (!string.IsNullOrWhiteSpace(icFamily) && profile is null)
             throw new ArgumentException($"Unknown NVT register profile '{icFamily}'.", nameof(icFamily));
-        var canonical = profile?.IcFamily;
-        var records = Records.Select(record => NvtRegisterCatalog.Reannotate(record, canonical)).ToArray();
-        return new CaptureSession(SourcePath, SourceSha256, Probe, records, adapterDiagnostics, canonical);
+        var identity = profile?.Identity ?? NvtRegisterCatalog.AutomaticProfileIdentity;
+        if (RegisterAnnotations.ProfileIdentity == identity) return this;
+        var projection = RegisterAnnotationIndex.Project(profile, cancellationToken);
+        return new CaptureSession(
+            SourcePath,
+            SourceSha256,
+            Probe,
+            Records,
+            TransportDiagnostics,
+            RegisterAnnotationIndex,
+            projection);
     }
 
     public CommonInspectionReport DecodeCommon(
@@ -97,7 +126,8 @@ public sealed class CaptureSession
         var decoder = new CommonEventBufferDecoder();
         var monitor = new CommonStreamMonitor();
         var frames = new List<CommonEventBufferFrame>();
-        var diagnostics = new List<ReplayDiagnostic>(SourceDiagnostics);
+        var diagnostics = new List<ReplayDiagnostic>(TransportDiagnostics);
+        diagnostics.AddRange(RegisterDiagnostics);
 
         foreach (var record in Records)
         {
@@ -163,13 +193,25 @@ public sealed class CaptureSession
         return new CommonInspectionReport(SourcePath, SourceSha256, version, frames, diagnostics);
     }
 
-    private static bool IsEventBufferRead(SourceRecord record) =>
-        record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
-        record.Data.Count >= CommonEventBufferDecoder.FrameLength &&
-        record.SourceFields?.TryGetValue("register_offset", out var offset) == true &&
-        offset.Equals("0x00", StringComparison.OrdinalIgnoreCase) &&
-        (record.SourceFields.GetValueOrDefault("register_page_known") == "false" ||
-         record.SourceFields.GetValueOrDefault("register_region") == "Event Buffer");
+    private bool IsEventBufferRead(SourceRecord record)
+    {
+        if (!record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) ||
+            record.Data.Count < CommonEventBufferDecoder.FrameLength)
+        {
+            return false;
+        }
+
+        if (record.Address is null &&
+            record.SourceFields?.GetValueOrDefault("register_page_known") == "false" &&
+            record.SourceFields.GetValueOrDefault("register_offset")?.Equals("0x00", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return true;
+        }
+
+        return RegisterAnnotations.TryGet(record, out var annotation) &&
+               annotation.Description.Region == "Event Buffer" &&
+               annotation.Description.Offset == 0;
+    }
 
     public Desay97InspectionReport DecodeDesay97(
         Desay97Profile profile,
@@ -182,7 +224,8 @@ public sealed class CaptureSession
         var assembly = new Desay97Assembler(resolvedEventBufferBase).Assemble(Records, cancellationToken);
         var decoder = new Desay97Decoder();
         var frames = new List<Desay97Frame>();
-        var diagnostics = new List<ReplayDiagnostic>(SourceDiagnostics);
+        var diagnostics = new List<ReplayDiagnostic>(TransportDiagnostics);
+        diagnostics.AddRange(RegisterDiagnostics);
         diagnostics.AddRange(assembly.Diagnostics);
         foreach (var packet in assembly.Packets)
         {

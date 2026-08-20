@@ -98,7 +98,11 @@ public sealed class NdsCaptureSessionTests : IDisposable
         Assert.Empty(unresolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
         Assert.Single(resolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
         Assert.Equal("51929/51932", resolved.RegisterProfile);
-        Assert.Equal("Event Buffer", resolved.Records[0].SourceFields?["register_region"]);
+        Assert.Same(unresolved.Records, resolved.Records);
+        Assert.Same(unresolved.Records[0], resolved.Records[0]);
+        Assert.Same(unresolved.RegisterAnnotationIndex, resolved.RegisterAnnotationIndex);
+        Assert.True(resolved.RegisterAnnotations.TryGet(resolved.Records[0], out var annotation));
+        Assert.Equal("Event Buffer", annotation.Description.Region);
     }
 
     [Fact]
@@ -112,8 +116,22 @@ public sealed class NdsCaptureSessionTests : IDisposable
 
         Assert.Single(catalogResolved.DecodeCommon(CommonEventBufferVersion.V83).Frames);
         Assert.Empty(wrongProfile.DecodeCommon(CommonEventBufferVersion.V83).Frames);
-        Assert.False(wrongProfile.Records[0].SourceFields?.ContainsKey("register_region"));
-        Assert.False(wrongProfile.Records[0].SourceFields?.ContainsKey("register_name"));
+        Assert.Same(catalogResolved.Records, wrongProfile.Records);
+        Assert.False(wrongProfile.RegisterAnnotations.TryGet(wrongProfile.Records[0], out _));
+    }
+
+    [Fact]
+    public async Task Transport_and_register_diagnostics_are_exposed_separately()
+    {
+        var path = WriteLog(Record("Read", "0x99070", [0x12, 0x34]));
+
+        var session = await CaptureSession.LoadAsync(path);
+
+        Assert.Empty(session.TransportDiagnostics);
+        Assert.Same(session.TransportDiagnostics, session.SourceDiagnostics);
+        var register = Assert.Single(session.RegisterDiagnostics);
+        Assert.Equal("NVT_FRAME_COUNTER_SAMPLE", register.Code);
+        Assert.DoesNotContain(session.SourceDiagnostics, item => item.Code.StartsWith("NVT_", StringComparison.Ordinal));
     }
 
     public void Dispose()
