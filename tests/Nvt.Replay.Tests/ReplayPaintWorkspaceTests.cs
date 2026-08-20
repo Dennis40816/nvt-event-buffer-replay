@@ -169,6 +169,101 @@ public sealed class ReplayPaintWorkspaceTests
     }
 
     [Fact]
+    public void Annotation_refresh_updates_scene_without_rebuilding_replay_history_or_settings()
+    {
+        var (replay, history) = Replay();
+        var settings = Settings();
+        var createdAt = DateTimeOffset.UnixEpoch;
+        var diagnostics = new List<ReplayDiagnostic>
+        {
+            Diagnostic("INITIAL_WARNING", DiagnosticSeverity.Warning),
+        };
+        var markers = new List<ReplayMarker>
+        {
+            Marker("marker-1", "Initial marker", createdAt),
+        };
+        var workspace = new ReplayPaintWorkspace(replay, history, settings, diagnostics, markers);
+        var snapshot = replay.Seek(0);
+
+        diagnostics[0] = Diagnostic("UPDATED_ALARM", DiagnosticSeverity.Alarm);
+        markers[0] = markers[0] with { Label = "Renamed marker" };
+        var beforeRefresh = workspace.CreateScene(snapshot);
+        var update = workspace.UpdateAnnotations(diagnostics, markers);
+        var afterRefresh = workspace.CreateScene(snapshot);
+
+        Assert.Equal("INITIAL_WARNING", Assert.Single(beforeRefresh.Diagnostics).Code);
+        Assert.Equal("Initial marker", Assert.Single(beforeRefresh.MarkerLabels));
+        Assert.True(update.Changed);
+        Assert.Equal(1, update.Revision);
+        Assert.Equal(1, workspace.AnnotationRevision);
+        Assert.Equal("UPDATED_ALARM", Assert.Single(afterRefresh.Diagnostics).Code);
+        Assert.Equal("Renamed marker", Assert.Single(afterRefresh.MarkerLabels));
+        Assert.Same(replay, workspace.Replay);
+        Assert.Same(history, workspace.TrailHistory);
+        Assert.Same(settings, workspace.Settings);
+        Assert.Equal(0, workspace.Revision);
+        Assert.Equal(0, workspace.GeometryRevision);
+    }
+
+    [Fact]
+    public void Equivalent_annotation_refresh_is_a_no_op_and_external_lists_cannot_mutate_the_snapshot()
+    {
+        var (replay, history) = Replay();
+        var createdAt = DateTimeOffset.UnixEpoch;
+        var diagnostics = new List<ReplayDiagnostic>
+        {
+            Diagnostic("WARNING", DiagnosticSeverity.Warning, new Dictionary<string, string> { ["state"] = "open" }),
+        };
+        var markers = new List<ReplayMarker>
+        {
+            Marker("marker-1", "Marker", createdAt, ["QA-1"]),
+        };
+        var workspace = new ReplayPaintWorkspace(replay, history, Settings(), diagnostics, markers);
+
+        diagnostics.Clear();
+        markers.Clear();
+        var initialScene = workspace.CreateScene(replay.Seek(0));
+        var update = workspace.UpdateAnnotations(
+            [Diagnostic("WARNING", DiagnosticSeverity.Warning, new Dictionary<string, string> { ["state"] = "open" })],
+            [Marker("marker-1", "Marker", createdAt, ["QA-1"])]);
+
+        Assert.Single(initialScene.Diagnostics);
+        Assert.Single(initialScene.MarkerLabels);
+        Assert.False(update.Changed);
+        Assert.Equal(0, update.Revision);
+        Assert.Equal(0, workspace.AnnotationRevision);
+    }
+
+    [Fact]
+    public void Marker_add_rename_and_remove_each_publish_the_current_scene_annotations()
+    {
+        var (replay, history) = Replay();
+        var workspace = new ReplayPaintWorkspace(replay, history, Settings(), diagnostics: [], markers: []);
+        var snapshot = replay.Seek(0);
+        var marker = Marker("marker-1", "Marker 1", DateTimeOffset.UnixEpoch);
+
+        var added = workspace.UpdateAnnotations(
+            [Diagnostic("ANNOTATION_MARKER", DiagnosticSeverity.Info)],
+            [marker]);
+        var addedScene = workspace.CreateScene(snapshot);
+        var renamed = workspace.UpdateAnnotations(
+            [Diagnostic("ANNOTATION_MARKER", DiagnosticSeverity.Info)],
+            [marker with { Label = "Baseline reset" }]);
+        var renamedScene = workspace.CreateScene(snapshot);
+        var removed = workspace.UpdateAnnotations([], []);
+        var removedScene = workspace.CreateScene(snapshot);
+
+        Assert.Equal((1, true), (added.Revision, added.Changed));
+        Assert.Equal("Marker 1", Assert.Single(addedScene.MarkerLabels));
+        Assert.Equal((2, true), (renamed.Revision, renamed.Changed));
+        Assert.Equal("Baseline reset", Assert.Single(renamedScene.MarkerLabels));
+        Assert.Equal((3, true), (removed.Revision, removed.Changed));
+        Assert.Empty(removedScene.Diagnostics);
+        Assert.Empty(removedScene.MarkerLabels);
+        Assert.Same(history, workspace.TrailHistory);
+    }
+
+    [Fact]
     public void Rejects_invalid_settings_and_trail_history_from_another_replay()
     {
         var (replay, history) = Replay();
@@ -190,6 +285,19 @@ public sealed class ReplayPaintWorkspaceTests
         {
             LegendPosition = ReplayLegendPosition.TopLeft,
         };
+
+    private static ReplayDiagnostic Diagnostic(
+        string code,
+        DiagnosticSeverity severity,
+        IReadOnlyDictionary<string, string>? details = null) =>
+        new(severity, code, code, "source-0", new SourceLocation(0, 1), details);
+
+    private static ReplayMarker Marker(
+        string id,
+        string label,
+        DateTimeOffset createdAt,
+        IReadOnlyList<string>? qaCaseIds = null) =>
+        new(id, label, 0, 0, createdAt, QaCaseIds: qaCaseIds);
 
     private static (FakeReplay Replay, ReplayTrailHistory History) Replay()
     {

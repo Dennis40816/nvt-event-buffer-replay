@@ -22,6 +22,10 @@ public readonly record struct ReplayPaintUpdate(
     public bool RequiresWorkspaceRebuild => Impact == ReplayPaintChangeImpact.WorkspaceRebuild;
 }
 
+public readonly record struct ReplayPaintAnnotationUpdate(
+    long Revision,
+    bool Changed);
+
 public sealed record ReplayPaintSettings(
     ReplayExtent PanelExtent,
     ReplayRenderMode PointView,
@@ -68,8 +72,8 @@ public sealed class ReplayPaintWorkspace
 
     private readonly ITouchReplaySession replay;
     private readonly ReplayTrailHistory trailHistory;
-    private readonly IReadOnlyList<ReplayDiagnostic> diagnostics;
-    private readonly IReadOnlyList<ReplayMarker> markers;
+    private IReadOnlyList<ReplayDiagnostic> diagnostics;
+    private IReadOnlyList<ReplayMarker> markers;
 
     public ReplayPaintWorkspace(
         ITouchReplaySession replay,
@@ -85,8 +89,8 @@ public sealed class ReplayPaintWorkspace
 
         this.replay = replay;
         this.trailHistory = trailHistory;
-        this.diagnostics = diagnostics ?? replay.Diagnostics;
-        this.markers = markers ?? [];
+        this.diagnostics = Snapshot(diagnostics ?? replay.Diagnostics);
+        this.markers = Snapshot(markers ?? []);
         Settings = settings ?? ReplayPaintSettings.Default(ReplayExtent.Measure(replay.AllReportedContacts));
         Validate(Settings, replay.Count);
         ResolvedLegendPosition = ResolveLegendPosition(Settings);
@@ -100,6 +104,7 @@ public sealed class ReplayPaintWorkspace
     public ReplayLegendPosition ResolvedLegendPosition { get; private set; }
     public long Revision { get; private set; }
     public long GeometryRevision { get; private set; }
+    public long AnnotationRevision { get; private set; }
 
     public ReplayPaintUpdate Update(ReplayPaintSettings settings)
     {
@@ -122,6 +127,21 @@ public sealed class ReplayPaintWorkspace
         GeometryRevision = nextGeometryRevision;
         ResolvedLegendPosition = nextLegendPosition;
         return new ReplayPaintUpdate(Revision, GeometryRevision, impact);
+    }
+
+    public ReplayPaintAnnotationUpdate UpdateAnnotations(
+        IReadOnlyList<ReplayDiagnostic> diagnostics,
+        IReadOnlyList<ReplayMarker> markers)
+    {
+        ArgumentNullException.ThrowIfNull(diagnostics);
+        ArgumentNullException.ThrowIfNull(markers);
+        if (DiagnosticsEqual(this.diagnostics, diagnostics) && MarkersEqual(this.markers, markers))
+            return new ReplayPaintAnnotationUpdate(AnnotationRevision, Changed: false);
+
+        this.diagnostics = Snapshot(diagnostics);
+        this.markers = Snapshot(markers);
+        AnnotationRevision = checked(AnnotationRevision + 1);
+        return new ReplayPaintAnnotationUpdate(AnnotationRevision, Changed: true);
     }
 
     public ReplayScene CreateScene(int logicalIndex) => CreateScene(replay.Seek(logicalIndex));
@@ -206,4 +226,58 @@ public sealed class ReplayPaintWorkspace
             !Enum.IsDefined(settings.Theme))
             throw new ArgumentOutOfRangeException(nameof(settings), "Paint settings contain an unknown enum value.");
     }
+
+    private static IReadOnlyList<T> Snapshot<T>(IReadOnlyList<T> values) =>
+        Array.AsReadOnly(values.ToArray());
+
+    private static bool DiagnosticsEqual(
+        IReadOnlyList<ReplayDiagnostic> left,
+        IReadOnlyList<ReplayDiagnostic> right)
+    {
+        if (left.Count != right.Count) return false;
+        for (var index = 0; index < left.Count; index++)
+        {
+            var first = left[index];
+            var second = right[index];
+            if (first.Severity != second.Severity ||
+                first.Code != second.Code ||
+                first.Message != second.Message ||
+                first.SourceRecordId != second.SourceRecordId ||
+                first.Location != second.Location ||
+                !DetailsEqual(first.Details, second.Details))
+                return false;
+        }
+        return true;
+    }
+
+    private static bool DetailsEqual(
+        IReadOnlyDictionary<string, string>? left,
+        IReadOnlyDictionary<string, string>? right)
+    {
+        if (ReferenceEquals(left, right)) return true;
+        if (left is null || right is null || left.Count != right.Count) return false;
+        foreach (var (key, value) in left)
+            if (!right.TryGetValue(key, out var candidate) || candidate != value) return false;
+        return true;
+    }
+
+    private static bool MarkersEqual(
+        IReadOnlyList<ReplayMarker> left,
+        IReadOnlyList<ReplayMarker> right)
+    {
+        if (left.Count != right.Count) return false;
+        for (var index = 0; index < left.Count; index++)
+            if (!MarkerEqual(left[index], right[index])) return false;
+        return true;
+    }
+
+    private static bool MarkerEqual(ReplayMarker left, ReplayMarker right) =>
+        left.Id == right.Id &&
+        left.Label == right.Label &&
+        left.StartLogicalIndex == right.StartLogicalIndex &&
+        left.EndLogicalIndex == right.EndLogicalIndex &&
+        left.CreatedAt == right.CreatedAt &&
+        left.Note == right.Note &&
+        (left.QaCaseIds ?? []).SequenceEqual(right.QaCaseIds ?? [], StringComparer.Ordinal) &&
+        (left.Evidence ?? []).SequenceEqual(right.Evidence ?? []);
 }
