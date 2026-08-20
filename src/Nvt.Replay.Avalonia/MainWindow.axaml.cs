@@ -88,7 +88,6 @@ public partial class MainWindow : Window
         OutputClockComboBox.SelectedIndex = 1;
         OutputSpeedComboBox.SelectedIndex = 2;
         OutputFrameRateComboBox.SelectedIndex = 3;
-        OutputResolutionComboBox.SelectedIndex = 0;
         SyncOutputResolutionWithPanel();
         configuringOutputSettings = false;
         ShortcutModulesItemsControl.ItemsSource = ReplayShortcutCatalog.Modules;
@@ -114,7 +113,6 @@ public partial class MainWindow : Window
             OutputClockComboBox,
             OutputSpeedComboBox,
             OutputFrameRateComboBox,
-            OutputResolutionComboBox,
             HeatmapModeComboBox);
         ApplyShortcutToolTips();
         AddHandler(

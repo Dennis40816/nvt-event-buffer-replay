@@ -107,6 +107,7 @@ public partial class MainWindow : Window
         };
         OutputContentDescriptionText.Text = option.Description;
         AutomationProperties.SetName(ExportSelectedOutputButton, ExportSelectedOutputButton.Content?.ToString());
+        RefreshOutputInfo();
         if (!mp4) StopOutputVideoPreviewPlayback();
         if (!mp4) OutputExportWarningPanel.IsVisible = false;
         if (heatmap) RefreshHeatmapPresentation();
@@ -483,7 +484,7 @@ public partial class MainWindow : Window
     private void OutputVideoSetting_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (configuringOutputSettings || OutputClockComboBox is null || OutputSpeedComboBox is null ||
-            OutputFrameRateComboBox is null || OutputResolutionComboBox is null)
+            OutputFrameRateComboBox is null)
             return;
 
         var clock = SelectedTag(OutputClockComboBox) == "recorded"
@@ -498,19 +499,7 @@ public partial class MainWindow : Window
         var frameRateTag = SelectedTag(OutputFrameRateComboBox);
         OutputCustomFrameRateTextBox.IsVisible = frameRateTag == "custom";
 
-        var resolutionTag = SelectedTag(OutputResolutionComboBox);
-        var customResolution = resolutionTag == "custom";
-        OutputCustomResolutionLabel.IsVisible = customResolution;
-        OutputCustomResolutionPanel.IsVisible = customResolution;
-        if (resolutionTag == "panel")
-        {
-            SyncOutputResolutionWithPanel(updateWorkspace: false);
-        }
-        else if (!customResolution && TryParseOutputResolution(resolutionTag, out var width, out var height))
-        {
-            OutputWidthTextBox.Text = width.ToString(CultureInfo.InvariantCulture);
-            OutputHeightTextBox.Text = height.ToString(CultureInfo.InvariantCulture);
-        }
+        SyncOutputResolutionWithPanel(updateWorkspace: false);
         ApplyOutputSettingsFromControls(showStatus: false);
     }
 
@@ -538,6 +527,7 @@ public partial class MainWindow : Window
         if (!outputWorkspace.Update(settings)) return;
 
         OutputExportWarningPanel.IsVisible = false;
+        RefreshOutputInfo();
         if (showStatus)
             SessionStatusText.Text = $"MP4 preview settings · {OutputVideoSettingsLabel()}";
         StopOutputVideoPreviewPlayback();
@@ -571,28 +561,8 @@ public partial class MainWindow : Window
             return false;
         }
 
-        var width = settings.Width;
-        var height = settings.Height;
-        var resolutionTag = SelectedTag(OutputResolutionComboBox);
-        if (resolutionTag == "panel")
-        {
-            width = NormalizeVideoDimension(CurrentPaintExtent.MaximumX, 320, ReplayOutputWorkspace.MaximumWidth);
-            height = NormalizeVideoDimension(CurrentPaintExtent.MaximumY, 180, ReplayOutputWorkspace.MaximumHeight);
-        }
-        else if (resolutionTag == "custom")
-        {
-            if (!int.TryParse(OutputWidthTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out width) ||
-                !int.TryParse(OutputHeightTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out height))
-            {
-                error = $"MP4 size must use even values: width 320-{ReplayOutputWorkspace.MaximumWidth} and height 180-{ReplayOutputWorkspace.MaximumHeight}.";
-                return false;
-            }
-        }
-        else if (!TryParseOutputResolution(resolutionTag, out width, out height))
-        {
-            error = "Select a valid MP4 resolution.";
-            return false;
-        }
+        var width = NormalizeVideoDimension(CurrentPaintExtent.MaximumX, 320, ReplayOutputWorkspace.MaximumWidth);
+        var height = NormalizeVideoDimension(CurrentPaintExtent.MaximumY, 180, ReplayOutputWorkspace.MaximumHeight);
 
         settings = settings with
         {
@@ -616,26 +586,14 @@ public partial class MainWindow : Window
     private static string? SelectedTag(ComboBox comboBox) =>
         (comboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString();
 
-    private static bool TryParseOutputResolution(string? text, out int width, out int height)
-    {
-        width = 0;
-        height = 0;
-        var parts = text?.Split('x', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        return parts is { Length: 2 } &&
-               int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out width) &&
-               int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out height);
-    }
-
     private bool SyncOutputResolutionWithPanel(bool updateWorkspace = true)
     {
         var width = NormalizeVideoDimension(CurrentPaintExtent.MaximumX, 320, ReplayOutputWorkspace.MaximumWidth);
         var height = NormalizeVideoDimension(CurrentPaintExtent.MaximumY, 180, ReplayOutputWorkspace.MaximumHeight);
-        OutputPanelResolutionItem.Content = $"Paint · {width} × {height}";
-        if (OutputResolutionComboBox.SelectedItem is not ComboBoxItem item || item.Tag?.ToString() != "panel")
-            return false;
-        OutputWidthTextBox.Text = width.ToString(CultureInfo.InvariantCulture);
-        OutputHeightTextBox.Text = height.ToString(CultureInfo.InvariantCulture);
-        return updateWorkspace && outputWorkspace.Update(outputWorkspace.Settings with { Width = width, Height = height });
+        OutputInfoResolutionText.Text = $"Paint · {width} × {height}";
+        var changed = updateWorkspace && outputWorkspace.Update(outputWorkspace.Settings with { Width = width, Height = height });
+        RefreshOutputInfo();
+        return changed;
     }
 
     private static int NormalizeVideoDimension(double value, int minimum, int maximum)
@@ -646,6 +604,85 @@ public partial class MainWindow : Window
 
     private string OutputVideoSettingsLabel() =>
         $"{outputWorkspace.Settings.Width} × {outputWorkspace.Settings.Height} / {outputWorkspace.Settings.FrameRate} FPS / {outputWorkspace.Settings.Speed:0.##}×";
+
+    private void RefreshOutputInfo()
+    {
+        if (OutputInfoFormatText is null) return;
+        var selectedType = (OutputContentComboBox.SelectedItem as SelectOption)?.Value ?? "mp4";
+        var settings = outputWorkspace.Settings;
+        var range = SelectedOutputRange();
+        var rangeText = replaySession is { Count: > 0 }
+            ? $"range {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}"
+            : "range -";
+        OutputInfoResolutionText.Text = $"Paint · {settings.Width} × {settings.Height}";
+
+        switch (selectedType)
+        {
+            case "heatmap":
+            {
+                var width = Math.Max(640, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Width));
+                var height = Math.Max(360, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Height));
+                var samples = currentOutputReport?.Hotspot.SampleCount ?? 0;
+                OutputInfoFormatText.Text = "PNG · heatmap";
+                OutputInfoResolutionText.Text = $"Preview · {width} × {height}";
+                OutputInfoSizeText.Text = FormatEstimatedRange(
+                    EstimateRasterBytes(width, height, 0.12),
+                    EstimateRasterBytes(width, height, 0.9));
+                OutputInfoDetailText.Text = $"{samples:N0} samples · {rangeText}";
+                break;
+            }
+            case "package":
+            {
+                var events = currentOutputReport?.Events.Count ?? 0;
+                var records = session?.Records.Count ?? 0;
+                var diagnostics = currentOutputReport?.DiagnosticAggregates.Count ?? 0;
+                var centralEstimate = 24_000L + events * 720L + records * 132L + diagnostics * 1_600L;
+                OutputInfoFormatText.Text = "ZIP-ready · 9 files";
+                OutputInfoResolutionText.Text = $"Paint metadata · {settings.Width} × {settings.Height}";
+                OutputInfoSizeText.Text = FormatEstimatedRange(
+                    Math.Max(8_192, (long)(centralEstimate * 0.7)),
+                    Math.Max(16_384, (long)(centralEstimate * 1.35)));
+                OutputInfoDetailText.Text = $"{events:N0} events · {records:N0} records · {rangeText}";
+                break;
+            }
+            default:
+            {
+                var frameCount = outputVideoPreviewPlan?.Estimate.OutputFrameCount ?? 0;
+                var duration = outputVideoPreviewPlan?.Estimate.Duration ?? TimeSpan.Zero;
+                OutputInfoFormatText.Text = "MP4 · H.264";
+                OutputInfoSizeText.Text = frameCount > 0
+                    ? FormatEstimatedRange(
+                        EstimateVideoBytes(settings.Width, settings.Height, frameCount, 0.01),
+                        EstimateVideoBytes(settings.Width, settings.Height, frameCount, 0.05))
+                    : outputPreviewPlanPending ? "Calculating…" : "Waiting for preview";
+                OutputInfoDetailText.Text =
+                    $"{settings.FrameRate} FPS · {frameCount:N0} frames · {FormatClock(duration)} · {rangeText}";
+                break;
+            }
+        }
+    }
+
+    private static long EstimateVideoBytes(int width, int height, long frameCount, double bitsPerPixelPerFrame) =>
+        (long)Math.Ceiling(Math.Max(0, width) * (double)Math.Max(0, height) * Math.Max(0, frameCount) *
+                          Math.Max(0, bitsPerPixelPerFrame) / 8d);
+
+    private static long EstimateRasterBytes(int width, int height, double bytesPerPixel) =>
+        (long)Math.Ceiling(Math.Max(0, width) * (double)Math.Max(0, height) * Math.Max(0, bytesPerPixel));
+
+    private static string FormatEstimatedRange(long minimumBytes, long maximumBytes) =>
+        $"Approx. {FormatFileSize(Math.Min(minimumBytes, maximumBytes))}-{FormatFileSize(Math.Max(minimumBytes, maximumBytes))}";
+
+    private static string FormatFileSize(long bytes)
+    {
+        var size = Math.Max(0, bytes);
+        if (size >= 1024L * 1024 * 1024)
+            return $"{size / (1024d * 1024 * 1024):0.#} GB";
+        if (size >= 1024L * 1024)
+            return $"{size / (1024d * 1024):0.#} MB";
+        if (size >= 1024L)
+            return $"{size / 1024d:0.#} KB";
+        return $"{size} B";
+    }
 
     private AnalysisRange SelectedOutputRange()
     {
@@ -867,6 +904,7 @@ public partial class MainWindow : Window
         RefreshHeatmapPresentation();
         if (preview is not null)
             PrepareOutputVideoPreview(preview, clockName, speed);
+        RefreshOutputInfo();
     }
 
     private void RefreshHeatmapPresentation()
@@ -888,6 +926,7 @@ public partial class MainWindow : Window
             $"Frames {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0} · " +
             $"{report.Hotspot.Columns} × {report.Hotspot.Rows} grid" +
             (hiddenSamples > 0 ? $" · {hiddenSamples:N0} samples below N" : string.Empty);
+        RefreshOutputInfo();
     }
 
     private void PrepareOutputVideoPreview(ReplayOutputPreviewPlan preview, string clockName, string speed)
@@ -912,6 +951,7 @@ public partial class MainWindow : Window
         outputVideoPreviewDirty = true;
         ShowOutputVideoFrame(outputVideoFrameIndex);
         OutputConfigurationText.Text += $"\nvideo    {clockName} / {settings.FrameRate} FPS / {speed}";
+        RefreshOutputInfo();
     }
 
     private void ShowOutputVideoFrame(int outputFrameIndex)
@@ -1075,6 +1115,7 @@ public partial class MainWindow : Window
         OutputPreviewFrameText.Text = "output 0/0";
         OutputFullscreenClockText.Text = "00:00.000 / 00:00.000";
         OutputFullscreenFrameText.Text = "0 / 0";
+        RefreshOutputInfo();
     }
 
     private void InvalidateCurrentOutputVideoFrame()

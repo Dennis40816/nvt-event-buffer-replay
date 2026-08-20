@@ -164,7 +164,7 @@ public sealed class MainWindowLayoutTests
             await WaitUntilAsync(() => !string.Equals(previewFrame.Text, "output 0/0", StringComparison.Ordinal));
             var expectedPaintResolution = $"{Required<TextBox>(window, "PanelWidthTextBox").Text} × {Required<TextBox>(window, "PanelHeightTextBox").Text}";
             Assert.Contains(expectedPaintResolution, Required<TextBlock>(window, "OutputVideoBadgeText").Text);
-            Assert.Contains(expectedPaintResolution, Required<ComboBoxItem>(window, "OutputPanelResolutionItem").Content?.ToString());
+            Assert.Contains(expectedPaintResolution, Required<TextBlock>(window, "OutputInfoResolutionText").Text);
             Assert.False(Required<Button>(window, "PlayPauseButton").IsEnabled);
             Assert.True(Required<Button>(window, "OutputPreviewPlayPauseButton").IsEnabled);
             Assert.True(Required<ToggleButton>(window, "OutputPreviewRepeatToggleButton").IsChecked);
@@ -202,11 +202,9 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             var settingsDark = CaptureHash(window, "11-golden-output-settings-dark.png");
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 5;
-            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 4;
             Dispatcher.UIThread.RunJobs();
             var customSettingsDark = CaptureHash(window, "15-golden-output-custom-settings-dark.png");
             Required<ComboBox>(window, "OutputSpeedComboBox").SelectedIndex = 2;
-            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 0;
             window.Width = 1180;
             window.Height = 720;
             Dispatcher.UIThread.RunJobs();
@@ -516,7 +514,6 @@ public sealed class MainWindowLayoutTests
                 "OutputClockComboBox",
                 "OutputSpeedComboBox",
                 "OutputFrameRateComboBox",
-                "OutputResolutionComboBox",
             };
 
             foreach (var name in names)
@@ -561,8 +558,12 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(3, outputContent.ItemCount);
             Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
             Assert.False(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
-            Assert.False(Required<Border>(window, "OutputPackagePanel").IsVisible);
+            Assert.False(Required<Grid>(window, "OutputPackagePanel").IsVisible);
             Assert.True(Required<ToggleButton>(window, "OutputPreviewRepeatToggleButton").IsChecked);
+            Assert.Equal("MP4 · H.264", Required<TextBlock>(window, "OutputInfoFormatText").Text);
+            Assert.Contains("Paint ·", Required<TextBlock>(window, "OutputInfoResolutionText").Text);
+            Assert.StartsWith("Approx.", Required<TextBlock>(window, "OutputInfoSizeText").Text);
+            Assert.Contains("120 FPS", Required<TextBlock>(window, "OutputInfoDetailText").Text);
 
             var videoPanel = Required<Grid>(window, "OutputVideoPanel");
             var settingsRail = Required<Border>(window, "OutputSettingsRailBorder");
@@ -575,6 +576,10 @@ public sealed class MainWindowLayoutTests
             Assert.True(
                 clockBounds.Right <= settingsScroller.Bounds.Width - 12,
                 $"Clock selector right edge {clockBounds.Right:0.##} should leave a scrollbar gutter inside {settingsScroller.Bounds.Width:0.##} px.");
+            var exportButton = Required<Button>(window, "ExportSelectedOutputButton");
+            var videoExportBounds = BoundsInside(exportButton, window);
+            Assert.True(videoExportBounds.Right <= window.Bounds.Width - 10);
+            Assert.True(videoExportBounds.Bottom <= window.Bounds.Height - 10);
 
             outputContent.SelectedIndex = 1;
             Dispatcher.UIThread.RunJobs();
@@ -592,6 +597,10 @@ public sealed class MainWindowLayoutTests
                 Required<Grid>(window, "OutputPageLayout").ColumnDefinitions[0].Width,
                 heatmapPanel.ColumnDefinitions[0].Width);
             Assert.Equal("Export PNG", Required<Button>(window, "ExportSelectedOutputButton").Content);
+            Assert.Equal("PNG · heatmap", Required<TextBlock>(window, "OutputInfoFormatText").Text);
+            var heatmapExportBounds = BoundsInside(exportButton, window);
+            Assert.Equal(videoExportBounds.Right, heatmapExportBounds.Right);
+            Assert.Equal(videoExportBounds.Bottom, heatmapExportBounds.Bottom);
             var heatmapMode = Required<ComboBox>(window, "HeatmapModeComboBox");
             Assert.Equal(2, heatmapMode.ItemCount);
             Assert.Equal("All recorded points", Assert.IsType<SelectOption>(heatmapMode.SelectedItem).Label);
@@ -609,6 +618,15 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(0.8, heatmap.LabelThresholdRatio, 3);
             Assert.True(heatmap.VisibleCellCount > 0);
             Assert.True(heatmap.VisibleCellCount < 35);
+
+            outputContent.SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Grid>(window, "OutputPackagePanel").IsVisible);
+            Assert.Equal("Export package", exportButton.Content);
+            Assert.Equal("ZIP-ready · 9 files", Required<TextBlock>(window, "OutputInfoFormatText").Text);
+            var packageExportBounds = BoundsInside(exportButton, window);
+            Assert.Equal(videoExportBounds.Right, packageExportBounds.Right);
+            Assert.Equal(videoExportBounds.Bottom, packageExportBounds.Bottom);
 
             outputContent.SelectedIndex = 0;
             Assert.True(Required<Grid>(window, "OutputVideoPanel").IsVisible);
@@ -1206,9 +1224,16 @@ public sealed class MainWindowLayoutTests
             var initialPlanBuilds = window.OutputPreviewPlanBuildCount;
             var initialReportBuilds = window.OutputReportBuildCount;
             var frozenFinalOptions = window.CreateCurrentOutputExportOptions("frozen.mp4");
-            Required<ComboBox>(window, "OutputResolutionComboBox").SelectedIndex = 1;
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "PaintTab");
+            var paintWidth = Required<TextBox>(window, "PanelWidthTextBox");
+            var paintHeight = Required<TextBox>(window, "PanelHeightTextBox");
+            paintWidth.Text = "1280";
+            paintHeight.Text = "720";
+            paintHeight.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
             await WaitUntilAsync(() => window.OutputPreviewPlanIdentity?.Settings.Width == 1280);
             Assert.Contains("1280 × 720", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
+            Assert.Contains("Paint · 1280 × 720", Required<TextBlock>(window, "OutputInfoResolutionText").Text);
             Assert.Same(initialPlan, window.OutputPreviewFramePlan);
             Assert.Equal(initialPlanBuilds, window.OutputPreviewPlanBuildCount);
             Assert.Equal(initialReportBuilds, window.OutputReportBuildCount);
@@ -1766,6 +1791,11 @@ public sealed class MainWindowLayoutTests
             Dispatcher.UIThread.RunJobs();
             Assert.True(Required<Grid>(window, "OutputHeatmapPanel").IsVisible);
             VerifySnapshotMatrix(window, "heatmap");
+
+            Required<ComboBox>(window, "OutputContentComboBox").SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Grid>(window, "OutputPackagePanel").IsVisible);
+            VerifySnapshotMatrix(window, "package");
 
             Required<Button>(window, "SettingsButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Dispatcher.UIThread.RunJobs();

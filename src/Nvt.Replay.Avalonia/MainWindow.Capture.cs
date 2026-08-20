@@ -152,7 +152,6 @@ public partial class MainWindow : Window
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
             RegisterProfileComboBox.IsEnabled = true;
-            EditConfigurationButton.IsEnabled = true;
             ExportReadableLogButton.IsEnabled = true;
             configuringRegisterProfile = true;
             RegisterProfileComboBox.SelectedIndex = 0;
@@ -408,7 +407,6 @@ public partial class MainWindow : Window
             InitializeReplay();
             SaveReviewButton.IsEnabled = true;
             LoadReviewButton.IsEnabled = true;
-            ExportAnalysisButton.IsEnabled = true;
             AnalysisTab.IsEnabled = true;
             AnalysisSummaryText.Text = $"Ready · {decodedRows.Length:N0} frames · export the full replay or current In/Out range";
             AddMarkerButton.IsEnabled = decodedRows.Length > 0;
@@ -809,7 +807,6 @@ public partial class MainWindow : Window
         MarkerQaCaseTextBox.Text = string.Empty;
         EventVersionComboBox.SelectedIndex = -1;
         EventVersionComboBox.IsEnabled = false;
-        EditConfigurationButton.IsEnabled = false;
         Desay97ProfileComboBox.SelectedIndex = -1;
         Desay97ProfileComboBox.IsVisible = false;
         PaintTab.IsEnabled = false;
@@ -821,7 +818,6 @@ public partial class MainWindow : Window
         AddMarkerButton.IsEnabled = false;
         SaveReviewButton.IsEnabled = false;
         LoadReviewButton.IsEnabled = false;
-        ExportAnalysisButton.IsEnabled = false;
         ExportSelectedOutputButton.IsEnabled = false;
         AnalysisTab.IsEnabled = false;
         currentOutputReport = null;
@@ -835,6 +831,9 @@ public partial class MainWindow : Window
         OutputConfigurationText.Text = "Decoder configuration will appear here.";
         OutputSourceText.Text = "Source identity will appear here.";
         AnalysisOutputText.Text = "Nothing exported in this session.";
+        OutputInfoFormatText.Text = "MP4 · H.264";
+        OutputInfoSizeText.Text = "Waiting for preview";
+        OutputInfoDetailText.Text = "120 FPS · 0 frames · 00:00.000 · range -";
         OutputContentComboBox.SelectedIndex = 0;
         LoadReviewButton.IsVisible = true;
         ApplySidecarButton.IsVisible = false;

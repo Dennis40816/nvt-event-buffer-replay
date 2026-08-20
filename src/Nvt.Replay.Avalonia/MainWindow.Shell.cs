@@ -39,10 +39,8 @@ public partial class MainWindow : Window
     private void ApplyResponsiveRails(double width)
     {
         var compactTransport = width < 1300;
-        EditActionLabel.IsVisible = width >= 1320;
         SaveActionLabel.IsVisible = width >= 1320;
         LoadReviewActionLabel.IsVisible = width >= 1320;
-        OutputActionLabel.IsVisible = width >= 1240;
         SettingsActionLabel.IsVisible = width >= 1240;
         TimelineStatusText.IsVisible = !compactTransport;
         LoopRangeText.IsVisible = !compactTransport;
@@ -188,13 +186,11 @@ public partial class MainWindow : Window
         LoadButton.IsEnabled = !busy && !outputExportJobs.IsActive;
         CancelButton.IsVisible = busy;
         EventVersionComboBox.IsEnabled = !busy && session is not null;
-        EditConfigurationButton.IsEnabled = !busy && session is not null;
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
         RegisterProfileComboBox.IsEnabled = !busy && session is not null;
         ExportReadableLogButton.IsEnabled = !busy && session is not null;
         SaveReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         LoadReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
-        ExportAnalysisButton.IsEnabled = !busy && replaySession is { Count: > 0 };
         UpdateOutputExportButtonAvailability();
         OutputPreviewPlayPauseButton.IsEnabled = !busy && outputVideoFrameCount > 0;
         SessionStatusText.Text = status;
@@ -273,7 +269,7 @@ public partial class MainWindow : Window
             case ReplayShortcutAction.SaveReview when SaveReviewButton.IsEnabled:
                 SaveReviewButton_OnClick(this, new RoutedEventArgs());
                 return true;
-            case ReplayShortcutAction.ExportAnalysis when ExportAnalysisButton.IsEnabled:
+            case ReplayShortcutAction.ExportAnalysis when AnalysisTab.IsEnabled:
                 OpenOutputPreviewButton_OnClick(this, new RoutedEventArgs());
                 return true;
             case ReplayShortcutAction.TogglePlayback when outputWorkspaceActive && OutputPreviewPlayPauseButton.IsEnabled:

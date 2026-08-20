@@ -117,7 +117,7 @@
 
           <StackPanel x:Name="OutputDefaultsSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="Output defaults" />
-            <TextBlock Classes="settingsSectionDescription" Text="These are startup defaults only. Timing, speed, FPS, resolution and range remain adjustable on Output." />
+            <TextBlock Classes="settingsSectionDescription" Text="These are startup defaults only. Timing, speed, FPS and range remain adjustable on Output; resolution follows Paint." />
             <RadioButton x:Name="DefaultFramePacedRadioButton" Classes="settingsChoice" GroupName="DefaultOutputClock" IsChecked="True">
               <StackPanel Spacing="2">
                 <TextBlock Text="Frame-paced · 120 Hz" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />

@@ -49,4 +49,16 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
+    <Style Selector="TextBlock.outputInfoLabel">
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.outputInfoValue">
+      <Setter Property="FontFamily" Value="Cascadia Mono" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="TextAlignment" Value="Right" />
+    </Style>
 </Styles>

@@ -12,7 +12,7 @@
 - 參考 commit / tag：`1e2567b` / `0.0.2`
 - Production handwritten C# / XAML：23,880 行；通過 25,000 行 architecture review threshold 與 30,000 行 hard cap。
 - Core / parser / rendering / CLI tests：289 / 289 passed。
-- Avalonia tests：94 / 94 passed；20 張 approved screenshots 由 exact pixel gate 驗證。
+- Avalonia tests：94 / 94 passed；24 張 approved screenshots 由 exact pixel gate 驗證。
 - 私有有效 KingstVIS golden `063ad09…`：568 logical frames；過期的 `4bec1b…` 不再作為 KingstVIS schema gate。
 - Release identity 已統一為 `VERSION=0.0.3`；正式 `v0.0.3` tag 尚未建立。
 - `MainWindow.axaml.cs` 只保留 142 行 constructor/bootstrap；Settings、Sidecar、Paint、Output、Review/Inspector、Playback、Capture、Shell 已拆為 8 個 partial，styles 位於獨立 resource dictionaries。`MainWindow.axaml` 的 UserControl 拆分保留給後續版本。
@@ -139,7 +139,7 @@ Source adapters
 - `c79376c` 至 `800a94f`：MainWindow 純搬移成 8 個功能 partial；每一步 build/targeted tests 通過，root code-behind 降至 142 行。
 - `2d1465a`、`022ba60`：16 張 base + 4 張 advanced approved screenshots；dark/light、1920/1180、Alarm、10-contact、Raw/Register 與 Marker states 具有 exact gate。
 
-目前驗證基線：core/parser/rendering/CLI 289 tests passed；Avalonia 94 tests passed；20 張 approved PNG exact compare 通過。私有 Common KingstVIS／DSL／NDS smoke 已於 `022ba60` 後重跑。尚未關閉的 release gate 為私有 Desay golden、125% UI scale/相關 visual baseline、正式 tag 與 package/release publish。
+目前驗證基線：core/parser/rendering/CLI 289 tests passed；Avalonia 94 tests passed；24 張 approved PNG exact compare 通過。私有 Common KingstVIS／DSL／NDS smoke 已於 `022ba60` 後重跑。尚未關閉的 release gate 為私有 Desay golden、125% UI scale/相關 visual baseline、正式 tag 與 package/release publish。
 
 ## Phase 6 — Register annotation projection
 
@@ -158,9 +158,12 @@ Source adapters
 - [x] Accent、Success、Severity、Contact ID、Heat density 使用獨立色彩角色。
 - [x] Button、Toggle、ComboBox 的 rest、hover、pressed、checked、focus、disabled 使用共用 style resources。
 - [x] Header 以 capture filename 為主要 identity；adapter、format、version、IC profile 為次要 metadata。
+- [x] Header 將 Load/Replace capture 移到來源 identity 一側，移除與主分頁重複的 Output 入口及只會重開既有下拉選單的 Edit。
 - [x] floating toolbar/settings bounds 納入 label placement 與 Fit 的 canvas safe area。
 - [x] Inspector 恢復 320–520 px contract，label/value layout 自適應；Alarm/All Break/10-contact 最壞狀態有 bounds 或 approved evidence。
 - [x] MP4、Heatmap、Data Package 維持相同左內容／右設定骨架，非 Paint 頁面隱藏 transport。
+- [x] Output type、即時設定、Output Info 與 Export footer 共用固定右欄；Export 永遠位於右下角，切換 Data Package 不再改變版面寬度。
+- [x] Output resolution 唯一跟隨 Paint panel resolution；Frame-paced 120 Hz 與 120 FPS 保持預設，Output Info 顯示格式、解析度、frames/duration/range 與估計輸出大小。
 - [x] Transport auto-pause 使用 anchored panel；窄版隱藏低優先說明文字並保留必要狀態與控制。
 - [ ] 增加 Comfortable / Compact 或 100% / 110% / 125% UI scale 設計與驗證。
 
@@ -168,7 +171,7 @@ Source adapters
 
 - [x] Paint：1920×1080、1180×720，dark/light；1672×720 由 responsive bounds tests 覆蓋，未另存 approved PNG。
 - [x] Paint/Inspector states：1／5／10 contacts、Finger／Glove／Palm、Alarm、All Break、Mark、Loop、auto-pause 均有 interaction/bounds tests；10-contact、Alarm、Marker 另有 approved PNG。
-- [ ] Output：MP4、Heatmap 已有 1920／1180 dark/light approved；Data Package、loading/progress/cancel 仍以行為測試覆蓋，尚未核准專屬 PNG。
+- [x] Output：MP4、Heatmap、Data Package 均有 1920／1180 dark/light approved；loading/progress/cancel 由行為測試覆蓋。
 - [ ] Raw／Decoded：Raw/Register 1920 dark 已 approved；1180 且兩側 rail 同時展開仍未建立 approved PNG。
 - [x] Inspector：320／380／520 bounds tests，Protocol／Raw／Review 與 Source identity interaction tests；Alarm、10-contact、Raw/Register advanced PNG 已 approved。
 - [ ] Settings：1920／1180 dark/light 已 approved；125% UI scale 未實作。

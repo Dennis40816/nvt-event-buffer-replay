@@ -32,19 +32,29 @@
       <RowDefinition Height="0" />
     </Grid.RowDefinitions>
     <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid Margin="12,0" ColumnDefinitions="Auto,22,200,10,Auto,10,Auto,*,8,Auto,4,Auto,4,Auto,8,Auto">
+      <Grid Margin="12,0" ColumnDefinitions="Auto,10,Auto,14,200,10,Auto,10,Auto,*,8,Auto,4,Auto">
         <StackPanel Grid.Column="0" Width="237" Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="NVT EVENT BUFFER REPLAY" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
         </StackPanel>
 
-        <Grid Grid.Column="2" Width="200" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+        <Grid Grid.Column="2" VerticalAlignment="Center">
+          <Button x:Name="CancelButton" Classes="ghost" Height="32" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
+          <Button x:Name="LoadButton" Classes="headerAction" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
+              <TextBlock x:Name="LoadActionLabel" Text="Load" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </Grid>
+
+        <Grid Grid.Column="4" Width="200" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
           <TextBlock x:Name="SourceAdapterText" Margin="22,0,0,0" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
           <ComboBox x:Name="SourceAdapterComboBox" Grid.ColumnSpan="2" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
           <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
         </Grid>
 
-        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
           <TextBlock Text="Common" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
           <ComboBox x:Name="EventVersionComboBox" Classes="headerInlineSelect" MinWidth="72" PlaceholderText="Version" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
               <ComboBoxItem Content="0x82" />
@@ -54,7 +64,7 @@
               <ComboBoxItem Content="0x97" />
           </ComboBox>
         </StackPanel>
-        <Grid Grid.Column="6" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+        <Grid Grid.Column="8" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
           <TextBlock Margin="0,0,3,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
           <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="1" Classes="headerInlineSelect" MinWidth="132" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
           <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="1" Classes="headerInlineSelect" MinWidth="132" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
@@ -63,16 +73,12 @@
           </ComboBox>
         </Grid>
 
-        <Grid Grid.Column="7">
+        <Grid Grid.Column="9">
           <TextBlock x:Name="CaptureNameText" Text="NO CAPTURE" IsVisible="False" />
           <TextBlock x:Name="SessionStatusText" Text="Load a capture to begin" IsVisible="False" AutomationProperties.LiveSetting="Polite" />
           <TextBlock x:Name="ConfigurationHintText" Text="Select a source and explicit Event Buffer version." IsVisible="False" />
         </Grid>
-        <Button x:Name="EditConfigurationButton" Grid.Column="7" Classes="headerAction" Margin="8,0,0,0" HorizontalAlignment="Left" IsEnabled="False" Click="EditConfigurationButton_OnClick" ToolTip.Tip="Edit Event Buffer configuration" AutomationProperties.Name="Edit Event Buffer configuration">
-          <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE70F;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="EditActionLabel" Text="Edit" /></StackPanel>
-        </Button>
-
-        <StackPanel x:Name="ReviewHeaderActions" Grid.Column="9" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+        <StackPanel x:Name="ReviewHeaderActions" Grid.Column="11" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
           <Button x:Name="SaveReviewButton" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock x:Name="SaveActionIcon" Text="&#xE74E;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
@@ -87,23 +93,11 @@
           </Button>
           <Button x:Name="ApplySidecarButton" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
         </StackPanel>
-        <Border Grid.Column="10" Classes="separator" />
-        <Button x:Name="ExportAnalysisButton" Grid.Column="11" Classes="headerAction" IsEnabled="False" Click="OpenOutputPreviewButton_OnClick" ToolTip.Tip="Open output preview" AutomationProperties.Name="Open output preview">
-          <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE72D;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="OutputActionLabel" Text="Output" /></StackPanel>
-        </Button>
         <Border Grid.Column="12" Classes="separator" />
         <Button x:Name="SettingsButton" Grid.Column="13" Classes="headerAction" Click="SettingsButton_OnClick" ToolTip.Tip="Settings" AutomationProperties.Name="Open settings">
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="SettingsActionLabel" Text="Settings" /></StackPanel>
         </Button>
-        <Border Grid.Column="14" Classes="separator" />
-        <Button x:Name="CancelButton" Grid.Column="15" Classes="ghost" Height="32" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
-        <Button x:Name="LoadButton" Grid.Column="15" Classes="primary" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <TextBlock Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
-            <TextBlock x:Name="LoadActionLabel" Text="Load capture" FontWeight="SemiBold" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
-        <ProgressBar x:Name="LoadingProgress" Grid.ColumnSpan="16" Height="2" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Bottom" />
+        <ProgressBar x:Name="LoadingProgress" Grid.ColumnSpan="14" Height="2" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Bottom" />
       </Grid>
     </Border>
 
@@ -397,35 +391,8 @@
                 <TextBlock Text="OUTPUT" VerticalAlignment="Center" />
               </StackPanel>
             </TabItem.Header>
-            <Grid Margin="0" RowDefinitions="44,*">
-              <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="14,0,10,0" ColumnDefinitions="7*,12,3*" VerticalAlignment="Center">
-                  <Grid Grid.Column="0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                    <TextBlock x:Name="OutputContentDescriptionText" Text="Preview and export use the same renderer" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                    <Button x:Name="ExportSelectedOutputButton" Grid.Column="1" Classes="primary" Height="34" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
-                  </Grid>
-                  <Grid Grid.Column="2" ColumnDefinitions="84,*" VerticalAlignment="Center">
-                    <TextBlock Text="Output type" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                    <ComboBox x:Name="OutputContentComboBox" Grid.Column="1" Classes="semanticSelect" Height="34" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
-                      <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:SelectOption">
-                          <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
-                            <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                            <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12.5" Opacity="0.8" TextWrapping="Wrap" />
-                          </Grid>
-                        </DataTemplate>
-                      </ComboBox.ItemTemplate>
-                      <ComboBox.SelectionBoxItemTemplate>
-                        <DataTemplate x:DataType="vm:SelectOption">
-                          <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        </DataTemplate>
-                      </ComboBox.SelectionBoxItemTemplate>
-                    </ComboBox>
-                  </Grid>
-                </Grid>
-              </Border>
-              <Grid Grid.Row="1">
-                <Grid x:Name="OutputVideoPanel">
+            <Grid Margin="0" ColumnDefinitions="7*,12,3*">
+                <Grid x:Name="OutputVideoPanel" Grid.ColumnSpan="3">
                   <Border Background="{DynamicResource CanvasBrush}" BorderThickness="0" Padding="0">
                     <Grid RowDefinitions="0,0,*">
                       <Grid ColumnDefinitions="*,Auto">
@@ -505,7 +472,7 @@
                           </Grid>
                         </Grid>
 
-                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,0,10,0">
+                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,64,10,210">
                           <ScrollViewer x:Name="OutputSettingsScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                             <StackPanel Spacing="8">
                               <TextBlock x:Name="OutputModeTitleText" Margin="0,0,0,2" Text="VIDEO SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
@@ -558,26 +525,6 @@
                               </Border>
 
                               <Border Classes="outputSettingRow">
-                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="34,92,*">
-                                  <TextBlock Text="&#xE7F4;" Classes="outputSettingIcon" />
-                                  <TextBlock Grid.Column="1" Text="Resolution" Classes="outputSettingLabel" />
-                                  <ComboBox x:Name="OutputResolutionComboBox" Grid.Column="2" Classes="outputSetting" SelectionChanged="OutputVideoSetting_OnSelectionChanged" AutomationProperties.Name="MP4 resolution">
-                                    <ComboBoxItem x:Name="OutputPanelResolutionItem" Content="Paint · 2304 × 1280" Tag="panel" />
-                                    <ComboBoxItem Content="1280 × 720" Tag="1280x720" />
-                                    <ComboBoxItem Content="1920 × 1080" Tag="1920x1080" />
-                                    <ComboBoxItem Content="2560 × 1440" Tag="2560x1440" />
-                                    <ComboBoxItem Content="Customized" Tag="custom" />
-                                  </ComboBox>
-                                  <Grid x:Name="OutputCustomResolutionPanel" Grid.Row="1" Grid.Column="2" Margin="0,7,0,0" ColumnDefinitions="82,Auto,82" IsVisible="False" HorizontalAlignment="Right">
-                                    <TextBox x:Name="OutputWidthTextBox" Classes="panelSize" Width="82" Text="2304" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 width" />
-                                    <TextBlock Grid.Column="1" Text="×" Margin="8,0" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                                    <TextBox x:Name="OutputHeightTextBox" Grid.Column="2" Classes="panelSize" Width="82" Text="1280" KeyDown="OutputCustomSetting_OnKeyDown" LostFocus="OutputCustomSetting_OnLostFocus" AutomationProperties.Name="MP4 height" />
-                                  </Grid>
-                                  <TextBlock x:Name="OutputCustomResolutionLabel" IsVisible="False" />
-                                </Grid>
-                              </Border>
-
-                              <Border Classes="outputSettingRow">
                                 <Grid ColumnDefinitions="34,92,*">
                                   <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
                                   <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
@@ -599,7 +546,7 @@
                   </Border>
                 </Grid>
 
-                <Grid x:Name="OutputHeatmapPanel" IsVisible="False" ColumnDefinitions="7*,12,3*">
+                <Grid x:Name="OutputHeatmapPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="7*,12,3*">
                   <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
                     <Grid RowDefinitions="Auto,14,*,12,Auto">
                       <Grid ColumnDefinitions="*,Auto">
@@ -622,7 +569,7 @@
                     </Grid>
                   </Border>
 
-                  <Border x:Name="HeatmapSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,0,10,0">
+                  <Border x:Name="HeatmapSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,64,10,210">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                       <StackPanel Spacing="8">
                         <TextBlock Margin="0,0,0,2" Text="HEATMAP SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
@@ -681,8 +628,8 @@
                   </Border>
                 </Grid>
 
-                <Border x:Name="OutputPackagePanel" IsVisible="False" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
-                  <Grid ColumnDefinitions="3*,1,22,2*">
+                <Grid x:Name="OutputPackagePanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="7*,12,3*">
+                  <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
                     <StackPanel Spacing="12">
                       <StackPanel Spacing="4">
                         <TextBlock Text="Data package" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
@@ -690,8 +637,10 @@
                       </StackPanel>
                       <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv / communication-readable.jsonl&#x0a;manifest.json&#x0a;heatmap.png" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" LineHeight="24" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
-                    <StackPanel Grid.Column="3" Spacing="18">
+                  </Border>
+                  <Border Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,64,10,210">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="18">
                       <StackPanel Spacing="7">
                         <TextBlock Text="Configuration" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
                         <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
@@ -705,9 +654,61 @@
                         <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
                       </StackPanel>
                     </StackPanel>
+                    </ScrollViewer>
+                  </Border>
+                </Grid>
+
+                <Border Grid.Column="2"
+                        ZIndex="10"
+                        Height="58"
+                        VerticalAlignment="Top"
+                        Background="{DynamicResource HeaderBrush}"
+                        BorderBrush="{DynamicResource StrongBorderBrush}"
+                        BorderThickness="1,0,0,1"
+                        Padding="14,9,10,9">
+                  <Grid ColumnDefinitions="Auto,10,*" VerticalAlignment="Center">
+                    <TextBlock Text="Output type" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Classes="semanticSelect" Height="36" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
+                            <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                            <TextBlock Grid.Row="1" Margin="0,2,0,0" Text="{Binding Description}" FontSize="12.5" Opacity="0.8" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                      <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate x:DataType="vm:SelectOption">
+                          <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DataTemplate>
+                      </ComboBox.SelectionBoxItemTemplate>
+                    </ComboBox>
+                    <TextBlock x:Name="OutputContentDescriptionText" IsVisible="False" Text="Preview and export use the same renderer" />
                   </Grid>
                 </Border>
-              </Grid>
+
+                <Border Grid.Column="2"
+                        ZIndex="10"
+                        Height="204"
+                        VerticalAlignment="Bottom"
+                        Background="{DynamicResource HeaderBrush}"
+                        BorderBrush="{DynamicResource StrongBorderBrush}"
+                        BorderThickness="1,1,0,0"
+                        Padding="14,12,10,10">
+                  <Grid RowDefinitions="Auto,8,Auto,6,Auto,12,*">
+                    <TextBlock Text="OUTPUT INFO" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.45" Foreground="{DynamicResource MutedTextBrush}" />
+                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" RowDefinitions="Auto,5,Auto,5,Auto">
+                      <TextBlock Text="Format" Classes="outputInfoLabel" />
+                      <TextBlock x:Name="OutputInfoFormatText" Grid.Column="1" Text="MP4 · H.264" Classes="outputInfoValue" />
+                      <TextBlock Grid.Row="2" Text="Resolution" Classes="outputInfoLabel" />
+                      <TextBlock x:Name="OutputInfoResolutionText" Grid.Row="2" Grid.Column="1" Text="Paint · 2304 × 1280" Classes="outputInfoValue" />
+                      <TextBlock Grid.Row="4" Text="Estimated size" Classes="outputInfoLabel" />
+                      <TextBlock x:Name="OutputInfoSizeText" Grid.Row="4" Grid.Column="1" Text="Waiting for preview" Classes="outputInfoValue" />
+                    </Grid>
+                    <TextBlock x:Name="OutputInfoDetailText" Grid.Row="4" Text="120 FPS · range - · duration -" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    <Button x:Name="ExportSelectedOutputButton" Grid.Row="6" Classes="primary" Height="36" MinWidth="132" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
+                  </Grid>
+                </Border>
             </Grid>
           </TabItem>
         </TabControl>

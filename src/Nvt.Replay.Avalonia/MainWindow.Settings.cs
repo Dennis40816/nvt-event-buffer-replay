@@ -47,13 +47,6 @@ public partial class MainWindow : Window
         else OpenSettingsPage();
     }
 
-    private void EditConfigurationButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (!EventVersionComboBox.IsEnabled) return;
-        EventVersionComboBox.Focus();
-        EventVersionComboBox.IsDropDownOpen = true;
-    }
-
     private void OpenSettingsPage()
     {
         StopPlayback();
