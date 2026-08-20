@@ -152,13 +152,17 @@ public sealed class ReplayTrailHistory
 
     public int Count => reportedIdsByFrame.Count;
 
-    public static ReplayTrailHistory Create(ITouchReplaySession replay)
+    public static ReplayTrailHistory Create(
+        ITouchReplaySession replay,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(replay);
-        return Create(Enumerable.Range(0, replay.Count).Select(replay.Seek).ToArray());
+        return Create(replay.EnumerateSnapshots(cancellationToken).ToArray(), cancellationToken);
     }
 
-    public static ReplayTrailHistory Create(IReadOnlyList<ITouchReplaySnapshot> snapshots)
+    public static ReplayTrailHistory Create(
+        IReadOnlyList<ITouchReplaySnapshot> snapshots,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(snapshots);
         var completed = new Dictionary<byte, List<Gesture>>();
@@ -168,6 +172,7 @@ public sealed class ReplayTrailHistory
 
         for (var logicalIndex = 0; logicalIndex < snapshots.Count; logicalIndex++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var snapshot = snapshots[logicalIndex];
             var reported = snapshot.ReportedContacts.Where(IsTrackable).OrderBy(contact => contact.Id).ToArray();
             reportedIds[logicalIndex] = reported.Select(contact => contact.Id).ToHashSet();
