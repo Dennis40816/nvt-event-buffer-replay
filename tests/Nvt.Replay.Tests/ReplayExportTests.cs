@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Rendering;
@@ -154,6 +155,159 @@ public sealed class ReplayExportTests : IDisposable
             options,
             cancellation.Token,
             cancellingProgress));
+    }
+
+    [Fact]
+    public void Frozen_frame_plan_copies_mutable_entries_and_rejects_invalid_shapes()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(100));
+        var options = Options(Path.Combine(directory, "frozen.mp4"), frameRate: 30);
+        var mutable = new List<ReplayFramePlanEntry>
+        {
+            new(0, 2),
+            new(1, 1),
+        };
+
+        var frozen = ReplayFramePlan.Freeze(replay, options, mutable);
+        mutable[0] = new ReplayFramePlanEntry(0, 99);
+        mutable.Clear();
+
+        Assert.Equal([2, 1], frozen.Select(entry => entry.RepeatCount));
+        Assert.Equal(3, frozen.OutputFrameCount);
+        Assert.Throws<ArgumentException>(() => ReplayFramePlan.Freeze(
+            replay,
+            options,
+            [new ReplayFramePlanEntry(2, 1)]));
+        Assert.Throws<ArgumentException>(() => ReplayFramePlan.Freeze(
+            replay,
+            options,
+            [new ReplayFramePlanEntry(0, 0)]));
+        Assert.Throws<ArgumentException>(() => ReplayFramePlan.Freeze(
+            replay,
+            options,
+            [new ReplayFramePlanEntry(1, 1), new ReplayFramePlanEntry(0, 1)]));
+        Assert.Throws<InvalidOperationException>(() => ReplayFramePlan.Freeze(
+            replay,
+            options,
+            [new ReplayFramePlanEntry(0, int.MaxValue)]));
+    }
+
+    [Fact]
+    public async Task Prebuilt_preview_plan_is_the_exact_final_sampler_without_replanning()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(100));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var output = Path.Combine(directory, "exact-plan.mp4");
+        var workspace = new ReplayOutputWorkspace(new ReplayOutputSettings(
+            ReplayOutputContentType.Mp4Video,
+            ReplayExportClock.Recorded,
+            Speed: 1,
+            FrameRate: 30,
+            Width: 320,
+            Height: 180,
+            Range: new AnalysisRange(0, 1)));
+        var planning = new List<ReplayExportProgress>();
+        var preview = workspace.BuildVideoPreview(
+            replay,
+            "capture-sha/0x83",
+            progress: new InlineProgress<ReplayExportProgress>(planning.Add));
+        var plan = preview.FramePlan;
+        var options = workspace.CreateExportOptions(
+            output,
+            ffmpegPath: Path.Combine(directory, "missing-ffmpeg.exe"));
+        var renderedLogicalIndices = new List<int>();
+        var exportProgress = new List<ReplayExportProgress>();
+
+        var result = await new ReplayRangeExporter().ExportAsync(
+            replay,
+            index =>
+            {
+                renderedLogicalIndices.Add(index);
+                return ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent);
+            },
+            options,
+            plan,
+            progress: new InlineProgress<ReplayExportProgress>(exportProgress.Add));
+
+        Assert.Contains(planning, update => update.Stage == "Planning duration");
+        Assert.DoesNotContain(exportProgress, update => update.Stage.StartsWith("Planning", StringComparison.Ordinal));
+        Assert.Equal(plan.Select(entry => entry.LogicalIndex), renderedLogicalIndices);
+        Assert.Equal(plan.OutputFrameCount, result.OutputFrameCount);
+        Assert.Equal(TimeSpan.FromSeconds(plan.OutputFrameCount / (double)options.FrameRate), result.Duration);
+        Assert.Equal(result.OutputFrameCount, Directory.GetFiles(result.OutputPath, "frame-*.png").Length);
+        Assert.Equal("Preparing encoder", exportProgress[0].Stage);
+        Assert.Equal(100, exportProgress[^1].Percent);
+        var manifest = await File.ReadAllTextAsync(result.ManifestPath);
+        using var document = JsonDocument.Parse(manifest);
+        Assert.Equal(plan.OutputFrameCount, document.RootElement.GetProperty("outputFrameCount").GetInt32());
+        Assert.Equal(
+            result.Duration,
+            TimeSpan.Parse(
+                document.RootElement.GetProperty("duration").GetString()!,
+                System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
+    public async Task Prebuilt_plan_rejects_stale_sampling_identity_before_creating_output()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(100));
+        var output = Path.Combine(directory, "stale-plan.mp4");
+        var options = Options(output, frameRate: 30, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe"));
+        var plan = ReplayFramePlan.BuildSnapshot(replay, options);
+        var sceneCalls = 0;
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => new ReplayRangeExporter().ExportAsync(
+            replay,
+            _ =>
+            {
+                sceneCalls++;
+                throw new InvalidOperationException("stale plan must not render");
+            },
+            options with { FrameRate = 60 },
+            plan));
+
+        Assert.Contains("stale", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, sceneCalls);
+        Assert.False(File.Exists(output));
+        Assert.False(Directory.Exists(output + ".frames"));
+
+        var replacementReplay = Replay(TimeSpan.FromMilliseconds(100));
+        await Assert.ThrowsAsync<ArgumentException>(() => new ReplayRangeExporter().ExportAsync(
+            replacementReplay,
+            _ => throw new InvalidOperationException("stale plan must not render"),
+            options,
+            plan));
+    }
+
+    [Fact]
+    public async Task Prebuilt_plan_preserves_render_cancellation_progress_and_atomic_cleanup()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(100));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var output = Path.Combine(directory, "cancel-prebuilt.mp4");
+        var options = Options(output, frameRate: 30, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe"));
+        var plan = ReplayFramePlan.BuildSnapshot(replay, options);
+        using var cancellation = new CancellationTokenSource();
+        var updates = new List<ReplayExportProgress>();
+        var progress = new InlineProgress<ReplayExportProgress>(update =>
+        {
+            updates.Add(update);
+            if (update.Stage == "Writing PNG fallback") cancellation.Cancel();
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new ReplayRangeExporter().ExportAsync(
+            replay,
+            index => ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent),
+            options,
+            plan,
+            cancellation.Token,
+            progress));
+
+        Assert.DoesNotContain(updates, update => update.Stage.StartsWith("Planning", StringComparison.Ordinal));
+        Assert.Contains(updates, update => update.Stage == "Preparing encoder");
+        Assert.Contains(updates, update => update.Stage == "Writing PNG fallback");
+        Assert.False(Directory.Exists(output + ".frames"));
+        Assert.Empty(Directory.GetDirectories(directory, ".*.tmp"));
     }
 
     [Fact]

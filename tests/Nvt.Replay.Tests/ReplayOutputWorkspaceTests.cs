@@ -79,6 +79,10 @@ public sealed class ReplayOutputWorkspaceTests
         Assert.Equal(30, first.Estimate.OutputFrameCount);
         Assert.Equal(TimeSpan.FromSeconds(1), first.Estimate.Duration);
         Assert.Equal(first.Identity, second.Identity);
+        Assert.Same(first.Entries, first.FramePlan);
+        Assert.Same(
+            first.FramePlan,
+            ReplayFramePlan.Freeze(replay, workspace.CreateExportOptions("same-plan.mp4"), first.Entries));
         Assert.Equal(
             ReplayFramePlan.Build(replay, workspace.CreateExportOptions("elsewhere.mp4")),
             first.Entries);

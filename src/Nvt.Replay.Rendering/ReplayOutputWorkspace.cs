@@ -50,7 +50,11 @@ public sealed record ReplayOutputEstimate(
 public sealed record ReplayOutputPreviewPlan(
     ReplayOutputPlanIdentity Identity,
     IReadOnlyList<ReplayFramePlanEntry> Entries,
-    ReplayOutputEstimate Estimate);
+    ReplayOutputEstimate Estimate)
+{
+    public ReplayFramePlanSnapshot FramePlan => Entries as ReplayFramePlanSnapshot ??
+        throw new InvalidOperationException("The preview was not created from an immutable replay frame plan.");
+}
 
 /// <summary>
 /// Headless output workspace state. Avalonia and CLI can project controls onto this model without
@@ -123,7 +127,7 @@ public sealed class ReplayOutputWorkspace
             throw new ArgumentException(string.Join(' ', validation.Errors), nameof(Settings));
 
         var options = CreateExportOptions("preview.mp4");
-        var entries = ReplayFramePlan.Build(replay, options, cancellationToken, progress);
+        var entries = ReplayFramePlan.BuildSnapshot(replay, options, cancellationToken, progress);
         var outputFrameCount = ReplayFramePlan.OutputFrameCount(entries);
         var duration = TimeSpan.FromSeconds(outputFrameCount / (double)Settings.FrameRate);
         var pixelFrameWork = MultiplySaturated(outputFrameCount, Settings.Width, Settings.Height);

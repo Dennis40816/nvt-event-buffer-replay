@@ -39,6 +39,106 @@ public sealed record ReplayExportOptions(
 
 public sealed record ReplayFramePlanEntry(int LogicalIndex, int RepeatCount);
 
+public sealed record ReplayFramePlanIdentity(
+    int ReplayFrameCount,
+    TimeSpan ReplayFrameInterval,
+    AnalysisRange Range,
+    ReplayExportClock Clock,
+    int FrameRate,
+    double Speed);
+
+/// <summary>
+/// Immutable frame sampling plan bound to the replay instance and timing options that produced it.
+/// Mutable caller lists are copied by <see cref="ReplayFramePlan.Freeze"/>; plans built by
+/// <see cref="ReplayFramePlan.BuildSnapshot"/> already own their compact entry and index arrays.
+/// </summary>
+public sealed class ReplayFramePlanSnapshot : IReadOnlyList<ReplayFramePlanEntry>
+{
+    private readonly ITouchReplaySession replay;
+    private readonly ReplayFramePlanEntry[] entries;
+    private readonly long[] cumulativeOutputEnds;
+
+    internal ReplayFramePlanSnapshot(
+        ITouchReplaySession replay,
+        ReplayFramePlanIdentity identity,
+        ReplayFramePlanEntry[] entries,
+        long[] cumulativeOutputEnds,
+        long outputFrameCount)
+    {
+        this.replay = replay;
+        Identity = identity;
+        this.entries = entries;
+        this.cumulativeOutputEnds = cumulativeOutputEnds;
+        OutputFrameCount = outputFrameCount;
+    }
+
+    public ReplayFramePlanIdentity Identity { get; }
+    public long OutputFrameCount { get; }
+    public int Count => entries.Length;
+    public ReplayFramePlanEntry this[int index] => entries[index];
+
+    public int LogicalIndexAt(long outputFrameIndex)
+    {
+        if (outputFrameIndex < 0 || outputFrameIndex >= OutputFrameCount)
+            throw new ArgumentOutOfRangeException(nameof(outputFrameIndex));
+        return entries[FindCumulativeEntry(cumulativeOutputEnds, outputFrameIndex)].LogicalIndex;
+    }
+
+    internal void ValidateFor(
+        ITouchReplaySession expectedReplay,
+        ReplayFramePlanIdentity expectedIdentity,
+        CancellationToken cancellationToken)
+    {
+        if (!ReferenceEquals(replay, expectedReplay) || Identity != expectedIdentity)
+            throw new ArgumentException(
+                "Replay frame plan is stale for the selected replay, range, clock, frame rate, or speed.",
+                "plan");
+
+        if (entries.Length == 0 || entries.Length != cumulativeOutputEnds.Length)
+            throw new ArgumentException("Replay frame plan must contain at least one indexed entry.", "plan");
+        var previousLogicalIndex = Identity.Range.StartLogicalIndex - 1;
+        var cumulative = 0L;
+        for (var index = 0; index < entries.Length; index++)
+        {
+            if ((index & 0xff) == 0) cancellationToken.ThrowIfCancellationRequested();
+            var entry = entries[index] ?? throw new ArgumentException("Replay frame plan entries cannot be null.", "plan");
+            if (entry.LogicalIndex < Identity.Range.StartLogicalIndex ||
+                entry.LogicalIndex > Identity.Range.EndLogicalIndex ||
+                entry.LogicalIndex <= previousLogicalIndex)
+                throw new ArgumentException("Replay frame plan logical indices must be strictly increasing within the export range.", "plan");
+            if (entry.RepeatCount <= 0)
+                throw new ArgumentException("Replay frame plan repeat counts must be positive.", "plan");
+            cumulative = checked(cumulative + entry.RepeatCount);
+            ReplayFramePlan.EnsureWithinHardLimit(cumulative);
+            if (cumulativeOutputEnds[index] != cumulative)
+                throw new ArgumentException("Replay frame plan cumulative index is inconsistent with its repeat counts.", "plan");
+            previousLogicalIndex = entry.LogicalIndex;
+        }
+        if (cumulative != OutputFrameCount)
+            throw new ArgumentException("Replay frame plan output frame count is inconsistent with its entries.", "plan");
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    public IEnumerator<ReplayFramePlanEntry> GetEnumerator() =>
+        ((IEnumerable<ReplayFramePlanEntry>)entries).GetEnumerator();
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => entries.GetEnumerator();
+
+    private static int FindCumulativeEntry(IReadOnlyList<long> cumulativeEnds, long outputFrameIndex)
+    {
+        var target = checked(outputFrameIndex + 1);
+        var low = 0;
+        var high = cumulativeEnds.Count - 1;
+        while (low < high)
+        {
+            var middle = low + ((high - low) / 2);
+            if (cumulativeEnds[middle] >= target) high = middle;
+            else low = middle + 1;
+        }
+        return low;
+    }
+}
+
 public sealed record ReplayVideoManifest(
     int SchemaVersion,
     string? SourceFileName,
@@ -82,16 +182,23 @@ public static class ReplayFramePlan
     public const long MaximumOutputFrames = 100_000_000;
 
     public static IReadOnlyList<ReplayFramePlanEntry> Build(ITouchReplaySession replay, ReplayExportOptions options) =>
-        Build(replay, options, CancellationToken.None);
+        BuildSnapshot(replay, options, CancellationToken.None);
 
     public static IReadOnlyList<ReplayFramePlanEntry> Build(
         ITouchReplaySession replay,
         ReplayExportOptions options,
         CancellationToken cancellationToken,
+        IProgress<ReplayExportProgress>? progress = null) =>
+        BuildSnapshot(replay, options, cancellationToken, progress);
+
+    public static ReplayFramePlanSnapshot BuildSnapshot(
+        ITouchReplaySession replay,
+        ReplayExportOptions options,
+        CancellationToken cancellationToken = default,
         IProgress<ReplayExportProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(replay);
-        Validate(replay, options);
+        ValidateOptions(replay, options);
         var logicalFrameCount = checked(options.Range.EndLogicalIndex - options.Range.StartLogicalIndex + 1);
         var progressStep = Math.Max(1, logicalFrameCount / 200);
         progress?.Report(new ReplayExportProgress(0, logicalFrameCount, "Planning duration"));
@@ -144,7 +251,59 @@ public static class ReplayFramePlan
                 progress?.Report(new ReplayExportProgress(completed, logicalFrameCount, "Planning frame map"));
         }
 
-        return new IndexedEntries(entries.ToArray(), cumulativeOutputEnds.ToArray(), outputFrameCount);
+        return new ReplayFramePlanSnapshot(
+            replay,
+            Identity(replay, options),
+            entries.ToArray(),
+            cumulativeOutputEnds.ToArray(),
+            outputFrameCount);
+    }
+
+    public static ReplayFramePlanSnapshot Freeze(
+        ITouchReplaySession replay,
+        ReplayExportOptions options,
+        IReadOnlyList<ReplayFramePlanEntry> plan,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(replay);
+        ArgumentNullException.ThrowIfNull(plan);
+        ValidateOptions(replay, options);
+        var identity = Identity(replay, options);
+        if (plan is ReplayFramePlanSnapshot snapshot)
+        {
+            snapshot.ValidateFor(replay, identity, cancellationToken);
+            return snapshot;
+        }
+
+        if (plan.Count == 0)
+            throw new ArgumentException("Replay frame plan must contain at least one entry.", nameof(plan));
+        var entries = new ReplayFramePlanEntry[plan.Count];
+        var cumulativeOutputEnds = new long[plan.Count];
+        var previousLogicalIndex = options.Range.StartLogicalIndex - 1;
+        var outputFrameCount = 0L;
+        for (var index = 0; index < plan.Count; index++)
+        {
+            if ((index & 0xff) == 0) cancellationToken.ThrowIfCancellationRequested();
+            var entry = plan[index] ?? throw new ArgumentException("Replay frame plan entries cannot be null.", nameof(plan));
+            if (entry.LogicalIndex < options.Range.StartLogicalIndex ||
+                entry.LogicalIndex > options.Range.EndLogicalIndex ||
+                entry.LogicalIndex <= previousLogicalIndex)
+                throw new ArgumentException("Replay frame plan logical indices must be strictly increasing within the export range.", nameof(plan));
+            if (entry.RepeatCount <= 0)
+                throw new ArgumentException("Replay frame plan repeat counts must be positive.", nameof(plan));
+            outputFrameCount = checked(outputFrameCount + entry.RepeatCount);
+            EnsureWithinHardLimit(outputFrameCount);
+            entries[index] = entry;
+            cumulativeOutputEnds[index] = outputFrameCount;
+            previousLogicalIndex = entry.LogicalIndex;
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new ReplayFramePlanSnapshot(
+            replay,
+            identity,
+            entries,
+            cumulativeOutputEnds,
+            outputFrameCount);
     }
 
     public static int OutputFrameCount(IReadOnlyList<ReplayFramePlanEntry> plan)
@@ -158,7 +317,7 @@ public static class ReplayFramePlan
     public static long OutputFrameCount64(IReadOnlyList<ReplayFramePlanEntry> plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        if (plan is IndexedEntries indexed) return indexed.OutputFrameCount;
+        if (plan is ReplayFramePlanSnapshot snapshot) return snapshot.OutputFrameCount;
         var total = 0L;
         foreach (var entry in plan)
         {
@@ -180,7 +339,7 @@ public static class ReplayFramePlan
         if (outputFrameIndex < 0 || outputFrameIndex >= outputFrameCount)
             throw new ArgumentOutOfRangeException(nameof(outputFrameIndex));
 
-        if (plan is IndexedEntries indexed) return indexed.LogicalIndexAt(outputFrameIndex);
+        if (plan is ReplayFramePlanSnapshot snapshot) return snapshot.LogicalIndexAt(outputFrameIndex);
         var cumulativeEnds = new long[plan.Count];
         var cumulative = 0L;
         for (var index = 0; index < plan.Count; index++)
@@ -191,7 +350,19 @@ public static class ReplayFramePlan
         return plan[FindCumulativeEntry(cumulativeEnds, outputFrameIndex)].LogicalIndex;
     }
 
-    private static void Validate(ITouchReplaySession replay, ReplayExportOptions options)
+    internal static void ValidateSnapshot(
+        ITouchReplaySession replay,
+        ReplayExportOptions options,
+        ReplayFramePlanSnapshot plan,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(replay);
+        ArgumentNullException.ThrowIfNull(plan);
+        ValidateOptions(replay, options);
+        plan.ValidateFor(replay, Identity(replay, options), cancellationToken);
+    }
+
+    private static void ValidateOptions(ITouchReplaySession replay, ReplayExportOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
         if (replay.Count == 0 || options.Range.StartLogicalIndex < 0 || options.Range.EndLogicalIndex < options.Range.StartLogicalIndex || options.Range.EndLogicalIndex >= replay.Count)
@@ -247,7 +418,7 @@ public static class ReplayFramePlan
         return count;
     }
 
-    private static void EnsureWithinHardLimit(long count)
+    internal static void EnsureWithinHardLimit(long count)
     {
         if (count > MaximumOutputFrames)
             throw new InvalidOperationException(
@@ -285,23 +456,13 @@ public static class ReplayFramePlan
         return low;
     }
 
-    private sealed class IndexedEntries(
-        ReplayFramePlanEntry[] entries,
-        long[] cumulativeOutputEnds,
-        long outputFrameCount) : IReadOnlyList<ReplayFramePlanEntry>
-    {
-        public long OutputFrameCount { get; } = outputFrameCount;
-        public int Count => entries.Length;
-        public ReplayFramePlanEntry this[int index] => entries[index];
-
-        public int LogicalIndexAt(long outputFrameIndex) =>
-            entries[FindCumulativeEntry(cumulativeOutputEnds, outputFrameIndex)].LogicalIndex;
-
-        public IEnumerator<ReplayFramePlanEntry> GetEnumerator() =>
-            ((IEnumerable<ReplayFramePlanEntry>)entries).GetEnumerator();
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => entries.GetEnumerator();
-    }
+    private static ReplayFramePlanIdentity Identity(ITouchReplaySession replay, ReplayExportOptions options) => new(
+        replay.Count,
+        replay.FrameInterval,
+        options.Range,
+        options.Clock,
+        options.FrameRate,
+        options.Speed);
 }
 
 public sealed class ReplayRangeExporter
@@ -313,7 +474,7 @@ public sealed class ReplayRangeExporter
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    public async Task<ReplayExportResult> ExportAsync(
+    public Task<ReplayExportResult> ExportAsync(
         ITouchReplaySession replay,
         Func<int, ReplayScene> sceneFactory,
         ReplayExportOptions options,
@@ -321,7 +482,32 @@ public sealed class ReplayRangeExporter
         IProgress<ReplayExportProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(sceneFactory);
-        var plan = ReplayFramePlan.Build(replay, options, cancellationToken, progress);
+        var plan = ReplayFramePlan.BuildSnapshot(replay, options, cancellationToken, progress);
+        return ExportPlannedAsync(replay, sceneFactory, options, plan, cancellationToken, progress);
+    }
+
+    public Task<ReplayExportResult> ExportAsync(
+        ITouchReplaySession replay,
+        Func<int, ReplayScene> sceneFactory,
+        ReplayExportOptions options,
+        ReplayFramePlanSnapshot plan,
+        CancellationToken cancellationToken = default,
+        IProgress<ReplayExportProgress>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(sceneFactory);
+        cancellationToken.ThrowIfCancellationRequested();
+        ReplayFramePlan.ValidateSnapshot(replay, options, plan, cancellationToken);
+        return ExportPlannedAsync(replay, sceneFactory, options, plan, cancellationToken, progress);
+    }
+
+    private static async Task<ReplayExportResult> ExportPlannedAsync(
+        ITouchReplaySession replay,
+        Func<int, ReplayScene> sceneFactory,
+        ReplayExportOptions options,
+        ReplayFramePlanSnapshot plan,
+        CancellationToken cancellationToken,
+        IProgress<ReplayExportProgress>? progress)
+    {
         var totalFrames = ReplayFramePlan.OutputFrameCount(plan);
         progress?.Report(new ReplayExportProgress(0, totalFrames, "Preparing encoder"));
         var fullOutputPath = Path.GetFullPath(options.OutputPath);
