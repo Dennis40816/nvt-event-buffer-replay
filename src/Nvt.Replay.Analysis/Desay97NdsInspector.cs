@@ -9,7 +9,7 @@ public sealed record Desay97InspectionReport(
     Desay97Profile Profile,
     uint EventBufferBase,
     IReadOnlyList<Desay97Frame> Frames,
-    IReadOnlyList<ReplayDiagnostic> Diagnostics);
+    IReadOnlyList<ReplayDiagnostic> Diagnostics) : IFormatInspectionReport;
 
 public sealed class Desay97NdsInspector
 {

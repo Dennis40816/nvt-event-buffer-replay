@@ -7,7 +7,7 @@ public sealed record CommonInspectionReport(
     string SourceSha256,
     CommonEventBufferVersion Version,
     IReadOnlyList<CommonEventBufferFrame> Frames,
-    IReadOnlyList<Nvt.Replay.Core.ReplayDiagnostic> Diagnostics);
+    IReadOnlyList<Nvt.Replay.Core.ReplayDiagnostic> Diagnostics) : IFormatInspectionReport;
 
 public sealed class CommonNdsInspector
 {
