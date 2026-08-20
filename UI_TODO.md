@@ -2,6 +2,8 @@
 
 更新日期：2026-08-19
 
+> 0.0.3 的跨模組穩定化、效能、MainWindow 拆分與 release gate 請以 [`TODO_0.0.3.md`](TODO_0.0.3.md) 為主；本文件繼續追蹤 UI 細節與視覺驗收。
+
 本文件追蹤目前 Paint、Output、Settings 與 replay transport 的近期工作。`ROADMAP.md` 保留產品長期方向；這裡只放可直接實作、測試與視覺驗收的項目。
 
 ## 本輪需求
