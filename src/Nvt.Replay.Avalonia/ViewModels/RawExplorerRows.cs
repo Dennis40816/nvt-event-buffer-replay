@@ -45,6 +45,8 @@ public sealed record RawRecordRow(
     {
         get
         {
+            if (IsNdsEventBufferRead) return "EVENT BUFFER";
+
             if (TryGetPageSwitch(out var page))
                 return $"PAGE 0x{page:X}";
 
@@ -73,16 +75,29 @@ public sealed record RawRecordRow(
         ? $"0x{transport.SlaveAddress:X2} · {Direction}"
         : $"— · {Direction}";
 
-    public string RawRegisterAddress => TryGetRawRegisterOffset(out var offset)
-        ? $"RAW REG 0x{offset:X2}"
-        : "-";
+    public string RawRegisterAddress
+    {
+        get
+        {
+            if (IsNdsEventBufferRead) return "RAW REG —";
+            if (IsNdsAbsoluteRegisterAddress && Field("raw_address") is { Length: > 0 } rawAddress)
+                return $"RAW ADDR {rawAddress}";
+            return TryGetRawRegisterOffset(out var offset)
+                ? $"RAW REG 0x{offset:X2}"
+                : "-";
+        }
+    }
 
     public string AddressTooltip
     {
         get
         {
             var notes = new List<string>();
-            if (TryGetPageSwitch(out var page))
+            if (IsNdsEventBufferRead)
+            {
+                notes.Add($"NDS Paint is an Event Buffer read from 7-bit I2C slave 0x{Record.I2c!.SlaveAddress:X2}; the source does not report a register address.");
+            }
+            else if (TryGetPageSwitch(out var page))
                 notes.Add($"Switch page selects 0x{page:X}; the captured FF command bytes remain unchanged.");
             else if (Field("register_profile_resolution") == "inferred")
                 notes.Add("Register address is inferred from the confirmed IC profile and Event Buffer offset; the source has no page-select transaction.");
@@ -94,13 +109,16 @@ public sealed record RawRecordRow(
                 notes.Add($"This NDS field is an absolute register address; the source does not report a 7-bit I2C address for this record. Direction {Direction} is shown separately.");
             else
                 notes.Add($"The source did not report a 7-bit I2C address; direction {Direction} is still available.");
-            if (TryGetRawRegisterOffset(out var offset))
+            if (IsNdsAbsoluteRegisterAddress && Field("raw_address") is { Length: > 0 } rawAddress)
+                notes.Add($"Raw NDS address token {rawAddress} is preserved beside the resolved register meaning.");
+            else if (TryGetRawRegisterOffset(out var offset))
                 notes.Add($"Raw register byte 0x{offset:X2} is preserved beside the resolved register address.");
             return notes.Count == 0 ? AddressPrimary : string.Join(Environment.NewLine, notes);
         }
     }
 
-    public string Register => Activity?.Register ?? Field("register_readable") ?? Field("register_name") ?? "-";
+    public string Register => Activity?.Register ?? Field("register_readable") ?? Field("register_name") ??
+        (IsNdsEventBufferRead ? "Event Buffer frame" : "-");
 
     public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
 
@@ -122,6 +140,7 @@ public sealed record RawRecordRow(
     {
         BusOperation.Read => "R",
         BusOperation.Write => "W",
+        BusOperation.Paint when IsNdsRecord => "R",
         BusOperation.Paint => "P",
         _ => "-",
     };
@@ -132,6 +151,13 @@ public sealed record RawRecordRow(
     private bool IsNdsAbsoluteRegisterAddress =>
         Record.SourceFields?.GetValueOrDefault(NdsCommunicationLogAdapter.AddressSemanticsField) ==
         NdsCommunicationLogAdapter.AbsoluteRegisterAddress;
+
+    private bool IsNdsEventBufferRead =>
+        Record.SourceFields?.GetValueOrDefault(NdsCommunicationLogAdapter.AccessSemanticsField) ==
+        NdsCommunicationLogAdapter.EventBufferRead;
+
+    private bool IsNdsRecord =>
+        Record.SourceFields?.GetValueOrDefault("adapter") == NdsCommunicationLogAdapter.AdapterId;
 
     private bool TryGetPageSwitch(out uint page)
     {

@@ -820,20 +820,43 @@ public partial class MainWindow : Window
 
     private static IReadOnlyList<InspectorDetailRow> BuildTransportRows(SourceRecord record)
     {
+        var isNds = record.SourceFields?.GetValueOrDefault("adapter") == NdsCommunicationLogAdapter.AdapterId;
+        var isNdsEventBufferRead =
+            record.SourceFields?.GetValueOrDefault(NdsCommunicationLogAdapter.AccessSemanticsField) ==
+            NdsCommunicationLogAdapter.EventBufferRead;
+        var direction = record.Operation switch
+        {
+            BusOperation.Read => "R",
+            BusOperation.Write => "W",
+            BusOperation.Paint when isNds => "R",
+            _ => "-",
+        };
         var rows = new List<InspectorDetailRow>
         {
             new("Operation", $"{record.Operation} {record.Target}"),
-            new("Register", record.Address is { } address ? $"0x{address:X}" : "Not reported"),
+            new("Register", isNdsEventBufferRead
+                ? "Event Buffer (implicit from Paint)"
+                : record.Address is { } address ? $"0x{address:X}" : "Not reported"),
             new("Payload", record.DeclaredByteCount is { } declared
                 ? $"{record.Data.Count} bytes, declared {declared}"
                 : $"{record.Data.Count} bytes"),
         };
-        if (record.I2c is not { } i2c) return rows;
-        var direction = record.Operation == BusOperation.Read ? "R" : record.Operation == BusOperation.Write ? "W" : "-";
-        var rawAddress = (i2c.SlaveAddress << 1) | (record.Operation == BusOperation.Read ? 1 : 0);
+        if (isNdsEventBufferRead)
+            rows.Add(new InspectorDetailRow("Raw register", "Not reported by NDS Paint"));
+        else if (isNds && record.SourceFields?.GetValueOrDefault("raw_address") is { Length: > 0 } sourceAddress)
+            rows.Add(new InspectorDetailRow("Raw address", sourceAddress));
+        if (record.I2c is not { } i2c)
+        {
+            if (isNds) rows.Add(new InspectorDetailRow("Direction", direction));
+            return rows;
+        }
         rows.Add(new InspectorDetailRow("7-bit address", $"0x{i2c.SlaveAddress:X2}"));
         rows.Add(new InspectorDetailRow("Direction", direction));
-        rows.Add(new InspectorDetailRow("Raw address byte", $"0x{rawAddress:X2}"));
+        if (!isNds)
+        {
+            var rawAddress = (i2c.SlaveAddress << 1) | (record.Operation == BusOperation.Read ? 1 : 0);
+            rows.Add(new InspectorDetailRow("Raw address byte", $"0x{rawAddress:X2}"));
+        }
         if (TryGetRawRegisterByte(record, out var rawRegister))
             rows.Add(new InspectorDetailRow("Raw register", $"0x{rawRegister:X2}"));
         rows.Add(new InspectorDetailRow("Address ACK", i2c.AddressAcknowledged switch

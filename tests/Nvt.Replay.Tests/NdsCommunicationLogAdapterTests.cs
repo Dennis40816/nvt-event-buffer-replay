@@ -67,6 +67,33 @@ public sealed class NdsCommunicationLogAdapterTests : IDisposable
 
         Assert.NotNull(parsed);
         Assert.Equal([0xA3], parsed.Data);
+        Assert.Equal(0x50u, parsed.Address);
+        Assert.Null(parsed.I2c);
+        Assert.Equal(NdsCommunicationLogAdapter.AbsoluteRegisterAddress, parsed.SourceFields?[NdsCommunicationLogAdapter.AddressSemanticsField]);
+        Assert.Equal(NdsCommunicationLogAdapter.RegisterRead, parsed.SourceFields?[NdsCommunicationLogAdapter.AccessSemanticsField]);
+    }
+
+    [Fact]
+    public async Task Reader_keeps_small_Read_Write_tokens_as_absolute_registers_while_Paint_is_an_event_buffer_read()
+    {
+        var path = WriteCapture(
+            """
+            2026-03-18 15:21:18:346 Write TP 0x62 2 0x00 0x35
+            2026-03-18 15:21:18:347 Read TP 0x62 1 0xA3
+            2026-03-18 15:21:18:348 Paint TP 0x02 2 0x05 0x00
+            """);
+        var records = new List<SourceRecord>();
+        await foreach (var record in new NdsCommunicationLogAdapter().ReadAsync(new SourceOpenContext(path, "operation-semantics")))
+            records.Add(record);
+
+        Assert.Equal(3, records.Count);
+        Assert.Equal(0x62u, records[0].Address);
+        Assert.Equal(NdsCommunicationLogAdapter.RegisterWrite, records[0].SourceFields?[NdsCommunicationLogAdapter.AccessSemanticsField]);
+        Assert.Equal(0x62u, records[1].Address);
+        Assert.Equal(NdsCommunicationLogAdapter.RegisterRead, records[1].SourceFields?[NdsCommunicationLogAdapter.AccessSemanticsField]);
+        Assert.Null(records[2].Address);
+        Assert.Equal(0x02, records[2].I2c?.SlaveAddress);
+        Assert.Equal(NdsCommunicationLogAdapter.EventBufferRead, records[2].SourceFields?[NdsCommunicationLogAdapter.AccessSemanticsField]);
     }
 
     [Fact]
@@ -92,6 +119,7 @@ public sealed class NdsCommunicationLogAdapterTests : IDisposable
         Assert.Null(parsed.Address);
         Assert.Equal(0x01, parsed.I2c?.SlaveAddress);
         Assert.Equal(NdsCommunicationLogAdapter.I2cSlaveAddress, parsed.SourceFields?[NdsCommunicationLogAdapter.AddressSemanticsField]);
+        Assert.Equal(NdsCommunicationLogAdapter.EventBufferRead, parsed.SourceFields?[NdsCommunicationLogAdapter.AccessSemanticsField]);
     }
 
     [Fact]
@@ -110,9 +138,11 @@ public sealed class NdsCommunicationLogAdapterTests : IDisposable
         Assert.Equal(0x99000u, records[0].Address);
         Assert.Null(records[0].I2c);
         Assert.Equal(NdsCommunicationLogAdapter.AbsoluteRegisterAddress, records[0].SourceFields?[NdsCommunicationLogAdapter.AddressSemanticsField]);
+        Assert.Equal(NdsCommunicationLogAdapter.RegisterRead, records[0].SourceFields?[NdsCommunicationLogAdapter.AccessSemanticsField]);
         Assert.Null(records[1].Address);
         Assert.Equal(0x2A, records[1].I2c?.SlaveAddress);
         Assert.Equal("0x2A", records[1].SourceFields?["raw_address"]);
+        Assert.Equal(NdsCommunicationLogAdapter.EventBufferRead, records[1].SourceFields?[NdsCommunicationLogAdapter.AccessSemanticsField]);
     }
 
     [Fact]

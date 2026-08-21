@@ -51,6 +51,65 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Nds_Paint_is_presented_as_an_implicit_event_buffer_read_without_inventing_a_register_byte()
+    {
+        var window = ShowWindow();
+        var fixture = Path.Combine(Path.GetTempPath(), $"nvt-nds-semantics-{Guid.NewGuid():N}.txt");
+        try
+        {
+            await File.WriteAllTextAsync(
+                fixture,
+                "2026-03-18 15:21:18:298 Paint TP 0x02 2 0x05 0x00\n" +
+                "2026-03-18 15:21:18:299 Read TP 0x96A60 1 0xA3\n" +
+                "2026-03-18 15:21:18:300 Write TP 0x62 2 0x00 0x35",
+                TestContext.Current.CancellationToken);
+
+            await window.OpenCaptureAsync(fixture);
+
+            var rawRecords = Required<ListBox>(window, "RawRecordsList");
+            var rows = rawRecords.Items.OfType<RawRecordRow>().ToArray();
+            Assert.Equal(3, rows.Length);
+
+            Assert.Equal("0x02 · R", rows[0].I2cEndpoint);
+            Assert.Equal("EVENT BUFFER", rows[0].AddressPrimary);
+            Assert.Equal("RAW REG —", rows[0].AddressSecondary);
+            Assert.Equal("Event Buffer frame", rows[0].Register);
+
+            rawRecords.SelectedItem = rows[0];
+            Dispatcher.UIThread.RunJobs();
+            var paintTransport = Required<ItemsControl>(window, "TransportFieldsItemsControl").Items
+                .OfType<InspectorDetailRow>()
+                .ToDictionary(row => row.Label, row => row.Value, StringComparer.Ordinal);
+            Assert.Equal("R", paintTransport["Direction"]);
+            Assert.Equal("Event Buffer (implicit from Paint)", paintTransport["Register"]);
+            Assert.Equal("0x02", paintTransport["7-bit address"]);
+            Assert.Equal("Not reported by NDS Paint", paintTransport["Raw register"]);
+            Assert.DoesNotContain("Raw address byte", paintTransport.Keys);
+
+            Assert.Equal("— · R", rows[1].I2cEndpoint);
+            Assert.Equal("REG 0x96A60", rows[1].AddressPrimary);
+            Assert.Equal("RAW ADDR 0x96A60", rows[1].AddressSecondary);
+            rawRecords.SelectedItem = rows[1];
+            Dispatcher.UIThread.RunJobs();
+            var readTransport = Required<ItemsControl>(window, "TransportFieldsItemsControl").Items
+                .OfType<InspectorDetailRow>()
+                .ToDictionary(row => row.Label, row => row.Value, StringComparer.Ordinal);
+            Assert.Equal("R", readTransport["Direction"]);
+            Assert.Equal("0x96A60", readTransport["Register"]);
+            Assert.Equal("0x96A60", readTransport["Raw address"]);
+
+            Assert.Equal("— · W", rows[2].I2cEndpoint);
+            Assert.Equal("REG 0x62", rows[2].AddressPrimary);
+            Assert.Equal("RAW ADDR 0x62", rows[2].AddressSecondary);
+        }
+        finally
+        {
+            window.Close();
+            File.Delete(fixture);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Switch_page_and_event_buffer_evidence_auto_selects_a_unique_IC_profile()
     {
         var window = ShowWindow();

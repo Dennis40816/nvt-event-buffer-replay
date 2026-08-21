@@ -21,6 +21,25 @@ scoped observations, and which tests were skipped when evidence was absent.
   CRC parameters, provenance, and CLI streaming. It does not promote 0x82 or
   0x85 tails beyond Provisional evidence.
 
+## Common 0x83 NDS mixed-operation observation
+
+- Source role: private `NT51926TT_CommunicationLog.txt` found in the local
+  `nds_helper` example data; payload is not copied into Git.
+- SHA-256:
+  `d1253e1f938b258d576c354cb7c62f2a16292703dda47adc954cc4485fc47d37`
+- Physical shape: 197 `Paint TP 0x02` Event Buffer frames, two absolute
+  `Paint TP 0x96A00` records, and explicit Read/Write traffic including
+  `0x96A50`, `0x96A60`, `0x96A78`, `0xFF004`, and the small absolute register
+  `Write TP 0x62`.
+- C# inspection result on 2026-08-21: operator-selected Common `0x83` with
+  target slave `0x02` decodes 197/197 CRC-valid and Host-State-eligible frames.
+  Absolute Event Buffer evidence at `0x96A00` uniquely infers IC 51926. The six
+  emitted diagnostics are informational samples: two FW State `0xA3` reads and
+  four TP FW Version reads, all resolved through the shared register catalog.
+- Scope: proves that the NDS address token cannot be classified by numeric
+  value alone. `Paint` with a 7-bit token is an implicit Event Buffer read;
+  explicit Read/Write tokens remain absolute registers even below `0x100`.
+
 ## Invalidated Common 0x83 transport observation
 
 - Source role: private decoded-I2C CSV retained in the sibling Python reference

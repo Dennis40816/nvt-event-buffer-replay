@@ -12,6 +12,10 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
     public const string AddressSemanticsField = "address_semantics";
     public const string AbsoluteRegisterAddress = "absolute_register";
     public const string I2cSlaveAddress = "i2c_slave";
+    public const string AccessSemanticsField = "access_semantics";
+    public const string EventBufferRead = "event_buffer_read";
+    public const string RegisterRead = "register_read";
+    public const string RegisterWrite = "register_write";
     private const int ProbeLineLimit = 40;
 
     public string Id => AdapterId;
@@ -236,12 +240,20 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
         public SourceRecord ToSourceRecord(long index, string sourceId)
         {
             var paintCarriesI2cAddress = Operation == BusOperation.Paint && Address <= 0x7F;
+            var accessSemantics = Operation switch
+            {
+                BusOperation.Paint when paintCarriesI2cAddress => EventBufferRead,
+                BusOperation.Paint or BusOperation.Read => RegisterRead,
+                BusOperation.Write => RegisterWrite,
+                _ => throw new InvalidOperationException($"Unsupported NDS operation {Operation}."),
+            };
             var sourceFields = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["adapter"] = AdapterId,
                 ["dialect"] = "nds-communication-log",
                 ["raw_address"] = paintCarriesI2cAddress ? $"0x{Address:X2}" : $"0x{Address:X}",
                 [AddressSemanticsField] = paintCarriesI2cAddress ? I2cSlaveAddress : AbsoluteRegisterAddress,
+                [AccessSemanticsField] = accessSemantics,
             };
             var transport = paintCarriesI2cAddress
                 ? new I2cTransport(checked((int)Address), [], [], null)

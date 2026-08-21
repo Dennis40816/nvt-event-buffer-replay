@@ -28,10 +28,14 @@ public sealed class RegisterProjectionPresentationTests
 
             var registerRow = new RawRecordRow(records[0]);
             var frameRow = new RawRecordRow(records[1]);
-            Assert.Equal("— · P", registerRow.I2cEndpoint);
+            Assert.Equal("— · R", registerRow.I2cEndpoint);
             Assert.Equal("REG 0x99000", registerRow.AddressPrimary);
-            Assert.Equal("0x2A · P", frameRow.I2cEndpoint);
-            Assert.Equal("-", frameRow.AddressPrimary);
+            Assert.Equal("RAW ADDR 0x99000", registerRow.AddressSecondary);
+            Assert.Equal("0x2A · R", frameRow.I2cEndpoint);
+            Assert.Equal("EVENT BUFFER", frameRow.AddressPrimary);
+            Assert.Equal("RAW REG —", frameRow.AddressSecondary);
+            Assert.Equal("Event Buffer frame", frameRow.Register);
+            Assert.Contains("does not report a register", frameRow.AddressTooltip, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
