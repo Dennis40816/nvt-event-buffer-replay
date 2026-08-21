@@ -207,7 +207,12 @@ public sealed class CaptureDecodeController : IDisposable
 
             cancellationToken.ThrowIfCancellationRequested();
             Report(progress, operation.Generation, CaptureDecodePhase.SelectingFormat);
-            if (!ExecutableFormatRegistry.TryResolve(format, out var selection, out var error))
+            if (!ExecutableFormatRegistry.TryResolve(
+                    loadedCapture,
+                    format,
+                    out var selection,
+                    out _,
+                    out var error))
                 throw new CaptureDecodeConfigurationException(error);
 
             cancellationToken.ThrowIfCancellationRequested();

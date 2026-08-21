@@ -70,6 +70,8 @@ public partial class MainWindow : Window
 
     private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference;
 
+    private int targetI2cAddress = 0x01;
+
     private bool operationInProgress;
 
     internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get; set; }
@@ -130,7 +132,7 @@ public partial class MainWindow : Window
                 () => CaptureSession.LoadAsync(path, progress, cancellationToken, adapterId),
                 cancellationToken);
             var profileInference = await Task.Run(
-                () => NvtRegisterProfileInference.Infer(nextSession.Records),
+                () => NvtRegisterProfileInference.Infer(nextSession.Records, targetI2cAddress),
                 cancellationToken);
             if (profileInference.UniqueProfile is { } inferredProfile)
             {
@@ -366,7 +368,8 @@ public partial class MainWindow : Window
                     loadedSession.RegisterProfile,
                     isDesay97
                         ? desayProfile == Desay97Profile.BenzPalm ? "benz-palm" : "standard"
-                        : null));
+                        : null,
+                    targetI2cAddress));
             var progress = new InlineProgress<CaptureDecodeProgress>(item =>
             {
                 CaptureDecodeProgressObserver?.Invoke(item);
@@ -420,8 +423,8 @@ public partial class MainWindow : Window
                 reviewWorkspace?.Markers);
 
             DecodedFramesList.ItemsSource = decodedRows;
-            SessionStatusText.Text = $"{result.Decode.DisplayIdentity} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
-            ConfigurationHintText.Text = $"{result.Decode.DisplayIdentity} confirmed · decoded automatically · raw source remains unchanged";
+            SessionStatusText.Text = $"{result.Decode.DisplayIdentity} · I²C 0x{targetI2cAddress:X2} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
+            ConfigurationHintText.Text = $"{result.Decode.DisplayIdentity} confirmed · 7-bit I²C 0x{targetI2cAddress:X2} · decoded automatically · raw source remains unchanged";
             SetTimelineCounts(session.Records.Count, decodedRows.Length, diagnosticRows.Length);
             TimelineStatusText.Text = decodedRows.Length > 0
                 ? "Logical replay ready · Space play/pause · ←/→ step · drag Loop handles"
@@ -568,7 +571,8 @@ public partial class MainWindow : Window
                string.Equals(decodeConfiguration.Desay97Profile, palmProfile, StringComparison.OrdinalIgnoreCase) &&
                decodeConfiguration.SourceAdapterId.Equals(session.Probe.AdapterId, StringComparison.Ordinal) &&
                decodeConfiguration.EventBufferBase == eventBufferBase &&
-               string.Equals(decodeConfiguration.RegisterProfile, session.RegisterProfile, StringComparison.OrdinalIgnoreCase);
+               string.Equals(decodeConfiguration.RegisterProfile, session.RegisterProfile, StringComparison.OrdinalIgnoreCase) &&
+               decodeConfiguration.TargetI2cAddress == targetI2cAddress;
     }
 
     private string ActiveDecodeContext()
@@ -577,7 +581,7 @@ public partial class MainWindow : Window
         var format = decodeConfiguration.EventBufferVersion.Equals("0x97", StringComparison.OrdinalIgnoreCase)
             ? $"Desay 0x97 / {decodeConfiguration.Desay97Profile ?? "unconfirmed Palm"}"
             : $"Common {decodeConfiguration.EventBufferVersion}";
-        return $"active replay: {format}";
+        return $"active replay: {format} · I²C 0x{decodeConfiguration.TargetI2cAddress:X2}";
     }
 
     private async void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -740,6 +744,82 @@ public partial class MainWindow : Window
 
     private void RegisterSearchTextBox_OnTextChanged(object? sender, TextChangedEventArgs e) => RefreshRawExplorer();
 
+    private async void TargetI2cAddressTextBox_OnLostFocus(object? sender, RoutedEventArgs e) =>
+        await CommitTargetI2cAddressAsync();
+
+    private async void TargetI2cAddressTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key != Key.Enter) return;
+        await CommitTargetI2cAddressAsync();
+        e.Handled = true;
+    }
+
+    private async Task CommitTargetI2cAddressAsync()
+    {
+        if (!TryParseTargetI2cAddress(TargetI2cAddressTextBox.Text, out var requested))
+        {
+            TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
+            SessionStatusText.Text = "I²C address rejected · enter a 7-bit value from 0x00 through 0x7F";
+            return;
+        }
+
+        TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(requested);
+        if (requested == targetI2cAddress) return;
+        targetI2cAddress = requested;
+        if (session is null)
+        {
+            SessionStatusText.Text = $"Decode target set to 7-bit I²C address 0x{targetI2cAddress:X2}";
+            return;
+        }
+
+        HideRegisterProfileInference();
+        var inference = NvtRegisterProfileInference.Infer(session.Records, targetI2cAddress);
+        var icFamily = inference.UniqueProfile?.IcFamily;
+        var choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
+            .FirstOrDefault(item => string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
+        if (choice is null && icFamily is null)
+        {
+            choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
+                .FirstOrDefault(item => item.IcFamily is null);
+        }
+        if (choice is null)
+            throw new InvalidOperationException($"IC profile choice '{icFamily ?? "Unconfirmed"}' is unavailable.");
+
+        SelectRegisterProfileChoice(choice.IcFamily);
+        await ApplyRegisterProfileAsync(choice);
+        if (inference.Status is NvtRegisterProfileInferenceStatus.Ambiguous or NvtRegisterProfileInferenceStatus.Conflicting)
+            ShowRegisterProfileInference(inference);
+        else if (inference.Status == NvtRegisterProfileInferenceStatus.None)
+            ConfigurationHintText.Text = $"I²C 0x{targetI2cAddress:X2} selected · no complete Switch Page + Event Buffer evidence; IC profile remains unconfirmed.";
+    }
+
+    internal Task SetTargetI2cAddressForTestingAsync(string value)
+    {
+        TargetI2cAddressTextBox.Text = value;
+        return CommitTargetI2cAddressAsync();
+    }
+
+    internal static bool TryParseTargetI2cAddress(string? value, out int address)
+    {
+        var text = value?.Trim() ?? string.Empty;
+        var style = NumberStyles.Integer;
+        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            text = text[2..];
+            style = NumberStyles.AllowHexSpecifier;
+        }
+        return int.TryParse(text, style, CultureInfo.InvariantCulture, out address) &&
+               address is >= 0 and <= 0x7F;
+    }
+
+    private static string FormatTargetI2cAddress(int address) => $"0x{address:X2}";
+
     private void ApplyRawExplorerProjection(RegisterActivityEntry[] projected, string? preferredStableId = null)
     {
         registerActivities = projected;
@@ -892,6 +972,7 @@ public partial class MainWindow : Window
         DetailPresentationCount = 0;
         RawRecordsList.ItemsSource = null;
         RegisterSearchTextBox.Text = string.Empty;
+        TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
         RegisterFilterComboBox.SelectedIndex = 0;
         configuringRegisterProfile = true;
         RegisterProfileComboBox.SelectedIndex = 0;

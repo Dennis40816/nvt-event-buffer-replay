@@ -189,6 +189,7 @@ public partial class MainWindow : Window
         EventVersionComboBox.IsEnabled = !busy && session is not null;
         Desay97ProfileComboBox.IsEnabled = !busy && session is not null;
         RegisterProfileComboBox.IsEnabled = !busy && session is not null;
+        TargetI2cAddressTextBox.IsEnabled = !busy;
         ExportReadableLogButton.IsEnabled = !busy && session is not null;
         SaveReviewButton.IsEnabled = !busy && decodeConfiguration is not null;
         LoadReviewButton.IsEnabled = !busy && decodeConfiguration is not null;

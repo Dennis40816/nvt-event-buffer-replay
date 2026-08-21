@@ -121,8 +121,15 @@ public sealed class CaptureSession
 
     public CommonInspectionReport DecodeCommon(
         CommonEventBufferVersion version,
+        CancellationToken cancellationToken = default) =>
+        DecodeCommon(version, 0x01, cancellationToken);
+
+    public CommonInspectionReport DecodeCommon(
+        CommonEventBufferVersion version,
+        int targetI2cAddress,
         CancellationToken cancellationToken = default)
     {
+        ValidateTargetI2cAddress(targetI2cAddress);
         var decoder = new CommonEventBufferDecoder();
         var monitor = new CommonStreamMonitor();
         var frames = new List<CommonEventBufferFrame>();
@@ -132,14 +139,17 @@ public sealed class CaptureSession
         foreach (var record in Records)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var isNdsPaint = record.Operation == BusOperation.Paint && record.Address == 0x01;
-            var isDecodedI2cRead = record.Operation == BusOperation.Read && IsEventBufferRead(record);
+            var isNdsPaint = targetI2cAddress == 0x01 &&
+                             record.Operation == BusOperation.Paint &&
+                             record.Address == 0x01;
+            var isDecodedI2cRead = record.Operation == BusOperation.Read &&
+                                   IsEventBufferRead(record, targetI2cAddress);
             if (!isNdsPaint && !isDecodedI2cRead)
             {
                 continue;
             }
 
-            if (!record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase))
+            if (isNdsPaint && !record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase))
             {
                 diagnostics.Add(NewDiagnostic(
                     record,
@@ -185,7 +195,8 @@ public sealed class CaptureSession
             diagnostics.Add(new ReplayDiagnostic(
                 DiagnosticSeverity.Warning,
                 "NO_EVENT_BUFFER_RECORDS",
-                "No Common event-buffer records were decoded (expected NDS Paint TP 0x01, a profile-matched Event Buffer read, or an offset-only I2C read at 0x00).",
+                $"No Common event-buffer records were decoded for 7-bit I2C address 0x{targetI2cAddress:X2} " +
+                "(expected NDS Paint TP 0x01, a profile-matched Event Buffer read, or an offset-only I2C read at register 0x00).",
                 SourceSha256,
                 new SourceLocation(0, 0)));
         }
@@ -193,10 +204,19 @@ public sealed class CaptureSession
         return new CommonInspectionReport(SourcePath, SourceSha256, version, frames, diagnostics);
     }
 
-    private bool IsEventBufferRead(SourceRecord record)
+    private bool IsEventBufferRead(SourceRecord record, int targetI2cAddress)
     {
-        if (!record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) ||
-            record.Data.Count < CommonEventBufferDecoder.FrameLength)
+        if (record.Data.Count < CommonEventBufferDecoder.FrameLength)
+        {
+            return false;
+        }
+
+        if (record.I2c is { } i2c)
+        {
+            if (i2c.SlaveAddress != targetI2cAddress) return false;
+        }
+        else if (targetI2cAddress != 0x01 ||
+                 !record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -216,12 +236,21 @@ public sealed class CaptureSession
     public Desay97InspectionReport DecodeDesay97(
         Desay97Profile profile,
         uint? eventBufferBase = null,
+        CancellationToken cancellationToken = default) =>
+        DecodeDesay97(profile, eventBufferBase, 0x01, cancellationToken);
+
+    public Desay97InspectionReport DecodeDesay97(
+        Desay97Profile profile,
+        uint? eventBufferBase,
+        int targetI2cAddress,
         CancellationToken cancellationToken = default)
     {
+        ValidateTargetI2cAddress(targetI2cAddress);
         var resolvedEventBufferBase = eventBufferBase ??
             NvtRegisterCatalog.FindProfile(RegisterProfile)?.EventBufferBase ??
             0x99000;
-        var assembly = new Desay97Assembler(resolvedEventBufferBase).Assemble(Records, cancellationToken);
+        var assembly = new Desay97Assembler(resolvedEventBufferBase, targetI2cAddress)
+            .Assemble(Records, cancellationToken);
         var decoder = new Desay97Decoder();
         var frames = new List<Desay97Frame>();
         var diagnostics = new List<ReplayDiagnostic>(TransportDiagnostics);
@@ -291,6 +320,15 @@ public sealed class CaptureSession
         string message,
         IReadOnlyDictionary<string, string>? details = null) =>
         new(severity, code, message, source.StableId, source.Location, details);
+
+    private static void ValidateTargetI2cAddress(int targetI2cAddress)
+    {
+        if (targetI2cAddress is < 0 or > 0x7F)
+            throw new ArgumentOutOfRangeException(
+                nameof(targetI2cAddress),
+                targetI2cAddress,
+                "I2C slave address must be a 7-bit value from 0x00 through 0x7F.");
+    }
 }
 
 public sealed class SourceSelectionRequiredException(IReadOnlyList<SourceProbeResult> candidates)

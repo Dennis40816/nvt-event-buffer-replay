@@ -366,6 +366,27 @@ public sealed class DecodedI2cAdapterTests : IDisposable
         Assert.DoesNotContain(report.Diagnostics, diagnostic => diagnostic.Code == "NO_EVENT_BUFFER_RECORDS");
     }
 
+    [Fact]
+    public async Task Common_decode_uses_only_the_selected_7bit_slave_and_preserves_other_raw_records()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var transactions = new[]
+        {
+            Transaction with { Index = 1, SlaveAddress = 0x01, ReadData = packet },
+            Transaction with { Index = 2, TimestampSeconds = 1.5, SlaveAddress = 0x2A, ReadData = packet },
+        };
+        var path = Write(".csv", DecodedI2cSimulator.ToKingstVisCsv(transactions));
+        var session = (await CaptureSession.LoadAsync(path)).WithRegisterProfile("51927");
+
+        var report = session.DecodeCommon(CommonEventBufferVersion.V83, 0x2A);
+
+        var frame = Assert.Single(report.Frames);
+        Assert.Equal(0x2A, frame.Source.I2c?.SlaveAddress);
+        Assert.Equal(4, session.Records.Count);
+        Assert.Contains(session.Records, record => record.I2c?.SlaveAddress == 0x01);
+        Assert.Contains(session.Records, record => record.I2c?.SlaveAddress == 0x2A);
+    }
+
     [Theory]
     [MemberData(nameof(TextAdapters))]
     public async Task Cancellation_is_observed_before_records_are_committed(

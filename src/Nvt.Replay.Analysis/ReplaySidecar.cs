@@ -16,7 +16,8 @@ public sealed record ReplayDecodeConfiguration(
     string? Desay97Profile,
     string SourceAdapterId,
     uint EventBufferBase = 0x99000,
-    string? RegisterProfile = null);
+    string? RegisterProfile = null,
+    int TargetI2cAddress = 0x01);
 
 public sealed record ReplayEvidenceReference(
     string Id,

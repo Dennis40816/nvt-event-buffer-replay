@@ -26,6 +26,7 @@ public sealed class ExecutableFormatRegistryTests
         Assert.Equal(expected, common.Version);
         Assert.Equal(display, common.DisplayIdentity);
         Assert.Equal(display, common.Descriptor.DisplayName);
+        Assert.Equal(0x01, common.TargetI2cAddress);
     }
 
     [Theory]
@@ -78,6 +79,21 @@ public sealed class ExecutableFormatRegistryTests
         Assert.False(ExecutableFormatRegistry.TryResolve(
             new FormatDecodeRequest("0x83", "unknown"), out _, out var profileError));
         Assert.Contains("--register-profile must be one of:", profileError, StringComparison.Ordinal);
+
+        Assert.False(ExecutableFormatRegistry.TryResolve(
+            new FormatDecodeRequest("0x83", TargetI2cAddress: 0x80), out _, out var addressError));
+        Assert.Contains("7-bit", addressError, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Selection_and_configuration_preserve_the_operator_selected_7bit_address()
+    {
+        Assert.True(ExecutableFormatRegistry.TryResolve(
+            new FormatDecodeRequest("0x83", TargetI2cAddress: 0x2A),
+            out var selection,
+            out var error), error);
+
+        Assert.Equal(0x2A, selection!.TargetI2cAddress);
     }
 
     [Fact]

@@ -127,7 +127,7 @@ dotnet build --no-restore
 dotnet test --no-build
 dotnet run --project src/Nvt.Replay.Cli -- formats
 dotnet run --project src/Nvt.Replay.Cli -- probe ./capture.txt --json
-dotnet run --project src/Nvt.Replay.Cli -- inspect ./capture.txt --event-buffer-version 0x83
+dotnet run --project src/Nvt.Replay.Cli -- inspect ./capture.txt --event-buffer-version 0x83 --i2c-address 0x01
 dotnet run --project src/Nvt.Replay.Cli -- analyze ./capture.txt --event-buffer-version 0x83 --output ./analysis
 dotnet run --project src/Nvt.Replay.Cli -- export ./capture.txt --event-buffer-version 0x83 --output ./replay.mp4
 dotnet run --project src/Nvt.Replay.Avalonia
@@ -140,6 +140,10 @@ dotnet run --project src/Nvt.Replay.Cli -- readable ./capture.txt --output ./ana
 
 The desktop startup options and IC register profiles are explicit operator choices for reproducible QA
 and screenshot runs. They do not infer Event Buffer Version or Benz Palm.
+The desktop header and CLI `--i2c-address` option select the 7-bit slave used by
+IC inference and Event Buffer decoding (default `0x01`). Raw Explorer continues
+to retain every captured device and displays the 7-bit address, W/R direction,
+resolved register address, and original register byte separately.
 
 Windows preview and stable packaging use a pinned version, committed dependency
 locks, a closed payload allowlist, SHA-256 manifests, and fresh-extraction

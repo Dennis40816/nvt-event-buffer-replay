@@ -30,6 +30,7 @@
 | UI-18 | Heatmap 與 MP4 使用相同 Output 左預覽／右設定骨架 | 已完成；1920/1180 dark/light approved | 切換內容只替換左側 preview renderer；Heatmap 不再橫跨整頁，右側設定 rail 與 MP4 維持相同層級與 padding |
 | UI-19 | Output type 移入右側設定動線 | 已完成；切換與 stale-state tests 通過 | 輸出類型固定在右欄頂端；左側只保留動態說明、preview 與 export action，操作順序為先選類型再調整該類型參數 |
 | UI-20 | 重排並整合 Inspector 的 Protocol／Raw／Review 資訊架構 | 待規劃 | 消除跨分頁重複欄位；固定 health、contact、transport、byte layout、source identity 與 review actions 的層級；320／380／520 px 均可讀，且 Raw/Register 與 decoded frame projector 不互相覆蓋 |
+| UI-21 | 以 7-bit I²C address 選擇解碼目標並保留 raw register 證據 | 已實作；mixed-slave tests 通過 | Header 在 Event Buffer Version 旁提供 0x00–0x7F target（預設 0x01）；decoder／IC inference 只使用該 slave，Raw 仍顯示所有設備；每列以 `7-bit · W/R` 呈現並在 resolved register 旁保留原始 register byte |
 
 ## 參考圖逐張對照
 

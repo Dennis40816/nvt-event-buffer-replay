@@ -17,6 +17,10 @@ location where available, original text or row fields, timestamp, direction,
 target, register address, declared/actual byte counts, and I2C transport
 evidence. Transport evidence includes slave address, preceding write commands,
 address ACK when exposed, per-byte ACK/NAK values, and decoder errors.
+The normalized slave address is always 7-bit. The desktop/CLI decode target
+defaults to `0x01` and may be changed without hiding or rewriting transactions
+from other devices; W/R remains a separate property. Register projection keeps
+both the resolved absolute address and the original register byte/offset.
 
 ## Built-in decoded-I2C inputs
 

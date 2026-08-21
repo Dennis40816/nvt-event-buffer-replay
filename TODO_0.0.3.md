@@ -118,6 +118,7 @@ Source adapters
 - [x] Desay two-transaction 保留獨立 assembler；補 cancellation，並維持 transport-stream/slave transaction scope。
 - [x] CRC ownership 明確化：Common decoder 單點驗證；Desay assembler 計算並攜帶 captured/computed CRC，semantic decoder 不重算。
 - [x] KingstVIS、DSL、NDS 與 built-in LA adapters 套用共用 acceptance contract：probe ambiguity、malformed row、cancellation、stable ID、address normalization、ACK unavailable、transaction boundary、simulator round trip、provenance。
+- [x] Header 提供 7-bit I²C decode target（預設 `0x01`）；Common／Desay／IC inference 只消費所選 slave，Raw Explorer 保留其他設備與原始 register byte 作為 evidence。
 
 完成條件：新增第三種 Event Buffer family 時不需要同時修改 MainWindow、CLI 三條 command flow 與 Rendering switch。
 

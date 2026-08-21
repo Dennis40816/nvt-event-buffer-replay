@@ -32,6 +32,17 @@ public sealed class NdsCaptureSessionTests : IDisposable
     }
 
     [Fact]
+    public async Task Nds_TP_is_the_fixed_0x01_slave_and_is_rejected_by_another_target_filter()
+    {
+        var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
+        var path = WriteLog(Record("Paint", "0x01", packet));
+        var session = await CaptureSession.LoadAsync(path);
+
+        Assert.Single(session.DecodeCommon(CommonEventBufferVersion.V83, 0x01).Frames);
+        Assert.Empty(session.DecodeCommon(CommonEventBufferVersion.V83, 0x2A).Frames);
+    }
+
+    [Fact]
     public async Task LoadAsync_rejects_source_without_NDS_records()
     {
         var path = WriteLog("this is not an NDS communication log");

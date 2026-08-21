@@ -3,9 +3,21 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Formats.Desay97;
 
-public sealed class Desay97Assembler(uint eventBufferBase = 0x99000)
+public sealed class Desay97Assembler
 {
-    public uint EventBufferBase { get; } = eventBufferBase;
+    public Desay97Assembler(uint eventBufferBase = 0x99000, int targetI2cAddress = 0x01)
+    {
+        if (targetI2cAddress is < 0 or > 0x7F)
+            throw new ArgumentOutOfRangeException(
+                nameof(targetI2cAddress),
+                targetI2cAddress,
+                "I2C slave address must be a 7-bit value from 0x00 through 0x7F.");
+        EventBufferBase = eventBufferBase;
+        TargetI2cAddress = targetI2cAddress;
+    }
+
+    public uint EventBufferBase { get; }
+    public int TargetI2cAddress { get; }
 
     public Desay97AssemblyResult Assemble(
         IEnumerable<SourceRecord> records,
@@ -138,10 +150,14 @@ public sealed class Desay97Assembler(uint eventBufferBase = 0x99000)
         return new Desay97AssemblyResult(packets, diagnostics);
     }
 
-    private bool IsEventRead(SourceRecord record) =>
-        record.Operation == BusOperation.Read &&
-        record.Address == EventBufferBase &&
-        record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase);
+    private bool IsEventRead(SourceRecord record)
+    {
+        if (record.Operation != BusOperation.Read || record.Address != EventBufferBase) return false;
+        return record.I2c is { } i2c
+            ? i2c.SlaveAddress == TargetI2cAddress
+            : TargetI2cAddress == 0x01 &&
+              record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static ReplayDiagnostic MissingPhase(SourceRecord source, string message) =>
         Diagnostic(source, "DESAY97_MISSING_SECOND_PHASE", message);

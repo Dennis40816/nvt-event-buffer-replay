@@ -27,6 +27,22 @@ public sealed class Desay97Tests
     }
 
     [Fact]
+    public void Assembler_uses_only_the_selected_7bit_slave_address()
+    {
+        var full = Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]);
+        var result = new Desay97Assembler(0x99000, 0x2A).Assemble(
+        [
+            Record(1, [0x01], slaveAddress: 0x01),
+            Record(2, full, slaveAddress: 0x01),
+            Record(3, [0x01], slaveAddress: 0x2A),
+            Record(4, full, slaveAddress: 0x2A),
+        ]);
+
+        var packet = Assert.Single(result.Packets);
+        Assert.All(packet.PhysicalRecords, record => Assert.Equal(0x2A, record.I2c?.SlaveAddress));
+    }
+
+    [Fact]
     public void Assembler_owns_crc_calculation_and_decoder_consumes_the_verified_evidence()
     {
         var full = Seal([0x01, 0x61, 0x03, 0x14, 0x07, 0x19]);
@@ -292,7 +308,11 @@ public sealed class Desay97Tests
         Assert.Contains(assembly.Diagnostics, item => item.Code == "DESAY97_CRC_MISMATCH");
     }
 
-    private static SourceRecord Record(long index, IReadOnlyList<byte> data, uint address = 0x99000) =>
+    private static SourceRecord Record(
+        long index,
+        IReadOnlyList<byte> data,
+        uint address = 0x99000,
+        int? slaveAddress = null) =>
         new(
             index,
             $"capture:L{index + 1}",
@@ -303,7 +323,8 @@ public sealed class Desay97Tests
             data.Count,
             data,
             string.Empty,
-            new SourceLocation(index * 10, (int)index + 1));
+            new SourceLocation(index * 10, (int)index + 1),
+            slaveAddress is { } slave ? new I2cTransport(slave, [], [], null) : null);
 
     private static byte[] Seal(IReadOnlyList<byte> bytes) =>
         [.. bytes, Crc8Poly1D.Compute(bytes.ToArray())];

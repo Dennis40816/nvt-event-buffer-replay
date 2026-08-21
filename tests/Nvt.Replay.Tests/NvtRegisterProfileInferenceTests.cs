@@ -77,17 +77,40 @@ public sealed class NvtRegisterProfileInferenceTests
         Assert.Contains(result.Candidates, item => item.IcFamily == "51923");
     }
 
+    [Fact]
+    public void Inference_uses_only_the_selected_7bit_slave_address()
+    {
+        var records = Tracked(
+            Write(0, [0xFF, 0x09, 0x40, 0x00], 0x01),
+            Read(1, Enumerable.Repeat((byte)0xFF, 80).ToArray(), 0x01),
+            Write(2, [0xFF, 0x09, 0x90, 0x00], 0x2A),
+            Read(3, Enumerable.Repeat((byte)0xFF, 80).ToArray(), 0x2A));
+
+        var defaultDevice = NvtRegisterProfileInference.Infer(records);
+        var selectedDevice = NvtRegisterProfileInference.Infer(records, 0x2A);
+
+        Assert.Equal("51923", defaultDevice.UniqueProfile?.IcFamily);
+        Assert.Equal("51927", selectedDevice.UniqueProfile?.IcFamily);
+        Assert.All(selectedDevice.Evidence, item => Assert.True(item.RecordIndex is 2 or 3));
+    }
+
     private static IReadOnlyList<SourceRecord> Tracked(params SourceRecord[] input)
     {
         var tracker = new NvtRegisterTracker();
         return input.Select(tracker.Observe).ToArray();
     }
 
-    private static SourceRecord Write(long index, IReadOnlyList<byte> data) => Record(index, BusOperation.Write, data);
+    private static SourceRecord Write(long index, IReadOnlyList<byte> data, int slaveAddress = 0x01) =>
+        Record(index, BusOperation.Write, data, slaveAddress);
 
-    private static SourceRecord Read(long index, IReadOnlyList<byte> data) => Record(index, BusOperation.Read, data);
+    private static SourceRecord Read(long index, IReadOnlyList<byte> data, int slaveAddress = 0x01) =>
+        Record(index, BusOperation.Read, data, slaveAddress);
 
-    private static SourceRecord Record(long index, BusOperation operation, IReadOnlyList<byte> data) =>
+    private static SourceRecord Record(
+        long index,
+        BusOperation operation,
+        IReadOnlyList<byte> data,
+        int slaveAddress) =>
         new(
             index,
             $"test:{index}",
@@ -99,6 +122,6 @@ public sealed class NvtRegisterProfileInferenceTests
             data,
             string.Join(' ', data.Select(value => value.ToString("X2"))),
             new SourceLocation(0, checked((int)index + 1)),
-            new I2cTransport(0x01, [], [], null),
+            new I2cTransport(slaveAddress, [], [], null),
             new Dictionary<string, string> { ["adapter"] = "test" });
 }

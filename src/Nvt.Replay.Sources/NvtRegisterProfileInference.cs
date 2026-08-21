@@ -53,18 +53,25 @@ public static class NvtRegisterProfileInference
     private const uint EventBufferLength = 128;
     private const uint HistoryLength = 128;
 
-    public static NvtRegisterProfileInferenceResult Infer(IEnumerable<SourceRecord> records)
+    public static NvtRegisterProfileInferenceResult Infer(
+        IEnumerable<SourceRecord> records,
+        int targetI2cAddress = 0x01)
     {
         ArgumentNullException.ThrowIfNull(records);
+        if (targetI2cAddress is < 0 or > 0x7F)
+            throw new ArgumentOutOfRangeException(
+                nameof(targetI2cAddress),
+                targetI2cAddress,
+                "I2C slave address must be a 7-bit value from 0x00 through 0x7F.");
         var recordList = records as IReadOnlyList<SourceRecord> ?? records.ToArray();
         var evidence = new List<NvtRegisterProfileEvidence>();
         var candidateSets = new List<HashSet<NvtRegisterProfile>>();
 
         foreach (var record in recordList)
         {
-            if (!record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) ||
-                record.Address is not { } address ||
-                record.I2c is not { } i2c)
+            if (record.Address is not { } address ||
+                record.I2c is not { } i2c ||
+                i2c.SlaveAddress != targetI2cAddress)
             {
                 continue;
             }
@@ -116,7 +123,11 @@ public static class NvtRegisterProfileInference
         // Buffer or History access may disambiguate it; otherwise the user must choose explicitly.
         foreach (var record in recordList)
         {
-            if (record.Address is not { } address) continue;
+            if (record.Address is not { } address ||
+                record.I2c?.SlaveAddress != targetI2cAddress)
+            {
+                continue;
+            }
             var matching = intersection.Where(profile => MatchesKnownRegion(profile, address)).ToArray();
             if (matching.Length > 0 && matching.Length < intersection.Count)
                 intersection.IntersectWith(matching);

@@ -9,7 +9,8 @@ namespace Nvt.Replay.Analysis;
 public sealed record FormatDecodeRequest(
     string EventBufferVersion,
     string? RegisterProfile = null,
-    string? Desay97Profile = null);
+    string? Desay97Profile = null,
+    int TargetI2cAddress = 0x01);
 
 public interface IFormatInspectionReport
 {
@@ -20,14 +21,19 @@ public interface IFormatInspectionReport
 
 public abstract class ExecutableFormatSelection
 {
-    protected ExecutableFormatSelection(FormatDescriptor descriptor, string? registerProfile)
+    protected ExecutableFormatSelection(
+        FormatDescriptor descriptor,
+        string? registerProfile,
+        int targetI2cAddress)
     {
         Descriptor = descriptor;
         RegisterProfile = registerProfile;
+        TargetI2cAddress = targetI2cAddress;
     }
 
     public FormatDescriptor Descriptor { get; }
     public string? RegisterProfile { get; }
+    public int TargetI2cAddress { get; }
     public abstract string DisplayIdentity { get; }
 
     public abstract ExecutableFormatDecodeResult Decode(
@@ -50,8 +56,9 @@ public sealed class CommonFormatSelection : ExecutableFormatSelection
     internal CommonFormatSelection(
         FormatDescriptor descriptor,
         CommonEventBufferVersion version,
-        string? registerProfile)
-        : base(descriptor, registerProfile) => Version = version;
+        string? registerProfile,
+        int targetI2cAddress)
+        : base(descriptor, registerProfile, targetI2cAddress) => Version = version;
 
     public CommonEventBufferVersion Version { get; }
     public override string DisplayIdentity => $"Common {Descriptor.Version}";
@@ -61,7 +68,7 @@ public sealed class CommonFormatSelection : ExecutableFormatSelection
         CancellationToken cancellationToken = default)
     {
         var configured = ConfigureCapture(capture, cancellationToken);
-        var report = configured.DecodeCommon(Version, cancellationToken);
+        var report = configured.DecodeCommon(Version, TargetI2cAddress, cancellationToken);
         var replay = new CommonReplaySession(report.Frames);
         var eventBufferBase = NvtRegisterCatalog.FindProfile(configured.RegisterProfile)?.EventBufferBase ?? 0;
         var configuration = new ReplayDecodeConfiguration(
@@ -69,7 +76,8 @@ public sealed class CommonFormatSelection : ExecutableFormatSelection
             null,
             configured.Probe.AdapterId,
             eventBufferBase,
-            configured.RegisterProfile);
+            configured.RegisterProfile,
+            TargetI2cAddress);
         return new CommonFormatDecodeResult(this, configured, report, replay, configuration);
     }
 }
@@ -79,8 +87,9 @@ public sealed class Desay97FormatSelection : ExecutableFormatSelection
     internal Desay97FormatSelection(
         FormatDescriptor descriptor,
         Desay97Profile profile,
-        NvtRegisterProfile registerProfile)
-        : base(descriptor, registerProfile.IcFamily)
+        NvtRegisterProfile registerProfile,
+        int targetI2cAddress)
+        : base(descriptor, registerProfile.IcFamily, targetI2cAddress)
     {
         Profile = profile;
         EventBufferBase = registerProfile.EventBufferBase;
@@ -96,14 +105,15 @@ public sealed class Desay97FormatSelection : ExecutableFormatSelection
         CancellationToken cancellationToken = default)
     {
         var configured = ConfigureCapture(capture, cancellationToken);
-        var report = configured.DecodeDesay97(Profile, EventBufferBase, cancellationToken);
+        var report = configured.DecodeDesay97(Profile, EventBufferBase, TargetI2cAddress, cancellationToken);
         var replay = new Desay97ReplaySession(report.Frames);
         var configuration = new ReplayDecodeConfiguration(
             "0x97",
             ProfileDisplayName,
             configured.Probe.AdapterId,
             EventBufferBase,
-            configured.RegisterProfile);
+            configured.RegisterProfile,
+            TargetI2cAddress);
         return new Desay97FormatDecodeResult(this, configured, report, replay, configuration);
     }
 }
@@ -180,6 +190,48 @@ public static class ExecutableFormatRegistry
 {
     public static IReadOnlyList<FormatDescriptor> Descriptors => BuiltInFormats.All;
 
+    /// <summary>
+    /// Resolves a format against immutable capture evidence. When no register profile was supplied,
+    /// a unique Switch Page + Event Buffer match is applied; ambiguous or conflicting evidence is
+    /// returned to the caller instead of being guessed.
+    /// </summary>
+    public static bool TryResolve(
+        CaptureSession capture,
+        FormatDecodeRequest request,
+        out ExecutableFormatSelection? selection,
+        out NvtRegisterProfileInferenceResult inference,
+        out string error)
+    {
+        ArgumentNullException.ThrowIfNull(capture);
+        ArgumentNullException.ThrowIfNull(request);
+
+        inference = string.IsNullOrWhiteSpace(request.RegisterProfile)
+            ? NvtRegisterProfileInference.Infer(capture.Records, request.TargetI2cAddress)
+            : new NvtRegisterProfileInferenceResult(NvtRegisterProfileInferenceStatus.None, [], []);
+
+        var effectiveRequest = request;
+        switch (inference.Status)
+        {
+            case NvtRegisterProfileInferenceStatus.Unique:
+                effectiveRequest = request with { RegisterProfile = inference.UniqueProfile!.IcFamily };
+                break;
+            case NvtRegisterProfileInferenceStatus.Ambiguous:
+                selection = null;
+                error = $"IC profile is ambiguous from Switch Page + Event Buffer evidence " +
+                        $"({string.Join(", ", inference.Candidates.Select(item => item.IcFamily))}). " +
+                        "Select an IC profile explicitly (--register-profile in CLI).";
+                return false;
+            case NvtRegisterProfileInferenceStatus.Conflicting:
+                selection = null;
+                error = $"Switch Page + Event Buffer evidence conflicts across IC profiles " +
+                        $"({string.Join(", ", inference.Candidates.Select(item => item.IcFamily))}). " +
+                        "Select an IC profile explicitly (--register-profile in CLI).";
+                return false;
+        }
+
+        return TryResolve(effectiveRequest, out selection, out error);
+    }
+
     public static bool TryResolve(
         FormatDecodeRequest request,
         out ExecutableFormatSelection? selection,
@@ -187,6 +239,11 @@ public static class ExecutableFormatRegistry
     {
         ArgumentNullException.ThrowIfNull(request);
         selection = null;
+        if (request.TargetI2cAddress is < 0 or > 0x7F)
+        {
+            error = "--i2c-address must be a 7-bit value from 0x00 through 0x7F.";
+            return false;
+        }
         var registerProfile = ResolveRegisterProfile(request.RegisterProfile, out error);
         if (!string.IsNullOrWhiteSpace(request.RegisterProfile) && registerProfile is null) return false;
 
@@ -194,7 +251,11 @@ public static class ExecutableFormatRegistry
         {
             var canonical = CommonVersionText(commonVersion);
             var descriptor = Descriptors.Single(item => item.Family == "Common" && item.Version == canonical);
-            selection = new CommonFormatSelection(descriptor, commonVersion, registerProfile?.IcFamily);
+            selection = new CommonFormatSelection(
+                descriptor,
+                commonVersion,
+                registerProfile?.IcFamily,
+                request.TargetI2cAddress);
             error = string.Empty;
             return true;
         }
@@ -218,7 +279,8 @@ public static class ExecutableFormatRegistry
         selection = new Desay97FormatSelection(
             Descriptors.Single(item => item.Family == "Desay" && item.Version == "0x97"),
             desayProfile,
-            registerProfile);
+            registerProfile,
+            request.TargetI2cAddress);
         error = string.Empty;
         return true;
     }

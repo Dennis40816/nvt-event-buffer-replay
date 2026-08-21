@@ -128,7 +128,7 @@ internal static class ReplayCli
             !TryReadOption(operands, "--event-buffer-version", out var versionText) ||
             !TryReadOption(operands, "--output", out var outputPath))
         {
-            await error.WriteLineAsync("Usage: nvt-replay export <file> --event-buffer-version <version> --output <file.mp4> [--range <first:last>] [--size <width>x<height>] [--fps <1-240>] [--speed <value>] [--clock <recorded|frame>] [--ffmpeg <path>] [--review <sidecar>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay export <file> --event-buffer-version <version> --output <file.mp4> [--i2c-address <0x00-0x7F>] [--range <first:last>] [--size <width>x<height>] [--fps <1-240>] [--speed <value>] [--clock <recorded|frame>] [--ffmpeg <path>] [--review <sidecar>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
         var path = operands[0];
@@ -143,16 +143,23 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
+        if (!TryReadI2cAddress(operands, out var targetI2cAddress, out var i2cAddressError))
+        {
+            await error.WriteLineAsync(i2cAddressError);
+            return UsageError;
+        }
         var palmProfile = TryReadOption(operands, "--desay97-profile", out var selectedPalm) ? selectedPalm : null;
+        var loadedCapture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
         if (!ExecutableFormatRegistry.TryResolve(
-                new FormatDecodeRequest(versionText, registerProfile, palmProfile),
+                loadedCapture,
+                new FormatDecodeRequest(versionText, registerProfile, palmProfile, targetI2cAddress),
                 out var formatSelection,
+                out _,
                 out var formatError))
         {
             await error.WriteLineAsync(formatError);
             return UsageError;
         }
-        var loadedCapture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
         var decodedFormat = formatSelection!.Decode(loadedCapture);
         var capture = decodedFormat.Capture;
         var replay = decodedFormat.Replay;
@@ -254,7 +261,7 @@ internal static class ReplayCli
             !TryReadOption(operands, "--event-buffer-version", out var versionText) ||
             !TryReadOption(operands, "--output", out var outputDirectory))
         {
-            await error.WriteLineAsync("Usage: nvt-replay analyze <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> --output <directory> [--range <first:last>] [--heatmap-size <width>x<height>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay analyze <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> --output <directory> [--i2c-address <0x00-0x7F>] [--range <first:last>] [--heatmap-size <width>x<height>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
         var path = operands[0];
@@ -277,16 +284,23 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
+        if (!TryReadI2cAddress(operands, out var targetI2cAddress, out var i2cAddressError))
+        {
+            await error.WriteLineAsync(i2cAddressError);
+            return UsageError;
+        }
         var palmProfile = TryReadOption(operands, "--desay97-profile", out var selectedPalm) ? selectedPalm : null;
+        var loadedCapture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
         if (!ExecutableFormatRegistry.TryResolve(
-                new FormatDecodeRequest(versionText, registerProfile, palmProfile),
+                loadedCapture,
+                new FormatDecodeRequest(versionText, registerProfile, palmProfile, targetI2cAddress),
                 out var formatSelection,
+                out _,
                 out var formatError))
         {
             await error.WriteLineAsync(formatError);
             return UsageError;
         }
-        var loadedCapture = await CaptureSession.LoadAsync(path, adapterId: adapterId);
         var decodedFormat = formatSelection!.Decode(loadedCapture);
         var capture = decodedFormat.Capture;
         var replay = decodedFormat.Replay;
@@ -377,7 +391,7 @@ internal static class ReplayCli
     {
         if (operands.Length < 3 || !TryReadOption(operands, "--event-buffer-version", out var versionText))
         {
-            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
+            await error.WriteLineAsync("Usage: nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85|0x97> [--i2c-address <0x00-0x7F>] [--source-adapter <id>] [--register-profile <family>] [--desay97-profile <standard|benz-palm>] [--json]");
             return UsageError;
         }
 
@@ -393,16 +407,23 @@ internal static class ReplayCli
             await error.WriteLineAsync(registerProfileError);
             return UsageError;
         }
+        if (!TryReadI2cAddress(operands, out var targetI2cAddress, out var i2cAddressError))
+        {
+            await error.WriteLineAsync(i2cAddressError);
+            return UsageError;
+        }
         var palmProfile = TryReadOption(operands, "--desay97-profile", out var selectedPalm) ? selectedPalm : null;
+        var capture = await CaptureSession.LoadAsync(path, adapterId: sourceAdapterId);
         if (!ExecutableFormatRegistry.TryResolve(
-                new FormatDecodeRequest(versionText, registerProfile, palmProfile),
+                capture,
+                new FormatDecodeRequest(versionText, registerProfile, palmProfile, targetI2cAddress),
                 out var formatSelection,
+                out _,
                 out var formatError))
         {
             await error.WriteLineAsync(formatError);
             return UsageError;
         }
-        var capture = await CaptureSession.LoadAsync(path, adapterId: sourceAdapterId);
         var decodedFormat = formatSelection!.Decode(capture);
         if (json)
         {
@@ -500,6 +521,31 @@ internal static class ReplayCli
         }
 
         error = $"--register-profile must be one of: {string.Join(", ", NvtRegisterCatalog.Profiles.Select(item => item.IcFamily))}.";
+        return false;
+    }
+
+    internal static bool TryReadI2cAddress(
+        string[] operands,
+        out int address,
+        out string error)
+    {
+        address = 0x01;
+        error = string.Empty;
+        if (!TryReadOption(operands, "--i2c-address", out var text)) return true;
+        var trimmed = text.Trim();
+        var style = System.Globalization.NumberStyles.Integer;
+        if (trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed[2..];
+            style = System.Globalization.NumberStyles.AllowHexSpecifier;
+        }
+        if (int.TryParse(trimmed, style, System.Globalization.CultureInfo.InvariantCulture, out address) &&
+            address is >= 0 and <= 0x7F)
+        {
+            return true;
+        }
+
+        error = "--i2c-address must be a 7-bit value from 0x00 through 0x7F (default 0x01).";
         return false;
     }
 
@@ -666,16 +712,19 @@ internal static class ReplayCli
               nvt-replay probe <file> [--json]
                                            Suggest a source adapter without selecting a format
               nvt-replay inspect <file> --event-buffer-version <0x82|0x83|0x84|0x85>
+                                 [--i2c-address <0x00-0x7F>]
                                  [--source-adapter <id>] [--register-profile <family>] [--json]
                                            Decode Common records from any supported source
               nvt-replay inspect <file> --event-buffer-version 0x97
                                  --desay97-profile <standard|benz-palm>
                                  --register-profile <family>
+                                 [--i2c-address <0x00-0x7F>]
                                  [--source-adapter <id>] [--json]
                                            Assemble and decode Desay reads
               nvt-replay analyze <file> --event-buffer-version <version>
                                  --output <directory> [--range <first:last>]
                                  [--heatmap-size <width>x<height>]
+                                 [--i2c-address <0x00-0x7F>]
                                  [--source-adapter <id>]
                                  [--register-profile <family>]
                                  [--desay97-profile <standard|benz-palm>] [--json]
@@ -689,6 +738,7 @@ internal static class ReplayCli
                                 [--size <width>x<height>] [--fps <1-240>]
                                 [--speed <value>] [--clock <recorded|frame>]
                                 [--ffmpeg <path>] [--review <sidecar>]
+                                [--i2c-address <0x00-0x7F>]
                                 [--source-adapter <id>]
                                 [--register-profile <family>]
                                 [--desay97-profile <standard|benz-palm>] [--json]

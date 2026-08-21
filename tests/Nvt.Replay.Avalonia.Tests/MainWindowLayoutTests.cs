@@ -1144,8 +1144,9 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(2, reads.Length);
             Assert.All(reads, row =>
             {
+                Assert.Equal("0x01 · R", row.I2cEndpoint);
                 Assert.Equal("REG 0x99000", row.AddressPrimary);
-                Assert.Equal("I2C 0x03 R", row.AddressSecondary);
+                Assert.Equal("RAW REG 0x00", row.RawRegisterAddress);
                 Assert.Null(row.Record.Address);
             });
 
@@ -1187,8 +1188,9 @@ public sealed class MainWindowLayoutTests
             var pageSwitch = Assert.Single(
                 raw.Items.OfType<RawRecordRow>(),
                 row => row.Record.Index == 0 && row.Activity?.Kind == RegisterActivityKind.PageSwitch);
+            Assert.Equal("0x01 · W", pageSwitch.I2cEndpoint);
             Assert.Equal("PAGE 0x99000", pageSwitch.AddressPrimary);
-            Assert.Equal("I2C 0x02 W", pageSwitch.AddressSecondary);
+            Assert.Equal("RAW REG 0xFF", pageSwitch.RawRegisterAddress);
             Assert.Equal("Switch page · 0x99000", pageSwitch.Register);
 
             var filter = Required<ComboBox>(window, "RegisterFilterComboBox");
@@ -1202,6 +1204,46 @@ public sealed class MainWindowLayoutTests
         finally
         {
             window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Header_7bit_target_selects_one_device_without_hiding_other_raw_records()
+    {
+        var packet = CommonPacket(asil: 0x00, corruptCrc: false, x: 240);
+        var path = await WriteMixedAddressKingstVisCaptureAsync(
+            (0x01, packet),
+            (0x2A, packet));
+        var window = ShowWindow();
+        try
+        {
+            var address = Required<TextBox>(window, "TargetI2cAddressTextBox");
+            Assert.Equal("0x01", address.Text);
+            await window.OpenCaptureAsync(path);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var decoded = Required<ListBox>(window, "DecodedFramesList");
+            Assert.Equal(0x01, Assert.Single(decoded.Items.OfType<DecodedFrameRow>()).Source.I2c?.SlaveAddress);
+            var raw = Required<ListBox>(window, "RawRecordsList");
+            Assert.Contains(raw.Items.OfType<RawRecordRow>(), row => row.I2cEndpoint == "0x01 · R");
+            Assert.Contains(raw.Items.OfType<RawRecordRow>(), row => row.I2cEndpoint == "0x2A · R");
+
+            await window.SetTargetI2cAddressForTestingAsync("0x2a");
+
+            Assert.Equal("0x2A", address.Text);
+            Assert.Equal(0x2A, Assert.Single(decoded.Items.OfType<DecodedFrameRow>()).Source.I2c?.SlaveAddress);
+            Assert.Contains("I²C 0x2A", Required<TextBlock>(window, "ConfigurationHintText").Text);
+
+            await window.SetTargetI2cAddressForTestingAsync("0x80");
+
+            Assert.Equal("0x2A", address.Text);
+            Assert.Equal(0x2A, Assert.Single(decoded.Items.OfType<DecodedFrameRow>()).Source.I2c?.SlaveAddress);
+            Assert.Contains("rejected", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            window.Close();
+            File.Delete(path);
         }
     }
 
@@ -3412,6 +3454,20 @@ public sealed class MainWindowLayoutTests
             packetId++;
         }
         await File.WriteAllLinesAsync(path, lines);
+        return path;
+    }
+
+    private static async Task<string> WriteMixedAddressKingstVisCaptureAsync(
+        params (int SlaveAddress, byte[] Packet)[] frames)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"nvt-mixed-i2c-{Guid.NewGuid():N}.csv");
+        var transactions = frames.Select((frame, index) => new SyntheticI2cTransaction(
+            index,
+            1.0 + (index * 0.1),
+            frame.SlaveAddress,
+            [new byte[] { 0xFF, 0x09, 0x90, 0x00 }],
+            frame.Packet));
+        await File.WriteAllTextAsync(path, DecodedI2cSimulator.ToKingstVisCsv(transactions));
         return path;
     }
 

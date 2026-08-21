@@ -64,6 +64,8 @@
               <ComboBoxItem Content="0x85" />
               <ComboBoxItem Content="0x97" />
           </ComboBox>
+          <TextBlock Margin="10,0,0,0" Text="I²C Addr" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+          <TextBox x:Name="TargetI2cAddressTextBox" Classes="headerInlineInput" Width="68" Text="0x01" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" LostFocus="TargetI2cAddressTextBox_OnLostFocus" KeyDown="TargetI2cAddressTextBox_OnKeyDown" ToolTip.Tip="Only this 7-bit I²C slave address is decoded. Raw Explorer keeps all devices visible." AutomationProperties.Name="Target 7-bit I2C address" />
         </StackPanel>
         <Grid Grid.Column="8" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
           <TextBlock Margin="0,0,3,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
@@ -188,32 +190,30 @@
                                                   AutomationProperties.Name="Register activity timeline" />
                 <TextBlock x:Name="RegisterResultText" Grid.Column="1" Margin="12,0,0,0" Text="0 records · 0 register events" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
               </Grid>
-              <Grid Grid.Row="2" ColumnDefinitions="64,100,64,72,128,180,70,*" Margin="10,0">
+              <Grid Grid.Row="2" ColumnDefinitions="64,100,132,190,200,70,*" Margin="10,0">
                 <TextBlock Classes="section" Text="INDEX" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Classes="section" Text="PC TIME" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Classes="section" Text="OP" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="3" Classes="section" Text="TARGET" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="4" Classes="section" Text="REGISTER / BUS" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="5" Classes="section" Text="REGISTER / MEANING" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="6" Classes="section" Text="BYTES" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="7" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Classes="section" Text="7-BIT ADDR · W/R" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Classes="section" Text="REGISTER / RAW" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="4" Classes="section" Text="REGISTER / MEANING" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="5" Classes="section" Text="BYTES" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="6" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
               </Grid>
               <ListBox x:Name="RawRecordsList" Grid.Row="3" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:RawRecordRow">
                     <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10,9">
-                      <Grid ColumnDefinitions="64,100,64,72,128,180,70,*">
+                      <Grid ColumnDefinitions="64,100,132,190,200,70,*">
                         <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
                         <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <TextBlock Grid.Column="2" Text="{Binding Operation}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-                        <TextBlock Grid.Column="3" Text="{Binding Target}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <StackPanel Grid.Column="4" Spacing="1" ToolTip.Tip="{Binding AddressTooltip}">
+                        <TextBlock Grid.Column="2" Text="{Binding I2cEndpoint}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="7-bit I²C slave address and transfer direction" />
+                        <StackPanel Grid.Column="3" Spacing="1" ToolTip.Tip="{Binding AddressTooltip}">
                           <TextBlock Text="{Binding AddressPrimary}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                          <TextBlock Text="{Binding AddressSecondary}" IsVisible="{Binding HasSecondaryAddress}" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                          <TextBlock Text="{Binding RawRegisterAddress}" IsVisible="{Binding HasSecondaryAddress}" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
                         </StackPanel>
-                        <TextBlock Grid.Column="5" Text="{Binding Register}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
-                        <TextBlock Grid.Column="6" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <TextBlock Grid.Column="7" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="4" Text="{Binding Register}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
+                        <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
+                        <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </Border>
                   </DataTemplate>

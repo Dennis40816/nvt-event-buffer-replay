@@ -42,6 +42,8 @@ public sealed class RegisterProjectionPresentationTests
             registerAnnotation: annotation);
 
         Assert.Equal("Event Buffer · 11", row.Register);
+        Assert.Equal("0x01 · R", row.I2cEndpoint);
+        Assert.Contains("NDS target TP", row.AddressTooltip, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Event Buffer", inspector.Subtitle, StringComparison.Ordinal);
         Assert.Contains(inspector.ProtocolRows, item => item.Label == "Profile" && item.Value == "resolved");
         Assert.Same(record, records[0]);
@@ -49,7 +51,7 @@ public sealed class RegisterProjectionPresentationTests
     }
 
     [Fact]
-    public void Raw_row_shows_projected_register_and_captured_bus_addresses_on_separate_lines()
+    public void Raw_row_shows_7bit_endpoint_resolved_register_and_raw_register_byte()
     {
         var sourceFields = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -80,9 +82,12 @@ public sealed class RegisterProjectionPresentationTests
 
         var row = new RawRecordRow(record, activity, projection.Find(record.StableId));
 
+        Assert.Equal("0x01 · R", row.I2cEndpoint);
         Assert.Equal("REG 0x99000", row.AddressPrimary);
-        Assert.Equal("I2C 0x03 R", row.AddressSecondary);
+        Assert.Equal("RAW REG 0x00", row.RawRegisterAddress);
+        Assert.Equal(row.RawRegisterAddress, row.AddressSecondary);
         Assert.Contains("inferred", row.AddressTooltip, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("7-bit", row.AddressTooltip, StringComparison.OrdinalIgnoreCase);
         Assert.True(row.Matches("0x99000"));
         Assert.True(row.Matches("0x03"));
         Assert.Null(record.Address);
@@ -90,7 +95,7 @@ public sealed class RegisterProjectionPresentationTests
     }
 
     [Fact]
-    public void Raw_row_names_switch_page_and_keeps_the_bus_address_visible()
+    public void Raw_row_names_switch_page_and_keeps_7bit_endpoint_and_raw_register_visible()
     {
         var bytes = new byte[] { 0xFF, 0x08, 0x08, 0x00 };
         var record = new SourceRecord(
@@ -110,8 +115,9 @@ public sealed class RegisterProjectionPresentationTests
 
         var row = new RawRecordRow(record, activity);
 
+        Assert.Equal("0x01 · W", row.I2cEndpoint);
         Assert.Equal("PAGE 0x80800", row.AddressPrimary);
-        Assert.Equal("I2C 0x02 W", row.AddressSecondary);
+        Assert.Equal("RAW REG 0xFF", row.RawRegisterAddress);
         Assert.Equal("Switch page · 0x80800", row.Register);
         Assert.Contains("Switch page", row.AddressTooltip, StringComparison.Ordinal);
         Assert.Equal(bytes, record.Data);

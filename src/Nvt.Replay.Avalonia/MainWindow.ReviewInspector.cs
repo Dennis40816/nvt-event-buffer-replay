@@ -829,7 +829,13 @@ public partial class MainWindow : Window
                 : $"{record.Data.Count} bytes"),
         };
         if (record.I2c is not { } i2c) return rows;
-        rows.Add(new InspectorDetailRow("Slave", $"0x{i2c.SlaveAddress:X2}"));
+        var direction = record.Operation == BusOperation.Read ? "R" : record.Operation == BusOperation.Write ? "W" : "-";
+        var rawAddress = (i2c.SlaveAddress << 1) | (record.Operation == BusOperation.Read ? 1 : 0);
+        rows.Add(new InspectorDetailRow("7-bit address", $"0x{i2c.SlaveAddress:X2}"));
+        rows.Add(new InspectorDetailRow("Direction", direction));
+        rows.Add(new InspectorDetailRow("Raw address byte", $"0x{rawAddress:X2}"));
+        if (TryGetRawRegisterByte(record, out var rawRegister))
+            rows.Add(new InspectorDetailRow("Raw register", $"0x{rawRegister:X2}"));
         rows.Add(new InspectorDetailRow("Address ACK", i2c.AddressAcknowledged switch
         {
             true => "ACK",
@@ -842,6 +848,33 @@ public partial class MainWindow : Window
         rows.Add(new InspectorDetailRow("Data ACK", I2cAckSummary.Format(i2c.Acked)));
         if (!string.IsNullOrWhiteSpace(i2c.Error)) rows.Add(new InspectorDetailRow("Transport error", i2c.Error));
         return rows;
+    }
+
+    private static bool TryGetRawRegisterByte(SourceRecord record, out byte value)
+    {
+        if (record.SourceFields?.GetValueOrDefault("register_offset") is { Length: > 0 } text)
+        {
+            var normalized = text.Trim();
+            var style = NumberStyles.Integer;
+            if (normalized.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized[2..];
+                style = NumberStyles.AllowHexSpecifier;
+            }
+            if (byte.TryParse(normalized, style, CultureInfo.InvariantCulture, out value)) return true;
+        }
+        if (record.I2c?.WriteCommands.LastOrDefault() is { Count: > 0 } command)
+        {
+            value = command[0];
+            return true;
+        }
+        if (record.Operation == BusOperation.Write && record.Data.Count > 0)
+        {
+            value = record.Data[0];
+            return true;
+        }
+        value = 0;
+        return false;
     }
 
     private string FormatSourceFields(SourceRecord record)

@@ -38,7 +38,28 @@ public sealed class ReplayCliContractTests : IDisposable
 
         Assert.Equal(0, exitCode);
         Assert.Contains("[--fps <1-240>]", output.ToString(), StringComparison.Ordinal);
+        Assert.Contains("[--i2c-address <0x00-0x7F>]", output.ToString(), StringComparison.Ordinal);
         Assert.Empty(error.ToString());
+    }
+
+    [Theory]
+    [InlineData("0x00", 0x00)]
+    [InlineData("0x2a", 0x2A)]
+    [InlineData("127", 0x7F)]
+    public void I2c_address_option_accepts_hex_or_decimal_7bit_values(string value, int expected)
+    {
+        Assert.True(ReplayCli.TryReadI2cAddress(["--i2c-address", value], out var address, out var error), error);
+        Assert.Equal(expected, address);
+    }
+
+    [Theory]
+    [InlineData("0x80")]
+    [InlineData("-1")]
+    [InlineData("invalid")]
+    public void I2c_address_option_rejects_values_outside_7bit_range(string value)
+    {
+        Assert.False(ReplayCli.TryReadI2cAddress(["--i2c-address", value], out _, out var error));
+        Assert.Contains("7-bit", error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
