@@ -8,13 +8,13 @@
       "nvt.replay.formats": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Replay.Core": "[1.0.0, )"
+          "Nvt.Replay.Core": "[0.1.0, )"
         }
       },
       "nvt.replay.sources": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Replay.Core": "[1.0.0, )"
+          "Nvt.Replay.Core": "[0.1.0, )"
         }
       }
     },

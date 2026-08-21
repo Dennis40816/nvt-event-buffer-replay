@@ -230,9 +230,9 @@
       "nvt.replay.analysis": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Replay.Core": "[1.0.0, )",
-          "Nvt.Replay.Formats": "[1.0.0, )",
-          "Nvt.Replay.Sources": "[1.0.0, )"
+          "Nvt.Replay.Core": "[0.1.0, )",
+          "Nvt.Replay.Formats": "[0.1.0, )",
+          "Nvt.Replay.Sources": "[0.1.0, )"
         }
       },
       "nvt.replay.core": {
@@ -241,22 +241,22 @@
       "nvt.replay.formats": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Replay.Core": "[1.0.0, )"
+          "Nvt.Replay.Core": "[0.1.0, )"
         }
       },
       "nvt.replay.rendering": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Replay.Analysis": "[1.0.0, )",
-          "Nvt.Replay.Core": "[1.0.0, )",
-          "Nvt.Replay.Formats": "[1.0.0, )",
+          "Nvt.Replay.Analysis": "[0.1.0, )",
+          "Nvt.Replay.Core": "[0.1.0, )",
+          "Nvt.Replay.Formats": "[0.1.0, )",
           "SkiaSharp": "[3.119.4, )"
         }
       },
       "nvt.replay.sources": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Replay.Core": "[1.0.0, )"
+          "Nvt.Replay.Core": "[0.1.0, )"
         }
       }
     },
