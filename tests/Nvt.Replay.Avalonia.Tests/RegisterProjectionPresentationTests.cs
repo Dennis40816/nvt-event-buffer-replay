@@ -157,4 +157,57 @@ public sealed class RegisterProjectionPresentationTests
         Assert.Equal(bytes, record.Data);
         Assert.Null(record.Address);
     }
+
+    [Fact]
+    public void Raw_row_builds_full_details_only_when_opened_and_preserves_all_source_evidence()
+    {
+        var payload = Enumerable.Range(0, 34).Select(value => (byte)value).ToArray();
+        var sourceFields = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["adapter"] = "kingstvis",
+            ["dialect"] = "decoded-i2c-v3.5-byte-row",
+            ["register_profile"] = "51927",
+            ["register_profile_resolution"] = "resolved",
+            ["register_address"] = "0x99050",
+            ["register_offset"] = "0x50",
+            ["register_readable"] = "FW Command · Baseline Reset",
+            ["fw_command_code"] = "0x23",
+            ["fw_command_name"] = "Baseline Reset",
+        };
+        var record = new SourceRecord(
+            4,
+            "capture:L5",
+            DateTimeOffset.UnixEpoch,
+            BusOperation.Write,
+            "TP",
+            0x99050,
+            34,
+            payload,
+            "4,0.125,0x01,Write,0x50 0x23",
+            new SourceLocation(128, 5),
+            new I2cTransport(1, [[0x50]], [true, true], true),
+            sourceFields);
+        var row = new RawRecordRow(record);
+
+        Assert.False(row.IsExpanded);
+        Assert.Null(row.Detail);
+
+        row.SetExpanded(true);
+
+        Assert.True(row.IsExpanded);
+        Assert.NotNull(row.Detail);
+        Assert.Contains(row.Detail.TransactionFields, field => field.Label == "Address ACK" && field.Value == "ACK");
+        Assert.Contains(row.Detail.RegisterFields, field => field.Label == "FW command" && field.Value == "0x23 · Baseline Reset");
+        Assert.Contains(row.Detail.SourceFields, field => field.Label == "Dialect" && field.Value.Contains("v3.5", StringComparison.Ordinal));
+        Assert.Contains("0000  00 01 02 03", row.Detail.FullPayload, StringComparison.Ordinal);
+        Assert.Contains("0020  20 21", row.Detail.FullPayload, StringComparison.Ordinal);
+        Assert.Equal(record.RawText, row.Detail.SourceText);
+        Assert.Same(payload, record.Data);
+        Assert.Same(sourceFields, record.SourceFields);
+
+        row.SetExpanded(false);
+
+        Assert.False(row.IsExpanded);
+        Assert.NotNull(row.Detail);
+    }
 }

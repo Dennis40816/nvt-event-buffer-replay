@@ -183,6 +183,39 @@ public sealed class AdvancedWorkspaceSnapshotTests
     }
 
     [AvaloniaFact]
+    public async Task Raw_event_expansion_keeps_summary_dense_and_reveals_transport_evidence()
+    {
+        var window = ShowWindow(1920, 1080, ThemeVariant.Dark);
+        try
+        {
+            await window.OpenCaptureAsync(Fixture("kingstvis-common-0x83.csv"));
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null, registerProfile: "51927");
+
+            Required<TabControl>(window, "WorkspaceTabs").SelectedIndex = 0;
+            var records = Required<ListBox>(window, "RawRecordsList");
+            var row = records.Items.OfType<RawRecordRow>()
+                .First(item => item.Record.Operation == Nvt.Replay.Core.BusOperation.Read);
+            records.SelectedItem = row;
+            row.SetExpanded(true);
+            records.ScrollIntoView(row);
+            Stabilize(window);
+
+            Assert.True(row.IsExpanded);
+            Assert.NotNull(row.Detail);
+            Assert.Contains("0010", row.Detail.FullPayload, StringComparison.Ordinal);
+            Assert.Single(
+                records.GetVisualDescendants().OfType<Border>(),
+                border => border.Classes.Contains("rawRecordDetails") && border.IsVisible);
+
+            VisualTestCapture.ProcessSnapshot(window, "raw-event-expanded-1920x1080-dark.png");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Paint_marker_quick_navigation_stays_compact_and_actionable()
     {
         var window = ShowWindow(1920, 1080, ThemeVariant.Dark);

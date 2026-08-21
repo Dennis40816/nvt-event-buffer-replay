@@ -199,21 +199,80 @@
                 <TextBlock Grid.Column="5" Classes="section" Text="BYTES" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="6" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
               </Grid>
-              <ListBox x:Name="RawRecordsList" Grid.Row="3" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
+              <ListBox x:Name="RawRecordsList" Classes="rawRecords" Grid.Row="3" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:RawRecordRow">
-                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10,9">
-                      <Grid ColumnDefinitions="64,100,132,190,200,70,*">
-                        <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <TextBlock Grid.Column="2" Text="{Binding I2cEndpoint}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="7-bit I²C slave address and transfer direction" />
-                        <StackPanel Grid.Column="3" Spacing="1" ToolTip.Tip="{Binding AddressTooltip}">
-                          <TextBlock Text="{Binding AddressPrimary}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                          <TextBlock Text="{Binding RawRegisterAddress}" IsVisible="{Binding HasSecondaryAddress}" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
-                        </StackPanel>
-                        <TextBlock Grid.Column="4" Text="{Binding Register}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
-                        <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                    <Border Classes="rawRecordRow" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" PointerPressed="RawRecordRow_OnPointerPressed">
+                      <Grid RowDefinitions="Auto,Auto">
+                        <Grid ColumnDefinitions="64,100,132,190,200,70,*" Margin="10,9">
+                          <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
+                          <TextBlock Grid.Column="2" Text="{Binding I2cEndpoint}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="7-bit I²C slave address and transfer direction" />
+                          <StackPanel Grid.Column="3" Spacing="1" ToolTip.Tip="{Binding AddressTooltip}">
+                            <TextBlock Text="{Binding AddressPrimary}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                            <TextBlock Text="{Binding RawRegisterAddress}" IsVisible="{Binding HasSecondaryAddress}" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                          </StackPanel>
+                          <TextBlock Grid.Column="4" Text="{Binding Register}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
+                          <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
+                          <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+
+                        <Border Grid.Row="1" Classes="rawRecordDetails" IsVisible="{Binding IsExpanded}" AutomationProperties.Name="Raw event details">
+                          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="1.05*,1.15*,1.2*" ColumnSpacing="28" RowSpacing="14">
+                            <StackPanel Spacing="8">
+                              <TextBlock Classes="section" Text="TRANSACTION" />
+                              <ItemsControl ItemsSource="{Binding Detail.TransactionFields}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:RawDetailField">
+                                    <Grid ColumnDefinitions="96,*" Margin="0,0,0,5">
+                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="8">
+                              <TextBlock Classes="section" Text="REGISTER INTERPRETATION" />
+                              <ItemsControl ItemsSource="{Binding Detail.RegisterFields}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:RawDetailField">
+                                    <Grid ColumnDefinitions="96,*" Margin="0,0,0,5">
+                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Spacing="8">
+                              <TextBlock Classes="section" Text="SOURCE EVIDENCE" />
+                              <ItemsControl ItemsSource="{Binding Detail.SourceFields}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:RawDetailField">
+                                    <Grid ColumnDefinitions="76,*" Margin="0,0,0,5">
+                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+
+                            <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="1.4*,1*" ColumnSpacing="28">
+                              <StackPanel Spacing="7">
+                                <TextBlock Classes="section" Text="FULL PAYLOAD" />
+                                <TextBlock Text="{Binding Detail.FullPayload}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                              </StackPanel>
+                              <StackPanel Grid.Column="1" Spacing="7">
+                                <TextBlock Classes="section" Text="ORIGINAL SOURCE LINE" />
+                                <TextBlock Text="{Binding Detail.SourceText}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" MaxHeight="90" />
+                              </StackPanel>
+                            </Grid>
+                          </Grid>
+                        </Border>
                       </Grid>
                     </Border>
                   </DataTemplate>

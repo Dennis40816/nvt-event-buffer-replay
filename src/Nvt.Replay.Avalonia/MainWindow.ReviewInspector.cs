@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private bool? reviewRailUserPreference;
     private bool? inspectorRailUserPreference;
     private SourceRecord? currentInspectorRecord;
+    private RawRecordRow? expandedRawRow;
     private object? currentInspectorFrame;
     private ITouchReplaySnapshot? currentInspectorSnapshot;
     private InspectorFramePresentation? currentInspectorPresentation;
@@ -200,6 +201,32 @@ public partial class MainWindow : Window
                 }
             }
         }
+    }
+
+    private void RawRecordRow_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: RawRecordRow row } control ||
+            !e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(expandedRawRow, row))
+        {
+            row.SetExpanded(false);
+            expandedRawRow = null;
+            return;
+        }
+
+        expandedRawRow?.SetExpanded(false);
+        row.SetExpanded(true);
+        expandedRawRow = row;
+    }
+
+    private void CollapseExpandedRawRow()
+    {
+        expandedRawRow?.SetExpanded(false);
+        expandedRawRow = null;
     }
 
     private void DecodedFramesList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)

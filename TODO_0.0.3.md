@@ -11,8 +11,8 @@
 - Branch：`0.0.3`
 - 參考 commit / tag：`1e2567b` / `0.0.2`
 - Production handwritten C# / XAML：23,880 行；通過 25,000 行 architecture review threshold 與 30,000 行 hard cap。
-- Core / parser / rendering / CLI tests：317 / 317 passed。
-- Avalonia tests：112 / 112 passed；28 張 approved screenshots 由 exact pixel gate 驗證。
+- Core / parser / rendering / CLI tests：329 / 329 passed。
+- Avalonia tests：115 / 115 passed；29 張 approved screenshots 由 exact pixel gate 驗證。
 - 私有有效 KingstVIS golden `063ad09…`：568 logical frames；過期的 `4bec1b…` 不再作為 KingstVIS schema gate。
 - Release identity 已統一為 `VERSION=0.0.3`；正式 `v0.0.3` tag 尚未建立。
 - `MainWindow.axaml.cs` 只保留 142 行 constructor/bootstrap；Settings、Sidecar、Paint、Output、Review/Inspector、Playback、Capture、Shell 已拆為 8 個 partial，styles 位於獨立 resource dictionaries。`MainWindow.axaml` 的 UserControl 拆分保留給後續版本。
@@ -141,7 +141,7 @@ Source adapters
 - `c79376c` 至 `800a94f`：MainWindow 純搬移成 8 個功能 partial；每一步 build/targeted tests 通過，root code-behind 降至 142 行。
 - `2d1465a`、`022ba60`：既有 20 張 approved screenshots；本輪再加入 MP4／Heatmap／Reported Points／Data Package 的共用 Range 版面與 4 張 Reported Points baseline，目前 24 張 base + 4 張 advanced 具有 exact gate。
 
-目前驗證基線：core/parser/rendering/CLI 317 tests passed；Avalonia 112 tests passed；28 張 approved PNG exact compare 通過。私有 Common KingstVIS／DSL／NDS smoke 已重跑。尚未關閉的 release gate 為私有 Desay golden、125% UI scale/相關 visual baseline、正式 tag 與 package/release publish。
+目前驗證基線：core/parser/rendering/CLI 329 tests passed；Avalonia 115 tests passed；29 張 approved PNG exact compare 通過。私有 Common KingstVIS／DSL／NDS smoke 已重跑。尚未關閉的 release gate 為私有 Desay golden、125% UI scale/相關 visual baseline、正式 tag 與 package/release publish。
 
 ## Phase 6 — Register annotation projection
 
@@ -176,7 +176,7 @@ Source adapters
 - [x] Paint：1920×1080、1180×720，dark/light；1672×720 由 responsive bounds tests 覆蓋，未另存 approved PNG。
 - [x] Paint/Inspector states：1／5／10 contacts、Finger／Glove／Palm、Alarm、All Break、Mark、Loop、auto-pause 均有 interaction/bounds tests；10-contact、Alarm、Marker 另有 approved PNG。
 - [x] Output：MP4、Heatmap、Reported Points、Data Package 均有 1920／1180 dark/light approved；loading/progress/cancel 由行為測試覆蓋。
-- [ ] Raw／Decoded：Raw/Register 1920 dark 已 approved；1180 且兩側 rail 同時展開仍未建立 approved PNG。
+- [ ] Raw／Decoded：Raw/Register 與 Raw event expanded 的 1920 dark 已 approved；1180 且兩側 rail 同時展開仍未建立 approved PNG。
 - [x] Inspector：320／380／520 bounds tests，Protocol／Raw／Review 與 Source identity interaction tests；Alarm、10-contact、Raw/Register advanced PNG 已 approved。
 - [ ] Settings：1920／1180 dark/light 已 approved；125% UI scale 未實作。
 - [x] CI/test gate 對 approved baseline 執行 exact PNG compare；失敗時產生 actual/diff/metrics，candidate promotion 必須明確執行。
@@ -221,6 +221,6 @@ Source adapters
 - [ ] 私有 Desay Standard/Benz Palm golden 尚未提供；正式 release 前仍需補一份可驗證證據。
 - [x] 私有 KingstVIS、DSL、NDS smoke 通過，來源檔不進 git；結果記錄於 `golden/README.md`。
 - [x] 100k point、長 recorded gap、180/240 FPS、cancel/race、21,600 advances（等效 3-minute 120 Hz Loop）與 Smoke performance gate 通過。
-- [ ] 28 張 approved screenshot dark/light/narrow 全部通過；125% UI scale 與 Output loading/cancel 專屬 PNG 尚未核准。
+- [ ] 29 張 approved screenshot dark/light/narrow 全部通過；125% UI scale 與 Output loading/cancel 專屬 PNG 尚未核准。
 - [x] 工作樹在驗收前 clean，無 firmware BIN、private golden、secret；驗收暫存會在 docs commit 前精確清除。
 - [ ] `VERSION=0.0.3`、package/manifest identity 已一致；正式 `v0.0.3` tag 與 GitHub release 尚未建立。

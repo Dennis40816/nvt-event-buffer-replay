@@ -54,6 +54,7 @@
 - [x] NDS overloaded address/access modeling: `Paint TP 0x00`–`0x7F` is an implicit Event Buffer read from that 7-bit slave, `Paint >=0x100` is an absolute-register read, and explicit Read/Write tokens are absolute registers even below `0x100`; source format remains visible in the window title
 - [x] Evidence-typed IC inference from decoded-I2C Switch Page transactions or NDS absolute Event Buffer registers
 - [x] Readable Raw Explorer column with IC candidate, region, register, raw value, and confirmed meaning
+- [x] Single-row Raw event disclosure for transaction/ACK context, register interpretation, complete payload, and immutable source evidence
 - [x] Separate FW Command parser for Event Buffer `+0x50`; unknown opcodes stay visible as raw values
 - [x] Operator-selected built-in register profile persisted in sidecars/manifests and reapplied before decode
 - [x] Export a paired `communication-readable.csv/jsonl` beside the immutable original log
@@ -66,9 +67,14 @@
 | --- | --- | --- |
 | `0xFF000`–`0xFF003` | Chip ID (4 bytes) | Raw bytes, no product inference |
 | `0xFF0FE ← 0x69` | Software Reset | Decode only for a write whose first byte is exactly `0x69` |
+| `0xFF00E`, `0xFF01A`, `0xFF06A` | `REG_MODE_FG`, `REG_MODE_FG2`, `REG_WAKEUP_SOURCE` | Common names only; values remain raw |
+| `0xFF43A`, `0xFF805`, `0xFF926` | TCON Calibration Enable, DP Error State, TP Ready Control | Common names only; values remain raw |
 | Event Buffer `+0x00` | Event Buffer | Register/region label; protocol decode still requires explicit Event Buffer Version |
 | Event Buffer `+0x50` | FW Command mailbox | Route write payload to the separate FW Command parser |
 | FW Command `0x23` | Baseline Reset | Confirmed command name; remaining payload stays raw |
+| FW Command `0x11`–`0x1C` (known subset) | Common scan-mode commands | Packed category/command byte; undefined values stay raw |
+| FW Command `0x41`–`0x4C` | Common MP-test commands | English command name only; payload/result schema still pending |
+| FW Command `0xD1`–`0xD4` | Common auto-engineering commands | English command name only; payload/handshake still pending |
 | Event Buffer `+0x60` | FW State | Only `0xA3 = Normal Run` is semantic; `0x00`, `0xA1`, `0xA2`, and other values stay raw until defined |
 | Event Buffer `+0x70` | Two-byte frame counter | Raw byte order, change tracking only; no endian guess |
 | Event Buffer `+0x76` | DP Version | Raw bytes |
@@ -99,7 +105,7 @@ may retain their transport-level Event Buffer offset meaning.
 - Register profile identity: IC/project name, FW version range, Event/Common/History bases, aliases, and source document/golden provenance.
 - Register contract: absolute address or base+offset, byte width, read/write permission, access side effects, and whether values are sampled or edge-triggered.
 - Value semantics: enums, bitmaps/bitfields, masks, signedness, scale/unit, valid/reserved ranges, clamp/wrap behavior, and byte order where confirmed.
-- FW Command table for Event Buffer `+0x50`: opcode, name, request payload schema/length, response or handshake, timeout, side effects, and FW-version differences.
+- Remaining FW Command table for Event Buffer `+0x50`: owner-confirmed aliases, request payload schema/length, response or handshake, timeout, side effects, and FW-version differences. `0x23` retains the product term Baseline Reset even though newer common FW also calls the operation force calibration.
 - Common Buffer handshake: request/ready/ack registers and values, transfer length/format, chunking, completion/error states, and representative NDS logs.
 - History layout: entry header, event IDs, length/timestamp rules, wrap behavior, clear behavior, and representative normal/failure logs.
 - Reset/control sequences beyond `0xFF0FE ← 0x69`, including required delays and observable follow-up state.

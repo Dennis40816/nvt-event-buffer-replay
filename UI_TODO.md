@@ -31,6 +31,7 @@
 | UI-19 | Output type 移入右側設定動線 | 已完成；切換與 stale-state tests 通過 | 輸出類型固定在右欄頂端；左側只保留動態說明、preview 與 export action，操作順序為先選類型再調整該類型參數 |
 | UI-20 | 重排並整合 Inspector 的 Protocol／Raw／Review 資訊架構 | 待規劃 | 消除跨分頁重複欄位；固定 health、contact、transport、byte layout、source identity 與 review actions 的層級；320／380／520 px 均可讀，且 Raw/Register 與 decoded frame projector 不互相覆蓋 |
 | UI-21 | 以 7-bit I²C address 選擇解碼目標並保留 raw register 證據 | 已實作；mixed-slave／NDS operation tests 通過 | Header 在 Event Buffer Version 旁提供 0x00–0x7F target（預設 0x01）；decoder／IC inference 只使用該 slave，Raw 仍顯示所有設備；每列以 `7-bit · W/R` 呈現並在 resolved register 旁保留原始 register byte。NDS `Paint + 7-bit token` 顯示為 implicit Event Buffer read／`RAW REG —`，不得虛構 register 或 8-bit address byte；NDS explicit Read/Write 即使小於 `0x100` 仍顯示 absolute raw address。 |
+| UI-22 | 點擊 Raw event 以 progressive disclosure 展開完整證據 | 已實作；interaction／lazy-allocation／approved visual 通過 | 首屏仍為 7 欄摘要；滑鼠點擊才延遲建立 Transaction、Register interpretation、Source evidence、完整 hex dump 與原始 source line；同時只允許一列展開，再次點擊收合，選取與 seek 行為不變。 |
 
 ## 參考圖逐張對照
 
@@ -81,8 +82,8 @@
 
 ## 目前驗證紀錄
 
-- Avalonia：112 / 112 passed；28 張 approved PNG exact compare 通過。
-- Core / parser / rendering / CLI：317 / 317 passed。
+- Avalonia：115 / 115 passed；29 張 approved PNG exact compare 通過。
+- Core / parser / rendering / CLI：329 / 329 passed。
 - 私有 Golden smoke：KingstVIS `063ad09…` 568 frames、DSL `e7e277…` 435 frames、NDS `0e32907…` 518 frames；來源檔均未進 git。
 - 100,003-point trail history 建立 allocation 降低 93.7%；250 次 random seek Build allocation 降低 69.3%。這是資料／幾何層量測，不等同桌面 Paint 的實際呈現 FPS。
 - 2026-08-20 Smoke performance：16.0 MiB source load 233.5 ms／52.2 MiB peak；10,000 physical records load 340.7 ms／78.1 MiB peak；8-hour、1,000-frame timeline load 119.5 ms、2,000 seeks 0.074 ms、60 rendered frames 105.1 ms（570.9 FPS）、55.4 MiB peak，gate pass。

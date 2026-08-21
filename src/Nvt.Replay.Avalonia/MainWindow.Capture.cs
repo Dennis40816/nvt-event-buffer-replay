@@ -825,6 +825,7 @@ public partial class MainWindow : Window
 
     private void ApplyRawExplorerProjection(RegisterActivityEntry[] projected, string? preferredStableId = null)
     {
+        CollapseExpandedRawRow();
         registerActivities = projected;
         var activityById = projected.ToDictionary(item => item.Record.StableId, StringComparer.Ordinal);
         allRawRows = session?.Records
@@ -852,6 +853,7 @@ public partial class MainWindow : Window
             RawRegisterFilter.Ambiguous => row.Activity?.IsAmbiguous == true,
             _ => true,
         }).ToArray();
+        if (expandedRawRow is not null && !visible.Contains(expandedRawRow)) CollapseExpandedRawRow();
         RawRecordsList.ItemsSource = visible;
         var visibleIds = visible.Select(row => row.Record.StableId).ToHashSet(StringComparer.Ordinal);
         var visibleActivities = registerActivities.Where(item => visibleIds.Contains(item.Record.StableId)).ToArray();
@@ -955,6 +957,7 @@ public partial class MainWindow : Window
         paintWorkspace = null;
         autoPauseIndex = null;
         allRawRows = [];
+        CollapseExpandedRawRow();
         registerActivities = [];
         rawRowsById = [];
         decodedRowsBySourceId = [];

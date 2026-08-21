@@ -1321,6 +1321,41 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Clicking_raw_rows_opens_only_one_progressive_detail_panel()
+    {
+        var window = ShowWindow();
+        try
+        {
+            await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
+            Dispatcher.UIThread.RunJobs();
+
+            var raw = Required<ListBox>(window, "RawRecordsList");
+            var rows = raw.Items.OfType<RawRecordRow>().Take(2).ToArray();
+            Assert.Equal(2, rows.Length);
+            Assert.All(rows, row => Assert.False(row.IsExpanded));
+
+            ClickRawRow(window, raw, rows[0]);
+            Assert.True(rows[0].IsExpanded);
+            Assert.False(rows[1].IsExpanded);
+            Assert.NotNull(rows[0].Detail);
+
+            ClickRawRow(window, raw, rows[1]);
+            Assert.False(rows[0].IsExpanded);
+            Assert.True(rows[1].IsExpanded);
+            Assert.Single(
+                raw.GetVisualDescendants().OfType<Border>(),
+                border => border.Classes.Contains("rawRecordDetails") && border.IsVisible);
+
+            ClickRawRow(window, raw, rows[1]);
+            Assert.All(rows, row => Assert.False(row.IsExpanded));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Header_7bit_target_selects_one_device_without_hiding_other_raw_records()
     {
         var packet = CommonPacket(asil: 0x00, corruptCrc: false, x: 240);
@@ -3582,6 +3617,19 @@ public sealed class MainWindowLayoutTests
             frame.Packet));
         await File.WriteAllTextAsync(path, DecodedI2cSimulator.ToKingstVisCsv(transactions));
         return path;
+    }
+
+    private static void ClickRawRow(MainWindow window, ListBox raw, RawRecordRow row)
+    {
+        VisualTestCapture.Stabilize(window);
+        var border = raw.GetVisualDescendants()
+            .OfType<Border>()
+            .Single(item => item.Classes.Contains("rawRecordRow") && ReferenceEquals(item.DataContext, row));
+        var point = border.TranslatePoint(new Point(12, 12), window) ??
+            throw new InvalidOperationException("Raw record row could not translate into the window.");
+        window.MouseDown(point, MouseButton.Left, RawInputModifiers.None);
+        window.MouseUp(point, MouseButton.Left, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
     }
 
     private static MainWindow ShowWindow()

@@ -1,4 +1,7 @@
+using System.ComponentModel;
 using System.Globalization;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
@@ -26,11 +29,41 @@ public sealed record RegisterProfileChoice(string Label, string? IcFamily)
     public override string ToString() => Label;
 }
 
-public sealed record RawRecordRow(
-    SourceRecord Record,
-    RegisterActivityEntry? Activity = null,
-    RegisterAnnotation? RegisterAnnotation = null)
+public sealed class RawRecordRow : INotifyPropertyChanged
 {
+    private bool isExpanded;
+
+    public RawRecordRow(
+        SourceRecord record,
+        RegisterActivityEntry? activity = null,
+        RegisterAnnotation? registerAnnotation = null)
+    {
+        Record = record;
+        Activity = activity;
+        RegisterAnnotation = registerAnnotation;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public SourceRecord Record { get; }
+
+    public RegisterActivityEntry? Activity { get; }
+
+    public RegisterAnnotation? RegisterAnnotation { get; }
+
+    public bool IsExpanded
+    {
+        get => isExpanded;
+        private set
+        {
+            if (isExpanded == value) return;
+            isExpanded = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public RawRecordDetail? Detail { get; private set; }
+
     public long Index => Record.Index;
 
     public string Timestamp => Record.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "-";
@@ -124,6 +157,16 @@ public sealed record RawRecordRow(
 
     public string Preview => string.Join(' ', Record.Data.Take(16).Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
 
+    public void SetExpanded(bool expanded)
+    {
+        if (expanded && Detail is null)
+        {
+            Detail = BuildDetail();
+            OnPropertyChanged(nameof(Detail));
+        }
+        IsExpanded = expanded;
+    }
+
     public bool Matches(string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return true;
@@ -191,6 +234,114 @@ public sealed record RawRecordRow(
         return false;
     }
 
+    private RawRecordDetail BuildDetail()
+    {
+        var transaction = new List<RawDetailField>
+        {
+            new("Operation", $"{Operation} · {Target}"),
+            new("I²C endpoint", I2cEndpoint),
+            new("Byte count", Record.DeclaredByteCount is { } declared
+                ? $"{Record.Data.Count} captured · {declared} declared"
+                : $"{Record.Data.Count} captured · declared unknown"),
+        };
+        if (Record.I2c is { } i2c)
+        {
+            transaction.Add(new RawDetailField("Address ACK", i2c.AddressAcknowledged switch
+            {
+                true => "ACK",
+                false => "NAK",
+                null => "Not reported",
+            }));
+            transaction.Add(new RawDetailField("Data ACK", I2cAckSummary.Format(i2c.Acked)));
+            transaction.Add(new RawDetailField(
+                "Write context",
+                i2c.WriteCommands.Count == 0
+                    ? "None"
+                    : string.Join(" | ", i2c.WriteCommands.Select(FormatBytes))));
+            if (!string.IsNullOrWhiteSpace(i2c.Error))
+                transaction.Add(new RawDetailField("Transport error", i2c.Error));
+        }
+
+        var register = new List<RawDetailField>
+        {
+            new("Resolved", AddressPrimary),
+            new("Raw evidence", RawRegisterAddress),
+            new("Interpretation", DetailRegisterInterpretation()),
+        };
+        if (TryGetPageSwitch(out var page))
+            register.Add(new RawDetailField("Switch page", $"0x{page:X}"));
+        if (Field("register_profile") is { Length: > 0 } profile)
+            register.Add(new RawDetailField("IC profile", profile));
+        if (Field("register_profile_resolution") is { Length: > 0 } resolution)
+            register.Add(new RawDetailField("Resolution", resolution));
+        if (Field("fw_command_name") is { Length: > 0 } commandName)
+        {
+            var commandCode = Field("fw_command_code");
+            register.Add(new RawDetailField(
+                "FW command",
+                string.IsNullOrWhiteSpace(commandCode) ? commandName : $"{commandCode} · {commandName}"));
+        }
+
+        var source = new List<RawDetailField>
+        {
+            new("Adapter", Field("adapter") ?? "Not reported"),
+            new("Location", $"Line {Record.Location.LineNumber:N0} · byte {Record.Location.ByteOffset:N0}"),
+            new("Stable ID", Record.StableId),
+        };
+        if (Field("dialect") is { Length: > 0 } dialect)
+            source.Add(new RawDetailField("Dialect", dialect));
+        if (Field("packet_id") is { Length: > 0 } packetId)
+            source.Add(new RawDetailField("Packet", packetId));
+
+        return new RawRecordDetail(
+            transaction,
+            register,
+            source,
+            FormatHexDump(Record.Data),
+            string.IsNullOrWhiteSpace(Record.RawText) ? "Source text not preserved." : Record.RawText);
+    }
+
+    private string DetailRegisterInterpretation()
+    {
+        if (TryGetPageSwitch(out var page)) return $"Switch page · 0x{page:X}";
+        var name = Field("register_display_name") ?? Field("register_name");
+        var meaning = Field("register_meaning");
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return string.IsNullOrWhiteSpace(meaning) || meaning.Equals("raw_only", StringComparison.OrdinalIgnoreCase)
+                ? name.Replace('_', ' ')
+                : $"{name.Replace('_', ' ')} · {meaning}";
+        }
+        return IsNdsEventBufferRead ? "Event Buffer frame" : Register;
+    }
+
+    private static string FormatBytes(IReadOnlyList<byte> values) =>
+        values.Count == 0
+            ? "—"
+            : string.Join(' ', values.Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
+
+    private static string FormatHexDump(IReadOnlyList<byte> values)
+    {
+        if (values.Count == 0) return "—";
+        var result = new StringBuilder(values.Count * 3 + (values.Count / 16 + 1) * 7);
+        for (var offset = 0; offset < values.Count; offset += 16)
+        {
+            if (result.Length > 0) result.AppendLine();
+            result.Append(offset.ToString("X4", CultureInfo.InvariantCulture));
+            result.Append("  ");
+            var end = Math.Min(offset + 16, values.Count);
+            for (var index = offset; index < end; index++)
+            {
+                if (index > offset) result.Append(' ');
+                result.Append(values[index].ToString("X2", CultureInfo.InvariantCulture));
+            }
+        }
+        return result.ToString();
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
     private static bool TryParseByte(string value, out byte result)
     {
         var trimmed = value.Trim();
@@ -199,6 +350,15 @@ public sealed record RawRecordRow(
             : byte.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
     }
 }
+
+public sealed record RawDetailField(string Label, string Value);
+
+public sealed record RawRecordDetail(
+    IReadOnlyList<RawDetailField> TransactionFields,
+    IReadOnlyList<RawDetailField> RegisterFields,
+    IReadOnlyList<RawDetailField> SourceFields,
+    string FullPayload,
+    string SourceText);
 
 public sealed record DecodedFrameRow(
     int LogicalIndex,
