@@ -750,9 +750,9 @@
                         BorderThickness="1,0,0,1"
                         Padding="14,9,10,9">
                   <Grid RowDefinitions="36,10,52">
-                    <Grid ColumnDefinitions="Auto,10,*" VerticalAlignment="Center">
-                    <TextBlock Text="Output type" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                    <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Classes="semanticSelect" Height="36" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
+                    <Grid ColumnDefinitions="92,10,*" VerticalAlignment="Center">
+                    <TextBlock x:Name="OutputTypeLabelText" Text="Output type" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Margin="4,0,0,0" Classes="semanticSelect" Height="36" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectOption">
                           <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -769,8 +769,8 @@
                     </ComboBox>
                     <TextBlock x:Name="OutputContentDescriptionText" IsVisible="False" Text="Preview and export use the same renderer" />
                     </Grid>
-                    <Grid Grid.Row="2" ColumnDefinitions="Auto,10,*,6,Auto,6,*,8,Auto" VerticalAlignment="Center">
-                      <TextBlock Text="Frames" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                    <Grid Grid.Row="2" ColumnDefinitions="92,10,*,6,Auto,6,*,8,Auto" VerticalAlignment="Center">
+                      <TextBlock x:Name="OutputFramesLabelText" Text="Frames" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                       <TextBox x:Name="OutputRangeStartTextBox" Grid.Column="2" Classes="panelSize" MinWidth="48" HorizontalAlignment="Stretch" Text="1" KeyDown="OutputRangeTextBox_OnKeyDown" LostFocus="OutputRangeTextBox_OnLostFocus" ToolTip.Tip="First source frame to export (1-based)" AutomationProperties.Name="Output range first frame" />
                       <TextBlock Grid.Column="4" Text="to" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
                       <TextBox x:Name="OutputRangeEndTextBox" Grid.Column="6" Classes="panelSize" MinWidth="48" HorizontalAlignment="Stretch" Text="1" KeyDown="OutputRangeTextBox_OnKeyDown" LostFocus="OutputRangeTextBox_OnLostFocus" ToolTip.Tip="Last source frame to export (1-based)" AutomationProperties.Name="Output range last frame" />
@@ -1212,6 +1212,68 @@
     </Border>
 
     <views:SettingsView x:Name="SettingsPage" Grid.Row="0" Grid.RowSpan="3" Margin="0,56,0,0" IsVisible="False" ZIndex="90" AutomationProperties.Name="Settings page" />
+
+    <Border x:Name="RegisterProfileInferenceOverlay"
+            Grid.RowSpan="3"
+            IsVisible="False"
+            Focusable="True"
+            ZIndex="96"
+            Background="{DynamicResource OverlayBrush}"
+            KeyDown="RegisterProfileInferenceOverlay_OnKeyDown"
+            AutomationProperties.Name="Confirm inferred IC profile">
+      <Border Width="520"
+              Padding="24"
+              CornerRadius="8"
+              Background="{DynamicResource HeaderBrush}"
+              BorderBrush="{DynamicResource AccentBrush}"
+              BorderThickness="1"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center">
+        <Grid RowDefinitions="Auto,12,Auto,16,Auto,20,Auto">
+          <StackPanel Spacing="4">
+            <TextBlock Text="CONFIRM IC PROFILE" Classes="section" />
+            <TextBlock x:Name="RegisterProfileInferenceTitleText"
+                       Text="This Event Buffer address is shared"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+          </StackPanel>
+          <TextBlock x:Name="RegisterProfileInferenceEvidenceText"
+                     Grid.Row="2"
+                     Text="Switch Page evidence"
+                     FontSize="13"
+                     FontWeight="Medium"
+                     Foreground="{DynamicResource SecondaryTextBrush}"
+                     TextWrapping="Wrap" />
+          <StackPanel Grid.Row="4" Spacing="6">
+            <TextBlock Text="IC profile" Classes="fieldLabel" />
+            <ComboBox x:Name="InferredRegisterProfileComboBox"
+                      Classes="semanticSelect"
+                      Height="38"
+                      AutomationProperties.Name="Choose inferred IC profile">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:RegisterProfileChoice">
+                  <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+              <ComboBox.SelectionBoxItemTemplate>
+                <DataTemplate x:DataType="vm:RegisterProfileChoice">
+                  <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DataTemplate>
+              </ComboBox.SelectionBoxItemTemplate>
+            </ComboBox>
+            <TextBlock Text="The raw capture remains unchanged. Your choice only selects the register annotation and Event Buffer base profile."
+                       FontSize="12.5"
+                       Foreground="{DynamicResource MutedTextBrush}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Classes="ghost" Content="Keep unconfirmed" Click="CancelRegisterProfileInferenceButton_OnClick" />
+            <Button Classes="primary" Content="Use profile" Click="ApplyRegisterProfileInferenceButton_OnClick" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Border>
 
     <Border x:Name="CommandPaletteOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="100" Background="{DynamicResource OverlayBrush}" KeyDown="CommandPaletteOverlay_OnKeyDown" AutomationProperties.Name="Command palette">
       <Border Width="720" MaxHeight="680" Padding="24" CornerRadius="8" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">

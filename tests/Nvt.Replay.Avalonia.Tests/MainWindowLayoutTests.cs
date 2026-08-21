@@ -19,12 +19,92 @@ using Nvt.Replay.Avalonia.Views;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Rendering;
+using Nvt.Replay.Sources;
 using Xunit;
 
 namespace Nvt.Replay.Avalonia.Tests;
 
 public sealed class MainWindowLayoutTests
 {
+    [AvaloniaFact]
+    public async Task Switch_page_and_event_buffer_evidence_auto_selects_a_unique_IC_profile()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+
+            await window.OpenCaptureAsync(fixture);
+
+            var selected = Assert.IsType<RegisterProfileChoice>(Required<ComboBox>(window, "RegisterProfileComboBox").SelectedItem);
+            Assert.Equal("51927", selected.IcFamily);
+            Assert.Null(window.PendingRegisterProfileInferenceForTesting);
+            Assert.False(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
+            Assert.Contains("inferred", Required<TextBlock>(window, "ConfigurationHintText").Text, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Shared_event_buffer_page_opens_an_explicit_profile_choice_and_applies_it_without_reloading()
+    {
+        var window = ShowWindow();
+        var capture = await WriteKingstVisCaptureForPageAsync(0x08, 0x08, MixedTenContactPacket());
+        try
+        {
+            await window.OpenCaptureAsync(capture);
+
+            var inference = Assert.IsType<NvtRegisterProfileInferenceResult>(window.PendingRegisterProfileInferenceForTesting);
+            Assert.Equal(NvtRegisterProfileInferenceStatus.Ambiguous, inference.Status);
+            Assert.Equal(["51929/51932", "51950/51951"], inference.Candidates.Select(item => item.IcFamily));
+            Assert.True(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
+            Assert.Contains("0x80800", Required<TextBlock>(window, "RegisterProfileInferenceTitleText").Text);
+            var sourceRows = Required<ListBox>(window, "RawRecordsList").ItemCount;
+
+            await window.ResolveRegisterProfileInferenceForTestingAsync("51950/51951");
+
+            Assert.False(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
+            Assert.Equal(sourceRows, Required<ListBox>(window, "RawRecordsList").ItemCount);
+            var selected = Assert.IsType<RegisterProfileChoice>(Required<ComboBox>(window, "RegisterProfileComboBox").SelectedItem);
+            Assert.Equal("51950/51951", selected.IcFamily);
+            Assert.Contains("source bytes", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            window.Close();
+            File.Delete(capture);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Output_type_and_frame_range_fields_share_the_same_left_edge()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            Dispatcher.UIThread.RunJobs();
+
+            var rail = Required<Border>(window, "OutputInfoPanel").Parent as Visual ?? window;
+            var outputType = BoundsInside(Required<ComboBox>(window, "OutputContentComboBox"), rail);
+            var rangeStart = BoundsInside(Required<TextBox>(window, "OutputRangeStartTextBox"), rail);
+
+            Assert.True(
+                Math.Abs(outputType.Left - rangeStart.Left) <= 0.5,
+                $"Output type starts at {outputType.Left:0.##}, frame range starts at {rangeStart.Left:0.##}.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [AvaloniaFact]
     public async Task Confirming_a_common_version_decodes_immediately_without_an_action_button()
     {
@@ -1325,7 +1405,7 @@ public sealed class MainWindowLayoutTests
             Assert.Contains("120 FPS", Required<TextBlock>(window, "OutputVideoBadgeText").Text);
             Assert.Contains("Frame-paced", Required<TextBlock>(window, "OutputClockDescriptionText").Text);
             Assert.Contains("kingstvis", window.OutputReplayIdentityForTesting, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("0x00000000", window.OutputReplayIdentityForTesting, StringComparison.Ordinal);
+            Assert.Contains("0x00099000", window.OutputReplayIdentityForTesting, StringComparison.Ordinal);
 
             var outputRangeStart = Required<TextBox>(window, "OutputRangeStartTextBox");
             var outputRangeEnd = Required<TextBox>(window, "OutputRangeEndTextBox");
@@ -3294,6 +3374,21 @@ public sealed class MainWindowLayoutTests
                 lines.Add($"{readTime.ToString("0.000000", CultureInfo.InvariantCulture)},{packetId},0x03,0x{packets[frameIndex][index]:X2},Read,{ack}");
             }
             packetId++;
+        }
+        await File.WriteAllLinesAsync(path, lines);
+        return path;
+    }
+
+    private static async Task<string> WriteKingstVisCaptureForPageAsync(byte pageHigh, byte pageLow, byte[] packet)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"nvt-profile-inference-{Guid.NewGuid():N}.csv");
+        var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
+        foreach (var value in new byte[] { 0xFF, pageHigh, pageLow, 0x00 })
+            lines.Add($"1.000000,0,0x02,0x{value:X2},Write,ACK");
+        for (var index = 0; index < packet.Length; index++)
+        {
+            var ack = index == packet.Length - 1 ? "NAK" : "ACK";
+            lines.Add($"1.000200,1,0x03,0x{packet[index]:X2},Read,{ack}");
         }
         await File.WriteAllLinesAsync(path, lines);
         return path;

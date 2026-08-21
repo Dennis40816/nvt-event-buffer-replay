@@ -68,6 +68,8 @@ public partial class MainWindow : Window
 
     private bool configuringRegisterProfile;
 
+    private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference;
+
     private bool operationInProgress;
 
     internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get; set; }
@@ -97,6 +99,7 @@ public partial class MainWindow : Window
 
     internal async Task OpenCaptureAsync(string path, string? adapterId = null)
     {
+        HideRegisterProfileInference();
         var loadGeneration = checked(++nextCaptureLoadGeneration);
         activeCaptureLoadGeneration = loadGeneration;
         captureDecodeController.CancelCurrent();
@@ -126,6 +129,15 @@ public partial class MainWindow : Window
             var nextSession = await Task.Run(
                 () => CaptureSession.LoadAsync(path, progress, cancellationToken, adapterId),
                 cancellationToken);
+            var profileInference = await Task.Run(
+                () => NvtRegisterProfileInference.Infer(nextSession.Records),
+                cancellationToken);
+            if (profileInference.UniqueProfile is { } inferredProfile)
+            {
+                nextSession = await Task.Run(
+                    () => nextSession.WithRegisterProfile(inferredProfile.IcFamily, cancellationToken),
+                    cancellationToken);
+            }
             var projectedActivities = await Task.Run(
                 () => RegisterActivityProjector.Project(nextSession.Records, nextSession.RegisterAnnotations).ToArray(),
                 cancellationToken);
@@ -153,10 +165,18 @@ public partial class MainWindow : Window
             EventVersionComboBox.IsEnabled = true;
             RegisterProfileComboBox.IsEnabled = true;
             ExportReadableLogButton.IsEnabled = true;
-            configuringRegisterProfile = true;
-            RegisterProfileComboBox.SelectedIndex = 0;
-            configuringRegisterProfile = false;
-            ConfigurationHintText.Text = "Confirm the version to decode automatically; source detection never infers it.";
+            SelectRegisterProfileChoice(nextSession.RegisterProfile);
+            if (profileInference.UniqueProfile is { } uniqueProfile)
+            {
+                ConfigurationHintText.Text =
+                    $"IC profile {uniqueProfile.IcFamily} inferred from Switch Page + Event Buffer register evidence; confirm Event Buffer Version to decode.";
+                SessionStatusText.Text =
+                    $"{session.Records.Count:N0} physical records indexed · IC {uniqueProfile.IcFamily} inferred · source bytes unchanged";
+            }
+            else
+            {
+                ConfigurationHintText.Text = "Confirm the version to decode automatically; Event Buffer format is never inferred.";
+            }
             SetTimelineCounts(session.Records.Count, 0, diagnosticRows.Length);
             TimelineStatusText.Text = "Raw capture indexed · confirm Event Buffer Version to open Paint";
             WorkspaceTabs.SelectedIndex = 0;
@@ -164,6 +184,8 @@ public partial class MainWindow : Window
             {
                 RawRecordsList.SelectedIndex = 0;
             }
+            if (profileInference.Status is NvtRegisterProfileInferenceStatus.Ambiguous or NvtRegisterProfileInferenceStatus.Conflicting)
+                ShowRegisterProfileInference(profileInference);
         }
         catch (OperationCanceledException)
         {
@@ -564,6 +586,84 @@ public partial class MainWindow : Window
             RegisterProfileComboBox.SelectedItem is not RegisterProfileChoice choice)
             return;
 
+        HideRegisterProfileInference();
+        await ApplyRegisterProfileAsync(choice);
+    }
+
+    private void SelectRegisterProfileChoice(string? icFamily)
+    {
+        var choices = RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>;
+        var choice = choices?.FirstOrDefault(item =>
+            string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
+        if (choice is null && icFamily is null) choice = choices?.FirstOrDefault(item => item.IcFamily is null);
+        configuringRegisterProfile = true;
+        RegisterProfileComboBox.SelectedItem = choice;
+        configuringRegisterProfile = false;
+    }
+
+    private void ShowRegisterProfileInference(NvtRegisterProfileInferenceResult inference)
+    {
+        pendingRegisterProfileInference = inference;
+        InferredRegisterProfileComboBox.ItemsSource = inference.Candidates
+            .Select(profile => new RegisterProfileChoice(profile.IcFamily, profile.IcFamily))
+            .ToArray();
+        InferredRegisterProfileComboBox.SelectedIndex = inference.Candidates.Count == 1 ? 0 : -1;
+        RegisterProfileInferenceTitleText.Text = inference.Status == NvtRegisterProfileInferenceStatus.Conflicting
+            ? "Multiple Event Buffer pages were captured"
+            : $"Event Buffer 0x{inference.Evidence[0].SelectedPage:X5} is shared by multiple IC profiles";
+        RegisterProfileInferenceEvidenceText.Text = inference.EvidenceSummary +
+            $" Choose one of: {string.Join(" or ", inference.Candidates.Select(item => item.IcFamily))}.";
+        RegisterProfileInferenceOverlay.IsVisible = true;
+        RegisterProfileInferenceOverlay.Focus();
+    }
+
+    private void HideRegisterProfileInference()
+    {
+        pendingRegisterProfileInference = null;
+        RegisterProfileInferenceOverlay.IsVisible = false;
+        InferredRegisterProfileComboBox.ItemsSource = null;
+        InferredRegisterProfileComboBox.SelectedIndex = -1;
+    }
+
+    private async void ApplyRegisterProfileInferenceButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (pendingRegisterProfileInference is null ||
+            InferredRegisterProfileComboBox.SelectedItem is not RegisterProfileChoice choice)
+        {
+            RegisterProfileInferenceEvidenceText.Text = "Select an IC profile before continuing. Raw data remains available while the profile is unconfirmed.";
+            return;
+        }
+
+        HideRegisterProfileInference();
+        SelectRegisterProfileChoice(choice.IcFamily);
+        await ApplyRegisterProfileAsync(choice);
+    }
+
+    private void CancelRegisterProfileInferenceButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        HideRegisterProfileInference();
+        ConfigurationHintText.Text = "IC profile remains unconfirmed; register collisions stay raw-only until a profile is selected.";
+        SessionStatusText.Text = "IC profile choice deferred; original capture remains unchanged";
+    }
+
+    private void RegisterProfileInferenceOverlay_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+        CancelRegisterProfileInferenceButton_OnClick(sender, new RoutedEventArgs());
+        e.Handled = true;
+    }
+
+    internal NvtRegisterProfileInferenceResult? PendingRegisterProfileInferenceForTesting => pendingRegisterProfileInference;
+
+    internal async Task ResolveRegisterProfileInferenceForTestingAsync(string icFamily)
+    {
+        if (pendingRegisterProfileInference is null)
+            throw new InvalidOperationException("No IC profile inference is awaiting confirmation.");
+        var choice = (InferredRegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
+            .SingleOrDefault(item => item.IcFamily == icFamily)
+            ?? throw new ArgumentException($"IC profile '{icFamily}' is not a current inference candidate.", nameof(icFamily));
+        HideRegisterProfileInference();
+        SelectRegisterProfileChoice(choice.IcFamily);
         await ApplyRegisterProfileAsync(choice);
     }
 
@@ -763,6 +863,7 @@ public partial class MainWindow : Window
 
     private void ClearSession()
     {
+        HideRegisterProfileInference();
         StopPlayback();
         ResetOutputPlanning();
         session = null;
