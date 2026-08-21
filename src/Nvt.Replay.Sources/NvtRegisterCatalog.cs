@@ -58,6 +58,18 @@ public static class NvtRegisterCatalog
 {
     private const uint EventBufferLength = 128;
     private const uint HistoryLength = 128;
+    private static readonly IReadOnlyDictionary<uint, CommonRegisterDefinition> CommonRegisters =
+        new Dictionary<uint, CommonRegisterDefinition>
+        {
+            // These addresses retain the same macro name and value across the reviewed IC generations.
+            // Version-dependent boot/checksum/ISP addresses intentionally remain profile-specific raw data.
+            [0xFF00E] = new("Mode FG", "Control"),
+            [0xFF01A] = new("Mode FG2", "Control"),
+            [0xFF06A] = new("Wakeup Source", "Status"),
+            [0xFF43A] = new("TCON Calibration Enable", "TCON"),
+            [0xFF805] = new("DP Error State", "Diagnostics"),
+            [0xFF926] = new("TP Ready Control", "Control"),
+        };
     private static readonly string[] SemanticFieldKeys =
     [
         "register_profile",
@@ -298,8 +310,17 @@ public static class NvtRegisterCatalog
                 $"Chip ID +0x{offset:X2} · {raw}");
         }
 
+        if (CommonRegisters.TryGetValue(address, out var definition))
+        {
+            return new NvtRegisterDescription(
+                "Common", "common", definition.Region, definition.Name, address, address, 0, raw, "raw_only",
+                $"{definition.Name} · {raw}");
+        }
+
         return null;
     }
+
+    private sealed record CommonRegisterDefinition(string Name, string Region);
 
     private sealed record ProfileMatch(NvtRegisterProfile Profile, string Region, uint BaseAddress, uint Offset);
 }

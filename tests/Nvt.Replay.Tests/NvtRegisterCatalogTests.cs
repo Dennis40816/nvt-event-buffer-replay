@@ -35,13 +35,51 @@ public sealed class NvtRegisterCatalogTests
     public void Fw_command_mailbox_uses_separate_command_parser()
     {
         var baselineReset = NvtRegisterCatalog.Describe(0x99050, BusOperation.Write, [0x23]);
-        var unknown = NvtRegisterCatalog.Describe(0x99050, BusOperation.Write, [0x42]);
+        var unknown = NvtRegisterCatalog.Describe(0x99050, BusOperation.Write, [0x5E]);
 
         Assert.Equal("FW Command", baselineReset?.Name);
         Assert.Equal("Baseline Reset", baselineReset?.Meaning);
         Assert.True(baselineReset?.FwCommand?.Confirmed);
-        Assert.Equal("Unknown FW Command 0x42", unknown?.Meaning);
+        Assert.Equal("Unknown FW Command 0x5E", unknown?.Meaning);
         Assert.False(unknown?.FwCommand?.Confirmed);
+    }
+
+    [Theory]
+    [InlineData(0x11, "Enter Deep Sleep Mode")]
+    [InlineData(0x22, "Real-time Raw Data After Algorithm")]
+    [InlineData(0x23, "Baseline Reset")]
+    [InlineData(0x41, "MP Test: CC Value")]
+    [InlineData(0x4C, "MP Test: Doze CC Value")]
+    [InlineData(0xD3, "Auto Engineering: DP ASIL Report")]
+    public void Common_fw_commands_use_the_packed_category_and_command_byte(byte code, string expected)
+    {
+        var command = NvtFwCommandParser.Parse([code]);
+
+        Assert.NotNull(command);
+        Assert.Equal(expected, command.Name);
+        Assert.True(command.Confirmed);
+    }
+
+    [Theory]
+    [InlineData(0xFF00Eu, "Mode FG", "Control")]
+    [InlineData(0xFF01Au, "Mode FG2", "Control")]
+    [InlineData(0xFF06Au, "Wakeup Source", "Status")]
+    [InlineData(0xFF43Au, "TCON Calibration Enable", "TCON")]
+    [InlineData(0xFF805u, "DP Error State", "Diagnostics")]
+    [InlineData(0xFF926u, "TP Ready Control", "Control")]
+    public void Cross_ic_registers_use_names_verified_in_multiple_regtables(
+        uint address,
+        string expectedName,
+        string expectedRegion)
+    {
+        var description = NvtRegisterCatalog.Describe(address, BusOperation.Read, [0xA5]);
+
+        Assert.NotNull(description);
+        Assert.Equal("Common", description.Profiles);
+        Assert.Equal(expectedName, description.Name);
+        Assert.Equal(expectedRegion, description.Region);
+        Assert.Equal("raw_only", description.Meaning);
+        Assert.Equal($"{expectedName} · A5", description.Readable);
     }
 
     [Fact]
