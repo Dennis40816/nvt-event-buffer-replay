@@ -134,18 +134,16 @@ public sealed class ReplayCliContractTests : IDisposable
         Assert.Equal(2, unsupported.ExitCode);
         Assert.Equal("Unsupported Event Buffer Version: 0x86", unsupported.Error.Trim());
 
-        var desay = Fixture("desay97-full-reread.nds.txt");
         var missingIc = await RunAsync(
-            "inspect", desay, "--event-buffer-version", "0x97");
+            "inspect", common, "--event-buffer-version", "0x97");
         Assert.Equal(2, missingIc.ExitCode);
         Assert.Equal(
             "Desay 0x97 requires --register-profile <family>; its Event Buffer base is IC-specific.",
             missingIc.Error.Trim());
 
+        var desay = Fixture("desay97-full-reread.nds.txt");
         var missingPalm = await RunAsync(
-            "inspect", desay,
-            "--event-buffer-version", "0x97",
-            "--register-profile", "51927");
+            "inspect", desay, "--event-buffer-version", "0x97");
         Assert.Equal(2, missingPalm.ExitCode);
         Assert.Equal(
             "Desay 0x97 requires --desay97-profile <standard|benz-palm>; it is never auto-detected.",

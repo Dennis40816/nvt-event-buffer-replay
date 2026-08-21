@@ -81,8 +81,8 @@
 
 ## 目前驗證紀錄
 
-- Avalonia：94 / 94 passed；20 張 approved PNG exact compare 通過。
-- Core / parser / rendering / CLI：289 / 289 passed。
+- Avalonia：111 / 111 passed；28 張 approved PNG exact compare 通過。
+- Core / parser / rendering / CLI：316 / 316 passed。
 - 私有 Golden smoke：KingstVIS `063ad09…` 568 frames、DSL `e7e277…` 435 frames、NDS `0e32907…` 518 frames；來源檔均未進 git。
 - 100,003-point trail history 建立 allocation 降低 93.7%；250 次 random seek Build allocation 降低 69.3%。這是資料／幾何層量測，不等同桌面 Paint 的實際呈現 FPS。
 - 2026-08-20 Smoke performance：16.0 MiB source load 233.5 ms／52.2 MiB peak；10,000 physical records load 340.7 ms／78.1 MiB peak；8-hour、1,000-frame timeline load 119.5 ms、2,000 seeks 0.074 ms、60 rendered frames 105.1 ms（570.9 FPS）、55.4 MiB peak，gate pass。

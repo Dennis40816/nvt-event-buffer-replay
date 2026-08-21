@@ -10,6 +10,36 @@ namespace Nvt.Replay.Avalonia.Tests;
 public sealed class RegisterProjectionPresentationTests
 {
     [Fact]
+    public async Task Nds_paint_row_displays_header_I2C_address_or_absolute_register_by_semantics()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"nvt-nds-row-{Guid.NewGuid():N}.txt");
+        try
+        {
+            await File.WriteAllTextAsync(
+                path,
+                "2026-08-12 19:21:52:824 Paint TP 0x99000 2 0x50 0x00\n" +
+                "2026-08-12 19:21:54:003 Paint TP 0x2A 2 0xA3 0x55",
+                TestContext.Current.CancellationToken);
+            var records = new List<SourceRecord>();
+            await foreach (var record in new NdsCommunicationLogAdapter().ReadAsync(
+                new SourceOpenContext(path, "nds"),
+                TestContext.Current.CancellationToken))
+                records.Add(record);
+
+            var registerRow = new RawRecordRow(records[0]);
+            var frameRow = new RawRecordRow(records[1]);
+            Assert.Equal("— · P", registerRow.I2cEndpoint);
+            Assert.Equal("REG 0x99000", registerRow.AddressPrimary);
+            Assert.Equal("0x2A · P", frameRow.I2cEndpoint);
+            Assert.Equal("-", frameRow.AddressPrimary);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Profile_switch_updates_raw_row_and_inspector_without_copying_the_record()
     {
         var record = new SourceRecord(
@@ -42,8 +72,8 @@ public sealed class RegisterProjectionPresentationTests
             registerAnnotation: annotation);
 
         Assert.Equal("Event Buffer · 11", row.Register);
-        Assert.Equal("0x01 · R", row.I2cEndpoint);
-        Assert.Contains("NDS target TP", row.AddressTooltip, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("— · R", row.I2cEndpoint);
+        Assert.Contains("did not report", row.AddressTooltip, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Event Buffer", inspector.Subtitle, StringComparison.Ordinal);
         Assert.Contains(inspector.ProtocolRows, item => item.Label == "Profile" && item.Value == "resolved");
         Assert.Same(record, records[0]);

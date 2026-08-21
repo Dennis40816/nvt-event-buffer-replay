@@ -32,7 +32,7 @@ both the resolved absolute address and the original register byte/offset.
 | `acute-decoded-i2c` | Acute `.csv`/`.txt` row-per-transaction report with `Timestamp`, `Status`, `Address(7b/8b/10b)`, and ordered `D0...` columns. English headers, comma/tab/semicolon delimiters, numeric or time-of-day timestamps, direction/address validation, and ACK/NACK suffixes are supported. Ambiguous continuation rows fail closed pending a real export. |
 | `excel-decoded-i2c` | `.xlsx`/`.xlsm` worksheet columns `Transaction`, `Start_Time_s`, `Type`, `Byte_Count`, `Bytes_Hex`; rows are streamed from Open XML without Microsoft Excel. The current long-read contract requires leading register-address byte `0x03`, strips it, and maps the payload to `0x99000`. |
 | `canonical-i2c-txt` | Versioned JSON Lines beginning with `# NVT-I2C-TXT 1`; accepts the existing Python generator fields and richer transport fields. |
-| `nds-communication-log` | NDS Paint/Read/Write text records, including continuation lines. Known addresses are annotated through the shared register catalog and FW Command parser; payload bytes remain immutable. |
+| `nds-communication-log` | NDS Paint/Read/Write text records, including continuation lines. The address token is overloaded by the source: `Paint TP 0x00..0x7F` is a 7-bit I2C slave address, while values `>= 0x100` and Read/Write address tokens are absolute registers. The ambiguous `0x80..0xFF` Paint range is warned and discarded. Known registers are annotated through the shared register catalog and FW Command parser; payload bytes remain immutable. |
 
 Malformed rows and partial transactions create diagnostics and are discarded;
 missing canonical timestamps are retained with a warning. The parser never
@@ -51,6 +51,19 @@ Unknown values remain raw. Labels are metadata only.
 The identical `0x80800` Event Buffer bases in the 51929/51932 and 51950/51951
 profiles are treated as a profile collision, not a shared address. Semantic
 register labels at that base require an explicit IC profile.
+
+IC profile inference consumes two typed evidence paths after source probing:
+
+- decoded-I2C requires a captured Switch Page command plus a matching Event
+  Buffer access on the selected 7-bit slave address;
+- NDS may provide the absolute Event Buffer register directly (for example
+  `Paint TP 0x99000 ...`), so no synthetic Switch Page is invented.
+
+A unique `0x99000` Event Buffer identifies 51927. Shared `0x80800` remains an
+operator choice unless another absolute Common Buffer or History access
+disambiguates it. This inference never selects Event Buffer Version and never
+rewrites raw records. The selected source-adapter format remains visible in the
+desktop header and window title after loading.
 
 ## Synthetic exports
 

@@ -27,6 +27,30 @@ namespace Nvt.Replay.Avalonia.Tests;
 public sealed class MainWindowLayoutTests
 {
     [AvaloniaFact]
+    public async Task Parsed_source_adapter_is_displayed_in_the_window_title()
+    {
+        var window = ShowWindow();
+        var fixture = Path.Combine(Path.GetTempPath(), $"nvt-title-{Guid.NewGuid():N}.nds.txt");
+        try
+        {
+            await File.WriteAllTextAsync(
+                fixture,
+                "2026-08-12 19:21:54:003 Paint TP 0x01 1 0x00",
+                TestContext.Current.CancellationToken);
+
+            await window.OpenCaptureAsync(fixture);
+
+            Assert.Equal("NVT Event Buffer Replay — NDS communication log", window.Title);
+            Assert.Equal("NDS communication log", Required<TextBlock>(window, "SourceAdapterText").Text);
+        }
+        finally
+        {
+            window.Close();
+            File.Delete(fixture);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Switch_page_and_event_buffer_evidence_auto_selects_a_unique_IC_profile()
     {
         var window = ShowWindow();
@@ -1412,8 +1436,8 @@ public sealed class MainWindowLayoutTests
             Assert.Equal("DESAY97-FULL-REREAD.NDS.TXT", Required<TextBlock>(window, "CaptureNameText").Text);
             Assert.Equal(0, Required<ListBox>(window, "DecodedFramesList").ItemCount);
             Assert.False(Required<TabItem>(window, "PaintTab").IsEnabled);
-            Assert.Contains("semantic format required", Required<TextBlock>(window, "SessionStatusText").Text);
-            Assert.Contains("Confirm the version", Required<TextBlock>(window, "ConfigurationHintText").Text);
+            Assert.Contains("IC 51927 inferred", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Contains("confirm Event Buffer Version", Required<TextBlock>(window, "ConfigurationHintText").Text, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -1449,7 +1473,7 @@ public sealed class MainWindowLayoutTests
 
             Assert.Equal("DESAY97-FULL-REREAD.NDS.TXT", Required<TextBlock>(window, "CaptureNameText").Text);
             Assert.Equal(0, Required<ListBox>(window, "DecodedFramesList").ItemCount);
-            Assert.Contains("semantic format required", Required<TextBlock>(window, "SessionStatusText").Text);
+            Assert.Contains("IC 51927 inferred", Required<TextBlock>(window, "SessionStatusText").Text);
             Assert.True(Required<Button>(window, "LoadButton").IsVisible);
             Assert.False(Required<Button>(window, "CancelButton").IsVisible);
         }

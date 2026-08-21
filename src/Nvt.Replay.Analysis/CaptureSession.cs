@@ -139,9 +139,10 @@ public sealed class CaptureSession
         foreach (var record in Records)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var isNdsPaint = targetI2cAddress == 0x01 &&
-                             record.Operation == BusOperation.Paint &&
-                             record.Address == 0x01;
+            var isNdsPaint = record.Operation == BusOperation.Paint &&
+                             record.I2c?.SlaveAddress == targetI2cAddress &&
+                             record.SourceFields?.GetValueOrDefault(NdsCommunicationLogAdapter.AddressSemanticsField) ==
+                             NdsCommunicationLogAdapter.I2cSlaveAddress;
             var isDecodedI2cRead = record.Operation == BusOperation.Read &&
                                    IsEventBufferRead(record, targetI2cAddress);
             if (!isNdsPaint && !isDecodedI2cRead)
@@ -196,7 +197,7 @@ public sealed class CaptureSession
                 DiagnosticSeverity.Warning,
                 "NO_EVENT_BUFFER_RECORDS",
                 $"No Common event-buffer records were decoded for 7-bit I2C address 0x{targetI2cAddress:X2} " +
-                "(expected NDS Paint TP 0x01, a profile-matched Event Buffer read, or an offset-only I2C read at register 0x00).",
+                "(expected NDS Paint TP <7-bit address>, a profile-matched Event Buffer read, or an offset-only I2C read at register 0x00).",
                 SourceSha256,
                 new SourceLocation(0, 0)));
         }
@@ -215,8 +216,7 @@ public sealed class CaptureSession
         {
             if (i2c.SlaveAddress != targetI2cAddress) return false;
         }
-        else if (targetI2cAddress != 0x01 ||
-                 !record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase))
+        else if (!IsNdsAbsoluteRegisterRecord(record))
         {
             return false;
         }
@@ -232,6 +232,12 @@ public sealed class CaptureSession
                annotation.Description.Region == "Event Buffer" &&
                annotation.Description.Offset == 0;
     }
+
+    private static bool IsNdsAbsoluteRegisterRecord(SourceRecord record) =>
+        record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
+        record.SourceFields?.GetValueOrDefault("adapter") == NdsCommunicationLogAdapter.AdapterId &&
+        record.SourceFields.GetValueOrDefault(NdsCommunicationLogAdapter.AddressSemanticsField) ==
+        NdsCommunicationLogAdapter.AbsoluteRegisterAddress;
 
     public Desay97InspectionReport DecodeDesay97(
         Desay97Profile profile,

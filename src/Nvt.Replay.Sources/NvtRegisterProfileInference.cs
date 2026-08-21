@@ -11,12 +11,24 @@ public enum NvtRegisterProfileInferenceStatus
     Conflicting,
 }
 
+public enum NvtRegisterProfileEvidenceKind
+{
+    SwitchPage,
+    AbsoluteRegister,
+}
+
 public sealed record NvtRegisterProfileEvidence(
     long RecordIndex,
     string SourceRecordId,
     uint EventBufferAddress,
     uint SelectedPage,
-    string SwitchPageCommand);
+    string SwitchPageCommand,
+    NvtRegisterProfileEvidenceKind Kind = NvtRegisterProfileEvidenceKind.SwitchPage)
+{
+    public string DisplayEvidence => Kind == NvtRegisterProfileEvidenceKind.SwitchPage
+        ? $"Switch Page {SwitchPageCommand}"
+        : $"NDS absolute register 0x{EventBufferAddress:X}";
+}
 
 public sealed record NvtRegisterProfileInferenceResult(
     NvtRegisterProfileInferenceStatus Status,
@@ -37,8 +49,8 @@ public sealed record NvtRegisterProfileInferenceResult(
                 .Select(item => $"0x{item.SelectedPage:X5}")
                 .Distinct(StringComparer.Ordinal));
             var first = Evidence[0];
-            return $"{Evidence.Count:N0} Event Buffer access(es) after Switch Page {pages}; " +
-                   $"first evidence at record {first.RecordIndex:N0}: {first.SwitchPageCommand}.";
+            return $"{Evidence.Count:N0} Event Buffer address evidence record(s) for page {pages}; " +
+                   $"first evidence at record {first.RecordIndex:N0}: {first.DisplayEvidence}.";
         }
     }
 }
@@ -69,6 +81,11 @@ public static class NvtRegisterProfileInference
 
         foreach (var record in recordList)
         {
+            if (TryAddAbsoluteNdsEvidence(record, evidence, candidateSets))
+            {
+                continue;
+            }
+
             if (record.Address is not { } address ||
                 record.I2c is not { } i2c ||
                 i2c.SlaveAddress != targetI2cAddress)
@@ -124,7 +141,7 @@ public static class NvtRegisterProfileInference
         foreach (var record in recordList)
         {
             if (record.Address is not { } address ||
-                record.I2c?.SlaveAddress != targetI2cAddress)
+                !BelongsToSelectedTransportOrNds(record, targetI2cAddress))
             {
                 continue;
             }
@@ -141,6 +158,38 @@ public static class NvtRegisterProfileInference
             resolved,
             evidence.ToArray());
     }
+
+    private static bool TryAddAbsoluteNdsEvidence(
+        SourceRecord record,
+        ICollection<NvtRegisterProfileEvidence> evidence,
+        ICollection<HashSet<NvtRegisterProfile>> candidateSets)
+    {
+        if (record.Address is not { } address || !IsAbsoluteNdsRegister(record)) return false;
+        var candidates = NvtRegisterCatalog.Profiles
+            .Where(profile => address >= profile.EventBufferBase &&
+                              address < profile.EventBufferBase + EventBufferLength)
+            .ToHashSet();
+        if (candidates.Count == 0) return false;
+        var page = candidates.Select(profile => profile.EventBufferBase).Distinct().Single();
+        evidence.Add(new NvtRegisterProfileEvidence(
+            record.Index,
+            record.StableId,
+            address,
+            page,
+            string.Empty,
+            NvtRegisterProfileEvidenceKind.AbsoluteRegister));
+        candidateSets.Add(candidates);
+        return true;
+    }
+
+    private static bool BelongsToSelectedTransportOrNds(SourceRecord record, int targetI2cAddress) =>
+        record.I2c?.SlaveAddress == targetI2cAddress || IsAbsoluteNdsRegister(record);
+
+    private static bool IsAbsoluteNdsRegister(SourceRecord record) =>
+        record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase) &&
+        record.SourceFields?.GetValueOrDefault("adapter") == NdsCommunicationLogAdapter.AdapterId &&
+        record.SourceFields.GetValueOrDefault(NdsCommunicationLogAdapter.AddressSemanticsField) ==
+        NdsCommunicationLogAdapter.AbsoluteRegisterAddress;
 
     private static bool MatchesKnownRegion(NvtRegisterProfile profile, uint address) =>
         address >= profile.EventBufferBase && address < profile.EventBufferBase + EventBufferLength ||

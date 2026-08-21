@@ -89,6 +89,47 @@ public sealed class NdsCommunicationLogAdapterTests : IDisposable
         Assert.Equal(BusOperation.Paint, parsed.Operation);
         Assert.Equal(2, parsed.DeclaredByteCount);
         Assert.Equal([0xA3, 0x55, 0x66], parsed.Data);
+        Assert.Null(parsed.Address);
+        Assert.Equal(0x01, parsed.I2c?.SlaveAddress);
+        Assert.Equal(NdsCommunicationLogAdapter.I2cSlaveAddress, parsed.SourceFields?[NdsCommunicationLogAdapter.AddressSemanticsField]);
+    }
+
+    [Fact]
+    public async Task Paint_header_distinguishes_7bit_I2C_address_from_absolute_register_address()
+    {
+        var path = WriteCapture(
+            """
+            2026-08-12 19:21:52:824 Paint TP 0x99000 2 0x50 0x00
+            2026-08-12 19:21:54:003 Paint TP 0x2A 2 0xA3 0x55
+            """);
+        var records = new List<SourceRecord>();
+        await foreach (var record in new NdsCommunicationLogAdapter().ReadAsync(new SourceOpenContext(path, "mixed")))
+            records.Add(record);
+
+        Assert.Equal(2, records.Count);
+        Assert.Equal(0x99000u, records[0].Address);
+        Assert.Null(records[0].I2c);
+        Assert.Equal(NdsCommunicationLogAdapter.AbsoluteRegisterAddress, records[0].SourceFields?[NdsCommunicationLogAdapter.AddressSemanticsField]);
+        Assert.Null(records[1].Address);
+        Assert.Equal(0x2A, records[1].I2c?.SlaveAddress);
+        Assert.Equal("0x2A", records[1].SourceFields?["raw_address"]);
+    }
+
+    [Fact]
+    public async Task Paint_header_rejects_the_ambiguous_non_7bit_range()
+    {
+        var path = WriteCapture("2026-08-12 19:21:54:003 Paint TP 0x80 2 0xA3 0x55");
+        var diagnostics = new List<ReplayDiagnostic>();
+        var records = new List<SourceRecord>();
+
+        await foreach (var record in new NdsCommunicationLogAdapter().ReadAsync(
+            new SourceOpenContext(path, "invalid", diagnostics.Add)))
+            records.Add(record);
+
+        Assert.Empty(records);
+        var warning = Assert.Single(diagnostics);
+        Assert.Equal("NDS_MALFORMED_RECORD", warning.Code);
+        Assert.Contains("7-bit I2C", warning.Message, StringComparison.Ordinal);
     }
 
     [Fact]

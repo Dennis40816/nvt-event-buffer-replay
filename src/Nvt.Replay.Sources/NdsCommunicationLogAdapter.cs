@@ -8,9 +8,13 @@ namespace Nvt.Replay.Sources;
 
 public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
 {
+    public const string AdapterId = "nds-communication-log";
+    public const string AddressSemanticsField = "address_semantics";
+    public const string AbsoluteRegisterAddress = "absolute_register";
+    public const string I2cSlaveAddress = "i2c_slave";
     private const int ProbeLineLimit = 40;
 
-    public string Id => "nds-communication-log";
+    public string Id => AdapterId;
 
     public string DisplayName => "NDS communication log";
 
@@ -198,6 +202,11 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
                 DateTimeStyles.AssumeLocal);
             var operation = Enum.Parse<BusOperation>(match.Groups["operation"].Value, ignoreCase: true);
             var address = uint.Parse(match.Groups["address"].Value.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            if (operation == BusOperation.Paint && address is > 0x7F and < 0x100)
+            {
+                throw new FormatException(
+                    $"Paint address 0x{address:X2} is neither a 7-bit I2C slave address nor an absolute register address (>= 0x100).");
+            }
             var count = int.Parse(match.Groups["count"].Value, CultureInfo.InvariantCulture);
             var pending = new PendingRecord(timestamp, operation, match.Groups["target"].Value, address, count, lineNumber, byteOffset);
             pending.rawText.Append(line);
@@ -226,17 +235,30 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
 
         public SourceRecord ToSourceRecord(long index, string sourceId)
         {
+            var paintCarriesI2cAddress = Operation == BusOperation.Paint && Address <= 0x7F;
+            var sourceFields = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["adapter"] = AdapterId,
+                ["dialect"] = "nds-communication-log",
+                ["raw_address"] = paintCarriesI2cAddress ? $"0x{Address:X2}" : $"0x{Address:X}",
+                [AddressSemanticsField] = paintCarriesI2cAddress ? I2cSlaveAddress : AbsoluteRegisterAddress,
+            };
+            var transport = paintCarriesI2cAddress
+                ? new I2cTransport(checked((int)Address), [], [], null)
+                : null;
             return NvtRegisterCatalog.Annotate(new SourceRecord(
                 index,
                 $"{sourceId}:L{LineNumber}",
                 Timestamp,
                 Operation,
                 Target,
-                Address,
+                paintCarriesI2cAddress ? null : Address,
                 DeclaredByteCount,
                 data.ToArray(),
                 rawText.ToString(),
-                new SourceLocation(ByteOffset, LineNumber)));
+                new SourceLocation(ByteOffset, LineNumber),
+                transport,
+                sourceFields));
         }
     }
 }

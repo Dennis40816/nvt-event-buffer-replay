@@ -10,8 +10,12 @@ scoped observations, and which tests were skipped when evidence was absent.
 - SHA-256:
   `0e329071e7c048118054e8db51f6bac3ab6442079556bbc1e358d7100f81d071`
 - Operator-selected format: Common `0x83`.
-- C# inspection result on 2026-08-14: 518 decoded frames, 518/518 valid CRC8,
-  518/518 Host-State-eligible, zero diagnostics.
+- C# inspection result on 2026-08-21: 518 decoded frames, 518/518 valid CRC8,
+  518/518 Host-State-eligible, zero diagnostics. The source contains 518
+  `Paint TP 0x01` frame records (the token is the 7-bit I2C slave address) and
+  two `Paint TP 0x99000` records (the token is an absolute register address).
+  Typed absolute-register evidence uniquely infers IC 51927; no synthetic
+  Switch Page transaction is created.
 - Python oracle expectation: 518 frames and 518/518 valid CRC8.
 - Scope: validates NDS Paint reconstruction, shared finger core, the 0x83 tail,
   CRC parameters, provenance, and CLI streaming. It does not promote 0x82 or

@@ -155,8 +155,7 @@ public sealed class Desay97Assembler
         if (record.Operation != BusOperation.Read || record.Address != EventBufferBase) return false;
         return record.I2c is { } i2c
             ? i2c.SlaveAddress == TargetI2cAddress
-            : TargetI2cAddress == 0x01 &&
-              record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase);
+            : record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase);
     }
 
     private static ReplayDiagnostic MissingPhase(SourceRecord source, string message) =>

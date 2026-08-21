@@ -32,14 +32,17 @@ public sealed class NdsCaptureSessionTests : IDisposable
     }
 
     [Fact]
-    public async Task Nds_TP_is_the_fixed_0x01_slave_and_is_rejected_by_another_target_filter()
+    public async Task Nds_Paint_uses_the_header_slave_address_instead_of_inferencing_from_TP()
     {
         var packet = CommonEventBufferDecoderTests.NewAllBreak(CommonEventBufferVersion.V83);
-        var path = WriteLog(Record("Paint", "0x01", packet));
+        var path = WriteLog(Record("Paint", "0x2A", packet));
         var session = await CaptureSession.LoadAsync(path);
 
-        Assert.Single(session.DecodeCommon(CommonEventBufferVersion.V83, 0x01).Frames);
-        Assert.Empty(session.DecodeCommon(CommonEventBufferVersion.V83, 0x2A).Frames);
+        var record = Assert.Single(session.Records);
+        Assert.Equal(0x2A, record.I2c?.SlaveAddress);
+        Assert.Null(record.Address);
+        Assert.Empty(session.DecodeCommon(CommonEventBufferVersion.V83, 0x01).Frames);
+        Assert.Single(session.DecodeCommon(CommonEventBufferVersion.V83, 0x2A).Frames);
     }
 
     [Fact]

@@ -62,6 +62,62 @@ public sealed class NvtRegisterProfileInferenceTests
     }
 
     [Fact]
+    public void Nds_absolute_event_buffer_address_uniquely_infers_51927_without_a_switch_page_transaction()
+    {
+        var record = new SourceRecord(
+            0,
+            "nds:L1",
+            DateTimeOffset.UnixEpoch,
+            BusOperation.Paint,
+            "TP",
+            0x99000,
+            2,
+            [0x50, 0x00],
+            "Paint TP 0x99000 2 0x50 0x00",
+            new SourceLocation(0, 1),
+            SourceFields: new Dictionary<string, string>
+            {
+                ["adapter"] = NdsCommunicationLogAdapter.AdapterId,
+                [NdsCommunicationLogAdapter.AddressSemanticsField] = NdsCommunicationLogAdapter.AbsoluteRegisterAddress,
+            });
+
+        var result = NvtRegisterProfileInference.Infer([record]);
+
+        Assert.Equal(NvtRegisterProfileInferenceStatus.Unique, result.Status);
+        Assert.Equal("51927", result.UniqueProfile?.IcFamily);
+        var evidence = Assert.Single(result.Evidence);
+        Assert.Equal(NvtRegisterProfileEvidenceKind.AbsoluteRegister, evidence.Kind);
+        Assert.Equal(0x99000u, evidence.EventBufferAddress);
+        Assert.Contains("NDS absolute register 0x99000", result.EvidenceSummary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Nds_shared_absolute_event_buffer_address_remains_ambiguous()
+    {
+        var record = new SourceRecord(
+            0,
+            "nds:L1",
+            null,
+            BusOperation.Read,
+            "TP",
+            0x80800,
+            1,
+            [0x00],
+            "Read TP 0x80800 1 0x00",
+            new SourceLocation(0, 1),
+            SourceFields: new Dictionary<string, string>
+            {
+                ["adapter"] = NdsCommunicationLogAdapter.AdapterId,
+                [NdsCommunicationLogAdapter.AddressSemanticsField] = NdsCommunicationLogAdapter.AbsoluteRegisterAddress,
+            });
+
+        var result = NvtRegisterProfileInference.Infer([record]);
+
+        Assert.Equal(NvtRegisterProfileInferenceStatus.Ambiguous, result.Status);
+        Assert.Equal(["51929/51932", "51950/51951"], result.Candidates.Select(item => item.IcFamily));
+    }
+
+    [Fact]
     public void Different_event_buffer_pages_are_reported_as_conflicting_instead_of_guessed()
     {
         var records = Tracked(

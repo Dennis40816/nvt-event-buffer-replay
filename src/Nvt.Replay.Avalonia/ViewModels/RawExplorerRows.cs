@@ -71,9 +71,7 @@ public sealed record RawRecordRow(
 
     public string I2cEndpoint => Record.I2c is { } transport
         ? $"0x{transport.SlaveAddress:X2} · {Direction}"
-        : IsImplicitNdsTouchTarget
-            ? $"0x01 · {Direction}"
-            : $"— · {Direction}";
+        : $"— · {Direction}";
 
     public string RawRegisterAddress => TryGetRawRegisterOffset(out var offset)
         ? $"RAW REG 0x{offset:X2}"
@@ -92,8 +90,8 @@ public sealed record RawRecordRow(
                 notes.Add("The source has no page-select transaction; only the register offset is captured.");
             if (Record.I2c is { } transport)
                 notes.Add($"I2C slave 0x{transport.SlaveAddress:X2} is the 7-bit address; {Direction} is shown separately.");
-            else if (IsImplicitNdsTouchTarget)
-                notes.Add($"NDS target TP maps to the fixed 7-bit I2C address 0x01; {Direction} is shown separately.");
+            else if (IsNdsAbsoluteRegisterAddress)
+                notes.Add($"This NDS field is an absolute register address; the source does not report a 7-bit I2C address for this record. Direction {Direction} is shown separately.");
             else
                 notes.Add($"The source did not report a 7-bit I2C address; direction {Direction} is still available.");
             if (TryGetRawRegisterOffset(out var offset))
@@ -131,8 +129,9 @@ public sealed record RawRecordRow(
     private string? Field(string key) =>
         RegisterAnnotation?.Fields.GetValueOrDefault(key) ?? Record.SourceFields?.GetValueOrDefault(key);
 
-    private bool IsImplicitNdsTouchTarget =>
-        Record.I2c is null && Record.Target.Equals("TP", StringComparison.OrdinalIgnoreCase);
+    private bool IsNdsAbsoluteRegisterAddress =>
+        Record.SourceFields?.GetValueOrDefault(NdsCommunicationLogAdapter.AddressSemanticsField) ==
+        NdsCommunicationLogAdapter.AbsoluteRegisterAddress;
 
     private bool TryGetPageSwitch(out uint page)
     {

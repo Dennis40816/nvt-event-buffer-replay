@@ -28,6 +28,8 @@ namespace Nvt.Replay.Avalonia;
 
 public partial class MainWindow : Window
 {
+    private const string ProductWindowTitle = "NVT Event Buffer Replay";
+
     private CancellationTokenSource? operationCancellation;
 
     private CaptureSession? session;
@@ -159,6 +161,7 @@ public partial class MainWindow : Window
             CaptureNameText.Text = Path.GetFileName(session.SourcePath).ToUpperInvariant();
             SessionStatusText.Text = $"{session.Records.Count:N0} physical records indexed · {diagnosticRows.Length:N0} source diagnostics · semantic format required";
             SourceAdapterText.Text = session.Probe.DisplayName;
+            Title = $"{ProductWindowTitle} — {session.Probe.DisplayName}";
             SourceAdapterText.IsVisible = true;
             SourceAdapterComboBox.IsVisible = false;
             pendingSourcePath = null;
@@ -171,7 +174,7 @@ public partial class MainWindow : Window
             if (profileInference.UniqueProfile is { } uniqueProfile)
             {
                 ConfigurationHintText.Text =
-                    $"IC profile {uniqueProfile.IcFamily} inferred from Switch Page + Event Buffer register evidence; confirm Event Buffer Version to decode.";
+                    $"IC profile {uniqueProfile.IcFamily} inferred from verified Event Buffer address evidence; confirm Event Buffer Version to decode.";
                 SessionStatusText.Text =
                     $"{session.Records.Count:N0} physical records indexed · IC {uniqueProfile.IcFamily} inferred · source bytes unchanged";
             }
@@ -796,7 +799,7 @@ public partial class MainWindow : Window
         if (inference.Status is NvtRegisterProfileInferenceStatus.Ambiguous or NvtRegisterProfileInferenceStatus.Conflicting)
             ShowRegisterProfileInference(inference);
         else if (inference.Status == NvtRegisterProfileInferenceStatus.None)
-            ConfigurationHintText.Text = $"I²C 0x{targetI2cAddress:X2} selected · no complete Switch Page + Event Buffer evidence; IC profile remains unconfirmed.";
+            ConfigurationHintText.Text = $"I²C 0x{targetI2cAddress:X2} selected · no complete Event Buffer address evidence; IC profile remains unconfirmed.";
     }
 
     internal Task SetTargetI2cAddressForTestingAsync(string value)
@@ -1097,6 +1100,7 @@ public partial class MainWindow : Window
         InspectorAlertBorder.IsVisible = false;
         InspectorAlertText.Text = string.Empty;
         SourceAdapterText.Text = "Probing…";
+        Title = ProductWindowTitle;
         SourceConfidenceText.Text = "Source and Event Buffer format remain separate";
         SourceHashText.Text = "SHA-256 appears after loading";
         SourceFieldsText.Text = "No adapter-specific source fields.";

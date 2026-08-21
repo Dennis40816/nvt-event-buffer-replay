@@ -51,6 +51,8 @@
 - [x] Shared register catalog for NDS and decoded-I2C sources; annotations never change source bytes
 - [x] Built-in IC address profiles for 51923, 51926, 51927, 51929/51932, and 51950/51951
 - [x] Profile-collision guard: `0x80800` remains unresolved until 51929/51932 or 51950/51951 is selected
+- [x] NDS overloaded `Paint TP` address modeling: 7-bit slave for `0x00`–`0x7F`, absolute register for `>=0x100`, with source format shown in the window title
+- [x] Evidence-typed IC inference from decoded-I2C Switch Page transactions or NDS absolute Event Buffer registers
 - [x] Readable Raw Explorer column with IC candidate, region, register, raw value, and confirmed meaning
 - [x] Separate FW Command parser for Event Buffer `+0x50`; unknown opcodes stay visible as raw values
 - [x] Operator-selected built-in register profile persisted in sidecars/manifests and reapplied before decode
