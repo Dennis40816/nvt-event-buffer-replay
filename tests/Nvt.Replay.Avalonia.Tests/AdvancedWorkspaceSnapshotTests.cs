@@ -203,9 +203,20 @@ public sealed class AdvancedWorkspaceSnapshotTests
             Assert.True(row.IsExpanded);
             Assert.NotNull(row.Detail);
             Assert.Contains("0010", row.Detail.FullPayload, StringComparison.Ordinal);
-            Assert.Single(
+            var detailPanel = Assert.Single(
                 records.GetVisualDescendants().OfType<Border>(),
                 border => border.Classes.Contains("rawRecordDetails") && border.IsVisible);
+
+            var sectionHeaders = detailPanel.GetVisualDescendants()
+                .OfType<TextBlock>()
+                .Where(block => block.Classes.Contains("section"))
+                .ToDictionary(block => block.Text!, StringComparer.Ordinal);
+            var transactionX = sectionHeaders["TRANSACTION"].TranslatePoint(default, window)!.Value.X;
+            var payloadX = sectionHeaders["FULL PAYLOAD"].TranslatePoint(default, window)!.Value.X;
+            var sourceEvidenceX = sectionHeaders["SOURCE EVIDENCE"].TranslatePoint(default, window)!.Value.X;
+            var sourceLineX = sectionHeaders["ORIGINAL SOURCE LINE"].TranslatePoint(default, window)!.Value.X;
+            Assert.InRange(Math.Abs(transactionX - payloadX), 0, 0.5);
+            Assert.InRange(Math.Abs(sourceEvidenceX - sourceLineX), 0, 0.5);
 
             VisualTestCapture.ProcessSnapshot(window, "raw-event-expanded-1920x1080-dark.png");
         }

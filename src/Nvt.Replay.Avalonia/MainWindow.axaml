@@ -261,16 +261,14 @@
                               </ItemsControl>
                             </StackPanel>
 
-                            <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="1.4*,1*" ColumnSpacing="28">
-                              <StackPanel Spacing="7">
-                                <TextBlock Classes="section" Text="FULL PAYLOAD" />
-                                <TextBlock Text="{Binding Detail.FullPayload}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
-                              </StackPanel>
-                              <StackPanel Grid.Column="1" Spacing="7">
-                                <TextBlock Classes="section" Text="ORIGINAL SOURCE LINE" />
-                                <TextBlock Text="{Binding Detail.SourceText}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" MaxHeight="90" />
-                              </StackPanel>
-                            </Grid>
+                            <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="7">
+                              <TextBlock Classes="section" Text="FULL PAYLOAD" />
+                              <TextBlock Text="{Binding Detail.FullPayload}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="2" Spacing="7">
+                              <TextBlock Classes="section" Text="ORIGINAL SOURCE LINE" />
+                              <TextBlock Text="{Binding Detail.SourceText}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" MaxHeight="90" />
+                            </StackPanel>
                           </Grid>
                         </Border>
                       </Grid>
