@@ -33,6 +33,9 @@ public sealed record ReplayExportOptions(
     ReplayDecodeConfiguration? DecodeConfiguration = null,
     ReplayRenderSettings? RenderSettings = null)
 {
+    public bool AllowPngSequenceFallback { get; init; }
+    public string? VideoEncoder { get; init; }
+
     public ReplayRenderSettings ResolvedRenderSettings =>
         (RenderSettings ?? new ReplayRenderSettings(Mode)) with { Mode = Mode };
 }
@@ -518,15 +521,32 @@ public sealed class ReplayRangeExporter
         Directory.CreateDirectory(outputDirectory);
         if (File.Exists(fullOutputPath)) throw new IOException($"Output already exists and will not be overwritten: {fullOutputPath}");
 
-        var encoder = ResolveFfmpeg(options.FfmpegPath);
+        FfmpegProbeResult probe;
         string? warning = null;
-        if (encoder is not null)
+        try
         {
-            var manifestPath = fullOutputPath + ".json";
-            if (File.Exists(manifestPath)) throw new IOException($"Output manifest already exists and will not be overwritten: {manifestPath}");
+            probe = await FfmpegRuntime.ProbeAsync(options.FfmpegPath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ReplayEncoderUnavailableException exception) when (options.AllowPngSequenceFallback)
+        {
+            warning = $"{exception.Message} Exported an explicitly requested PNG sequence instead.";
+            return await ExportPngSequenceAsync(
+                replay, sceneFactory, options, plan, fullOutputPath + ".frames", warning, cancellationToken, progress);
+        }
+
+        var manifestPath = fullOutputPath + ".json";
+        if (File.Exists(manifestPath)) throw new IOException($"Output manifest already exists and will not be overwritten: {manifestPath}");
+        var encoders = string.IsNullOrWhiteSpace(options.VideoEncoder)
+            ? probe.H264Encoders
+            : [options.VideoEncoder];
+        var failures = new List<string>();
+        foreach (var videoEncoder in encoders)
+        {
             try
             {
-                return await EncodeMp4Async(replay, sceneFactory, options, plan, encoder, fullOutputPath, manifestPath, cancellationToken, progress);
+                return await EncodeMp4Async(
+                    replay, sceneFactory, options, plan, probe.ExecutablePath, videoEncoder,
+                    fullOutputPath, manifestPath, cancellationToken, progress);
             }
             catch (OperationCanceledException)
             {
@@ -534,14 +554,17 @@ public sealed class ReplayRangeExporter
             }
             catch (Exception exception) when (exception is IOException or InvalidOperationException)
             {
-                warning = $"FFmpeg was unavailable or incompatible ({exception.Message}); exported PNG sequence instead.";
+                failures.Add($"{videoEncoder}: {exception.Message}");
             }
         }
-        else
-        {
-            warning = "No reviewed FFmpeg executable was found; exported PNG sequence instead.";
-        }
-        return await ExportPngSequenceAsync(replay, sceneFactory, options, plan, fullOutputPath + ".frames", warning, cancellationToken, progress);
+
+        var failure = new ReplayEncoderUnavailableException(
+            $"FFmpeg could not encode H.264 with the reviewed encoder set ({string.Join("; ", failures)}). No fallback output was created.");
+        if (!options.AllowPngSequenceFallback)
+            throw failure;
+        warning = $"{failure.Message} Exported an explicitly requested PNG sequence instead.";
+        return await ExportPngSequenceAsync(
+            replay, sceneFactory, options, plan, fullOutputPath + ".frames", warning, cancellationToken, progress);
     }
 
     private static async Task<ReplayExportResult> EncodeMp4Async(
@@ -550,6 +573,7 @@ public sealed class ReplayRangeExporter
         ReplayExportOptions options,
         IReadOnlyList<ReplayFramePlanEntry> plan,
         string encoder,
+        string videoEncoder,
         string outputPath,
         string manifestPath,
         CancellationToken cancellationToken,
@@ -567,7 +591,7 @@ public sealed class ReplayRangeExporter
                 CreateNoWindow = true,
             },
         };
-        var arguments = BuildFfmpegArguments(options, temporaryPath);
+        var arguments = BuildFfmpegArguments(options, temporaryPath, videoEncoder);
         foreach (var argument in arguments) process.StartInfo.ArgumentList.Add(argument);
         var started = false;
         var outputCreated = false;
@@ -593,7 +617,7 @@ public sealed class ReplayRangeExporter
                 throw new InvalidOperationException($"FFmpeg exited with code {process.ExitCode}: {error.Trim()}");
             File.Move(temporaryPath, outputPath);
             outputCreated = true;
-            var manifest = Manifest(options, plan, ReplayExportKind.Mp4, Path.GetFileName(encoder), null);
+            var manifest = Manifest(options, plan, ReplayExportKind.Mp4, $"{Path.GetFileName(encoder)}:{videoEncoder}", null);
             await WriteManifestAsync(manifestPath, manifest, cancellationToken);
             return Result(ReplayExportKind.Mp4, outputPath, manifestPath, plan, options.FrameRate, null);
         }
@@ -622,14 +646,30 @@ public sealed class ReplayRangeExporter
         }
     }
 
-    internal static string[] BuildFfmpegArguments(ReplayExportOptions options, string outputPath) =>
-    [
-        "-hide_banner", "-loglevel", "error", "-f", "rawvideo", "-pixel_format", "rgb24",
-        "-video_size", $"{options.Width}x{options.Height}",
-        "-framerate", options.FrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        "-i", "pipe:0", "-an", "-c:v", "libx264", "-preset", "veryfast",
-        "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-y", outputPath,
-    ];
+    internal static string[] BuildFfmpegArguments(
+        ReplayExportOptions options,
+        string outputPath,
+        string videoEncoder = "libx264")
+    {
+        var arguments = new List<string>
+        {
+            "-hide_banner", "-loglevel", "error", "-f", "rawvideo", "-pixel_format", "rgb24",
+            "-video_size", $"{options.Width}x{options.Height}",
+            "-framerate", options.FrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "-i", "pipe:0", "-an", "-c:v", videoEncoder,
+        };
+        if (videoEncoder == "libx264")
+        {
+            arguments.AddRange(["-preset", "veryfast", "-crf", "18"]);
+        }
+        else
+        {
+            var bitRate = Math.Clamp((long)options.Width * options.Height * options.FrameRate / 20, 1_500_000, 40_000_000);
+            arguments.AddRange(["-b:v", bitRate.ToString(System.Globalization.CultureInfo.InvariantCulture)]);
+        }
+        arguments.AddRange(["-pix_fmt", "yuv420p", "-movflags", "+faststart", "-y", outputPath]);
+        return [.. arguments];
+    }
 
     /// <summary>
     /// Renders each distinct logical frame into one reusable RGB buffer, then writes its planned
@@ -797,15 +837,4 @@ public sealed class ReplayRangeExporter
     private static Task WriteManifestAsync(string path, ReplayVideoManifest manifest, CancellationToken cancellationToken) =>
         AtomicOutput.WriteAsync(path, (stream, token) => JsonSerializer.SerializeAsync(stream, manifest, JsonOptions, token), cancellationToken);
 
-    private static string? ResolveFfmpeg(string? explicitPath)
-    {
-        if (!string.IsNullOrWhiteSpace(explicitPath)) return File.Exists(explicitPath) ? Path.GetFullPath(explicitPath) : null;
-        var executable = OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg";
-        foreach (var directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            var candidate = Path.Combine(directory.Trim(), executable);
-            if (File.Exists(candidate)) return candidate;
-        }
-        return null;
-    }
 }

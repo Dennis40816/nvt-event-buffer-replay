@@ -214,7 +214,10 @@ public sealed class ReplayExportTests : IDisposable
         var plan = preview.FramePlan;
         var options = workspace.CreateExportOptions(
             output,
-            ffmpegPath: Path.Combine(directory, "missing-ffmpeg.exe"));
+            ffmpegPath: Path.Combine(directory, "missing-ffmpeg.exe")) with
+        {
+            AllowPngSequenceFallback = true,
+        };
         var renderedLogicalIndices = new List<int>();
         var exportProgress = new List<ReplayExportProgress>();
 
@@ -382,14 +385,17 @@ public sealed class ReplayExportTests : IDisposable
         var result = await new ReplayRangeExporter().ExportAsync(
             replay,
             index => ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent, diagnostics, markers),
-            Options(output, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe")));
+            Options(output, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe")) with
+            {
+                AllowPngSequenceFallback = true,
+            });
 
         Assert.Equal(ReplayExportKind.PngSequence, result.Kind);
         Assert.False(File.Exists(output));
         Assert.True(Directory.Exists(output + ".frames"));
         Assert.Single(Directory.GetFiles(output + ".frames", "frame-*.png"));
         Assert.True(File.Exists(result.ManifestPath));
-        Assert.Contains("No reviewed FFmpeg", result.Warning);
+        Assert.Contains("FFmpeg runtime is missing", result.Warning);
         Assert.Contains("pngSequence", await File.ReadAllTextAsync(result.ManifestPath));
         var firstFrame = Directory.GetFiles(output + ".frames", "frame-*.png").Order().First();
         Assert.Equal([137, 80, 78, 71, 13, 10, 26, 10], (await File.ReadAllBytesAsync(firstFrame))[..8]);
@@ -409,7 +415,10 @@ public sealed class ReplayExportTests : IDisposable
         var result = await new ReplayRangeExporter().ExportAsync(
             replay,
             index => ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent),
-            Options(output, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe")),
+            Options(output, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe")) with
+            {
+                AllowPngSequenceFallback = true,
+            },
             progress: new InlineProgress<ReplayExportProgress>(updates.Add));
 
         Assert.Equal(ReplayExportKind.PngSequence, result.Kind);
@@ -420,6 +429,28 @@ public sealed class ReplayExportTests : IDisposable
         Assert.Contains(updates, item => item.Stage == "Writing PNG fallback");
         Assert.Equal(updates[^1].TotalFrames, updates[^1].CompletedFrames);
         Assert.Equal(100, updates[^1].Percent);
+    }
+
+    [Fact]
+    public async Task Missing_encoder_fails_without_creating_a_silent_PNG_fallback_by_default()
+    {
+        var replay = Replay(TimeSpan.FromMilliseconds(10));
+        var extent = ReplayExtent.Measure(replay.AllReportedContacts);
+        var output = Path.Combine(directory, "strict.mp4");
+
+        var exception = await Assert.ThrowsAsync<ReplayEncoderUnavailableException>(() =>
+            new ReplayRangeExporter().ExportAsync(
+                replay,
+                index => ReplaySceneFactory.Create(replay.Seek(index), replay.Count, extent),
+                Options(output, ffmpeg: Path.Combine(directory, "missing-ffmpeg.exe")) with
+                {
+                    AllowPngSequenceFallback = false,
+                }));
+
+        Assert.Contains("no PNG fallback", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(output));
+        Assert.False(Directory.Exists(output + ".frames"));
+        Assert.Empty(Directory.GetDirectories(directory, ".*.tmp"));
     }
 
     [Fact]
@@ -668,8 +699,12 @@ public sealed class ReplayExportTests : IDisposable
         double speed = 1,
         ReplayExportClock clock = ReplayExportClock.Recorded,
         string? ffmpeg = null) =>
-        new(path, new AnalysisRange(0, 1), 320, 180, frameRate, speed, clock, ReplayRenderMode.Compare, ffmpeg,
-            "capture.txt", new string('a', 64), new ReplayDecodeConfiguration("0x83", null, "synthetic"));
+        new ReplayExportOptions(
+            path, new AnalysisRange(0, 1), 320, 180, frameRate, speed, clock, ReplayRenderMode.Compare, ffmpeg,
+            "capture.txt", new string('a', 64), new ReplayDecodeConfiguration("0x83", null, "synthetic"))
+        {
+            AllowPngSequenceFallback = true,
+        };
 
     private static FakeReplay Replay(TimeSpan secondTime)
     {

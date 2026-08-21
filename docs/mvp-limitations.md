@@ -11,4 +11,4 @@ The following remain deliberately gated rather than guessed:
 - multi-source clock alignment/comparison until clock provenance and drift requirements are measured;
 - persistent disk cache until large-capture profiling demonstrates that the in-memory/sparse-checkpoint design is insufficient.
 
-Private captures, firmware BINs, customer golden data, and confidential QA evidence are never bundled. The release has no telemetry, upload path, automatic update check, or background network dependency. FFmpeg is intentionally not bundled; MP4 export uses an operator-selected executable and otherwise produces an atomic deterministic PNG sequence.
+Private captures, firmware BINs, customer golden data, and confidential QA evidence are never bundled. The release has no telemetry, upload path, automatic update check, or background network dependency. Windows releases bundle only the pinned, hash-verified LGPL FFmpeg command-line runtime and its required notices; no capture data or firmware is added. MP4 export fails visibly when that reviewed encoder is missing or incompatible and never silently changes formats.

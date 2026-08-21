@@ -106,6 +106,36 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Missing_FFmpeg_opens_a_blocking_warning_instead_of_silently_exporting_frames()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+            Required<TabControl>(window, "WorkspaceTabs").SelectedItem = Required<TabItem>(window, "AnalysisTab");
+            await WaitUntilAsync(() => window.OutputPreviewPlanIdentity is not null);
+            window.FfmpegProbeForTesting = _ => Task.FromException<FfmpegProbeResult>(
+                new ReplayEncoderUnavailableException("FFmpeg probe failed in the deterministic UI test; no PNG fallback was created."));
+
+            Required<Button>(window, "ExportSelectedOutputButton")
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(() => Required<Border>(window, "OutputExportWarningPanel").IsVisible);
+
+            Assert.Equal("MP4 encoder unavailable", Required<TextBlock>(window, "OutputExportWarningTitleText").Text);
+            Assert.Contains("no PNG fallback", Required<TextBlock>(window, "OutputExportWarningText").Text, StringComparison.OrdinalIgnoreCase);
+            Assert.False(Required<Button>(window, "OutputExportContinueButton").IsVisible);
+            Assert.Equal("Close", Required<Button>(window, "OutputExportDismissButton").Content);
+            Assert.Contains("blocked", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Confirming_a_common_version_decodes_immediately_without_an_action_button()
     {
         var window = ShowWindow();

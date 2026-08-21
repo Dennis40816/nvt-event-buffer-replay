@@ -36,15 +36,34 @@ try {
         throw 'Release archive must contain exactly one package directory.'
     }
     $PackageRoot = $PackageDirectories[0].FullName
-    $AllowedFiles = @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json', 'SHA256SUMS.txt')
-    $ActualFiles = @(Get-ChildItem -LiteralPath $PackageRoot -File | ForEach-Object Name | Sort-Object)
+    $AllowedFiles = @(
+        'NvtEventBufferReplay.exe',
+        'nvt-replay.exe',
+        'RELEASE.json',
+        'SHA256SUMS.txt',
+        'tools/ffmpeg/FFMPEG-RUNTIME.json',
+        'tools/ffmpeg/LICENSE.txt',
+        'tools/ffmpeg/NOTICE.txt',
+        'tools/ffmpeg/bin/avcodec-62.dll',
+        'tools/ffmpeg/bin/avdevice-62.dll',
+        'tools/ffmpeg/bin/avfilter-11.dll',
+        'tools/ffmpeg/bin/avformat-62.dll',
+        'tools/ffmpeg/bin/avutil-60.dll',
+        'tools/ffmpeg/bin/ffmpeg.exe',
+        'tools/ffmpeg/bin/ffprobe.exe',
+        'tools/ffmpeg/bin/swresample-6.dll',
+        'tools/ffmpeg/bin/swscale-9.dll'
+    )
+    $ActualFiles = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File | ForEach-Object {
+        [IO.Path]::GetRelativePath($PackageRoot, $_.FullName).Replace('\', '/')
+    } | Sort-Object)
     if (Compare-Object -ReferenceObject ($AllowedFiles | Sort-Object) -DifferenceObject $ActualFiles) {
         throw 'Extracted release differs from the closed file allowlist.'
     }
 
     $InnerChecksumLines = @(Get-Content -LiteralPath (Join-Path $PackageRoot 'SHA256SUMS.txt'))
-    if ($InnerChecksumLines.Count -ne 3) {
-        throw 'Inner checksum manifest must contain exactly three entries.'
+    if ($InnerChecksumLines.Count -ne ($AllowedFiles.Count - 1)) {
+        throw 'Inner checksum manifest does not cover every release payload.'
     }
     $InnerChecksumNames = @()
     foreach ($Line in $InnerChecksumLines) {
@@ -58,7 +77,8 @@ try {
         }
         $InnerChecksumNames += $Parts[1]
     }
-    if (Compare-Object -ReferenceObject @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json') -DifferenceObject ($InnerChecksumNames | Sort-Object)) {
+    $ExpectedChecksumNames = $AllowedFiles | Where-Object { $_ -ne 'SHA256SUMS.txt' } | Sort-Object
+    if (Compare-Object -ReferenceObject $ExpectedChecksumNames -DifferenceObject ($InnerChecksumNames | Sort-Object)) {
         throw 'Inner checksum manifest differs from the required payload set.'
     }
 
@@ -78,6 +98,16 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged CLI formats smoke failed.' }
     $FormatObjects = ($Formats -join [Environment]::NewLine) | ConvertFrom-Json
     if (@($FormatObjects).Count -lt 5) { throw 'Packaged CLI did not report every built-in format.' }
+
+    $FfmpegExecutable = Join-Path $PackageRoot 'tools\ffmpeg\bin\ffmpeg.exe'
+    $FfmpegEncoders = & $FfmpegExecutable -hide_banner -encoders 2>&1
+    $FfmpegEncoderText = $FfmpegEncoders -join [Environment]::NewLine
+    if ($LASTEXITCODE -ne 0 -or $FfmpegEncoderText -notmatch '\bh264_mf\b' -or $FfmpegEncoderText -notmatch '\blibopenh264\b') {
+        throw 'Packaged FFmpeg failed its reviewed H.264 encoder smoke.'
+    }
+    $FfprobeExecutable = Join-Path $PackageRoot 'tools\ffmpeg\bin\ffprobe.exe'
+    & $FfprobeExecutable -version | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged ffprobe version smoke failed.' }
 
     if (-not $SkipUiLaunch) {
         $Executable = Join-Path $PackageRoot 'NvtEventBufferReplay.exe'

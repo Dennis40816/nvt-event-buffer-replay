@@ -50,6 +50,7 @@ public partial class MainWindow : Window
     private bool configuringOutputSettings;
     private bool configuringOutputRange;
     private bool outputRangeUserDefined;
+    private bool outputEncoderWarning;
     internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
     internal long OutputSettingsRevision => outputWorkspace.Revision;
     internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => outputVideoPreviewPlan?.Identity;
@@ -60,6 +61,7 @@ public partial class MainWindow : Window
     internal bool OutputVideoPreviewDirty => outputVideoPreviewDirty;
     internal CaptureAnalysisReport? CurrentOutputReport => currentOutputReport;
     internal Action<string>? OutputFolderRevealActionForTesting { get; set; }
+    internal Func<CancellationToken, Task<FfmpegProbeResult>>? FfmpegProbeForTesting { get; set; }
     internal OutputReportInputs CaptureCurrentOutputReportInputsForTesting(AnalysisRange range) =>
         CaptureOutputReportInputs(range);
     internal string OutputReplayIdentityForTesting => OutputReplayIdentity();
@@ -393,7 +395,10 @@ public partial class MainWindow : Window
     private void OutputExportDismissButton_OnClick(object? sender, RoutedEventArgs e)
     {
         OutputExportWarningPanel.IsVisible = false;
-        SessionStatusText.Text = "Long MP4 export not started";
+        SessionStatusText.Text = outputEncoderWarning
+            ? "MP4 encoder warning dismissed; no output was created"
+            : "Long MP4 export not started";
+        outputEncoderWarning = false;
     }
 
     private void OutputExportCancelButton_OnClick(object? sender, RoutedEventArgs e)
@@ -404,6 +409,23 @@ public partial class MainWindow : Window
     private async Task BeginReplayExportAsync(bool longExportConfirmed)
     {
         if (session is null || replaySession is null || decodeConfiguration is null || replaySession.Count == 0 || outputExportJobs.IsActive) return;
+        FfmpegProbeResult encoderProbe;
+        try
+        {
+            encoderProbe = FfmpegProbeForTesting is { } probe
+                ? await probe(outputPreviewCancellation?.Token ?? CancellationToken.None)
+                : await FfmpegRuntime.ProbeAsync(cancellationToken: outputPreviewCancellation?.Token ?? CancellationToken.None);
+        }
+        catch (OperationCanceledException)
+        {
+            SessionStatusText.Text = "FFmpeg probe cancelled; no output was created";
+            return;
+        }
+        catch (ReplayEncoderUnavailableException exception)
+        {
+            ShowOutputEncoderWarning(exception.Message);
+            return;
+        }
         outputWorkspace.Update(outputWorkspace.Settings with
         {
             ContentType = ReplayOutputContentType.Mp4Video,
@@ -453,6 +475,10 @@ public partial class MainWindow : Window
         var settings = preview.Identity.Settings;
         if (!longExportConfirmed && estimate.RequiresConfirmation)
         {
+            outputEncoderWarning = false;
+            OutputExportWarningTitleText.Text = "Long MP4 export";
+            OutputExportContinueButton.IsVisible = true;
+            OutputExportDismissButton.Content = "Cancel";
             OutputExportWarningText.Text =
                 $"This selection produces {estimate.OutputFrameCount:N0} frames ({FormatClock(estimate.Duration)}) at " +
                 $"{settings.FrameRate} FPS and {settings.Width} × {settings.Height}. " +
@@ -473,7 +499,11 @@ public partial class MainWindow : Window
         var path = file?.TryGetLocalPath();
         if (path is null) return;
 
-        var options = CreateReplayExportOptions(path);
+        var options = CreateReplayExportOptions(path) with
+        {
+            FfmpegPath = encoderProbe.ExecutablePath,
+            AllowPngSequenceFallback = false,
+        };
         if (paintWorkspace is null)
             throw new InvalidOperationException("A decoded Paint workspace is required for MP4 output.");
         var exportPaintWorkspace = new ReplayPaintWorkspace(
@@ -515,7 +545,20 @@ public partial class MainWindow : Window
         else if (completed.Status == ExportJobStatus.Failed)
         {
             SessionStatusText.Text = $"Replay export failed · {completed.Error?.Message ?? "Unknown export error"}";
+            if (completed.Error is ReplayEncoderUnavailableException encoderException)
+                ShowOutputEncoderWarning(encoderException.Message);
         }
+    }
+
+    private void ShowOutputEncoderWarning(string message)
+    {
+        outputEncoderWarning = true;
+        OutputExportWarningTitleText.Text = "MP4 encoder unavailable";
+        OutputExportWarningText.Text = message;
+        OutputExportContinueButton.IsVisible = false;
+        OutputExportDismissButton.Content = "Close";
+        OutputExportWarningPanel.IsVisible = true;
+        SessionStatusText.Text = "MP4 export blocked · FFmpeg requires attention";
     }
 
     internal bool RevealOutputFolder(string outputPath)

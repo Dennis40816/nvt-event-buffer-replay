@@ -170,7 +170,7 @@ public sealed class ReplayCliContractTests : IDisposable
     }
 
     [Fact]
-    public async Task Export_manifest_keeps_the_provider_configuration()
+    public async Task Export_with_missing_encoder_fails_clearly_without_a_silent_fallback()
     {
         var outputPath = Path.Combine(directory, "replay.mp4");
         var result = await RunAsync(
@@ -180,14 +180,11 @@ public sealed class ReplayCliContractTests : IDisposable
             "--ffmpeg", Path.Combine(directory, "missing-ffmpeg.exe"),
             "--json");
 
-        Assert.Equal(0, result.ExitCode);
-        using var json = JsonDocument.Parse(result.Output);
-        var manifestPath = json.RootElement.GetProperty("ManifestPath").GetString();
-        Assert.NotNull(manifestPath);
-        using var manifest = JsonDocument.Parse(await File.ReadAllTextAsync(manifestPath));
-        Assert.Equal(2, manifest.RootElement.GetProperty("schemaVersion").GetInt32());
-        Assert.Equal("0x83", manifest.RootElement.GetProperty("decodeConfiguration").GetProperty("eventBufferVersion").GetString());
-        Assert.Equal("nds-communication-log", manifest.RootElement.GetProperty("decodeConfiguration").GetProperty("sourceAdapterId").GetString());
+        Assert.Equal(4, result.ExitCode);
+        Assert.Contains("Encoder error:", result.Error, StringComparison.Ordinal);
+        Assert.Contains("No PNG fallback", result.Error, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(outputPath));
+        Assert.False(Directory.Exists(outputPath + ".frames"));
     }
 
     public void Dispose()

@@ -500,7 +500,7 @@
                             <Border x:Name="OutputExportWarningPanel" IsVisible="False" Padding="12" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="4">
                               <Grid ColumnDefinitions="*,12,Auto,8,Auto">
                                 <StackPanel>
-                                  <TextBlock Text="Long MP4 export" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                                  <TextBlock x:Name="OutputExportWarningTitleText" Text="Long MP4 export" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
                                   <TextBlock x:Name="OutputExportWarningText" Text="Review the estimated duration before starting." FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
                                 <Button x:Name="OutputExportContinueButton" Grid.Column="2" Classes="primary" Content="Export anyway" Click="OutputExportContinueButton_OnClick" AutomationProperties.Name="Confirm long MP4 export" />

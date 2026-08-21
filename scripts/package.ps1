@@ -23,6 +23,7 @@ $ZipPath = Join-Path $ReleaseRoot "$PackageName.zip"
 $ChecksumPath = "$ZipPath.sha256"
 $UiProjectPath = Join-Path $RepoRoot 'src/Nvt.Replay.Avalonia/Nvt.Replay.Avalonia.csproj'
 $CliProjectPath = Join-Path $RepoRoot 'src/Nvt.Replay.Cli/Nvt.Replay.Cli.csproj'
+$FfmpegRuntimeRoot = Join-Path $PackageRoot 'tools\ffmpeg'
 
 function Assert-SafeChildPath {
     param(
@@ -116,6 +117,7 @@ foreach ($Published in @(
 
 Copy-Item -LiteralPath (Join-Path $UiPublishRoot 'Nvt.Replay.Avalonia.exe') -Destination (Join-Path $PackageRoot 'NvtEventBufferReplay.exe')
 Copy-Item -LiteralPath (Join-Path $CliPublishRoot 'Nvt.Replay.Cli.exe') -Destination (Join-Path $PackageRoot 'nvt-replay.exe')
+& (Join-Path $PSScriptRoot 'install-ffmpeg.ps1') -Destination $FfmpegRuntimeRoot | Out-Null
 $CommitTime = (git -C $RepoRoot show -s --format=%cI $Commit).Trim()
 $ReleaseIdentity = [ordered]@{
     schemaVersion = '1.0'
@@ -127,18 +129,39 @@ $ReleaseIdentity = [ordered]@{
     selfContained = $true
     offlineDefaults = $true
     telemetry = $false
-    payloads = @('NvtEventBufferReplay.exe', 'nvt-replay.exe')
+    payloads = @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'tools/ffmpeg/bin/ffmpeg.exe', 'tools/ffmpeg/bin/ffprobe.exe')
+    bundledFfmpeg = 'tools/ffmpeg/FFMPEG-RUNTIME.json'
 }
 $IdentityPath = Join-Path $PackageRoot 'RELEASE.json'
 $ReleaseIdentity | ConvertTo-Json | Set-Content -LiteralPath $IdentityPath -Encoding utf8NoBOM
 
-$AllowedPackageFiles = @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json', 'SHA256SUMS.txt')
-$HashLines = foreach ($Name in @('NvtEventBufferReplay.exe', 'nvt-replay.exe', 'RELEASE.json')) {
+$AllowedPackageFiles = @(
+    'NvtEventBufferReplay.exe',
+    'nvt-replay.exe',
+    'RELEASE.json',
+    'SHA256SUMS.txt',
+    'tools/ffmpeg/FFMPEG-RUNTIME.json',
+    'tools/ffmpeg/LICENSE.txt',
+    'tools/ffmpeg/NOTICE.txt',
+    'tools/ffmpeg/bin/avcodec-62.dll',
+    'tools/ffmpeg/bin/avdevice-62.dll',
+    'tools/ffmpeg/bin/avfilter-11.dll',
+    'tools/ffmpeg/bin/avformat-62.dll',
+    'tools/ffmpeg/bin/avutil-60.dll',
+    'tools/ffmpeg/bin/ffmpeg.exe',
+    'tools/ffmpeg/bin/ffprobe.exe',
+    'tools/ffmpeg/bin/swresample-6.dll',
+    'tools/ffmpeg/bin/swscale-9.dll'
+)
+$HashedPackageFiles = $AllowedPackageFiles | Where-Object { $_ -ne 'SHA256SUMS.txt' }
+$HashLines = foreach ($Name in $HashedPackageFiles) {
     $Path = Join-Path $PackageRoot $Name
     "$(Get-LowerSha256 -Path $Path)  $Name"
 }
 $HashLines | Set-Content -LiteralPath (Join-Path $PackageRoot 'SHA256SUMS.txt') -Encoding utf8NoBOM
-$ActualPackageFiles = @(Get-ChildItem -LiteralPath $PackageRoot -File | ForEach-Object Name | Sort-Object)
+$ActualPackageFiles = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File | ForEach-Object {
+    [IO.Path]::GetRelativePath($PackageRoot, $_.FullName).Replace('\', '/')
+} | Sort-Object)
 if (Compare-Object -ReferenceObject ($AllowedPackageFiles | Sort-Object) -DifferenceObject $ActualPackageFiles) {
     throw 'Release package differs from the closed file allowlist.'
 }

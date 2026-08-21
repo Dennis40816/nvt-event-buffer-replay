@@ -149,8 +149,9 @@ MVP exports selected-range MP4, heatmap PNG, parsed and diagnostic JSON/CSV,
 replay sidecar, and a source/config/hash manifest. Output presents one selected
 content type at a time: MP4 video by default, heatmap, or data package. UI and
 export share a `ReplayScene`; MP4 is not a screen recording. C# renders frames
-and pipes them to a reviewed FFmpeg build. If no encoder is available, PNG
-sequence remains available.
+and pipes them to the pinned, reviewed FFmpeg runtime shipped with Windows
+releases. Missing or incompatible encoder support blocks MP4 export with a
+visible error; it does not silently create a PNG sequence.
 
 The desktop preview presents the exact configured MP4 frame plan and raster,
 not a separately laid-out approximation. Its range/time scrubber operates in

@@ -69,6 +69,11 @@ internal static class ReplayCli
             await error.WriteLineAsync($"Input error: {exception.Message}");
             return InputError;
         }
+        catch (ReplayEncoderUnavailableException exception)
+        {
+            await error.WriteLineAsync($"Encoder error: {exception.Message}");
+            return DecodeError;
+        }
     }
 
     private static async Task<int> BenchmarkAsync(string[] operands, TextWriter output, TextWriter error, bool json)
@@ -742,7 +747,7 @@ internal static class ReplayCli
                                 [--source-adapter <id>]
                                 [--register-profile <family>]
                                 [--desay97-profile <standard|benz-palm>] [--json]
-                                           Export MP4 or atomic PNG fallback
+                                           Export MP4; missing/incompatible FFmpeg is a hard error
               nvt-replay benchmark <file> --event-buffer-version <0x82|0x83|0x84|0x85>
                                    [--source-adapter <id>] [--sample-seeks <count>]
                                    [--render-frames <count>] [--json]

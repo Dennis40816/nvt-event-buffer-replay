@@ -34,8 +34,9 @@ dotnet run --project src/Nvt.Replay.Cli -- export capture.txt `
 ```
 
 C# renders deterministic RGB24 frames and pipes them directly to FFmpeg. The
-reviewed invocation uses H.264 (`libx264`) and `yuv420p` for common playback
-compatibility. The adjacent `.mp4.json` records source/config/hash, range,
+reviewed encoder order is Media Foundation `h264_mf`, LGPL `libopenh264`, then
+`libx264` for an explicitly supplied compatible runtime; output uses `yuv420p`
+for common playback compatibility. The adjacent `.mp4.json` records source/config/hash, range,
 clock, Paint mode, dimensions, frame rate, speed, output-frame count, duration,
 and encoder identity.
 
@@ -47,28 +48,19 @@ even while catching up. Paint and raster export also share the same deterministi
 hard-avoidance label placement, so coordinate labels do not overlap at normal
 preview/export sizes.
 
-If no encoder is found or it exits incompatibly, export creates an atomic
-`<name>.mp4.frames` PNG-sequence directory with the same scenes and an
-`export-manifest.json`. The temporary MP4 or sequence is removed on failure or
-cancellation. Existing MP4, manifest, or fallback directories are never
-overwritten.
+If no reviewed encoder is found or it exits incompatibly, MP4 export stops with
+a visible error and creates no fallback output. The temporary MP4 is removed on
+failure or cancellation, and an existing MP4 or manifest is never overwritten.
+The rendering library retains an explicit opt-in PNG-sequence API for tests and
+specialized callers, but the desktop and CLI never invoke it implicitly.
 
 ## Encoder boundary and provenance
 
-FFmpeg is optional and is not bundled in the NVT Event Buffer Replay release.
-The [FFmpeg download page](https://ffmpeg.org/download.html) provides source
-and links to third-party Windows builds. Its
-[legal page](https://ffmpeg.org/legal.html) explains that configuration choices
-can change the applicable LGPL/GPL terms.
-
-The MVP validation used the gyan.dev 8.1.2 essentials build linked by FFmpeg's
-download page. The exact GitHub release asset reported SHA-256
-`db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`;
-`ffmpeg -version` identified it as GPLv3 with libx264. It was used only as an
-ignored local test tool. `ffprobe` confirmed the generated validation MP4 as
-H.264/yuv420p, 640x360, nine frames, and 0.300 seconds.
-
-Before distributing any encoder binary with the application, release owners
-must select a specific build, record its source/configuration and hash, review
-its license obligations, and update the closed package allowlist. Until that
-review happens, PNG sequence is the offline-safe built-in export.
+Windows release packaging downloads one pinned BtbN LGPL shared build described
+by `eng/ffmpeg-runtime.json`, verifies the archive SHA-256, extracts only the
+closed runtime allowlist, and records every shipped file hash in
+`tools/ffmpeg/FFMPEG-RUNTIME.json`. `NOTICE.txt`, the upstream license, exact
+FFmpeg source commit, and build-source URL ship beside the binaries. Release
+smoke tests require the reviewed H.264 encoders and a working `ffprobe` before a
+package is accepted. Developers may still use `--ffmpeg` or
+`NVT_REPLAY_FFMPEG` to probe another executable explicitly.

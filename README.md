@@ -101,8 +101,10 @@ The desktop MP4 preview also uses the exact export frame plan and 1280×720
 raster; only the on-screen presentation is scaled. Preview RGB/RGBA buffers and
 the Avalonia bitmap are reused between frames to avoid playback GC churn.
 `nvt-replay export` renders selected ranges to raw RGB and pipes them to an
-operator-reviewed FFmpeg executable, or atomically falls back to a PNG
-sequence when no compatible encoder is available. See [replay video export](docs/video-export.md).
+operator-reviewed FFmpeg executable. Windows release packages include a pinned,
+hash-verified LGPL FFmpeg runtime; a missing or incompatible encoder is reported
+as an error and never silently changes MP4 output into another format. See
+[replay video export](docs/video-export.md).
 
 Repeatable performance gates cover 1 GiB input, one million physical records,
 an eight-hour timeline, sparse seek checkpoints, and 60 FPS Paint rendering.
