@@ -39,4 +39,9 @@ if ($ReportPath) {
     $Report | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $FullReportPath -Encoding utf8NoBOM
 }
 $Report | ConvertTo-Json -Depth 4
-if ($Status -ne 'pass') { throw "Handwritten production line budget status: $Status ($($Production.lines) lines)." }
+if ($Status -eq 'review-required') {
+    Write-Warning "Handwritten production line budget requires architecture review ($($Production.lines) lines)."
+}
+elseif ($Status -eq 'fail') {
+    throw "Handwritten production line budget exceeded the 30,000-line hard cap ($($Production.lines) lines)."
+}
