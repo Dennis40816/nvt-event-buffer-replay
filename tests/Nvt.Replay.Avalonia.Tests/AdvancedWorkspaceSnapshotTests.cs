@@ -23,6 +23,37 @@ namespace Nvt.Replay.Avalonia.Tests;
 public sealed class AdvancedWorkspaceSnapshotTests
 {
     [AvaloniaFact]
+    public async Task Capture_setup_keeps_required_version_and_detected_IC_evidence_in_one_dialog()
+    {
+        var window = ShowWindow(1920, 1080, ThemeVariant.Dark);
+        try
+        {
+            await window.OpenCaptureAsync(
+                Fixture("kingstvis-common-0x83.csv"),
+                promptForConfiguration: true);
+            Stabilize(window);
+
+            Assert.True(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
+            Assert.Equal("AUTO-DETECTED", Required<TextBlock>(window, "RegisterProfileInferenceBadgeText").Text);
+            Assert.Equal("51927", Assert.IsType<RegisterProfileChoice>(
+                Required<ComboBox>(window, "InferredRegisterProfileComboBox").SelectedItem).IcFamily);
+            Assert.False(Required<Button>(window, "CaptureSetupDecodeButton").IsEnabled);
+            AssertInside(
+                Required<ComboBox>(window, "CaptureSetupEventVersionComboBox"),
+                Required<Border>(window, "RegisterProfileInferenceOverlay"));
+            AssertInside(
+                Required<TextBox>(window, "CaptureSetupI2cAddressTextBox"),
+                Required<Border>(window, "RegisterProfileInferenceOverlay"));
+
+            VisualTestCapture.ProcessSnapshot(window, "capture-setup-1920x1080-dark.png");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Review_marker_selected_keeps_queue_and_marker_actions_legible()
     {
         var window = ShowWindow(1920, 1080, ThemeVariant.Dark);

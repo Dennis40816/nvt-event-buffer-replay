@@ -28,7 +28,9 @@ public partial class App : Application
             {
                 window.Opened += async (_, _) =>
                 {
-                    await window.OpenCaptureAsync(initialCapture);
+                    await window.OpenCaptureAsync(
+                        initialCapture,
+                        promptForConfiguration: initialVersion is null);
                     if (initialVersion is not null)
                         await window.ApplyStartupDecodeAsync(initialVersion, initialPalmProfile, initialRegisterProfile);
                 };

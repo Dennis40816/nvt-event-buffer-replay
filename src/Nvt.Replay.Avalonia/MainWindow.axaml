@@ -1295,57 +1295,170 @@
             ZIndex="96"
             Background="{DynamicResource OverlayBrush}"
             KeyDown="RegisterProfileInferenceOverlay_OnKeyDown"
-            AutomationProperties.Name="Confirm inferred IC profile">
-      <Border Width="520"
-              Padding="24"
+            AutomationProperties.Name="Capture setup">
+      <Border Width="760"
               CornerRadius="8"
               Background="{DynamicResource HeaderBrush}"
-              BorderBrush="{DynamicResource AccentBrush}"
+              BorderBrush="{DynamicResource StrongBorderBrush}"
               BorderThickness="1"
               HorizontalAlignment="Center"
               VerticalAlignment="Center">
-        <Grid RowDefinitions="Auto,12,Auto,16,Auto,20,Auto">
-          <StackPanel Spacing="4">
-            <TextBlock Text="CONFIRM IC PROFILE" Classes="section" />
-            <TextBlock x:Name="RegisterProfileInferenceTitleText"
-                       Text="This Event Buffer address is shared"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource PrimaryTextBrush}" />
-          </StackPanel>
-          <TextBlock x:Name="RegisterProfileInferenceEvidenceText"
-                     Grid.Row="2"
-                     Text="Switch Page evidence"
-                     FontSize="13"
-                     FontWeight="Medium"
-                     Foreground="{DynamicResource SecondaryTextBrush}"
-                     TextWrapping="Wrap" />
-          <StackPanel Grid.Row="4" Spacing="6">
-            <TextBlock Text="IC profile" Classes="fieldLabel" />
-            <ComboBox x:Name="InferredRegisterProfileComboBox"
-                      Classes="semanticSelect"
-                      Height="38"
-                      AutomationProperties.Name="Choose inferred IC profile">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:RegisterProfileChoice">
-                  <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-              <ComboBox.SelectionBoxItemTemplate>
-                <DataTemplate x:DataType="vm:RegisterProfileChoice">
-                  <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                </DataTemplate>
-              </ComboBox.SelectionBoxItemTemplate>
-            </ComboBox>
-            <TextBlock Text="The raw capture remains unchanged. Your choice only selects the register annotation and Event Buffer base profile."
-                       FontSize="12.5"
-                       Foreground="{DynamicResource MutedTextBrush}"
-                       TextWrapping="Wrap" />
-          </StackPanel>
-          <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-            <Button Classes="ghost" Content="Keep unconfirmed" Click="CancelRegisterProfileInferenceButton_OnClick" />
-            <Button Classes="primary" Content="Use profile" Click="ApplyRegisterProfileInferenceButton_OnClick" />
-          </StackPanel>
+        <Grid RowDefinitions="Auto,Auto,Auto">
+          <Border Padding="24,20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,14,*">
+              <Border Width="38" Height="38" CornerRadius="6" Background="{DynamicResource AccentSurfaceBrush}" VerticalAlignment="Top">
+                <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="2" Spacing="3">
+                <TextBlock Text="CAPTURE SETUP" Classes="section" />
+                <TextBlock x:Name="RegisterProfileInferenceTitleText"
+                           Text="Confirm decoder settings"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryTextBrush}" />
+                <TextBlock Text="Event Buffer Version is always confirmed by the user. IC detection only supplies a profile recommendation."
+                           FontSize="12.5"
+                           Foreground="{DynamicResource MutedTextBrush}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Grid Grid.Row="1" Margin="24,20" ColumnDefinitions="248,1,24,*">
+            <StackPanel Spacing="12">
+              <StackPanel Spacing="5">
+                <TextBlock Text="IC DETECTION" Classes="section" />
+                <Border x:Name="RegisterProfileInferenceBadge"
+                        Classes="captureSetupBadge"
+                        Padding="8,4"
+                        CornerRadius="4"
+                        Background="{DynamicResource AccentSurfaceBrush}"
+                        BorderBrush="{DynamicResource AccentBorderBrush}"
+                        BorderThickness="1"
+                        HorizontalAlignment="Left">
+                  <TextBlock x:Name="RegisterProfileInferenceBadgeText"
+                             Text="NO MATCH"
+                             FontSize="11.5"
+                             FontWeight="Bold"
+                             Foreground="{DynamicResource AccentBrush}" />
+                </Border>
+              </StackPanel>
+              <TextBlock x:Name="RegisterProfileInferenceEvidenceText"
+                         Text="No verified Event Buffer address evidence was found."
+                         FontSize="13"
+                         FontWeight="Medium"
+                         Foreground="{DynamicResource SecondaryTextBrush}"
+                         TextWrapping="Wrap" />
+              <Border Padding="10" CornerRadius="5" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto">
+                  <TextBlock Text="Source" Classes="fieldLabel" />
+                  <TextBlock x:Name="CaptureSetupSourceText" Grid.Column="1" Margin="12,0,0,0" Text="-" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Row="2" Text="Target" Classes="fieldLabel" />
+                  <TextBlock x:Name="CaptureSetupTargetText" Grid.Row="2" Grid.Column="1" Margin="12,0,0,0" Text="I²C 0x01" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                </Grid>
+              </Border>
+            </StackPanel>
+
+            <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
+
+            <StackPanel Grid.Column="3" Spacing="13">
+              <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="Event Buffer Version" Classes="fieldLabel" />
+                  <TextBlock Grid.Column="1" Text="REQUIRED" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}" />
+                </Grid>
+                <ComboBox x:Name="CaptureSetupEventVersionComboBox"
+                          Classes="semanticSelect"
+                          Height="38"
+                          PlaceholderText="Choose a version"
+                          SelectionChanged="CaptureSetupEventVersionComboBox_OnSelectionChanged"
+                          AutomationProperties.Name="Choose Event Buffer Version">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SelectOption">
+                      <StackPanel Margin="2,5" Spacing="2">
+                        <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                  <ComboBox.SelectionBoxItemTemplate>
+                    <DataTemplate x:DataType="vm:SelectOption">
+                      <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </DataTemplate>
+                  </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="IC profile" Classes="fieldLabel" />
+                  <TextBlock x:Name="CaptureSetupProfileHintText" Grid.Column="1" Text="OPTIONAL" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" />
+                </Grid>
+                <ComboBox x:Name="InferredRegisterProfileComboBox"
+                          Classes="semanticSelect"
+                          Height="38"
+                          SelectionChanged="CaptureSetupRegisterProfileComboBox_OnSelectionChanged"
+                          AutomationProperties.Name="Choose inferred IC profile">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RegisterProfileChoice">
+                      <TextBlock Text="{Binding Label}" Margin="2,5" FontSize="14" FontWeight="SemiBold" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                  <ComboBox.SelectionBoxItemTemplate>
+                    <DataTemplate x:DataType="vm:RegisterProfileChoice">
+                      <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </DataTemplate>
+                  </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,14,*">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="7-bit I²C address" Classes="fieldLabel" />
+                  <TextBox x:Name="CaptureSetupI2cAddressTextBox"
+                           Classes="canvasField"
+                           Height="38"
+                           Text="0x01"
+                           HorizontalContentAlignment="Center"
+                           LostFocus="CaptureSetupI2cAddressTextBox_OnLostFocus"
+                           AutomationProperties.Name="Capture target 7-bit I2C address" />
+                </StackPanel>
+                <StackPanel x:Name="CaptureSetupPalmProfilePanel" Grid.Column="2" Spacing="6" IsVisible="False">
+                  <TextBlock Text="0x97 Palm profile" Classes="fieldLabel" />
+                  <ComboBox x:Name="CaptureSetupPalmProfileComboBox"
+                            Classes="semanticSelect"
+                            Height="38"
+                            PlaceholderText="Choose Palm profile"
+                            SelectionChanged="CaptureSetupPalmProfileComboBox_OnSelectionChanged"
+                            AutomationProperties.Name="Choose 0x97 Palm profile">
+                    <ComboBoxItem Content="Standard" />
+                    <ComboBoxItem Content="Benz Palm" />
+                  </ComboBox>
+                </StackPanel>
+              </Grid>
+
+              <TextBlock x:Name="CaptureSetupValidationText"
+                         Classes="captureSetupValidation"
+                         Text="Choose an Event Buffer Version to continue."
+                         FontSize="12.5"
+                         FontWeight="Medium"
+                         Foreground="{DynamicResource WarningBrush}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+
+          <Border Grid.Row="2" Padding="24,16" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Source bytes stay unchanged. Esc opens Raw Explorer."
+                         FontSize="12.5"
+                         Foreground="{DynamicResource MutedTextBrush}"
+                         VerticalAlignment="Center" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="CaptureSetupRawButton" Classes="ghost" Content="Inspect raw" Click="CancelRegisterProfileInferenceButton_OnClick" />
+                <Button x:Name="CaptureSetupDecodeButton" Classes="primary" Content="Decode capture" IsEnabled="False" Click="ApplyRegisterProfileInferenceButton_OnClick" />
+              </StackPanel>
+            </Grid>
+          </Border>
         </Grid>
       </Border>
     </Border>

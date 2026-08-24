@@ -35,6 +35,30 @@
       <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <Style Selector="Border.captureSetupBadge.detected">
+      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+    </Style>
+    <Style Selector="Border.captureSetupBadge.detected TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Border.captureSetupBadge.review">
+      <Setter Property="Background" Value="{DynamicResource WarningSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+    </Style>
+    <Style Selector="Border.captureSetupBadge.review TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+    </Style>
+    <Style Selector="Border.captureSetupBadge.none">
+      <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+    </Style>
+    <Style Selector="Border.captureSetupBadge.none TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.captureSetupValidation.ready">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
     <Style Selector="TextBlock.monoValue">
       <Setter Property="FontFamily" Value="Cascadia Mono" />
       <Setter Property="FontSize" Value="13" />

@@ -59,6 +59,7 @@ public partial class MainWindow : Window
         RegisterProfileComboBox.ItemsSource = new[] { new RegisterProfileChoice("Unconfirmed", null) }
             .Concat(NvtRegisterCatalog.Profiles.Select(profile => new RegisterProfileChoice(profile.IcFamily, profile.IcFamily)))
             .ToArray();
+        CaptureSetupEventVersionComboBox.ItemsSource = CaptureSetupEventVersions;
         RegisterFilterComboBox.ItemsSource = new RawRegisterFilterChoice[]
         {
             new("All records", RawRegisterFilter.All),

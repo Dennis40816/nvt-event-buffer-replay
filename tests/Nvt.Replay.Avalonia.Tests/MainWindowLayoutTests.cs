@@ -132,6 +132,132 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task User_file_load_prompts_for_missing_version_and_combines_detected_IC_settings()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+
+            await window.OpenCaptureAsync(fixture, promptForConfiguration: true);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
+            Assert.Equal(-1, Required<ComboBox>(window, "CaptureSetupEventVersionComboBox").SelectedIndex);
+            Assert.Equal("AUTO-DETECTED", Required<TextBlock>(window, "RegisterProfileInferenceBadgeText").Text);
+            Assert.Equal("51927", Assert.IsType<RegisterProfileChoice>(
+                Required<ComboBox>(window, "InferredRegisterProfileComboBox").SelectedItem).IcFamily);
+            Assert.Equal("0x01", Required<TextBox>(window, "CaptureSetupI2cAddressTextBox").Text);
+            Assert.False(Required<Button>(window, "CaptureSetupDecodeButton").IsEnabled);
+
+            Required<ComboBox>(window, "CaptureSetupEventVersionComboBox").SelectedItem =
+                Required<ComboBox>(window, "CaptureSetupEventVersionComboBox").Items
+                    .OfType<SelectOption>()
+                    .Single(option => option.Value == "0x83");
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Required<Button>(window, "CaptureSetupDecodeButton").IsEnabled);
+
+            Required<Button>(window, "CaptureSetupDecodeButton")
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(() => Required<ListBox>(window, "DecodedFramesList").ItemCount == 19);
+
+            Assert.False(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
+            Assert.Equal(1, Required<ComboBox>(window, "EventVersionComboBox").SelectedIndex);
+            Assert.Same(Required<TabItem>(window, "PaintTab"), Required<TabControl>(window, "WorkspaceTabs").SelectedItem);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Capture_setup_can_defer_decode_and_keep_raw_records_available()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture, promptForConfiguration: true);
+
+            Required<Button>(window, "CaptureSetupRawButton")
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.False(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
+            Assert.Equal(-1, Required<ComboBox>(window, "EventVersionComboBox").SelectedIndex);
+            Assert.Equal(38, Required<ListBox>(window, "RawRecordsList").ItemCount);
+            Assert.Empty(Required<ListBox>(window, "DecodedFramesList").Items);
+            Assert.Contains("unchanged", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Capture_setup_recomputes_IC_recommendation_when_target_address_changes()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture, promptForConfiguration: true);
+            var target = Required<TextBox>(window, "CaptureSetupI2cAddressTextBox");
+
+            target.Text = "0x02";
+            target.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("NO IC MATCH", Required<TextBlock>(window, "RegisterProfileInferenceBadgeText").Text);
+            Assert.Null(Assert.IsType<RegisterProfileChoice>(
+                Required<ComboBox>(window, "InferredRegisterProfileComboBox").SelectedItem).IcFamily);
+            Assert.Equal("I²C 0x02", Required<TextBlock>(window, "CaptureSetupTargetText").Text);
+
+            target.Text = "0x01";
+            target.RaiseEvent(new RoutedEventArgs(InputElement.LostFocusEvent));
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("AUTO-DETECTED", Required<TextBlock>(window, "RegisterProfileInferenceBadgeText").Text);
+            Assert.Equal("51927", Assert.IsType<RegisterProfileChoice>(
+                Required<ComboBox>(window, "InferredRegisterProfileComboBox").SelectedItem).IcFamily);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Capture_setup_exposes_Palm_profile_only_for_0x97()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture, promptForConfiguration: true);
+            var versions = Required<ComboBox>(window, "CaptureSetupEventVersionComboBox");
+            versions.SelectedItem = versions.Items.OfType<SelectOption>().Single(option => option.Value == "0x97");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(Required<StackPanel>(window, "CaptureSetupPalmProfilePanel").IsVisible);
+            Assert.False(Required<Button>(window, "CaptureSetupDecodeButton").IsEnabled);
+            Assert.Contains("Standard or Benz Palm", Required<TextBlock>(window, "CaptureSetupValidationText").Text);
+
+            Required<ComboBox>(window, "CaptureSetupPalmProfileComboBox").SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(Required<Button>(window, "CaptureSetupDecodeButton").IsEnabled);
+            Assert.Equal("REQUIRED", Required<TextBlock>(window, "CaptureSetupProfileHintText").Text);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Shared_event_buffer_page_opens_an_explicit_profile_choice_and_applies_it_without_reloading()
     {
         var window = ShowWindow();

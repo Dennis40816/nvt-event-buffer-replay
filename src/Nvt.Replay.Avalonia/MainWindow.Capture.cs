@@ -66,6 +66,8 @@ public partial class MainWindow : Window
 
     private string? pendingSourcePath;
 
+    private bool pendingSourceRequiresConfiguration;
+
     private bool configuringSourceChoice;
 
     private bool configuringRegisterProfile;
@@ -98,10 +100,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        await OpenCaptureAsync(path);
+        await OpenCaptureAsync(path, promptForConfiguration: true);
     }
 
-    internal async Task OpenCaptureAsync(string path, string? adapterId = null)
+    internal async Task OpenCaptureAsync(
+        string path,
+        string? adapterId = null,
+        bool promptForConfiguration = false)
     {
         HideRegisterProfileInference();
         var loadGeneration = checked(++nextCaptureLoadGeneration);
@@ -165,6 +170,7 @@ public partial class MainWindow : Window
             SourceAdapterText.IsVisible = true;
             SourceAdapterComboBox.IsVisible = false;
             pendingSourcePath = null;
+            pendingSourceRequiresConfiguration = false;
             SourceConfidenceText.Text = $"{session.Probe.Confidence} confidence · {session.Probe.Reasons.FirstOrDefault()}";
             SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
@@ -189,7 +195,8 @@ public partial class MainWindow : Window
             {
                 RawRecordsList.SelectedIndex = 0;
             }
-            if (profileInference.Status is NvtRegisterProfileInferenceStatus.Ambiguous or NvtRegisterProfileInferenceStatus.Conflicting)
+            if (promptForConfiguration ||
+                profileInference.Status is NvtRegisterProfileInferenceStatus.Ambiguous or NvtRegisterProfileInferenceStatus.Conflicting)
                 ShowRegisterProfileInference(profileInference);
         }
         catch (OperationCanceledException)
@@ -202,6 +209,7 @@ public partial class MainWindow : Window
             if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
             {
                 pendingSourcePath = path;
+                pendingSourceRequiresConfiguration = promptForConfiguration;
                 configuringSourceChoice = true;
                 SourceAdapterComboBox.ItemsSource = exception.Candidates
                     .Select(candidate => new SourceAdapterChoice(candidate.AdapterId, candidate.DisplayName, candidate.Confidence))
@@ -236,6 +244,7 @@ public partial class MainWindow : Window
 
     internal async Task ApplyStartupDecodeAsync(string eventVersion, string? palmProfile, string? registerProfile = null)
     {
+        HideRegisterProfileInference();
         if (!string.IsNullOrWhiteSpace(registerProfile))
         {
             var profileChoice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
@@ -608,58 +617,6 @@ public partial class MainWindow : Window
         configuringRegisterProfile = false;
     }
 
-    private void ShowRegisterProfileInference(NvtRegisterProfileInferenceResult inference)
-    {
-        pendingRegisterProfileInference = inference;
-        InferredRegisterProfileComboBox.ItemsSource = inference.Candidates
-            .Select(profile => new RegisterProfileChoice(profile.IcFamily, profile.IcFamily))
-            .ToArray();
-        InferredRegisterProfileComboBox.SelectedIndex = inference.Candidates.Count == 1 ? 0 : -1;
-        RegisterProfileInferenceTitleText.Text = inference.Status == NvtRegisterProfileInferenceStatus.Conflicting
-            ? "Multiple Event Buffer pages were captured"
-            : $"Event Buffer 0x{inference.Evidence[0].SelectedPage:X5} is shared by multiple IC profiles";
-        RegisterProfileInferenceEvidenceText.Text = inference.EvidenceSummary +
-            $" Choose one of: {string.Join(" or ", inference.Candidates.Select(item => item.IcFamily))}.";
-        RegisterProfileInferenceOverlay.IsVisible = true;
-        RegisterProfileInferenceOverlay.Focus();
-    }
-
-    private void HideRegisterProfileInference()
-    {
-        pendingRegisterProfileInference = null;
-        RegisterProfileInferenceOverlay.IsVisible = false;
-        InferredRegisterProfileComboBox.ItemsSource = null;
-        InferredRegisterProfileComboBox.SelectedIndex = -1;
-    }
-
-    private async void ApplyRegisterProfileInferenceButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (pendingRegisterProfileInference is null ||
-            InferredRegisterProfileComboBox.SelectedItem is not RegisterProfileChoice choice)
-        {
-            RegisterProfileInferenceEvidenceText.Text = "Select an IC profile before continuing. Raw data remains available while the profile is unconfirmed.";
-            return;
-        }
-
-        HideRegisterProfileInference();
-        SelectRegisterProfileChoice(choice.IcFamily);
-        await ApplyRegisterProfileAsync(choice);
-    }
-
-    private void CancelRegisterProfileInferenceButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        HideRegisterProfileInference();
-        ConfigurationHintText.Text = "IC profile remains unconfirmed; register collisions stay raw-only until a profile is selected.";
-        SessionStatusText.Text = "IC profile choice deferred; original capture remains unchanged";
-    }
-
-    private void RegisterProfileInferenceOverlay_OnKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Escape) return;
-        CancelRegisterProfileInferenceButton_OnClick(sender, new RoutedEventArgs());
-        e.Handled = true;
-    }
-
     internal NvtRegisterProfileInferenceResult? PendingRegisterProfileInferenceForTesting => pendingRegisterProfileInference;
 
     internal async Task ResolveRegisterProfileInferenceForTestingAsync(string icFamily)
@@ -674,7 +631,7 @@ public partial class MainWindow : Window
         await ApplyRegisterProfileAsync(choice);
     }
 
-    private async Task ApplyRegisterProfileAsync(RegisterProfileChoice choice)
+    private async Task ApplyRegisterProfileAsync(RegisterProfileChoice choice, bool decodeIfReady = true)
     {
         if (session is null) return;
         var selectedId = (RawRecordsList.SelectedItem as RawRecordRow)?.Record.StableId;
@@ -725,7 +682,7 @@ public partial class MainWindow : Window
         var canDecode = EventVersionComboBox.SelectedIndex >= 0 &&
             (EventVersionComboBox.SelectedIndex != 4 ||
              (choice.IcFamily is not null && Desay97ProfileComboBox.SelectedIndex >= 0));
-        if (canDecode)
+        if (decodeIfReady && canDecode)
             await DecodeSelectedAsync(
                 preserveWorkspaceContext: true,
                 preservedWorkspaceStateOverride: preservedWorkspaceState,
@@ -935,7 +892,10 @@ public partial class MainWindow : Window
         if (configuringSourceChoice || pendingSourcePath is not { } path ||
             SourceAdapterComboBox.SelectedItem is not SourceAdapterChoice choice)
             return;
-        await OpenCaptureAsync(path, choice.AdapterId);
+        await OpenCaptureAsync(
+            path,
+            choice.AdapterId,
+            promptForConfiguration: pendingSourceRequiresConfiguration);
     }
 
     private static ReplayDiagnostic[] SessionDiagnostics(CaptureSession capture) =>
