@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Nvt.Replay.Avalonia;
 
@@ -16,6 +17,12 @@ internal static class SourceFileNavigator
         var path = Path.GetFullPath(sourcePath);
         if (!File.Exists(path))
             return new SourceFileOpenResult(false, false, string.Empty, $"File not found: {path}");
+
+        if (PrefersExcel(path))
+        {
+            var excelResult = TryOpenCsvInExcel(path, lineNumber);
+            if (excelResult.Opened) return excelResult;
+        }
 
         foreach (var codePath in VisualStudioCodePaths())
         {
@@ -47,6 +54,80 @@ internal static class SourceFileNavigator
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {
             return new SourceFileOpenResult(false, false, "default application", exception.Message);
+        }
+    }
+
+    internal static bool PrefersExcel(string sourcePath) =>
+        Path.GetExtension(sourcePath).Equals(".csv", StringComparison.OrdinalIgnoreCase);
+
+    private static SourceFileOpenResult TryOpenCsvInExcel(string path, int lineNumber)
+    {
+        if (!OperatingSystem.IsWindows())
+            return new SourceFileOpenResult(false, false, "Microsoft Excel", "Excel Automation is only available on Windows.");
+
+        object? application = null;
+        object? workbooks = null;
+        object? workbook = null;
+        object? worksheet = null;
+        object? rows = null;
+        object? targetRow = null;
+        var opened = false;
+        try
+        {
+            var excelType = Type.GetTypeFromProgID("Excel.Application");
+            if (excelType is null)
+                return new SourceFileOpenResult(false, false, "Microsoft Excel", "Microsoft Excel is not installed or registered.");
+
+            application = Activator.CreateInstance(excelType) ??
+                          throw new InvalidOperationException("Microsoft Excel could not be started.");
+            dynamic excel = application;
+            excel.Visible = true;
+            workbooks = excel.Workbooks;
+            workbook = ((dynamic)workbooks).Open(path);
+            worksheet = ((dynamic)workbook).ActiveSheet;
+            rows = ((dynamic)worksheet).Rows;
+            targetRow = ((dynamic)rows).Item[Math.Max(1, lineNumber)];
+            excel.Goto(targetRow, true);
+            opened = true;
+            return new SourceFileOpenResult(true, true, "Microsoft Excel");
+        }
+        catch (Exception exception)
+        {
+            return new SourceFileOpenResult(false, false, "Microsoft Excel", exception.Message);
+        }
+        finally
+        {
+            if (!opened && application is not null)
+            {
+                try
+                {
+                    ((dynamic)application).Quit();
+                }
+                catch
+                {
+                    // The original Automation error is more useful than a cleanup failure.
+                }
+            }
+
+            ReleaseComObject(targetRow);
+            ReleaseComObject(rows);
+            ReleaseComObject(worksheet);
+            ReleaseComObject(workbook);
+            ReleaseComObject(workbooks);
+            ReleaseComObject(application);
+        }
+    }
+
+    private static void ReleaseComObject(object? value)
+    {
+        if (!OperatingSystem.IsWindows() || value is null || !Marshal.IsComObject(value)) return;
+        try
+        {
+            Marshal.FinalReleaseComObject(value);
+        }
+        catch (InvalidComObjectException)
+        {
+            // The RCW was already released by a failed Automation call.
         }
     }
 
