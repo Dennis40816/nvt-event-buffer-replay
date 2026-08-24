@@ -218,7 +218,7 @@ public partial class MainWindow : Window
     private void MainWindow_OnPreviewKeyUp(object? sender, KeyEventArgs e)
     {
         if (ReplayShortcutCatalog.Match(e.Key, e.KeyModifiers) is { } shortcut &&
-            (!IsShortcutEditingContext(e.Source) || shortcut.AllowWhileEditing))
+            CanHandleShortcutFromCurrentFocus(shortcut, e.Source))
         {
             e.Handled = true;
         }
@@ -254,11 +254,19 @@ public partial class MainWindow : Window
             e.Handled = true;
         }
         else if (ReplayShortcutCatalog.Match(e.Key, e.KeyModifiers) is { } shortcut &&
-                 (!IsShortcutEditingContext(e.Source) || shortcut.AllowWhileEditing) &&
+                 CanHandleShortcutFromCurrentFocus(shortcut, e.Source) &&
                  ExecuteShortcut(shortcut.Action))
         {
             e.Handled = true;
         }
+    }
+
+    private bool CanHandleShortcutFromCurrentFocus(ReplayShortcutDefinition shortcut, object? source)
+    {
+        if (!IsShortcutEditingContext(source) || shortcut.AllowWhileEditing) return true;
+
+        return shortcut.Action == ReplayShortcutAction.TogglePlayback &&
+               ReferenceEquals(WorkspaceTabs.SelectedItem, PaintTab);
     }
 
     private bool ExecuteShortcut(ReplayShortcutAction action)

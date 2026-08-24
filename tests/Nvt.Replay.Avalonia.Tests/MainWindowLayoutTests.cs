@@ -2345,6 +2345,38 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Space_toggles_playback_from_editing_controls_while_Paint_is_active()
+    {
+        var window = ShowWindow();
+        try
+        {
+            var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+            await window.OpenCaptureAsync(fixture);
+            await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
+
+            var speed = Required<ComboBox>(window, "ReplaySpeedComboBox");
+            speed.SelectedItem = speed.Items.OfType<ComboBoxItem>().Single(item => item.Tag?.ToString() == "0.01");
+
+            var panelWidth = Required<TextBox>(window, "PanelWidthTextBox");
+            panelWidth.Focus();
+            window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.None, " ");
+            window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.None, " ");
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Pause", Required<Button>(window, "PlayPauseButton").Content?.ToString());
+
+            speed.Focus();
+            window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.None, " ");
+            window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.None, " ");
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("Play", Required<Button>(window, "PlayPauseButton").Content?.ToString());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Changing_speed_interrupts_the_old_delay_and_one_frame_loop_is_rejected()
     {
         var window = ShowWindow();
