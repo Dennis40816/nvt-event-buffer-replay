@@ -270,7 +270,7 @@ public sealed class MainWindowLayoutTests
             Assert.Equal(NvtRegisterProfileInferenceStatus.Ambiguous, inference.Status);
             Assert.Equal(["51929/51932", "51950/51951"], inference.Candidates.Select(item => item.IcFamily));
             Assert.True(Required<Border>(window, "RegisterProfileInferenceOverlay").IsVisible);
-            Assert.Contains("0x80800", Required<TextBlock>(window, "RegisterProfileInferenceTitleText").Text);
+            Assert.Contains("0x80800", Required<TextBlock>(window, "CaptureSetupDetectionTitleText").Text);
             var sourceRows = Required<ListBox>(window, "RawRecordsList").ItemCount;
 
             await window.ResolveRegisterProfileInferenceForTestingAsync("51950/51951");

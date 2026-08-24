@@ -66,36 +66,50 @@ public partial class MainWindow
         switch (inference.Status)
         {
             case NvtRegisterProfileInferenceStatus.Unique:
-                RegisterProfileInferenceTitleText.Text =
-                    $"Confirm {inference.UniqueProfile!.IcFamily} decoder settings";
+                CaptureSetupDetectionTitleText.Text =
+                    $"{inference.UniqueProfile!.IcFamily} inferred from capture";
                 RegisterProfileInferenceBadgeText.Text = "AUTO-DETECTED";
                 RegisterProfileInferenceBadge.Classes.Add("detected");
-                CaptureSetupProfileHintText.Text = "AUTO-DETECTED";
+                CaptureSetupProfileHintText.Text = "SUGGESTED";
                 break;
             case NvtRegisterProfileInferenceStatus.Ambiguous:
-                RegisterProfileInferenceTitleText.Text =
-                    $"Event Buffer 0x{inference.Evidence[0].SelectedPage:X5} needs an IC choice";
+                CaptureSetupDetectionTitleText.Text =
+                    $"Event Buffer 0x{inference.Evidence[0].SelectedPage:X5} matches multiple IC profiles";
                 RegisterProfileInferenceBadgeText.Text = "NEEDS CONFIRMATION";
                 RegisterProfileInferenceBadge.Classes.Add("review");
-                CaptureSetupProfileHintText.Text = "CONFIRM";
+                CaptureSetupProfileHintText.Text = "REVIEW";
                 break;
             case NvtRegisterProfileInferenceStatus.Conflicting:
-                RegisterProfileInferenceTitleText.Text = "Multiple Event Buffer pages were captured";
+                CaptureSetupDetectionTitleText.Text = "Multiple Event Buffer pages need review";
                 RegisterProfileInferenceBadgeText.Text = "CONFLICTING EVIDENCE";
                 RegisterProfileInferenceBadge.Classes.Add("review");
-                CaptureSetupProfileHintText.Text = "CONFIRM";
+                CaptureSetupProfileHintText.Text = "REVIEW";
                 break;
             default:
-                RegisterProfileInferenceTitleText.Text = "Choose the Event Buffer format";
+                CaptureSetupDetectionTitleText.Text = "No IC profile inferred";
                 RegisterProfileInferenceBadgeText.Text = "NO IC MATCH";
                 RegisterProfileInferenceBadge.Classes.Add("none");
                 CaptureSetupProfileHintText.Text = "OPTIONAL";
                 break;
         }
 
-        RegisterProfileInferenceEvidenceText.Text = inference.EvidenceSummary;
+        RegisterProfileInferenceTitleText.Text = "Confirm decoder settings";
+        RegisterProfileInferenceEvidenceText.Text = CaptureSetupEvidenceSummary(inference);
         CaptureSetupSourceText.Text = session?.Probe.DisplayName ?? "-";
         CaptureSetupTargetText.Text = $"I²C {CaptureSetupI2cAddressTextBox.Text}";
+    }
+
+    private static string CaptureSetupEvidenceSummary(NvtRegisterProfileInferenceResult inference)
+    {
+        if (inference.Evidence.Count == 0)
+            return "No verified Event Buffer address evidence was found.";
+
+        var pages = string.Join(", ", inference.Evidence
+            .Select(item => $"0x{item.SelectedPage:X5}")
+            .Distinct(StringComparer.Ordinal));
+        var first = inference.Evidence[0];
+        return $"{inference.Evidence.Count:N0} matching Event Buffer records at {pages}. " +
+               $"First evidence: record {first.RecordIndex:N0}, {first.DisplayEvidence}.";
     }
 
     private SelectOption? CurrentCaptureSetupVersion()
@@ -208,10 +222,10 @@ public partial class MainWindow
         CaptureSetupProfileHintText.Text = isDesay97
             ? "REQUIRED"
             : pendingRegisterProfileInference?.Status == NvtRegisterProfileInferenceStatus.Unique
-                ? "AUTO-DETECTED"
+                ? "SUGGESTED"
                 : pendingRegisterProfileInference?.Status is NvtRegisterProfileInferenceStatus.Ambiguous or
                     NvtRegisterProfileInferenceStatus.Conflicting
-                    ? "CONFIRM"
+                    ? "REVIEW"
                     : "OPTIONAL";
         if (!isDesay97) CaptureSetupPalmProfileComboBox.SelectedIndex = -1;
         if (!configuringCaptureSetup) UpdateCaptureSetupValidation();
