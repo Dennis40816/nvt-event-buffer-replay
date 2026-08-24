@@ -66,6 +66,8 @@ public sealed class RawRecordRow : INotifyPropertyChanged
 
     public long Index => Record.Index;
 
+    public string SourceNavigationLabel => $"Open source line {Record.Location.LineNumber:N0}";
+
     public string Timestamp => Record.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "-";
 
     public string Operation => Record.Operation.ToString().ToUpperInvariant();

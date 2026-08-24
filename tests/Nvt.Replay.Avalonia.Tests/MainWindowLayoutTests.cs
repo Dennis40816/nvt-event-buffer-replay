@@ -1356,6 +1356,53 @@ public sealed class MainWindowLayoutTests
     }
 
     [AvaloniaFact]
+    public async Task Inspector_and_raw_source_links_open_the_exact_physical_capture_line()
+    {
+        var window = ShowWindow();
+        var fixture = Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv");
+        try
+        {
+            await window.OpenCaptureAsync(fixture);
+            Dispatcher.UIThread.RunJobs();
+
+            var raw = Required<ListBox>(window, "RawRecordsList");
+            var row = raw.Items.OfType<RawRecordRow>().First();
+            raw.SelectedItem = row;
+            Dispatcher.UIThread.RunJobs();
+
+            var opened = new List<(string Path, int Line)>();
+            window.SourceLocationOpenActionForTesting = (path, line) => opened.Add((path, line));
+
+            var inspectorLink = Required<Button>(window, "SourceLineButton");
+            Assert.True(inspectorLink.IsEnabled);
+            inspectorLink.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+            VisualTestCapture.Stabilize(window);
+            var rawLink = raw.GetVisualDescendants()
+                .OfType<Button>()
+                .Single(button => button.Classes.Contains("rawSourceOpen") && ReferenceEquals(button.DataContext, row));
+            var point = rawLink.TranslatePoint(new Point(rawLink.Bounds.Width / 2, rawLink.Bounds.Height / 2), window) ??
+                throw new InvalidOperationException("Raw source link could not translate into the window.");
+            window.MouseDown(point, MouseButton.Left, RawInputModifiers.None);
+            window.MouseUp(point, MouseButton.Left, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(2, opened.Count);
+            Assert.All(opened, location =>
+            {
+                Assert.Equal(Path.GetFullPath(fixture), location.Path);
+                Assert.Equal(row.Record.Location.LineNumber, location.Line);
+            });
+            Assert.False(row.IsExpanded);
+            Assert.Equal($"Open source line {row.Record.Location.LineNumber:N0}", ToolTip.GetTip(rawLink));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Header_7bit_target_selects_one_device_without_hiding_other_raw_records()
     {
         var packet = CommonPacket(asil: 0x00, corruptCrc: false, x: 240);

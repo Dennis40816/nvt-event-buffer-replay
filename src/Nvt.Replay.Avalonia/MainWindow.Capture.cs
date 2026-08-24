@@ -974,6 +974,10 @@ public partial class MainWindow : Window
         currentInspectorFrame = null;
         currentInspectorSnapshot = null;
         currentInspectorPresentation = null;
+        SourceLineText.Text = "-";
+        SourceLineButton.IsEnabled = false;
+        SourceOffsetText.Text = "-";
+        StableIdText.Text = "-";
         lastDetailPresentationTimestamp = 0;
         DetailPresentationCount = 0;
         RawRecordsList.ItemsSource = null;

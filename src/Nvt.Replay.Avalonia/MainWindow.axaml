@@ -190,7 +190,7 @@
                                                   AutomationProperties.Name="Register activity timeline" />
                 <TextBlock x:Name="RegisterResultText" Grid.Column="1" Margin="12,0,0,0" Text="0 records · 0 register events" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
               </Grid>
-              <Grid Grid.Row="2" ColumnDefinitions="64,100,132,190,200,70,*" Margin="10,0">
+              <Grid Grid.Row="2" ColumnDefinitions="64,100,132,190,200,70,*,60" Margin="10,0">
                 <TextBlock Classes="section" Text="INDEX" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Classes="section" Text="PC TIME" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" Classes="section" Text="7-BIT ADDR · W/R" VerticalAlignment="Center" />
@@ -198,13 +198,14 @@
                 <TextBlock Grid.Column="4" Classes="section" Text="REGISTER / MEANING" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="5" Classes="section" Text="BYTES" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="6" Classes="section" Text="PAYLOAD PREVIEW" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="7" Classes="section" Text="SOURCE" HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Grid>
               <ListBox x:Name="RawRecordsList" Classes="rawRecords" Grid.Row="3" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:RawRecordRow">
                     <Border Classes="rawRecordRow" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" PointerPressed="RawRecordRow_OnPointerPressed">
                       <Grid RowDefinitions="Auto,Auto">
-                        <Grid ColumnDefinitions="64,100,132,190,200,70,*" Margin="10,9">
+                        <Grid ColumnDefinitions="64,100,132,190,200,70,*,60" Margin="10,9">
                           <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
                           <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
                           <TextBlock Grid.Column="2" Text="{Binding I2cEndpoint}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="7-bit I²C slave address and transfer direction" />
@@ -215,6 +216,12 @@
                           <TextBlock Grid.Column="4" Text="{Binding Register}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
                           <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
                           <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                          <Button Grid.Column="7"
+                                  Classes="inspectorIcon rawSourceOpen"
+                                  Content="&#xE8A7;"
+                                  Click="RawSourceOpenButton_OnClick"
+                                  ToolTip.Tip="{Binding SourceNavigationLabel}"
+                                  AutomationProperties.Name="{Binding SourceNavigationLabel}" />
                         </Grid>
 
                         <Border Grid.Row="1" Classes="rawRecordDetails" IsVisible="{Binding IsExpanded}" AutomationProperties.Name="Raw event details">
@@ -1067,7 +1074,18 @@
                       <StackPanel Margin="14,2,14,14" Spacing="7">
                         <Grid ColumnDefinitions="86,*" RowDefinitions="Auto,7,Auto,7,Auto">
                           <TextBlock Classes="fieldLabel" Text="Source line" />
-                          <TextBlock x:Name="SourceLineText" Grid.Column="1" Classes="monoValue" Text="-" />
+                          <Button x:Name="SourceLineButton"
+                                  Grid.Column="1"
+                                  Classes="sourceLineLink"
+                                  IsEnabled="False"
+                                  Click="SourceLineButton_OnClick"
+                                  ToolTip.Tip="Open the original capture at this line"
+                                  AutomationProperties.Name="Open original source line">
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                              <TextBlock x:Name="SourceLineText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                              <TextBlock Text="&#xE8A7;" FontFamily="Segoe Fluent Icons" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                          </Button>
                           <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Byte offset" />
                           <TextBlock x:Name="SourceOffsetText" Grid.Row="2" Grid.Column="1" Classes="monoValue" Text="-" />
                           <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Stable ID" />

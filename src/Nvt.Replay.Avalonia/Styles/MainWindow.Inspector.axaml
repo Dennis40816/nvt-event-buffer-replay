@@ -16,6 +16,32 @@
       <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
     </Style>
+    <Style Selector="Button.rawSourceOpen">
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="MinWidth" Value="28" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.sourceLineLink">
+      <Setter Property="Height" Value="26" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="Button.sourceLineLink:pointerover">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.sourceLineLink:focus-visible">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.sourceLineLink:disabled TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
+    </Style>
     <Style Selector="Border.inspectorMetric">
       <Setter Property="MinHeight" Value="38" />
       <Setter Property="Padding" Value="9,6" />

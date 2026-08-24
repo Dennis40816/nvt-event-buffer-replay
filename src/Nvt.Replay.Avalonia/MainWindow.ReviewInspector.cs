@@ -28,6 +28,8 @@ namespace Nvt.Replay.Avalonia;
 
 public partial class MainWindow : Window
 {
+    internal Action<string, int>? SourceLocationOpenActionForTesting { get; set; }
+
     private ReviewInspectorWorkspace? reviewWorkspace;
     private ReviewGroupRow[] reviewRows = [];
     private PaintMarkerRow[] paintMarkerRows = [];
@@ -205,6 +207,12 @@ public partial class MainWindow : Window
 
     private void RawRecordRow_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (e.Source is Visual sourceVisual &&
+            (sourceVisual is Button || sourceVisual.FindAncestorOfType<Button>() is not null))
+        {
+            return;
+        }
+
         if (sender is not Control { DataContext: RawRecordRow row } control ||
             !e.GetCurrentPoint(control).Properties.IsLeftButtonPressed)
         {
@@ -221,6 +229,51 @@ public partial class MainWindow : Window
         expandedRawRow?.SetExpanded(false);
         row.SetExpanded(true);
         expandedRawRow = row;
+    }
+
+    private void RawSourceOpenButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control { DataContext: RawRecordRow row }) return;
+        OpenSourceLocation(row.Record);
+        e.Handled = true;
+    }
+
+    private void SourceLineButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (currentInspectorRecord is { } record) OpenSourceLocation(record);
+        e.Handled = true;
+    }
+
+    internal bool OpenSourceLocation(SourceRecord record)
+    {
+        if (session is not { } loadedSession)
+        {
+            SessionStatusText.Text = "Source location is unavailable because no capture is loaded.";
+            return false;
+        }
+
+        var path = Path.GetFullPath(loadedSession.SourcePath);
+        var lineNumber = Math.Max(1, record.Location.LineNumber);
+        if (!File.Exists(path))
+        {
+            SessionStatusText.Text = $"Source file is no longer available: {path}";
+            return false;
+        }
+
+        if (SourceLocationOpenActionForTesting is { } openForTesting)
+        {
+            openForTesting(path, lineNumber);
+            SessionStatusText.Text = $"Opened {Path.GetFileName(path)} at line {lineNumber:N0}";
+            return true;
+        }
+
+        var result = SourceFileNavigator.Open(path, lineNumber);
+        SessionStatusText.Text = result.Opened
+            ? result.ExactLine
+                ? $"Opened {Path.GetFileName(path)} at line {lineNumber:N0} in {result.Application}"
+                : $"Opened {Path.GetFileName(path)}. The default app may not select line {lineNumber:N0}."
+            : $"Unable to open source: {result.Error}";
+        return result.Opened;
     }
 
     private void CollapseExpandedRawRow()
@@ -767,6 +820,10 @@ public partial class MainWindow : Window
         PreviousFindingButton.IsVisible = hasNavigableFindings;
         NextFindingButton.IsVisible = hasNavigableFindings;
         SourceLineText.Text = record.Location.LineNumber.ToString(CultureInfo.InvariantCulture);
+        SourceLineButton.IsEnabled = session is not null && record.Location.LineNumber > 0;
+        ToolTip.SetTip(
+            SourceLineButton,
+            $"Open {Path.GetFileName(session?.SourcePath)} at line {record.Location.LineNumber:N0}");
         SourceOffsetText.Text = record.Location.ByteOffset.ToString(CultureInfo.InvariantCulture);
         StableIdText.Text = record.StableId;
         TransportFieldsItemsControl.ItemsSource = BuildTransportRows(record);
