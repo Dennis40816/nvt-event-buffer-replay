@@ -38,6 +38,7 @@ open to Event Buffer Analysis while no-file startup opens Tools.
 | FWU-07 | Keep frame navigation and selected-metric state responsive for large captures: parse/index off the UI thread, cache a bounded set of frames, and calculate only enabled metrics for the selected frame. Verify with long captures before claiming performance. | Planned |
 | FWU-08 | Review the launcher and raw workspace concept with the user, then verify the chosen design in dark/light and narrow layouts; avoid shrinking the matrix to make room for low-priority controls. | Design review pending |
 | FWU-09 | Make the NF-table reconstruction an **operator-editable, ordered step pipeline** rather than one fixed formula. Provide reusable blocks for common operations; allow drag-and-drop reordering; allow the operator to add a custom step using placeholders such as `{col}`. Show the chosen order and parameters, and retain them with the derived output so the result can be reproduced. The original input remains untouched. | User requirement recorded; block catalog and expression contract pending |
+| FWU-10 | Add **Raw Check** analysis to the Raw Data Analysis tool. The user expects this to be a substantial analysis area; record it for planning, but do not infer checks or results from the name alone. | Requested; scope and rules pending |
 
 ### Processing-state model (current understanding)
 
@@ -73,6 +74,10 @@ changing order can produce a different result.
    Custom steps should use a validated, deterministic expression language,
    not unrestricted code execution; this is a proposed safety boundary to
    review with the user.
+6. Raw Check contract: what input/state it consumes, which checks and
+   conditions it runs, how results are displayed, and representative expected
+   results/golden evidence. Keep this separate from generic matrix statistics
+   until the user defines how they relate.
 
 ## Reference boundary
 
