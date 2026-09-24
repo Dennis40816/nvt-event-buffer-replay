@@ -120,3 +120,12 @@ may retain their transport-level Event Buffer offset meaning.
 - scoped QA records suitable for rule conversion
 - multi-source clock alignment and comparison workflows
 - complete register maps, FW command dictionaries, Common Buffer handshake, and History layouts
+
+## Proposed next product slice — NVT FW UTIL
+
+- [ ] Rename the shell to NVT FW UTIL and make Event Buffer Analysis a tool workspace; keep Recent captures inside that workspace.
+- [ ] Add a C# Raw Data Analysis workspace with frame-by-frame matrix inspection and operator-selected per-frame metrics, using `nds_helper.frame_extractor` formats as an input reference only.
+- [ ] Specify and implement NF-table-based Before Diff / After Diff derivation with immutable original data and verified golden evidence.
+- [ ] Add TPMux2 only after its calculation contract and golden evidence are provided.
+
+Detailed decisions, scope boundaries, and open evidence are in [`TODO_NVT_FW_UTIL.md`](TODO_NVT_FW_UTIL.md).
