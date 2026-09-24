@@ -125,7 +125,7 @@ may retain their transport-level Event Buffer offset meaning.
 
 - [ ] Rename the shell to NVT FW UTIL and make Event Buffer Analysis a tool workspace; keep Recent captures inside that workspace.
 - [ ] Add a C# Raw Data Analysis workspace with frame-by-frame matrix inspection and operator-selected per-frame metrics, using `nds_helper.frame_extractor` formats as an input reference only.
-- [ ] Specify and implement NF-table-based Before Diff / After Diff derivation with immutable original data and verified golden evidence.
+- [ ] Specify and implement NF-table-based Before Diff / After Diff derivation as a user-editable ordered pipeline: common function blocks, drag reordering, and custom placeholder expressions (for example `{col}`), with immutable original data and verified golden evidence.
 - [ ] Add TPMux2 only after its calculation contract and golden evidence are provided.
 
 Detailed decisions, scope boundaries, and open evidence are in [`TODO_NVT_FW_UTIL.md`](TODO_NVT_FW_UTIL.md).

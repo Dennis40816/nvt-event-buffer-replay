@@ -37,6 +37,7 @@ open to Event Buffer Analysis while no-file startup opens Tools.
 | FWU-06 | Distinguish **Before Diff** and **After Diff** at import. Record the new requirement to use an **NF table** to derive/reconstruct the corresponding data view (the user specifically raised Before Diff input and calculating After Diff). Preserve the imported matrix separately from any derived matrix, with input type, NF-table identity, formula/version, and provenance visible. Do not guess arithmetic, sign, scale, saturation, or whether the reverse direction is mathematically valid. | Requirement recorded; conversion contract pending |
 | FWU-07 | Keep frame navigation and selected-metric state responsive for large captures: parse/index off the UI thread, cache a bounded set of frames, and calculate only enabled metrics for the selected frame. Verify with long captures before claiming performance. | Planned |
 | FWU-08 | Review the launcher and raw workspace concept with the user, then verify the chosen design in dark/light and narrow layouts; avoid shrinking the matrix to make room for low-priority controls. | Design review pending |
+| FWU-09 | Make the NF-table reconstruction an **operator-editable, ordered step pipeline** rather than one fixed formula. Provide reusable blocks for common operations; allow drag-and-drop reordering; allow the operator to add a custom step using placeholders such as `{col}`. Show the chosen order and parameters, and retain them with the derived output so the result can be reproduced. The original input remains untouched. | User requirement recorded; block catalog and expression contract pending |
 
 ## Evidence and decisions still needed
 
@@ -52,6 +53,15 @@ open to Event Buffer Analysis while no-file startup opens Tools.
    meaning/unit, failure behavior, and a golden example.
 4. Metric scope and missing/invalid-cell rules, including whether Button Data
    is a parallel section or participates in any calculation.
+5. Reconstruction editor contract: the first set of built-in function blocks;
+   whether each step operates on one cell, one column, one frame, or an entire
+   capture; and the exact meaning and allowed companions of `{col}` (for
+   example, whether it denotes a column index, current cell value, or a column
+   vector). Also confirm expression syntax, evaluation order, error handling,
+   numeric precision, and a golden case where step order changes the result.
+   Custom steps should use a validated, deterministic expression language,
+   not unrestricted code execution; this is a proposed safety boundary to
+   review with the user.
 
 ## Reference boundary
 
