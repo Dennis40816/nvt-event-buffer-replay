@@ -175,10 +175,12 @@ HTML/PDF reports, evidence ZIP packaging, and redaction UI are post-MVP.
   success; cancellation never overwrites existing output.
 - CI opens and renders the real Avalonia `MainWindow` through the headless Skia
   backend and verifies decode, compact layout, responsive rails, and both themes.
-- Each new handwritten production `.cs` or `.axaml` file under `src/` is limited
-  to 800 lines. The six grandfathered files in `eng/file-size-baseline.json`
-  may only shrink. Total and per-project line counts are reported without a
-  limit. Tests are counted separately; generated code cannot hide product logic.
+- Every handwritten production `.cs` or `.axaml` file under `src/` outside
+  `eng/file-size-baseline.json` is limited to 800 lines. Each grandfathered
+  file must match its recorded ceiling; lower the entry when it shrinks, and
+  remove it when the file reaches 800 lines or is deleted. Total and
+  per-project line counts are reported without a limit. Tests are counted
+  separately; generated code cannot hide product logic.
 
 ## Deferred capabilities
 

@@ -95,11 +95,13 @@ ones a change touches:
   [`docs/source-adapters.md`](docs/source-adapters.md).
 - 0003: physical, logical and evidence timelines stay distinct; human analysis
   lives in a sidecar.
-- 0004: new handwritten production `.cs` and `.axaml` files under `src/` have
-  an 800-line ceiling; the six grandfathered files may only shrink.
+- 0004: every handwritten production `.cs` and `.axaml` file under `src/`
+  outside the baseline has an 800-line ceiling. Each grandfathered file must
+  match its recorded ceiling; lower the entry when it shrinks, and remove it
+  when the file reaches 800 lines or is deleted.
   `./scripts/check-line-budget.ps1` reports total and per-project counts and
   fails on a per-file violation. The owner approves every change under `src/`;
-  changing the ceiling or baseline is an owner decision and an ADR change.
+  changing this policy is an owner decision and an ADR change.
 
 ## Completion
 

@@ -12,9 +12,10 @@ $BaselinePath = Join-Path $RepoRoot 'eng/file-size-baseline.json'
 $Baseline = Get-Content -LiteralPath $BaselinePath -Raw | ConvertFrom-Json -AsHashtable
 
 function Get-CountedFiles([string]$Root) {
-    return @(Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object {
+    return @(Get-ChildItem -LiteralPath $Root -Recurse -File -Force | Where-Object {
+        $RelativePath = [IO.Path]::GetRelativePath($Root, $_.FullName)
         $_.Extension -in '.cs', '.axaml' -and
-        $_.FullName -notmatch '[\\/](bin|obj)[\\/]'
+        $RelativePath -notmatch '(^|[\\/])(bin|obj)[\\/]'
     } | Sort-Object FullName)
 }
 
@@ -32,6 +33,12 @@ $Production = [ordered]@{ files = $ProductionFiles.Count; lines = 0 }
 $Projects = [ordered]@{}
 $OffendingFiles = @()
 $AllowlistedFiles = @()
+$ObservedAllowlisted = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$Problems = @()
+
+if ($ProductionFiles.Count -eq 0) {
+    $Problems += 'No production .cs or .axaml files found under src/.'
+}
 
 foreach ($File in $ProductionFiles) {
     $RelativePath = [IO.Path]::GetRelativePath($RepoRoot, $File.FullName).Replace('\', '/')
@@ -47,17 +54,35 @@ foreach ($File in $ProductionFiles) {
     $IsAllowlisted = $Baseline.files.Contains($RelativePath)
     $Ceiling = if ($IsAllowlisted) { [int]$Baseline.files[$RelativePath] } else { $PerFileLimit }
     if ($IsAllowlisted) {
+        $ObservedAllowlisted.Add($RelativePath) | Out-Null
         $AllowlistedFiles += [ordered]@{ path = $RelativePath; lines = $LineCount; ceiling = $Ceiling }
-        if ($LineCount -lt $Ceiling) {
-            Write-Host "Note: $RelativePath has shrunk to $LineCount lines; lower its baseline ceiling from $Ceiling."
+        if ($LineCount -le $PerFileLimit) {
+            $OffendingFiles += [ordered]@{ path = $RelativePath; lines = $LineCount; ceiling = $Ceiling; reason = 'remove-baseline' }
+            $Problems += "$RelativePath is at or below $PerFileLimit lines; remove its entry from eng/file-size-baseline.json."
+        }
+        elseif ($LineCount -lt $Ceiling) {
+            $OffendingFiles += [ordered]@{ path = $RelativePath; lines = $LineCount; ceiling = $Ceiling; reason = 'lower-baseline' }
+            $Problems += "$RelativePath shrank to $LineCount lines; lower its value in eng/file-size-baseline.json from $Ceiling to $LineCount."
+        }
+        elseif ($LineCount -gt $Ceiling) {
+            $OffendingFiles += [ordered]@{ path = $RelativePath; lines = $LineCount; ceiling = $Ceiling; reason = 'above-baseline' }
+            $Problems += "$RelativePath exceeds its $Ceiling-line baseline ceiling ($LineCount lines)."
         }
     }
-    if ($LineCount -gt $Ceiling) {
-        $OffendingFiles += [ordered]@{ path = $RelativePath; lines = $LineCount; ceiling = $Ceiling }
+    elseif ($LineCount -gt $PerFileLimit) {
+        $OffendingFiles += [ordered]@{ path = $RelativePath; lines = $LineCount; ceiling = $PerFileLimit; reason = 'over-limit' }
+        $Problems += "$RelativePath exceeds the $PerFileLimit-line per-file limit ($LineCount lines)."
     }
 }
 
-$Status = if ($OffendingFiles.Count -gt 0) { 'fail' } else { 'pass' }
+foreach ($Entry in $Baseline.files.GetEnumerator()) {
+    if (-not $ObservedAllowlisted.Contains($Entry.Key)) {
+        $OffendingFiles += [ordered]@{ path = $Entry.Key; lines = $null; ceiling = [int]$Entry.Value; reason = 'missing-baseline-file' }
+        $Problems += "$($Entry.Key) is missing; remove its entry from eng/file-size-baseline.json."
+    }
+}
+
+$Status = if ($Problems.Count -gt 0) { 'fail' } else { 'pass' }
 $Report = [ordered]@{
     schemaVersion = '2.0'
     generatedUtc = [DateTimeOffset]::UtcNow.ToString('O')
@@ -67,6 +92,7 @@ $Report = [ordered]@{
     offendingFiles = $OffendingFiles
     allowlistedFiles = $AllowlistedFiles
     projects = @($Projects.Values)
+    errors = $Problems
     status = $Status
 }
 
@@ -77,5 +103,5 @@ if ($ReportPath) {
 }
 $Report | ConvertTo-Json -Depth 5
 if ($Status -eq 'fail') {
-    throw "Handwritten production file ceiling exceeded: $($OffendingFiles.Count) file(s)."
+    throw ($Problems -join [Environment]::NewLine)
 }
