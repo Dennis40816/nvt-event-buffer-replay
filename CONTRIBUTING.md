@@ -90,12 +90,13 @@ latest review decision being an approval on that same head. A later change
 request or dismissal blocks it.
 
 The required build check is the `build-and-test` job of
-`.github/workflows/ci.yml`. The `governance / approval` check enforces the
-approval rule on pull requests; its script does not read `build-and-test`.
-The repository ruleset must require `build-and-test` and the commit status
-`governance/approval-rule`, Code Owner review with stale approval dismissal,
-and branches up to date. The GitHub App keeps no `workflows` permission by
-default.
+`.github/workflows/ci.yml`. The `governance / approval` workflow evaluates
+the approval rule on pull requests and reports a commit status; its script
+does not read `build-and-test`. The repository ruleset must require
+`build-and-test` and the commit status `governance/approval-rule`, pinned to
+the GitHub Actions source, plus Code Owner review with stale approval
+dismissal and branches up to date. The GitHub App must hold no `workflows`
+permission or commit-status write permission.
 
 GitHub reads `approval.yml` from the pull request's merge ref, which the pull
 request can change. The workflow checks out the base branch's script and
@@ -126,9 +127,9 @@ the final rebase, and merge one pull request at a time.
 
 Agents open pull requests through the GitHub App, so the owner's account
 remains free to approve them. GitHub forbids approval of one's own pull
-request. An owner-authored owner-gated pull request leaves the check red;
-the owner merges it personally, through the ruleset bypass once a ruleset
-requires the check.
+request. An owner-authored owner-gated pull request leaves the approval check
+and status red; the owner merges it personally, through the ruleset bypass
+once a ruleset requires the status.
 
 Releases follow [`docs/release.md`](docs/release.md). Publishing a release is
 the owner's action, or an agent's on the owner's instruction for that version.

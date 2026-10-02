@@ -220,12 +220,17 @@ def owner_result(reviews: list[dict], owner: dict, head: str) -> tuple[bool, str
 
 
 def evaluate(reader: Reader, policy: dict,
-             checked_out_base: str | None) -> list[tuple[str, bool, str]]:
+             checked_out_base: str | None,
+             expected_head: str | None = None) -> list[tuple[str, bool, str]]:
     pull = reader.pull()
+    require(pull.get("state") == "open", "pull request is not open")
     base, head = pull.get("base"), pull.get("head")
     require(isinstance(base, dict) and isinstance(head, dict),
             "pull request has no base or head")
     head_sha = sha(head.get("sha"), "head SHA")
+    if expected_head is not None:
+        require(head_sha == sha(expected_head, "expected head SHA"),
+                "live head differs from expected head")
     base_ref = base.get("ref")
     require(isinstance(base_ref, str) and base_ref, "base ref is missing")
     base_sha = reader.branch_tip(base_ref)
@@ -246,6 +251,7 @@ def evaluate(reader: Reader, policy: dict,
         live = reader.pull()
         live_base, live_head = live.get("base"), live.get("head")
         require(isinstance(live_base, dict) and isinstance(live_head, dict)
+                and live.get("state") == "open"
                 and live_base.get("ref") == base_ref
                 and str(live_head.get("sha") or "").lower() == head_sha
                 and reader.branch_tip(base_ref) == base_sha,
@@ -266,6 +272,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--summary", type=Path)
     parser.add_argument("--checked-out-base")
+    parser.add_argument("--expected-head")
     args = parser.parse_args(argv)
     try:
         require(args.fixture is not None or args.checked_out_base is not None,
@@ -274,7 +281,7 @@ def main(argv: list[str] | None = None) -> int:
                            "approval policy")
         require(isinstance(policy, dict), "approval policy is malformed")
         results = evaluate(Reader(args.repository, args.pull_request, args.fixture),
-                           policy, args.checked_out_base)
+                           policy, args.checked_out_base, args.expected_head)
     except (InputError, OSError, KeyError, TypeError, ValueError) as error:
         results = [(part, False, f"input unavailable: {error}") for part in
                    ("up to date", "gate", "review record", "owner approval")]
