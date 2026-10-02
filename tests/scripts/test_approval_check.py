@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 import unittest
 from unittest import mock
 
@@ -250,6 +251,58 @@ class ApprovalCheckTests(unittest.TestCase):
                           approval.evaluate(reader, POLICY, None)}
                 self.assertFalse(result["review record"][0])
                 self.assertIn("malformed", result["review record"][1])
+
+    def test_invisible_and_markdown_word_splits_block_older_accept(self):
+        splits = (
+            "Re&shy;view record", "Re&#8203;view record",
+            "Re\u00adview record", "Re\u200bview record",
+            "Re\u200cview record", "Re\u200dview record",
+            "Re\u2060view record", "Re\ufeffview record",
+            "Re\u200eview record", "Re\u202eview record",
+            "Review re**cord**", "Re_view_ record",
+            "Re`view` record", "Re~view~ record",
+            "Re<b>view</b> record", "Re<!-- x -->view record",
+        )
+        for prefix in splits:
+            with self.subTest(prefix=prefix):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(review(
+                    101, state="COMMENTED",
+                    body=f"{prefix}: {HEAD} reject"))
+                result = {name: (ok, detail) for name, ok, detail in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"][0])
+                self.assertIn("malformed", result["review record"][1])
+
+    def test_normalization_removes_every_format_character(self):
+        import unicodedata
+        format_chars = "".join(chr(codepoint) for codepoint in
+                               range(0x110000)
+                               if unicodedata.category(chr(codepoint)) == "Cf")
+        self.assertEqual(
+            approval.normalized_attempt_text(f"Re{format_chars}view record"),
+            "Review record")
+
+    def test_ordinary_prose_keeps_existing_attempt_result(self):
+        for body, expected in (("preview recording", False),
+                               ("reviewer recorded", True)):
+            with self.subTest(body=body):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(review(
+                    101, state="COMMENTED", body=body))
+                result = {name: ok for name, ok, _ in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertEqual(result["review record"], expected)
+
+    def test_comparison_text_is_fast_on_adversarial_bodies(self):
+        for pattern in ("for(i<n; i++) ", "<a ", "<!--", "&"):
+            with self.subTest(pattern=pattern):
+                body = (pattern * (65536 // len(pattern) + 1))[:65536]
+                started = time.perf_counter()
+                comparison = approval.review_comparison_text(body)
+                elapsed = time.perf_counter() - started
+                self.assertEqual(comparison, body)
+                self.assertLess(elapsed, 2.0, f"{pattern!r}: {elapsed:.3f}s")
 
     def test_html_parser_cannot_hide_raw_later_record(self):
         for body in (f"<!--\nReview record: {HEAD} reject\n-->",

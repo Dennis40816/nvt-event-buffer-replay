@@ -45,7 +45,9 @@ An `accept` verdict requires zero P0 and P1 findings.
 
 The latest pull request review from the owner or the GitHub App whose body
 contains the letters "review record", in any case and with any spacing or
-punctuation between the two words, is the record in force. Write that first
+punctuation between the two words, is the record in force. HTML tags, HTML
+comments, character references, invisible characters and Markdown emphasis
+inside or between those words also count as a record attempt. Write that first
 line exactly: any other form, including a review that only mentions a review
 record, reads as a malformed record and blocks the merge until a well-formed
 record follows. A record posted as a change request, or later dismissed, does
