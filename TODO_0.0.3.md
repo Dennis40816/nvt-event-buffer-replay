@@ -10,7 +10,7 @@
 
 - Branch：`0.0.3`
 - 參考 commit / tag：`1e2567b` / `0.0.2`
-- Production handwritten C# / XAML：23,880 行；通過 25,000 行 architecture review threshold 與 30,000 行 hard cap。
+- Production handwritten C# / XAML：23,880 行。這是 0.0.3 當時的量測；現行檔案大小規則見 `docs/adr/0004-mvp-and-line-budget.md`。
 - Core / parser / rendering / CLI tests：329 / 329 passed。
 - Avalonia tests：115 / 115 passed；29 張 approved screenshots 由 exact pixel gate 驗證。
 - 私有有效 KingstVIS golden `063ad09…`：568 logical frames；過期的 `4bec1b…` 不再作為 KingstVIS schema gate。

@@ -175,9 +175,10 @@ HTML/PDF reports, evidence ZIP packaging, and redaction UI are post-MVP.
   success; cancellation never overwrites existing output.
 - CI opens and renders the real Avalonia `MainWindow` through the headless Skia
   backend and verifies decode, compact layout, responsive rails, and both themes.
-- Production target is 18,000-22,000 handwritten C#/XAML lines. At 25,000 an
-  architecture review is mandatory. 30,000 is a hard cap. Tests are counted
-  separately; generated code cannot hide product logic.
+- Each new handwritten production `.cs` or `.axaml` file under `src/` is limited
+  to 800 lines. The six grandfathered files in `eng/file-size-baseline.json`
+  may only shrink. Total and per-project line counts are reported without a
+  limit. Tests are counted separately; generated code cannot hide product logic.
 
 ## Deferred capabilities
 
