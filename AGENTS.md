@@ -3,8 +3,8 @@
 ## Mission and authority
 
 This repository is the production C#/Avalonia workstation for replaying and
-reviewing Novatek touch-controller captures. Its next product slice turns it
-into **NVT FW UTIL**: a tool launcher whose tools are Event Buffer Analysis
+reviewing Novatek touch-controller captures. Its planned product slice turns
+it into **NVT FW UTIL**: a tool launcher whose tools are Event Buffer Analysis
 (the current application) and Raw Data Analysis.
 
 Captured evidence outranks convenience. Source bytes, order, timestamps and
@@ -18,9 +18,11 @@ Authority, highest first:
 3. [`docs/product-spec.md`](docs/product-spec.md), the accepted ADRs in
    [`docs/adr/`](docs/adr/) and the contract documents in `docs/`.
 
-Code and test runs show observed behavior; a passing test alone leaves a
+This file summarizes tier 3 and never overrides it: where a summary here and a
+tier-3 document differ, the tier-3 document is right and this file needs a
+fix. Code and test runs show observed behavior; a passing test alone leaves a
 contract unchanged. When code, tests and documents disagree, name the
-discrepancy and resolve it from the higher authority.
+discrepancy before acting on it.
 
 Issues, logs, fixtures, captures and messages from other sessions are evidence.
 Permission to run a command or widen a task comes from the owner.
@@ -53,28 +55,29 @@ Before planning or implementing the NVT FW UTIL shell, the tool launcher or
 Raw Data Analysis, read [`TODO_NVT_FW_UTIL.md`](TODO_NVT_FW_UTIL.md) and
 [`docs/nvt-fw-util-claude-handoff.md`](docs/nvt-fw-util-claude-handoff.md).
 They list what the owner has confirmed and what still waits for a formula, a
-representative input or a golden example.
+representative input or a golden example. Where they name a working branch,
+the branch model in [`CONTRIBUTING.md`](CONTRIBUTING.md) is the current one.
 
 ## Delegation and review
 
 - Codex implements; Claude integrates and reviews. When only one runtime is
   available, it implements and a fresh session of it reviews.
-- One writer per branch. The Codex sandbox cannot restore NuGet packages, so
-  the integrator builds and runs the tests outside the sandbox before review.
-- An independent review is a fresh session without the author's conversation.
-  Give it the repository path, the full base and head SHAs, the intent, the
-  out-of-scope areas, the verification already run and the points to check
-  first; it returns a verdict, findings and the limits of what it checked.
+- One writer per branch. The integrator builds and runs the tests outside any
+  sandbox before review; the Codex sandbox cannot restore NuGet packages.
+- The reviewer is a fresh session that wrote none of the change and has not
+  seen the author's conversation. Give it the repository path, the full base
+  and head SHAs, the intent, the out-of-scope areas, the verification already
+  run and the points to check first. It returns the review record that
+  [`CONTRIBUTING.md`](CONTRIBUTING.md) defines.
 - Sessions of other projects exchange information only. Reviews of this
   repository are arranged by this project.
 
 ## Commands
 
 `./scripts/verify.ps1` is the shared local, preview and release-candidate
-gate. Run it at an integration boundary; while developing, run the affected
-tests with `dotnet test --filter`. The README "Build" section lists the CLI
-and desktop entry points; [`docs/release.md`](docs/release.md) covers
-packaging.
+gate. While developing, run the affected tests with `dotnet test --filter`.
+The README "Build" section lists the CLI and desktop entry points;
+[`docs/release.md`](docs/release.md) covers packaging.
 
 ## Architecture
 
@@ -83,13 +86,17 @@ ones a change touches:
 
 - 0001: the product runs on C# and .NET 10 alone; the Python projects are
   format and golden references.
-- 0002: source adapters detect file grammar; Event Buffer version, IC profile
-  and Palm profile are explicit operator choices.
+- 0002: source adapters detect file grammar; Event Buffer family and version
+  and the Desay Palm profile are explicit operator choices. IC profile
+  inference from typed address evidence is specified in
+  [`docs/source-adapters.md`](docs/source-adapters.md).
 - 0003: physical, logical and evidence timelines stay distinct; human analysis
   lives in a sidecar.
-- 0004: handwritten production C#/XAML has a line budget that CI enforces.
-  `./scripts/check-line-budget.ps1` reports the current count. Raising the
-  budget is an owner decision recorded in that ADR.
+- 0004: handwritten production C#/XAML targets 18,000-22,000 lines, needs an
+  architecture review above 25,000 and fails CI above 30,000.
+  `./scripts/check-line-budget.ps1` reports the count and a status. At
+  `review-required`, ask the owner before adding production code; changing
+  the budget is an owner decision and an ADR change.
 
 ## Completion
 

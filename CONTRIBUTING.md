@@ -4,18 +4,20 @@
 
 - `main` holds released versions and receives release merges only.
 - A version branch such as `0.1.2` is the integration trunk of that version.
+  The owner decides when a trunk is created and when it is released.
 - `feature/<version>/<topic>` carries one logical change and merges into its
   version trunk.
 - `VERSION` changes in the release-preparation commit, so on a trunk it names
   the previous release until then.
 
 Owner decision, 2026-10-02: `0.1.2` finishes the repository template adoption
-(agent documents and CI alignment, no product behavior change); NVT FW UTIL
-product work uses a new `0.2.0` trunk.
+(agent documents, the approval check and CI alignment) with no product
+behavior change, and keeps the checks that `ci.yml` and `scripts/verify.ps1`
+already run. NVT FW UTIL product work uses a new `0.2.0` trunk.
 
 ## Change sequence
 
-1. Branch from the trunk head. One writer per branch.
+1. Branch from the trunk head.
 2. Implement one logical change and run the affected tests. Commit with a
    Conventional Commit title and a body that states the reason.
 3. At the integration boundary run `./scripts/verify.ps1` outside any sandbox.
@@ -34,21 +36,44 @@ A review record names the full head SHA it reviewed and gives:
 - the limits of what was checked.
 
 Severities: **P0** ships wrong results, loses data or leaks private material;
-**P1** breaks a contract or required behavior; **P2** should be fixed soon;
-**P3** is optional polish.
+**P1** breaks a contract or required behavior, or misdirects an agent;
+**P2** should be fixed soon; **P3** is optional polish.
 
 ## Who approves
 
-A pull request that touches any owner-gated path is owner-gated as a whole.
+Owner-gated paths are everything that decides what is built, tested, checked,
+released or approved. A pull request that touches one is owner-gated as a
+whole, and so is one that removes or weakens a test, an approved snapshot or a
+fixture.
 
-| Gate | Paths | Merge condition |
-| --- | --- | --- |
-| Owner-gated | `src/**`; `.github/**`; `VERSION`, `global.json`, `Directory.Build.props`; `eng/**`; the scripts that CI and the release workflows execute (`scripts/verify.ps1`, `verify-release-identity.ps1`, `check-line-budget.ps1`, `performance-gate.ps1`, `package.ps1`, `smoke-release.ps1`, `install-ffmpeg.ps1`); `AGENTS.md`, `CONTRIBUTING.md`; agent permission settings (`.claude/settings*.json`, `.codex/**`) | The review-gated condition plus the owner's GitHub approval of the last push |
-| Review-gated | Everything else: documents, tests, other scripts, agent skills | Review verdict `accept` with zero P0 and P1 findings on the exact head, and every required check green |
+Owner-gated paths:
 
-A failing required check or an open P0 or P1 finding blocks every merge.
-Releases follow [`docs/release.md`](docs/release.md) and wait on the GitHub
-`release` environment.
+- Product and build graph: `src/**`, `*.sln`, `**/*.csproj`,
+  `**/packages.lock.json`, `Directory.*.props`, `Directory.*.targets`,
+  `global.json`, `nuget.config`, `.editorconfig`, `.globalconfig`.
+- CI, gates and release: `.github/**`, `scripts/**`, `eng/**`, `VERSION`,
+  `docs/release.md`, any `CODEOWNERS`.
+- Decisions and contracts: `docs/adr/**`, `docs/product-spec.md`.
+- Rules and agent configuration: every `AGENTS.md` and `AGENTS.override.md`,
+  `CLAUDE.md`, `CONTRIBUTING.md`, `.claude/**`, `.codex/**`, `.mcp.json`.
+- Repository hygiene: `.gitignore`, `.gitattributes`.
+- Any merge into `main`.
+
+Everything else is review-gated: other documents, added or strengthened tests,
+synthetic fixtures and agent skills under `.agents/skills/**`.
+
+| Gate | Merge condition |
+| --- | --- |
+| Review-gated | The latest review record is for the exact head, its verdict is `accept` with zero P0 and P1 findings, and the required check has completed green on that head |
+| Owner-gated | The review-gated condition, plus the owner's GitHub approval submitted on that same head |
+
+The required check is the `build-and-test` job of `.github/workflows/ci.yml`.
+The merging agent reads the check conclusion and the approval for the exact
+head from GitHub immediately before merging; a pending or failed check, an
+open P0 or P1 finding, or an approval of an earlier commit blocks the merge.
+
+Releases follow [`docs/release.md`](docs/release.md). Publishing a release is
+the owner's action, or an agent's on the owner's instruction for that version.
 
 ## GitHub access for agents
 
@@ -61,6 +86,7 @@ stay local.
 
 ## Temporary files
 
-Tests and scripts create uniquely named directories under the system temporary
-path and remove them. Put any other scratch output in the ignored `artifacts/`
-or `out/` folders, or outside the repository.
+Tests use the system temporary path. The gate and packaging scripts write
+under the ignored `artifacts/` folder and reset it, so run one of them at a
+time per checkout. Put any other scratch output in `artifacts/` or `out/`, or
+outside the repository.
