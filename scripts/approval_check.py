@@ -23,6 +23,10 @@ import urllib.request
 ROOT = Path(__file__).resolve().parent.parent
 SHA = re.compile(r"[0-9a-fA-F]{40}\Z")
 RECORD = re.compile(r"Review record: ([0-9a-fA-F]{40}) (accept|reject)\Z")
+# A line that tries to be a record: the words, however decorated or cased,
+# together with a SHA-like run or a verdict. Plain prose does not count.
+ATTEMPT = re.compile(r"[\s>#*_`~-]*review record\b", re.IGNORECASE)
+VERDICT = re.compile(r"[0-9a-f]{7,}|\b(?:accept|reject)\b", re.IGNORECASE)
 PER_PAGE = 100
 MAX_PAGES = 30
 
@@ -182,9 +186,7 @@ def record_result(reviews: list[dict], policy: dict, head: str) -> tuple[bool, s
         require(isinstance(body, str), "review body is malformed")
         lines = body.splitlines()
         first = next((line.rstrip() for line in lines if line.strip()), "")
-        mentions_record = any(line.lstrip().startswith("Review record")
-                              for line in lines)
-        if first.startswith("Review record") or mentions_record:
+        if any(ATTEMPT.match(line) and VERDICT.search(line) for line in lines):
             records.append((review_order(review), review,
                             RECORD.fullmatch(first)))
     if not records:

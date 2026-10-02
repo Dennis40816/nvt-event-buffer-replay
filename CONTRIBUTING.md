@@ -100,7 +100,10 @@ earlier commit blocks the merge.
 From a checkout of `origin/<base>`, the merging agent also runs
 `python scripts/approval_check.py` with `--repository`, `--pull-request` and
 `--checked-out-base` set to that checkout's `git rev-parse HEAD`, and requires
-exit 0 before merging.
+exit 0 before merging. While a base branch has no checker yet (the pull
+request that introduces it, and the first release merge into `main`), the
+check stays red and this step cannot run: the merging agent confirms the
+other parts and the owner merges.
 
 Every merge moves the base branch, so the other open pull requests then need a
 rebase, a new review and a new check run. Ask for the owner's approval after
@@ -109,7 +112,8 @@ the final rebase, and merge one pull request at a time.
 Agents open pull requests through the GitHub App, so the owner's account
 remains free to approve them. GitHub forbids approval of one's own pull
 request. An owner-authored owner-gated pull request leaves the check red;
-the owner merges it personally.
+the owner merges it personally, through the ruleset bypass once a ruleset
+requires the check.
 
 Releases follow [`docs/release.md`](docs/release.md). Publishing a release is
 the owner's action, or an agent's on the owner's instruction for that version.
