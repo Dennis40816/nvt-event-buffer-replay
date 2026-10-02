@@ -16,7 +16,7 @@ permissions:
   statuses: write
 
 concurrency:
-  group: approval-${{ github.event.pull_request.number }}
+  group: approval-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -65,13 +65,13 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           APPROVAL_REPOSITORY: ${{ github.repository }}
           APPROVAL_PULL_REQUEST: ${{ github.event.pull_request.number }}
-          APPROVAL_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # New checker inputs use env so older base scripts ignore them.
+          APPROVAL_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
         run: >-
           python -B scripts/approval_check.py
           --repository "$APPROVAL_REPOSITORY"
           --pull-request "$APPROVAL_PULL_REQUEST"
           --checked-out-base "$APPROVAL_BASE_SHA"
-          --expected-head "$APPROVAL_HEAD_SHA"
           --summary "$GITHUB_STEP_SUMMARY"
       - name: Report approval status
         if: ${{ !cancelled() }}

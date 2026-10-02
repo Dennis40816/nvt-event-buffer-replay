@@ -90,22 +90,25 @@ latest review decision being an approval on that same head. A later change
 request or dismissal blocks it.
 
 The required build check is the `build-and-test` job of
-`.github/workflows/ci.yml`. The `governance / approval` workflow evaluates
-the approval rule on pull requests and reports a commit status; its script
-does not read `build-and-test`. The repository ruleset must require
-`build-and-test` and the commit status `governance/approval-rule`, pinned to
-the GitHub Actions source, plus Code Owner review with stale approval
-dismissal and branches up to date. The GitHub App must hold no `workflows`
-permission or commit-status write permission.
+`.github/workflows/ci.yml`. The `approval` workflow (job
+`governance / approval`) evaluates the approval rule on pull requests and
+reports a commit status; its script does not read `build-and-test`. The
+repository ruleset must require `build-and-test` and the commit status
+`governance/approval-rule`, pinned to the GitHub Actions source, plus Code
+Owner review with stale approval dismissal and branches up to date. The
+GitHub App must hold no `workflows` permission or commit-status write
+permission.
 
 GitHub reads `approval.yml` from the pull request's merge ref, which the pull
 request can change. The workflow checks out the base branch's script and
 policy, but that checkout does not make the workflow definition trusted.
 Several `governance / approval` check runs accumulate on one head; a stale
-red run remains after approval. The ruleset must require the commit status
-`governance/approval-rule` and `build-and-test`, not the check run
-`governance / approval`. Pull requests from forks cannot post the status with
-a read-only token, so they stay blocked until a maintainer handles them.
+red run remains after approval. A commit status belongs to a commit, so two
+open pull requests with the same head share one status and the latest run
+wins. The ruleset must require the commit status `governance/approval-rule`
+and `build-and-test`, not the check run `governance / approval`. Pull requests
+from forks cannot post the status with a read-only token, so they stay
+blocked until a maintainer handles them.
 
 The merging agent confirms each part of the condition for the exact head
 immediately before merging: `git fetch origin <base>` followed by
@@ -114,12 +117,12 @@ and the owner's review as GitHub reports them. A head behind its base branch,
 a pending or failed check, an open P0 or P1 finding, or an approval of an
 earlier commit blocks the merge.
 From a checkout of `origin/<base>`, the merging agent also runs
-`python scripts/approval_check.py` with `--repository`, `--pull-request` and
-`--checked-out-base` set to that checkout's `git rev-parse HEAD`, and requires
-exit 0 before merging. While a base branch has no checker yet (the pull
-request that introduces it, and the first release merge into `main`), the
-check stays red and this step cannot run: the merging agent confirms the
-other parts and the owner merges.
+`python scripts/approval_check.py` with `--repository`, `--pull-request`,
+`--expected-head <head>` and `--checked-out-base` set to that checkout's
+`git rev-parse HEAD`, and requires exit 0 before merging. While a base
+branch has no checker yet (the pull request that introduces it, and the
+first release merge into `main`), the check stays red and this step cannot
+run: the merging agent confirms the other parts and the owner merges.
 
 Every merge moves the base branch, so the other open pull requests then need a
 rebase, a new review and a new check run. Ask for the owner's approval after

@@ -272,7 +272,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--summary", type=Path)
     parser.add_argument("--checked-out-base")
-    parser.add_argument("--expected-head")
+    parser.add_argument("--expected-head",
+                        default=os.environ.get("APPROVAL_EXPECTED_HEAD") or None)
     args = parser.parse_args(argv)
     try:
         require(args.fixture is not None or args.checked_out_base is not None,

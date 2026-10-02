@@ -8,6 +8,7 @@ import http.client
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -380,6 +381,37 @@ class ApprovalCheckTests(unittest.TestCase):
                             "live head differs from expected head" in line
                             for line in lines))
 
+    def test_expected_head_environment(self):
+        args = ["--repository", "Dennis40816/nvt-event-buffer-replay",
+                "--pull-request", "1", "--fixture", str(FIXTURE)]
+        for value, expected_code in ((OLD, 1), (HEAD, 0), ("", 0)):
+            with self.subTest(value=value):
+                output = io.StringIO()
+                with mock.patch.dict(os.environ,
+                                     {"APPROVAL_EXPECTED_HEAD": value}):
+                    with redirect_stdout(output):
+                        code = approval.main(args)
+                self.assertEqual(code, expected_code)
+                if value == OLD:
+                    self.assertEqual(output.getvalue().count("- FAIL "), 4)
+                    self.assertIn("live head differs from expected head",
+                                  output.getvalue())
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(approval.main(args), 0)
+
+    def test_explicit_expected_head_overrides_environment(self):
+        args = ["--repository", "Dennis40816/nvt-event-buffer-replay",
+                "--pull-request", "1", "--fixture", str(FIXTURE)]
+        for environment, explicit, expected_code in (
+                (OLD, HEAD, 0), (HEAD, OLD, 1)):
+            with self.subTest(environment=environment, explicit=explicit):
+                with mock.patch.dict(os.environ,
+                                     {"APPROVAL_EXPECTED_HEAD": environment}):
+                    with redirect_stdout(io.StringIO()):
+                        code = approval.main(args + ["--expected-head", explicit])
+                self.assertEqual(code, expected_code)
+
     def test_closed_or_merged_pull_fails_all_parts(self):
         for merged in (False, True):
             with self.subTest(merged=merged):
@@ -479,8 +511,16 @@ class ApprovalCheckTests(unittest.TestCase):
         self.assertIn("# GitHub reads this workflow from the pull request's "
                       "merge ref.", workflow)
         self.assertRegex(workflow, r"(?m)^  statuses: write$")
+        self.assertRegex(workflow, r"(?m)^  pull_request_review:$")
+        self.assertIn(
+            "  group: approval-${{ github.event.pull_request.number }}-"
+            "${{ github.event.pull_request.head.sha }}", workflow)
+        job_header = workflow.split("  approval:\n", 1)[1].split(
+            "    steps:\n", 1)[0]
+        self.assertNotRegex(job_header, r"(?m)^    if:")
         self.assertNotIn("|| true", workflow)
         self.assertNotIn("continue-on-error", workflow)
+        self.assertNotIn("--expected-head", workflow)
         steps = re.findall(
             r"(?ms)^      - name: [^\n]+\n.*?(?=^      - name: |\Z)",
             workflow)
@@ -502,9 +542,8 @@ class ApprovalCheckTests(unittest.TestCase):
         self.assertEqual(re.findall(r"(?m)^          ref: (.+)$", checkout),
                          ["${{ github.event.pull_request.base.ref }}"])
         self.assertRegex(check, r"(?m)^        id: approval_check$")
-        self.assertRegex(check, r"(?m)^          APPROVAL_HEAD_SHA: "
+        self.assertRegex(check, r"(?m)^          APPROVAL_EXPECTED_HEAD: "
                          r"\$\{\{ github.event.pull_request.head.sha \}\}$")
-        self.assertIn('--expected-head "$APPROVAL_HEAD_SHA"', check)
         self.assertRegex(status,
                          r"(?m)^        if: \$\{\{ !cancelled\(\) \}\}$")
         self.assertRegex(status, r"(?m)^          APPROVAL_OUTCOME: "
