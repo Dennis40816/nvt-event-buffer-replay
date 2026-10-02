@@ -16,5 +16,6 @@
   ],
   "tests_non_added": "tests/**",
   "owner_gated_base_branch": "main",
-  "required_check": "build-and-test"
+  "required_check": "build-and-test",
+  "approval_status_context": "governance/approval-rule"
 }

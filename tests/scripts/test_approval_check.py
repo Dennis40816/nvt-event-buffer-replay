@@ -438,6 +438,33 @@ class ApprovalCheckTests(unittest.TestCase):
         self.assertEqual(POLICY["tests_non_added"], "tests/**")
         self.assertEqual(POLICY["owner_gated_base_branch"], "main")
         self.assertEqual(POLICY["required_check"], "build-and-test")
+        self.assertEqual(POLICY["approval_status_context"],
+                         "governance/approval-rule")
+
+    def test_workflow_reports_approval_commit_status(self):
+        workflow = (ROOT / ".github/workflows/approval.yml").read_text(
+            encoding="utf-8")
+        self.assertRegex(workflow, r"(?m)^  statuses: write$")
+        self.assertRegex(workflow,
+                         r"(?m)^      - name: Check approval\n"
+                         r"        id: approval_check$")
+        match = re.search(
+            r"(?ms)^      - name: Report approval status\n"
+            r"(?P<step>.*?)(?=^      - name: |\Z)", workflow)
+        self.assertIsNotNone(match)
+        step = match.group("step")
+        self.assertRegex(step, r"(?m)^        if: \$\{\{ !cancelled\(\) \}\}$")
+        self.assertRegex(step, r"(?m)^          APPROVAL_HEAD_SHA: "
+                         r"\$\{\{ github.event.pull_request.head.sha \}\}$")
+        self.assertRegex(step, r"(?m)^          APPROVAL_OUTCOME: "
+                         r"\$\{\{ steps.approval_check.outcome \}\}$")
+        body = step.split("        run: |\n", 1)[1]
+        self.assertNotIn("${{", body)
+        self.assertIn("$APPROVAL_HEAD_SHA", body)
+        self.assertIn("$APPROVAL_OUTCOME", body)
+        context = re.search(r'-f "context=([^"]+)"', body)
+        self.assertIsNotNone(context)
+        self.assertEqual(context.group(1), POLICY["approval_status_context"])
 
 
 if __name__ == "__main__":

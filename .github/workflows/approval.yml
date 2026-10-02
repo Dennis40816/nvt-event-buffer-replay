@@ -1,7 +1,7 @@
 name: approval
 
-# PR merge ref supplies this workflow; base checkout supplies the checker/policy.
-# Base moves emit no PR event: up-to-date and merger checks cover staleness; dual-event ruleset selection needs live verification.
+# Require commit status governance/approval-rule and build-and-test in rulesets.
+# Same-named check runs accumulate per head; the latest commit status wins.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, edited,
@@ -12,6 +12,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  statuses: write
 
 concurrency:
   group: approval-${{ github.event.pull_request.number }}
@@ -37,6 +38,7 @@ jobs:
           base_sha=$(git rev-parse HEAD)
           echo "APPROVAL_BASE_SHA=$base_sha" >> "$GITHUB_ENV"
       - name: Check approval
+        id: approval_check
         env:
           GITHUB_TOKEN: ${{ github.token }}
           APPROVAL_REPOSITORY: ${{ github.repository }}
@@ -47,3 +49,24 @@ jobs:
           --pull-request "$APPROVAL_PULL_REQUEST"
           --checked-out-base "$APPROVAL_BASE_SHA"
           --summary "$GITHUB_STEP_SUMMARY"
+      - name: Report approval status
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APPROVAL_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          APPROVAL_OUTCOME: ${{ steps.approval_check.outcome }}
+          APPROVAL_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$APPROVAL_OUTCOME" = success ]; then
+            state=success
+            description="Approval rule satisfied"
+          else
+            state=failure
+            description="Approval rule not satisfied"
+          fi
+          gh api -X POST "repos/$GH_REPO/statuses/$APPROVAL_HEAD_SHA" \
+            -f "state=$state" \
+            -f "context=governance/approval-rule" \
+            -f "description=$description" \
+            -f "target_url=$APPROVAL_RUN_URL"

@@ -92,15 +92,19 @@ request or dismissal blocks it.
 The required build check is the `build-and-test` job of
 `.github/workflows/ci.yml`. The `governance / approval` check enforces the
 approval rule on pull requests; its script does not read `build-and-test`.
-The repository ruleset must require both checks, Code Owner review with stale
-approval dismissal, and branches up to date. The GitHub App keeps no
-`workflows` permission by default.
+The repository ruleset must require `build-and-test` and the commit status
+`governance/approval-rule`, Code Owner review with stale approval dismissal,
+and branches up to date. The GitHub App keeps no `workflows` permission by
+default.
 
 GitHub reads `approval.yml` from the pull request's merge ref, which the pull
 request can change. The workflow checks out the base branch's script and
 policy, but that checkout does not make the workflow definition trusted.
-Which run a ruleset uses when both PR and review events report the same check
-name remains unverified until a live pull request runs this workflow.
+Several `governance / approval` check runs accumulate on one head; a stale
+red run remains after approval. The ruleset must require the commit status
+`governance/approval-rule` and `build-and-test`, not the check run
+`governance / approval`. Pull requests from forks cannot post the status with
+a read-only token, so they stay blocked until a maintainer handles them.
 
 The merging agent confirms each part of the condition for the exact head
 immediately before merging: `git fetch origin <base>` followed by
