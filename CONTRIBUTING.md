@@ -43,6 +43,11 @@ Severities: **P0** ships wrong results, loses data or leaks private material;
 **P2** should be fixed soon; **P3** is optional polish.
 An `accept` verdict requires zero P0 and P1 findings.
 
+The latest review from the owner or the GitHub App that contains the words
+"review record" is the record in force. Write that first line exactly: any
+other form, including a comment that only mentions a review record, reads as
+a malformed record and blocks the merge until a well-formed record follows.
+
 ## Who approves
 
 Owner-gated paths are everything that decides what is built, tested, checked,

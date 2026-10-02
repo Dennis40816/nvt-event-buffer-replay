@@ -184,44 +184,76 @@ class ApprovalCheckTests(unittest.TestCase):
                           approval.evaluate(reader, POLICY, None)}
                 self.assertFalse(result["review record"])
 
-    def test_equal_time_records_order_by_id_not_list_position(self):
+    def test_equal_time_records_order_by_id_in_either_list_order(self):
         for accept_id, reject_id, passes in ((9, 5, True), (5, 9, False)):
-            with self.subTest(accept_id=accept_id, reject_id=reject_id):
-                reader = MemoryReader()
-                accept = review(accept_id, user=OWNER, state="COMMENTED",
-                                body=f"Review record: {HEAD} accept")
-                reject = review(reject_id, user=OWNER, state="COMMENTED",
-                                body=f"Review record: {HEAD} reject")
-                reject["submitted_at"] = accept["submitted_at"]
-                # The higher id is listed first, so list order would pick
-                # the other record.
-                ordered = sorted((accept, reject), key=lambda item: -item["id"])
-                reader.payloads["reviews-1"] = ordered
-                result = {name: ok for name, ok, _ in
-                          approval.evaluate(reader, POLICY, None)}
-                self.assertEqual(result["review record"], passes)
+            for reverse in (False, True):
+                with self.subTest(accept_id=accept_id, reject_id=reject_id,
+                                  reverse=reverse):
+                    reader = MemoryReader()
+                    accept = review(accept_id, user=OWNER, state="COMMENTED",
+                                    body=f"Review record: {HEAD} accept")
+                    reject = review(reject_id, user=OWNER, state="COMMENTED",
+                                    body=f"Review record: {HEAD} reject")
+                    reject["submitted_at"] = accept["submitted_at"]
+                    ordered = [accept, reject]
+                    if reverse:
+                        ordered.reverse()
+                    reader.payloads["reviews-1"] = ordered
+                    result = {name: ok for name, ok, _ in
+                              approval.evaluate(reader, POLICY, None)}
+                    self.assertEqual(result["review record"], passes)
 
-    def test_decorated_or_recased_newer_reject_blocks_older_accept(self):
-        for line in (f"**Review record: {HEAD} reject**",
+    def test_any_later_mention_that_is_not_exact_blocks_older_accept(self):
+        nbsp, zero_width = chr(0xA0), chr(0x200B)
+        for body in (f"**Review record: {HEAD} reject**",
                      f"- Review record: {HEAD} reject",
                      f"## Review record: {HEAD} reject",
                      f"> Review record: {HEAD} reject",
+                     f"1. Review record: {HEAD} reject",
+                     f"(Review record: {HEAD} reject)",
+                     f"| Review record: {HEAD} reject |",
+                     f"<b>Review record: {HEAD} reject</b>",
                      f"review record: {HEAD} reject",
-                     f"Review Record: {HEAD} reject"):
-            with self.subTest(line=line):
+                     f"Review Record: {HEAD} reject",
+                     f"Updated review record: {HEAD} reject",
+                     f"Review  record: {HEAD} reject",
+                     f"Review-record: {HEAD} reject",
+                     f"Review{nbsp}record: {HEAD} reject",
+                     f"{zero_width}Review record: {HEAD} reject",
+                     f"Review record:\n{HEAD} reject",
+                     "Review record: rejected",
+                     "Review record: not accepted",
+                     "Review record: declined, see findings",
+                     f"Findings first.\nReview record: {HEAD} reject",
+                     "Review record read, approving."):
+            with self.subTest(body=body):
                 reader = MemoryReader()
                 reader.payloads["reviews-1"].append(
-                    review(101, state="COMMENTED", body=line))
+                    review(101, state="COMMENTED", body=body))
                 result = {name: (ok, detail) for name, ok, detail in
                           approval.evaluate(reader, POLICY, None)}
                 self.assertFalse(result["review record"][0])
                 self.assertIn("malformed", result["review record"][1])
 
-    def test_prose_mentioning_a_review_record_is_not_a_record(self):
-        self.reader.payloads["reviews-1"].append(
-            review(101, state="APPROVED",
-                   body="Review record read, approving."))
-        self.assertTrue(self.result()["review record"][0])
+    def test_later_review_without_the_phrase_leaves_the_record(self):
+        for body in ("", "Looks good, approving.", "Reviewed the findings."):
+            with self.subTest(body=body):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(
+                    review(101, state="APPROVED", body=body))
+                result = {name: ok for name, ok, _ in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertTrue(result["review record"])
+
+    def test_exact_first_line_wins_over_later_lines_in_the_same_body(self):
+        reader = MemoryReader()
+        reader.payloads["reviews-1"].append(review(
+            101, state="COMMENTED",
+            body=f"\n  \nReview record: {HEAD} accept  \r\n"
+                 f"Earlier round: **Review record: {OLD} reject**"))
+        result = {name: ok for name, ok, _ in
+                  approval.evaluate(reader, POLICY, None)}
+        self.assertTrue(result["review record"])
 
     def test_summary_file_receives_the_result_lines(self):
         import tempfile
