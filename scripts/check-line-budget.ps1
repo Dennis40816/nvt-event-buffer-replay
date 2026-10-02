@@ -36,6 +36,18 @@ $AllowlistedFiles = @()
 $ObservedAllowlisted = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $Problems = @()
 
+$GitWorkTree = & git -C $RepoRoot rev-parse --is-inside-work-tree 2>$null
+if ($LASTEXITCODE -eq 0 -and $GitWorkTree -eq 'true') {
+    $TrackedOutput = (& git -C $RepoRoot ls-files --cached -z -- src/) -join ''
+    if ($LASTEXITCODE -ne 0) { throw 'Could not list tracked files below src/.' }
+    foreach ($TrackedPath in $TrackedOutput.Split([char]0, [StringSplitOptions]::RemoveEmptyEntries)) {
+        if ($TrackedPath -match '(^|/)(bin|obj)/') {
+            $OffendingFiles += [ordered]@{ path = $TrackedPath; lines = $null; ceiling = $null; reason = 'tracked-build-output' }
+            $Problems += "$TrackedPath is tracked under a bin/ or obj/ folder below src/."
+        }
+    }
+}
+
 if ($ProductionFiles.Count -eq 0) {
     $Problems += 'No production .cs or .axaml files found under src/.'
 }

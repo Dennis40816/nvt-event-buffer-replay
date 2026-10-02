@@ -90,7 +90,11 @@ latest review decision being an approval on that same head. A later change
 request or dismissal blocks it.
 
 The required build check is the `build-and-test` job of
-`.github/workflows/ci.yml`. The `approval` workflow (job
+`.github/workflows/ci.yml`. CI runs on every pull request and on pushes to
+`main` and three-part numeric version trunks such as `0.1.2`. The job restores,
+builds, tests, enforces the 800-line per-file ceiling with recorded baseline
+exceptions, tests that checker, then runs the performance smoke gate. The
+`approval` workflow (job
 `governance / approval`) evaluates the approval rule on pull requests and
 reports a commit status; its script does not read `build-and-test`. The
 repository ruleset must require `build-and-test` and the commit status

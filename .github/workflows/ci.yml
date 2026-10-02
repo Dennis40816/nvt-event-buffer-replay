@@ -2,11 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, '[0-9]+.[0-9]+.[0-9]+']
   pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-and-test:
@@ -24,18 +28,26 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
+        timeout-minutes: 5
         run: dotnet restore Nvt.EventBufferReplay.sln --locked-mode
 
       - name: Build
+        timeout-minutes: 5
         run: dotnet build Nvt.EventBufferReplay.sln --configuration Release --no-restore
 
       - name: Test
+        timeout-minutes: 7
         run: dotnet test Nvt.EventBufferReplay.sln --configuration Release --no-build
 
-      - name: Enforce handwritten line budget
+      - name: Enforce handwritten per-file line ceiling
         shell: pwsh
         run: ./scripts/check-line-budget.ps1
 
+      - name: Test line ceiling checker
+        shell: pwsh
+        run: ./scripts/test-line-budget.ps1
+
       - name: Run performance smoke gate
+        timeout-minutes: 5
         shell: pwsh
         run: ./scripts/performance-gate.ps1 -Mode Smoke
