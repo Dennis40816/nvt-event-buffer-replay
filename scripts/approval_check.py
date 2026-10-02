@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import html
+from html.parser import HTMLParser
 import http.client
 import json
 import os
@@ -27,7 +29,8 @@ RECORD = re.compile(r"Review record: ([0-9a-fA-F]{40}) (accept|reject)\Z")
 # record anywhere is a record. Unless its first non-empty line is exact, it is
 # a malformed one, so a later decorated or reworded reject can never be skipped
 # in favour of an older accept. The cost is that prose mentioning the phrase
-# needs a fresh, well-formed record after it.
+# needs a fresh, well-formed record after it. Test the raw body as well as
+# visible HTML text so normalization can only add attempts, never remove them.
 ATTEMPT = re.compile(r"review[\W_]*record", re.IGNORECASE)
 PER_PAGE = 100
 MAX_PAGES = 30
@@ -155,6 +158,31 @@ def review_order(review: dict) -> tuple[str, int]:
     return submitted, review_id
 
 
+class ReviewComparisonText(HTMLParser):
+    """Collect review text without HTML tags or comments, keeping references."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self.parts.append(data)
+
+    def handle_entityref(self, name: str) -> None:
+        self.parts.append(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        self.parts.append(f"&#{name};")
+
+
+def review_comparison_text(body: str) -> str:
+    parser = ReviewComparisonText()
+    parser.feed(body)
+    parser.close()
+    # Decode only after parsing: &lt;b&gt; is visible literal text, not a tag.
+    return html.unescape("".join(parser.parts))
+
+
 def classify(policy: dict, base_ref: str, files: list[dict]) -> tuple[str, str]:
     if base_ref.casefold() == policy["owner_gated_base_branch"].casefold():
         return "owner-gated", f"base branch {base_ref}"
@@ -188,7 +216,7 @@ def record_result(reviews: list[dict], policy: dict, head: str) -> tuple[bool, s
         require(isinstance(body, str), "review body is malformed")
         lines = body.splitlines()
         first = next((line.rstrip() for line in lines if line.strip()), "")
-        if ATTEMPT.search(body):
+        if ATTEMPT.search(body) or ATTEMPT.search(review_comparison_text(body)):
             records.append((review_order(review), review,
                             RECORD.fullmatch(first)))
     if not records:
