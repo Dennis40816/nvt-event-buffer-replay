@@ -17,8 +17,9 @@ sets of documents each govern their own subject:
 - Process (scope, delegation, branches, approval): this file and
   [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Product behavior: [`docs/product-spec.md`](docs/product-spec.md), the
-  accepted ADRs in [`docs/adr/`](docs/adr/) and the contract documents in
-  `docs/`.
+  accepted ADRs in [`docs/adr/`](docs/adr/) and the protocol, format and
+  feature contracts in `docs/`. `docs/release.md` and the handoff documents
+  there describe process.
 
 Where this file summarizes a product document and the two differ, the product
 document is right and this file needs a fix. Code and test runs show observed
