@@ -12,8 +12,8 @@
 
 Owner decision, 2026-10-02: `0.1.2` finishes the repository template adoption
 (agent documents, a check that enforces the approval rule below, and CI
-alignment) with no product behavior change, and keeps the checks that `ci.yml`
-and `scripts/verify.ps1` already run. NVT FW UTIL product work uses a new `0.2.0` trunk.
+alignment) with no product behavior change, and keeps the checks that
+`ci.yml` and `scripts/verify.ps1` already run. NVT FW UTIL product work uses a new `0.2.0` trunk.
 
 ## Change sequence
 
@@ -29,7 +29,8 @@ and `scripts/verify.ps1` already run. NVT FW UTIL product work uses a new `0.2.0
 
 ## Review record
 
-A review record names the full head SHA it reviewed and gives:
+A review record starts with the line `Review record: <full head SHA>
+<verdict>` and gives:
 
 - the verdict: `accept` or `reject`;
 - findings, each with a severity, `path:line`, the failing scenario and a fix;
@@ -43,13 +44,15 @@ Severities: **P0** ships wrong results, loses data or leaks private material;
 
 Owner-gated paths are everything that decides what is built, tested, checked,
 released or approved. A pull request that touches one is owner-gated as a
-whole. Every pattern below matches at any depth of the repository.
+whole. Every pattern below matches at any depth of the repository, ignoring
+case.
 
 - Product and build graph: `src/**`, `*.sln`, `*.slnx`, `*.slnf`, `*.csproj`,
   `packages.lock.json`, `*.props`, `*.targets`, `*.rsp`, `global.json`,
   `nuget.config`, `.editorconfig`, `.globalconfig`.
-- Existing tests: modifying or deleting any existing file under `tests/**`,
-  including approved snapshots and fixtures.
+- Existing tests: modifying or deleting any file under `tests/**` that is
+  present on the base branch, including approved snapshots and fixtures
+  (`M` or `D` in `git diff --name-status --no-renames origin/<base>...<head>`).
 - CI, gates and release: `.github/**`, `scripts/**`, `eng/**`, `VERSION`,
   `docs/release.md`, `CODEOWNERS`.
 - Decisions and contracts: `docs/adr/**`, `docs/product-spec.md`.
@@ -64,15 +67,20 @@ Everything else is review-gated: other documents and new files under
 
 | Gate | Merge condition |
 | --- | --- |
-| Review-gated | The head contains the current trunk head, the latest review record is for that exact head with verdict `accept` and zero P0 and P1 findings, and the required check has completed green on it |
-| Owner-gated | The review-gated condition, plus the owner's GitHub approval submitted on that same head |
+| Review-gated | The head contains the current head of the base branch, the latest review record is for that exact head with verdict `accept` and zero P0 and P1 findings, and the required check has completed green on it |
+| Owner-gated | The review-gated condition, plus the owner's latest GitHub review on that same head being an approval |
 
 The required check is the `build-and-test` job of `.github/workflows/ci.yml`.
 The merging agent confirms each part of the condition for the exact head
-immediately before merging: `git merge-base --is-ancestor origin/<trunk>
-<head>`, the check conclusion and the approval as GitHub reports them. A head
-behind the trunk, a pending or failed check, an open P0 or P1 finding, or an
-approval of an earlier commit blocks the merge.
+immediately before merging: `git fetch origin <base>` followed by
+`git merge-base --is-ancestor origin/<base> <head>`, then the check conclusion
+and the owner's review as GitHub reports them. A head behind its base branch,
+a pending or failed check, an open P0 or P1 finding, or an approval of an
+earlier commit blocks the merge.
+
+Every merge moves the base branch, so the other open pull requests then need a
+rebase, a new review and a new check run. Ask for the owner's approval after
+the final rebase, and merge one pull request at a time.
 
 Agents open pull requests through the GitHub App, so the owner's account
 remains free to approve them. The owner merging a pull request personally
