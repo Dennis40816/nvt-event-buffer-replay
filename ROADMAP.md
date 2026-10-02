@@ -128,5 +128,6 @@ may retain their transport-level Event Buffer offset meaning.
 - [ ] Specify and implement NF-table-based Before Diff / After Diff derivation as a user-editable ordered pipeline: common function blocks, drag reordering, and custom placeholder expressions (for example `{col}`), with immutable original data and verified golden evidence. Stop FW `Before Diff` is confirmed as NF-normalized with common-mode removal not yet applied.
 - [ ] Define and add Raw Check analysis after its input, checks, presentation, and golden evidence are specified.
 - [ ] Add TPMux2 only after its calculation contract and golden evidence are provided.
+- [ ] Version route: 0.x, then 1.0, then 2.0.0, which starts sharing the core architecture (owner's provisional target, 2026-10-02).
 
 Detailed decisions, scope boundaries, and open evidence are in [`TODO_NVT_FW_UTIL.md`](TODO_NVT_FW_UTIL.md).
