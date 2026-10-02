@@ -103,6 +103,7 @@ public sealed class ReplayPaintSurface : Control
         if (Mode == mode) return;
         Mode = mode;
         labelAnchors.Clear();
+        if (scene is not null) AdvanceLabelAnchors(scene);
         InvalidateVisual();
     }
 
@@ -139,8 +140,23 @@ public sealed class ReplayPaintSurface : Control
             if ((activeIds & (1u << id)) == 0) labelAnchors.Remove(id);
         sceneTrailBatches = trailBatchCache.Build(value);
         viewportOffset = ClampViewportOffset(viewportOffset, value.ViewExtent, zoomFactor);
+        AdvanceLabelAnchors(value);
         UpdatePanCursor();
         InvalidateVisual();
+    }
+
+    private void AdvanceLabelAnchors(ReplayScene value)
+    {
+        if (Bounds.Width > 0 && Bounds.Height > 0)
+        {
+            var bounds = new Rect(Bounds.Size);
+            var placements = PlaceSceneLabels(
+                BuildViewport(bounds, value.ViewExtent, zoomFactor, viewportOffset),
+                BuildAvailableBounds(bounds),
+                value).Placements;
+            foreach (var placement in placements)
+                labelAnchors[placement.Key] = placement.Anchor;
+        }
     }
 
     public void Clear()
@@ -334,9 +350,9 @@ public sealed class ReplayPaintSurface : Control
         if (outgoingScene is { } previous)
         {
             var previousViewport = BuildViewport(bounds, previous.ViewExtent, zoomFactor, viewportOffset);
-            DrawSceneContacts(context, previousViewport, available, previous, outgoingTrailBatches, 1 - transition, updateLabelAnchors: false);
+            DrawSceneContacts(context, previousViewport, available, previous, outgoingTrailBatches, 1 - transition);
         }
-        DrawSceneContacts(context, viewport, available, scene, sceneTrailBatches, transition, updateLabelAnchors: true);
+        DrawSceneContacts(context, viewport, available, scene, sceneTrailBatches, transition);
         DrawLegend(context, legendViewport, scene);
     }
 
@@ -346,8 +362,7 @@ public sealed class ReplayPaintSurface : Control
         Rect available,
         ReplayScene value,
         IReadOnlyList<ReplayTrailDrawBatch> trailBatches,
-        double opacity,
-        bool updateLabelAnchors)
+        double opacity)
     {
         if (opacity <= 0) return;
         DrawTrails(context, viewport, value, trailBatches, opacity);
@@ -364,6 +379,17 @@ public sealed class ReplayPaintSurface : Control
                 DrawContact(context, viewport, contact, value, reported: false);
         }
 
+        var (labelData, placements) = PlaceSceneLabels(viewport, available, value);
+        for (var index = 0; index < labelData.Length; index++)
+            DrawContactLabel(context, labelData[index], placements[index]);
+
+        if (value.GlobalPalm)
+            context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
+    }
+
+    private (ContactLabelData[] Data, IReadOnlyList<ReplayLabelPlacement> Placements) PlaceSceneLabels(
+        Rect viewport, Rect available, ReplayScene value)
+    {
         var labels = (Mode == ReplayRenderMode.HostState
             ? value.HostContacts
             : value.ReportedContacts.Concat(value.HostContacts).GroupBy(contact => contact.Id).Select(group => group.First()))
@@ -388,14 +414,7 @@ public sealed class ReplayPaintSurface : Control
         var placements = ReplayLabelLayout.Place(
             new ReplayLabelBounds(available.X + 4, available.Y + 4, available.Width - 8, available.Height - 8),
             requests);
-        if (updateLabelAnchors)
-            foreach (var placement in placements)
-                labelAnchors[placement.Key] = placement.Anchor;
-        for (var index = 0; index < labelData.Length; index++)
-            DrawContactLabel(context, labelData[index], placements[index]);
-
-        if (value.GlobalPalm)
-            context.DrawRectangle(null, new Pen(AlarmBrush, 4), viewport);
+        return (labelData, placements);
     }
 
     private double LoopCrossfadeProgress()
