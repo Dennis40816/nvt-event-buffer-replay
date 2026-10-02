@@ -11,9 +11,9 @@
   the previous release until then.
 
 Owner decision, 2026-10-02: `0.1.2` finishes the repository template adoption
-(agent documents, the approval check and CI alignment) with no product
-behavior change, and keeps the checks that `ci.yml` and `scripts/verify.ps1`
-already run. NVT FW UTIL product work uses a new `0.2.0` trunk.
+(agent documents, a check that enforces the approval rule below, and CI
+alignment) with no product behavior change, and keeps the checks that `ci.yml`
+and `scripts/verify.ps1` already run. NVT FW UTIL product work uses a new `0.2.0` trunk.
 
 ## Change sequence
 
@@ -43,34 +43,40 @@ Severities: **P0** ships wrong results, loses data or leaks private material;
 
 Owner-gated paths are everything that decides what is built, tested, checked,
 released or approved. A pull request that touches one is owner-gated as a
-whole, and so is one that removes or weakens a test, an approved snapshot or a
-fixture.
+whole. Every pattern below matches at any depth of the repository.
 
-Owner-gated paths:
-
-- Product and build graph: `src/**`, `*.sln`, `**/*.csproj`,
-  `**/packages.lock.json`, `Directory.*.props`, `Directory.*.targets`,
-  `global.json`, `nuget.config`, `.editorconfig`, `.globalconfig`.
+- Product and build graph: `src/**`, `*.sln`, `*.slnx`, `*.slnf`, `*.csproj`,
+  `packages.lock.json`, `*.props`, `*.targets`, `*.rsp`, `global.json`,
+  `nuget.config`, `.editorconfig`, `.globalconfig`.
+- Existing tests: modifying or deleting any existing file under `tests/**`,
+  including approved snapshots and fixtures.
 - CI, gates and release: `.github/**`, `scripts/**`, `eng/**`, `VERSION`,
-  `docs/release.md`, any `CODEOWNERS`.
+  `docs/release.md`, `CODEOWNERS`.
 - Decisions and contracts: `docs/adr/**`, `docs/product-spec.md`.
-- Rules and agent configuration: every `AGENTS.md` and `AGENTS.override.md`,
-  `CLAUDE.md`, `CONTRIBUTING.md`, `.claude/**`, `.codex/**`, `.mcp.json`.
+- Rules and agent configuration: `AGENTS.md`, `AGENTS.override.md`,
+  `CLAUDE.md`, `CONTRIBUTING.md`, `.agents/**`, `.claude/**`, `.codex/**`,
+  `.mcp.json`.
 - Repository hygiene: `.gitignore`, `.gitattributes`.
 - Any merge into `main`.
 
-Everything else is review-gated: other documents, added or strengthened tests,
-synthetic fixtures and agent skills under `.agents/skills/**`.
+Everything else is review-gated: other documents and new files under
+`tests/**`.
 
 | Gate | Merge condition |
 | --- | --- |
-| Review-gated | The latest review record is for the exact head, its verdict is `accept` with zero P0 and P1 findings, and the required check has completed green on that head |
+| Review-gated | The head contains the current trunk head, the latest review record is for that exact head with verdict `accept` and zero P0 and P1 findings, and the required check has completed green on it |
 | Owner-gated | The review-gated condition, plus the owner's GitHub approval submitted on that same head |
 
 The required check is the `build-and-test` job of `.github/workflows/ci.yml`.
-The merging agent reads the check conclusion and the approval for the exact
-head from GitHub immediately before merging; a pending or failed check, an
-open P0 or P1 finding, or an approval of an earlier commit blocks the merge.
+The merging agent confirms each part of the condition for the exact head
+immediately before merging: `git merge-base --is-ancestor origin/<trunk>
+<head>`, the check conclusion and the approval as GitHub reports them. A head
+behind the trunk, a pending or failed check, an open P0 or P1 finding, or an
+approval of an earlier commit blocks the merge.
+
+Agents open pull requests through the GitHub App, so the owner's account
+remains free to approve them. The owner merging a pull request personally
+also satisfies the owner gate.
 
 Releases follow [`docs/release.md`](docs/release.md). Publishing a release is
 the owner's action, or an agent's on the owner's instruction for that version.
@@ -87,6 +93,6 @@ stay local.
 ## Temporary files
 
 Tests use the system temporary path. The gate and packaging scripts write
-under the ignored `artifacts/` folder and reset it, so run one of them at a
-time per checkout. Put any other scratch output in `artifacts/` or `out/`, or
-outside the repository.
+under the ignored `artifacts/` folder and reset their own subfolders there, so
+run one of them at a time per checkout. Put any other scratch output in the
+ignored `out/` folder or outside the repository.
