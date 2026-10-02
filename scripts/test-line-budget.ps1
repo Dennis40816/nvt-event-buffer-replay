@@ -69,6 +69,20 @@ try {
     Add-File $Root 'bin/Hidden.cs' 801
     Assert-Case 'source bin folder leaves no production files and fails' $Root 'fail' 0 $true 'No production'
 
+    $Root = New-Case 'tracked-bin' @{}
+    Add-File $Root 'New.cs' 1
+    Add-File $Root 'bin/Hidden.cs' 801
+    Set-Content -LiteralPath (Join-Path $Root '.gitignore') -Value "bin/`nobj/" -Encoding utf8NoBOM
+    $GitConfig = @('-c', 'user.name=Line Budget Test', '-c', 'user.email=line-budget@example.invalid', '-c', 'core.autocrlf=false')
+    & git @GitConfig -C $Root init -q
+    if ($LASTEXITCODE -ne 0) { throw 'Could not initialize temporary git repository.' }
+    & git @GitConfig -C $Root add -f -- src/App/bin/Hidden.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Could not force-add hidden source file.' }
+    Assert-Case 'tracked source bin file fails' $Root 'fail' 1 $true 'src/App/bin/Hidden.cs'
+    & git @GitConfig -C $Root rm -q --cached -- src/App/bin/Hidden.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Could not untrack hidden source file.' }
+    Assert-Case 'untracked source bin file passes' $Root 'pass' 0
+
     $Root = New-Case 'bin/repository-root' @{}
     Add-File $Root 'New.cs' 801
     Assert-Case 'repository path containing bin still counts files' $Root 'fail' 1

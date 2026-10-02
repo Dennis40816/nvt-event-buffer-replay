@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import time
 import unittest
 from unittest import mock
 
@@ -236,6 +237,98 @@ class ApprovalCheckTests(unittest.TestCase):
                 self.assertFalse(result["review record"][0])
                 self.assertIn("malformed", result["review record"][1])
 
+    def test_html_decorated_later_record_blocks_older_accept(self):
+        for body in (f"Review <b>record</b>: {HEAD} reject",
+                     f"Review&nbsp;record: {HEAD} reject",
+                     f"Review&#32;record: {HEAD} reject",
+                     f"Review&#x20;record: {HEAD} reject",
+                     f"Review<!-- x -->record: {HEAD} reject"):
+            with self.subTest(body=body):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(
+                    review(101, state="COMMENTED", body=body))
+                result = {name: (ok, detail) for name, ok, detail in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"][0])
+                self.assertIn("malformed", result["review record"][1])
+
+    def test_invisible_and_markdown_word_splits_block_older_accept(self):
+        splits = (
+            "Re&shy;view record", "Re&#8203;view record",
+            "Re\u00adview record", "Re\u200bview record",
+            "Re\u200cview record", "Re\u200dview record",
+            "Re\u2060view record", "Re\ufeffview record",
+            "Re\u200eview record", "Re\u202eview record",
+            "Review re**cord**", "Re_view_ record",
+            "Re`view` record", "Re~view~ record",
+            "Re<b>view</b> record", "Re<!-- x -->view record",
+        )
+        for prefix in splits:
+            with self.subTest(prefix=prefix):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(review(
+                    101, state="COMMENTED",
+                    body=f"{prefix}: {HEAD} reject"))
+                result = {name: (ok, detail) for name, ok, detail in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"][0])
+                self.assertIn("malformed", result["review record"][1])
+
+    def test_normalization_removes_every_format_character(self):
+        import unicodedata
+        format_chars = "".join(chr(codepoint) for codepoint in
+                               range(0x110000)
+                               if unicodedata.category(chr(codepoint)) == "Cf")
+        self.assertEqual(
+            approval.normalized_attempt_text(f"Re{format_chars}view record"),
+            "Review record")
+
+    def test_ordinary_prose_keeps_existing_attempt_result(self):
+        for body, expected in (("preview recording", False),
+                               ("reviewer recorded", True)):
+            with self.subTest(body=body):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(review(
+                    101, state="COMMENTED", body=body))
+                result = {name: ok for name, ok, _ in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertEqual(result["review record"], expected)
+
+    def test_comparison_text_is_fast_on_adversarial_bodies(self):
+        for pattern in ("for(i<n; i++) ", "<a ", "<!--", "&"):
+            with self.subTest(pattern=pattern):
+                body = (pattern * (65536 // len(pattern) + 1))[:65536]
+                started = time.perf_counter()
+                comparison = approval.review_comparison_text(body)
+                elapsed = time.perf_counter() - started
+                self.assertEqual(comparison, body)
+                self.assertLess(elapsed, 2.0, f"{pattern!r}: {elapsed:.3f}s")
+
+    def test_html_parser_cannot_hide_raw_later_record(self):
+        for body in (f"<!--\nReview record: {HEAD} reject\n-->",
+                     '<a title="review record">x</a>',
+                     f"<!--\nReview record: {HEAD} reject",
+                     f'<a title="review record: {HEAD} reject'):
+            with self.subTest(body=body):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(
+                    review(101, state="COMMENTED", body=body))
+                result = {name: (ok, detail) for name, ok, detail in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"][0])
+                self.assertIn("malformed", result["review record"][1])
+
+    def test_html_without_record_phrase_leaves_older_accept(self):
+        for body in ("<b>Looks good</b>",
+                     "Review &lt;b&gt;record&lt;/b&gt; was not a record"):
+            with self.subTest(body=body):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(
+                    review(101, state="COMMENTED", body=body))
+                result = {name: ok for name, ok, _ in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertTrue(result["review record"])
+
     def test_later_review_without_the_phrase_leaves_the_record(self):
         for body in ("", "Looks good, approving.", "Reviewed the findings."):
             with self.subTest(body=body):
@@ -400,6 +493,23 @@ class ApprovalCheckTests(unittest.TestCase):
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(approval.main(args), 0)
 
+    def test_invalid_expected_head_environment_fails_closed(self):
+        args = ["--repository", "Dennis40816/nvt-event-buffer-replay",
+                "--pull-request", "1", "--fixture", str(FIXTURE)]
+        for value in ("not-a-sha", "g" * 40):
+            with self.subTest(value=value):
+                output = io.StringIO()
+                with mock.patch.dict(os.environ,
+                                     {"APPROVAL_EXPECTED_HEAD": value}):
+                    with redirect_stdout(output):
+                        code = approval.main(args)
+                self.assertEqual(code, 1)
+                lines = output.getvalue().splitlines()
+                self.assertEqual(len(lines), 4)
+                self.assertTrue(all(line.startswith("- FAIL ") and
+                                    "expected head SHA is not a full SHA" in line
+                                    for line in lines))
+
     def test_explicit_expected_head_overrides_environment(self):
         args = ["--repository", "Dennis40816/nvt-event-buffer-replay",
                 "--pull-request", "1", "--fixture", str(FIXTURE)]
@@ -512,6 +622,17 @@ class ApprovalCheckTests(unittest.TestCase):
                       "merge ref.", workflow)
         self.assertRegex(workflow, r"(?m)^  statuses: write$")
         self.assertRegex(workflow, r"(?m)^  pull_request_review:$")
+        self.assertRegex(workflow, r"(?m)^  cancel-in-progress: true$")
+        for event, required in (
+                ("pull_request_review", {"submitted", "edited", "dismissed"}),
+                ("pull_request", {"opened", "synchronize", "reopened",
+                                  "ready_for_review", "edited",
+                                  "converted_to_draft"})):
+            match = re.search(
+                rf"(?m)^  {event}:\n    types: \[([^\]]+)\]", workflow)
+            self.assertIsNotNone(match, event)
+            actual = {item.strip() for item in match.group(1).split(",")}
+            self.assertTrue(required <= actual, f"{event}: {required - actual}")
         self.assertIn(
             "  group: approval-${{ github.event.pull_request.number }}-"
             "${{ github.event.pull_request.head.sha }}", workflow)

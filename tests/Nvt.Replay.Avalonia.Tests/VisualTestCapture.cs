@@ -13,6 +13,8 @@ internal static class VisualTestCapture
     private const string CandidateDirectoryVariable = "NVT_UI_CANDIDATE_DIR";
     private const string CandidateModeVariable = "NVT_UI_CANDIDATE_MODE";
     private const string AuditDirectoryVariable = "NVT_UI_AUDIT_DIR";
+    private static readonly string DefaultAuditRoot = Path.Combine(
+        Path.GetTempPath(), $"nvt-ui-diff-{Environment.ProcessId}-{Guid.NewGuid():N}");
 
     public static bool CandidateMatrixEnabled
     {
@@ -124,7 +126,7 @@ internal static class VisualTestCapture
 
         var auditDirectory = Environment.GetEnvironmentVariable(AuditDirectoryVariable);
         if (string.IsNullOrWhiteSpace(auditDirectory))
-            auditDirectory = Path.Combine(Path.GetTempPath(), defaultAuditDirectory);
+            auditDirectory = Path.Combine(DefaultAuditRoot, defaultAuditDirectory);
         Directory.CreateDirectory(auditDirectory);
 
         var actualPath = Path.Combine(auditDirectory, $"actual-{artifactName}");

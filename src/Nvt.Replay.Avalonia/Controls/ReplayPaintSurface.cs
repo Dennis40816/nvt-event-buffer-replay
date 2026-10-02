@@ -40,6 +40,7 @@ public sealed class ReplayPaintSurface : Control
     private ReplayScene? outgoingScene;
     private readonly ReplayTrailBatchCache trailBatchCache = new();
     private readonly Dictionary<int, ReplayLabelAnchor> labelAnchors = [];
+    private bool labelAnchorsAdvancedForScene;
     private IReadOnlyList<ReplayTrailDrawBatch> sceneTrailBatches = [];
     private IReadOnlyList<ReplayTrailDrawBatch> outgoingTrailBatches = [];
     private readonly DispatcherTimer loopCrossfadeTimer;
@@ -85,6 +86,7 @@ public sealed class ReplayPaintSurface : Control
 
     public ReplayPaintSurface()
     {
+        SizeChanged += (_, _) => { if (scene is not null && !labelAnchorsAdvancedForScene) AdvanceLabelAnchors(scene); };
         loopCrossfadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         loopCrossfadeTimer.Tick += (_, _) =>
         {
@@ -103,6 +105,7 @@ public sealed class ReplayPaintSurface : Control
         if (Mode == mode) return;
         Mode = mode;
         labelAnchors.Clear();
+        labelAnchorsAdvancedForScene = false;
         if (scene is not null) AdvanceLabelAnchors(scene);
         InvalidateVisual();
     }
@@ -131,6 +134,7 @@ public sealed class ReplayPaintSurface : Control
             outgoingTrailBatches = [];
         }
         scene = value;
+        labelAnchorsAdvancedForScene = false;
         uint activeIds = 0;
         foreach (var contact in value.ReportedContacts)
             if (contact.Id <= 10) activeIds |= 1u << contact.Id;
@@ -147,16 +151,15 @@ public sealed class ReplayPaintSurface : Control
 
     private void AdvanceLabelAnchors(ReplayScene value)
     {
-        if (Bounds.Width > 0 && Bounds.Height > 0)
-        {
-            var bounds = new Rect(Bounds.Size);
-            var placements = PlaceSceneLabels(
-                BuildViewport(bounds, value.ViewExtent, zoomFactor, viewportOffset),
-                BuildAvailableBounds(bounds),
-                value).Placements;
-            foreach (var placement in placements)
-                labelAnchors[placement.Key] = placement.Anchor;
-        }
+        if (Bounds.Width <= 0 || Bounds.Height <= 0) return;
+        var bounds = new Rect(Bounds.Size);
+        var placements = PlaceSceneLabels(
+            BuildViewport(bounds, value.ViewExtent, zoomFactor, viewportOffset),
+            BuildAvailableBounds(bounds),
+            value).Placements;
+        foreach (var placement in placements)
+            labelAnchors[placement.Key] = placement.Anchor;
+        labelAnchorsAdvancedForScene = true;
     }
 
     public void Clear()
@@ -167,6 +170,7 @@ public sealed class ReplayPaintSurface : Control
         outgoingTrailBatches = [];
         trailBatchCache.Clear();
         labelAnchors.Clear();
+        labelAnchorsAdvancedForScene = false;
         highlightedContactId = null;
         loopCrossfadeTimer.Stop();
         EndPan(releaseCapture: true);
@@ -784,11 +788,7 @@ public sealed class ReplayPaintSurface : Control
         ReplayLabelPlacement placement)
     {
         var contact = data.Contact;
-        var labelRect = new Rect(
-            placement.Bounds.X,
-            placement.Bounds.Y,
-            placement.Bounds.Width,
-            placement.Bounds.Height);
+        var labelRect = new Rect(placement.Bounds.X, placement.Bounds.Y, placement.Bounds.Width, placement.Bounds.Height);
         var idBrush = new SolidColorBrush(ContactColor(contact.Id));
         var leader = new Point(placement.LeaderX, placement.LeaderY);
         context.DrawLine(new Pen(idBrush, 1), data.Center, leader);

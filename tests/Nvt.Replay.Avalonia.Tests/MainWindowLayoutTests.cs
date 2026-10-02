@@ -24,13 +24,24 @@ using Xunit;
 
 namespace Nvt.Replay.Avalonia.Tests;
 
-public sealed class MainWindowLayoutTests
+public sealed class MainWindowLayoutTests : IDisposable
 {
+    private readonly string temporaryDirectory = Path.Combine(
+        Path.GetTempPath(), $"nvt-main-window-{Guid.NewGuid():N}");
+
+    public MainWindowLayoutTests() => Directory.CreateDirectory(temporaryDirectory);
+
+    public void Dispose()
+    {
+        Directory.Delete(temporaryDirectory, recursive: true);
+        GC.SuppressFinalize(this);
+    }
+
     [AvaloniaFact]
     public async Task Parsed_source_adapter_is_displayed_in_the_window_title()
     {
         var window = ShowWindow();
-        var fixture = Path.Combine(Path.GetTempPath(), $"nvt-title-{Guid.NewGuid():N}.nds.txt");
+        var fixture = Path.Combine(temporaryDirectory, "title.nds.txt");
         try
         {
             await File.WriteAllTextAsync(
@@ -54,7 +65,7 @@ public sealed class MainWindowLayoutTests
     public async Task Nds_Paint_is_presented_as_an_implicit_event_buffer_read_without_inventing_a_register_byte()
     {
         var window = ShowWindow();
-        var fixture = Path.Combine(Path.GetTempPath(), $"nvt-nds-semantics-{Guid.NewGuid():N}.txt");
+        var fixture = Path.Combine(temporaryDirectory, "nds-semantics.txt");
         try
         {
             await File.WriteAllTextAsync(
@@ -3751,9 +3762,9 @@ public sealed class MainWindowLayoutTests
         return new Rect(origin, control.Bounds.Size);
     }
 
-    private static async Task<string> WriteKingstVisCaptureAsync(params byte[][] packets)
+    private async Task<string> WriteKingstVisCaptureAsync(params byte[][] packets)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"nvt-inspector-{Guid.NewGuid():N}.csv");
+        var path = Path.Combine(temporaryDirectory, "inspector.csv");
         var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
         var packetId = 0;
         for (var frameIndex = 0; frameIndex < packets.Length; frameIndex++)
@@ -3774,9 +3785,9 @@ public sealed class MainWindowLayoutTests
         return path;
     }
 
-    private static async Task<string> WriteKingstVisCaptureForPageAsync(byte pageHigh, byte pageLow, byte[] packet)
+    private async Task<string> WriteKingstVisCaptureForPageAsync(byte pageHigh, byte pageLow, byte[] packet)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"nvt-profile-inference-{Guid.NewGuid():N}.csv");
+        var path = Path.Combine(temporaryDirectory, "profile-inference.csv");
         var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
         foreach (var value in new byte[] { 0xFF, pageHigh, pageLow, 0x00 })
             lines.Add($"1.000000,0,0x02,0x{value:X2},Write,ACK");
@@ -3789,9 +3800,9 @@ public sealed class MainWindowLayoutTests
         return path;
     }
 
-    private static async Task<string> WriteOffsetOnlyKingstVisCaptureAsync(params byte[][] packets)
+    private async Task<string> WriteOffsetOnlyKingstVisCaptureAsync(params byte[][] packets)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"nvt-offset-only-{Guid.NewGuid():N}.csv");
+        var path = Path.Combine(temporaryDirectory, "offset-only.csv");
         var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
         var packetId = 0;
         for (var frameIndex = 0; frameIndex < packets.Length; frameIndex++)
@@ -3810,10 +3821,10 @@ public sealed class MainWindowLayoutTests
         return path;
     }
 
-    private static async Task<string> WriteMixedAddressKingstVisCaptureAsync(
+    private async Task<string> WriteMixedAddressKingstVisCaptureAsync(
         params (int SlaveAddress, byte[] Packet)[] frames)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"nvt-mixed-i2c-{Guid.NewGuid():N}.csv");
+        var path = Path.Combine(temporaryDirectory, "mixed-i2c.csv");
         var transactions = frames.Select((frame, index) => new SyntheticI2cTransaction(
             index,
             1.0 + (index * 0.1),

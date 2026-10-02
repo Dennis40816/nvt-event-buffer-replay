@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import html
 import http.client
 import json
 import os
 from pathlib import Path
 import re
 import sys
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -27,8 +29,11 @@ RECORD = re.compile(r"Review record: ([0-9a-fA-F]{40}) (accept|reject)\Z")
 # record anywhere is a record. Unless its first non-empty line is exact, it is
 # a malformed one, so a later decorated or reworded reject can never be skipped
 # in favour of an older accept. The cost is that prose mentioning the phrase
-# needs a fresh, well-formed record after it.
+# needs a fresh, well-formed record after it. Test the raw body as well as
+# visible HTML text and its normalized form so normalization can only add
+# attempts, never remove them.
 ATTEMPT = re.compile(r"review[\W_]*record", re.IGNORECASE)
+MARKDOWN_MARKERS = frozenset("*_~`")
 PER_PAGE = 100
 MAX_PAGES = 30
 
@@ -155,6 +160,70 @@ def review_order(review: dict) -> tuple[str, int]:
     return submitted, review_id
 
 
+def review_comparison_text(body: str) -> str:
+    """Strip complete HTML tags and comments in one pass, keeping references.
+
+    An unfinished tag or comment remains text, so ambiguous markup cannot
+    hide a record attempt. A '<' inside a tag ends that candidate tag.
+    """
+    parts: list[str] = []
+    start = cursor = 0
+    length = len(body)
+    while cursor < length:
+        if body[cursor] != "<":
+            cursor += 1
+            continue
+        tag_start = cursor
+        if body.startswith("<!--", cursor):
+            end = body.find("-->", cursor + 4)
+            if end < 0:
+                break
+            parts.append(body[start:tag_start])
+            cursor = end + 3
+            start = cursor
+            continue
+        cursor += 1
+        if cursor < length and body[cursor] == "/":
+            cursor += 1
+        if cursor >= length or not body[cursor].isascii() or not body[cursor].isalpha():
+            continue
+        cursor += 1
+        while cursor < length and body[cursor].isascii() and (
+                body[cursor].isalnum() or body[cursor] in "-.:_"):
+            cursor += 1
+        if cursor >= length:
+            break
+        if not (body[cursor].isspace() or body[cursor] in "/>"):
+            continue
+        quote = None
+        while cursor < length:
+            char = body[cursor]
+            if quote is not None:
+                if char == quote:
+                    quote = None
+            elif char in "\"'":
+                quote = char
+            elif char == "<":
+                break
+            elif char == ">":
+                parts.append(body[start:tag_start])
+                cursor += 1
+                start = cursor
+                break
+            cursor += 1
+        else:
+            break
+    parts.append(body[start:])
+    # Decode only after parsing: &lt;b&gt; is visible literal text, not a tag.
+    return html.unescape("".join(parts))
+
+
+def normalized_attempt_text(text: str) -> str:
+    """Remove only invisible format characters and Markdown word markers."""
+    return "".join(char for char in text if char not in MARKDOWN_MARKERS
+                   and unicodedata.category(char) != "Cf")
+
+
 def classify(policy: dict, base_ref: str, files: list[dict]) -> tuple[str, str]:
     if base_ref.casefold() == policy["owner_gated_base_branch"].casefold():
         return "owner-gated", f"base branch {base_ref}"
@@ -188,7 +257,9 @@ def record_result(reviews: list[dict], policy: dict, head: str) -> tuple[bool, s
         require(isinstance(body, str), "review body is malformed")
         lines = body.splitlines()
         first = next((line.rstrip() for line in lines if line.strip()), "")
-        if ATTEMPT.search(body):
+        comparison = review_comparison_text(body)
+        if (ATTEMPT.search(body) or ATTEMPT.search(comparison)
+                or ATTEMPT.search(normalized_attempt_text(comparison))):
             records.append((review_order(review), review,
                             RECORD.fullmatch(first)))
     if not records:
