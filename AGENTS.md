@@ -17,8 +17,10 @@ sets of documents each govern their own subject:
 - Process (scope, delegation, branches, approval): this file and
   [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Product behavior: [`docs/product-spec.md`](docs/product-spec.md), the
-  accepted ADRs in [`docs/adr/`](docs/adr/) and the contract documents in
-  `docs/`.
+  accepted ADRs in [`docs/adr/`](docs/adr/) and the other documents in
+  `docs/`, with two exceptions: `docs/release.md` describes the release
+  process, and `docs/nvt-fw-util-claude-handoff.md` records requirements and
+  work status. Neither is a product contract.
 
 Where this file summarizes a product document and the two differ, the product
 document is right and this file needs a fix. Code and test runs show observed

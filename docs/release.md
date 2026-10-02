@@ -37,12 +37,17 @@ file. A final read-only job downloads and verifies the published archive.
 
 ## Package contract
 
-The archive has one top-level directory and exactly four files:
+The archive has one top-level directory and a closed set of files:
 
 - `NvtEventBufferReplay.exe`
 - `nvt-replay.exe`
-- `RELEASE.json` with version, commit, commit time, runtime, self-contained status, offline defaults, telemetry status, and payload names
-- `SHA256SUMS.txt` covering both executables and release identity
+- `RELEASE.json` with version, commit, commit time, runtime, self-contained status, offline defaults, telemetry status, payload names, and the path of the bundled FFmpeg manifest
+- `SHA256SUMS.txt` covering every other file in the archive
+- `tools/ffmpeg/`: `FFMPEG-RUNTIME.json`, `LICENSE.txt`, `NOTICE.txt`, and under `bin/` the `ffmpeg.exe` and `ffprobe.exe` executables with their FFmpeg DLLs, as pinned by `eng/ffmpeg-runtime.json`
+
+The exact list is `$AllowedPackageFiles` in `scripts/package.ps1`;
+`scripts/smoke-release.ps1` checks a fresh extraction against its own copy of
+that list.
 
 The adjacent `.zip.sha256` covers the complete archive. Packaging starts from
 empty repository-owned staging directories, rejects dirty worktrees, and fails
