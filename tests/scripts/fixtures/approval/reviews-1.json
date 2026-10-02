@@ -1,0 +1,10 @@
+[
+  {
+    "id": 100,
+    "user": {"login": "nfc-agent-dennis40816[bot]", "id": 334370883},
+    "state": "COMMENTED",
+    "submitted_at": "2026-10-01T12:00:00Z",
+    "commit_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "body": "Review record: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa accept\nFindings: none.\nLimits: synthetic review."
+  }
+]

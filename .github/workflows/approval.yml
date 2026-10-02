@@ -1,0 +1,58 @@
+name: approval
+
+# The base branch checkout supplies the checker and policy for both events.
+# No PR event fires when its base moves; the up-to-date ruleset and merger check cover stale green results.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited,
+            converted_to_draft]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  approval:
+    name: governance / approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the base branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
+      - name: Check approval
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          APPROVAL_REPOSITORY: ${{ github.repository }}
+          APPROVAL_PULL_REQUEST: ${{ github.event.pull_request.number }}
+        run: >-
+          python -B scripts/approval_check.py
+          --repository "$APPROVAL_REPOSITORY"
+          --pull-request "$APPROVAL_PULL_REQUEST"
+          --checked-out-base "$(git rev-parse HEAD)"
+          --summary "$GITHUB_STEP_SUMMARY"
+
+  self-test:
+    name: governance / approval self-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the proposed tests
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
+      - name: Run approval tests
+        run: python -B -m unittest discover -s tests/scripts -v

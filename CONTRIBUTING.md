@@ -30,8 +30,8 @@ a new `0.2.0` trunk.
 
 ## Review record
 
-A review record starts with the line `Review record: <full head SHA>
-<verdict>` and gives:
+A review record is posted as a pull request review (not an issue comment).
+It starts with the line `Review record: <full head SHA> <verdict>` and gives:
 
 - the verdict: `accept` or `reject`;
 - findings, each with a severity, `path:line`, the failing scenario and a fix;
@@ -40,20 +40,22 @@ A review record starts with the line `Review record: <full head SHA>
 Severities: **P0** ships wrong results, loses data or leaks private material;
 **P1** breaks a contract or required behavior, or misdirects an agent;
 **P2** should be fixed soon; **P3** is optional polish.
+An `accept` verdict requires zero P0 and P1 findings.
 
 ## Who approves
 
 Owner-gated paths are everything that decides what is built, tested, checked,
 released or approved. A pull request that touches one is owner-gated as a
 whole. Every pattern below matches at any depth of the repository, ignoring
-case.
+case. The exact pattern list is in
+[`docs/governance/approval-policy.json`](docs/governance/approval-policy.json).
 
 - Product and build graph: `src/**`, `*.sln`, `*.slnx`, `*.slnf`, `*.csproj`,
   `packages.lock.json`, `*.props`, `*.targets`, `*.rsp`, `global.json`,
   `nuget.config`, `.editorconfig`, `.globalconfig`.
 - Existing tests: modifying or deleting any file under `tests/**` that is
   present on the base branch, including approved snapshots and fixtures
-  (`M` or `D` in `git diff --name-status --no-renames origin/<base>...<head>`).
+  (any status other than `A` in the changed-file list).
 - CI, gates and release: `.github/**`, `scripts/**`, `eng/**`, `VERSION`,
   `docs/release.md`, `CODEOWNERS`.
 - Decisions and contracts: `docs/adr/**`, `docs/product-spec.md`.
@@ -66,12 +68,15 @@ case.
 Everything else is review-gated: other documents and new files under
 `tests/**`.
 
-| Gate | Merge condition |
-| --- | --- |
-| Review-gated | The head contains the current head of the base branch, the latest review record is for that exact head with verdict `accept` and zero P0 and P1 findings, and the required check has completed green on it |
-| Owner-gated | The review-gated condition, plus the owner's latest GitHub review on that same head being an approval |
+Review-gated merge condition: the head contains the current head of the base
+branch, the latest review record is for that exact head with verdict `accept`
+and zero P0 and P1 findings, and the required check has completed green on it.
+
+Owner-gated merge condition: all review-gated conditions, plus the owner's
+latest GitHub approval or change request being an approval on that same head.
 
 The required check is the `build-and-test` job of `.github/workflows/ci.yml`.
+The `governance / approval` check enforces the approval rule on pull requests.
 The merging agent confirms each part of the condition for the exact head
 immediately before merging: `git fetch origin <base>` followed by
 `git merge-base --is-ancestor origin/<base> <head>`, then the check conclusion

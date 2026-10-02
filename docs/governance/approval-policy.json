@@ -1,0 +1,20 @@
+{
+  "owner": {"login": "Dennis40816", "id": 146855708},
+  "review_record_authors": [
+    {"login": "Dennis40816", "id": 146855708},
+    {"login": "nfc-agent-dennis40816[bot]", "id": 334370883}
+  ],
+  "owner_gated_patterns": [
+    "src/**", "*.sln", "*.slnx", "*.slnf", "*.csproj",
+    "packages.lock.json", "*.props", "*.targets", "*.rsp",
+    "global.json", "nuget.config", ".editorconfig", ".globalconfig",
+    ".github/**", "scripts/**", "eng/**", "VERSION",
+    "docs/release.md", "CODEOWNERS", "docs/adr/**",
+    "docs/product-spec.md", "AGENTS.md", "AGENTS.override.md",
+    "CLAUDE.md", "CONTRIBUTING.md", ".agents/**", ".claude/**",
+    ".codex/**", ".mcp.json", ".gitignore", ".gitattributes"
+  ],
+  "tests_non_added": "tests/**",
+  "owner_gated_base_branch": "main",
+  "required_check": "build-and-test"
+}
