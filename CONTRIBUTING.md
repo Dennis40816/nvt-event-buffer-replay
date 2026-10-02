@@ -13,7 +13,8 @@
 Owner decision, 2026-10-02: `0.1.2` finishes the repository template adoption
 (agent documents, a check that enforces the approval rule below, and CI
 alignment) with no product behavior change, and keeps the checks that
-`ci.yml` and `scripts/verify.ps1` already run. NVT FW UTIL product work uses a new `0.2.0` trunk.
+`ci.yml` and `scripts/verify.ps1` already run. NVT FW UTIL product work uses
+a new `0.2.0` trunk.
 
 ## Change sequence
 
