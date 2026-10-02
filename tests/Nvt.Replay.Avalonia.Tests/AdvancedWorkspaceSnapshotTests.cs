@@ -20,8 +20,19 @@ namespace Nvt.Replay.Avalonia.Tests;
 /// Approved, stateful workspace examples that complement the base Paint/Output/Heatmap/Settings matrix.
 /// Each capture exercises real UI wiring so the snapshots cannot silently drift into a decorative mock state.
 /// </summary>
-public sealed class AdvancedWorkspaceSnapshotTests
+public sealed class AdvancedWorkspaceSnapshotTests : IDisposable
 {
+    private readonly string temporaryDirectory = Path.Combine(
+        Path.GetTempPath(), $"nvt-advanced-snapshots-{Guid.NewGuid():N}");
+
+    public AdvancedWorkspaceSnapshotTests() => Directory.CreateDirectory(temporaryDirectory);
+
+    public void Dispose()
+    {
+        Directory.Delete(temporaryDirectory, recursive: true);
+        GC.SuppressFinalize(this);
+    }
+
     [AvaloniaFact]
     public async Task Capture_setup_keeps_required_version_and_detected_IC_evidence_in_one_dialog()
     {
@@ -451,11 +462,9 @@ public sealed class AdvancedWorkspaceSnapshotTests
         return packet;
     }
 
-    private static async Task<string> WriteKingstVisCaptureAsync(string fileName, params byte[][] packets)
+    private async Task<string> WriteKingstVisCaptureAsync(string fileName, params byte[][] packets)
     {
-        var directory = Path.Combine(Path.GetTempPath(), "nvt-replay-advanced-snapshots");
-        Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, fileName);
+        var path = Path.Combine(temporaryDirectory, fileName);
         var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK" };
         var packetId = 0;
         for (var frameIndex = 0; frameIndex < packets.Length; frameIndex++)

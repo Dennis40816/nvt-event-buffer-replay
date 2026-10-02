@@ -1,4 +1,5 @@
 bin/
+tests/Nvt.Replay.Avalonia.Tests/bin-ui-determinism/
 obj/
 .vs/
 .idea/

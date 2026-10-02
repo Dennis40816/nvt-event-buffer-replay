@@ -95,11 +95,13 @@ ones a change touches:
   [`docs/source-adapters.md`](docs/source-adapters.md).
 - 0003: physical, logical and evidence timelines stay distinct; human analysis
   lives in a sidecar.
-- 0004: handwritten production C#/XAML targets 18,000-22,000 lines, needs an
-  architecture review above 25,000 and fails CI above 30,000.
-  `./scripts/check-line-budget.ps1` reports the count and a status. At
-  `review-required`, ask the owner before adding production code; changing
-  the budget is an owner decision and an ADR change.
+- 0004: every handwritten production `.cs` and `.axaml` file under `src/`
+  outside the baseline has an 800-line ceiling. Each grandfathered file must
+  match its recorded ceiling; lower the entry when it shrinks, and remove it
+  when the file reaches 800 lines or is deleted.
+  `./scripts/check-line-budget.ps1` reports total and per-project counts and
+  fails on a per-file violation. The owner approves every change under `src/`;
+  changing this policy is an owner decision and an ADR change.
 
 ## Completion
 
