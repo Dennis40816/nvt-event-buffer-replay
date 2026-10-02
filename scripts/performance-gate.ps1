@@ -15,9 +15,9 @@ if (-not ($OutputRoot + [IO.Path]::DirectorySeparatorChar).StartsWith($Artifacts
     throw "Performance output must remain under $ArtifactsRoot"
 }
 [IO.Directory]::CreateDirectory($OutputRoot) | Out-Null
-$FixtureRoot = Join-Path $OutputRoot 'fixtures'
-if (Test-Path -LiteralPath $FixtureRoot) { [IO.Directory]::Delete($FixtureRoot, $true) }
-[IO.Directory]::CreateDirectory($FixtureRoot) | Out-Null
+$FixtureRoot = Join-Path $OutputRoot ('fixtures-' + [Guid]::NewGuid().ToString('N'))
+try {
+    [IO.Directory]::CreateDirectory($FixtureRoot) | Out-Null
 
 $GoldenLine = (Get-Content -LiteralPath (Join-Path $RepoRoot 'tests/fixtures/common-0x83-asil-lifecycle.nds.txt') -TotalCount 1)
 $PayloadTokens = @($GoldenLine -split '\s+' | Where-Object { $_ -match '^0x[0-9A-Fa-f]{2}$' })
@@ -97,3 +97,6 @@ $ReportPath = Join-Path $OutputRoot "performance-$($Mode.ToLowerInvariant()).jso
 $Gate | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $ReportPath -Encoding utf8NoBOM
 $Gate | ConvertTo-Json -Depth 8
 if ($Failures.Count -ne 0) { throw "Performance gate failed: $($Failures -join '; ')" }
+} finally {
+    if (Test-Path -LiteralPath $FixtureRoot) { [IO.Directory]::Delete($FixtureRoot, $true) }
+}

@@ -7,12 +7,23 @@ using Xunit;
 
 namespace Nvt.Replay.Avalonia.Tests;
 
-public sealed class RegisterProjectionPresentationTests
+public sealed class RegisterProjectionPresentationTests : IDisposable
 {
+    private readonly string temporaryDirectory = Path.Combine(
+        Path.GetTempPath(), $"nvt-register-presentation-{Guid.NewGuid():N}");
+
+    public RegisterProjectionPresentationTests() => Directory.CreateDirectory(temporaryDirectory);
+
+    public void Dispose()
+    {
+        Directory.Delete(temporaryDirectory, recursive: true);
+        GC.SuppressFinalize(this);
+    }
+
     [Fact]
     public async Task Nds_paint_row_displays_header_I2C_address_or_absolute_register_by_semantics()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"nvt-nds-row-{Guid.NewGuid():N}.txt");
+        var path = Path.Combine(temporaryDirectory, "nds-row.txt");
         try
         {
             await File.WriteAllTextAsync(
