@@ -1,4 +1,4 @@
-# Every path below is owner-gated by docs/governance/approval-policy.json.
+# Every path below is owner-gated by .github/approval-policy.json.
 # CODEOWNERS cannot express the modified-versus-added rule under tests/**,
 # case-insensitive matching, or the main base-branch rule. The script covers them.
 **/src/** @Dennis40816

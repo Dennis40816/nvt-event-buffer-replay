@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import copy
+from contextlib import redirect_stdout
+import http.client
 import importlib.util
+import io
 import json
 from pathlib import Path
 import re
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,7 +20,7 @@ spec = importlib.util.spec_from_file_location(
     "approval_check", ROOT / "scripts/approval_check.py")
 approval = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(approval)
-POLICY = json.loads((ROOT / "docs/governance/approval-policy.json").read_text(
+POLICY = json.loads((ROOT / ".github/approval-policy.json").read_text(
     encoding="utf-8"))
 HEAD = "a" * 40
 OLD = "d" * 40
@@ -101,6 +105,21 @@ class ApprovalCheckTests(unittest.TestCase):
             review(102, state="COMMENTED"))
         self.assertTrue(self.result()["owner approval"][0])
 
+    def test_dismissed_owner_change_request_blocks_older_approval(self):
+        self.owner_gate()
+        self.approve()
+        self.reader.payloads["reviews-1"].append(
+            review(102, state="DISMISSED"))
+        self.assertFalse(self.result()["owner approval"][0])
+
+    def test_pending_owner_review_is_ignored(self):
+        self.owner_gate()
+        self.approve()
+        pending = review(103, state="PENDING")
+        del pending["submitted_at"]
+        self.reader.payloads["reviews-1"].append(pending)
+        self.assertTrue(self.result()["owner approval"][0])
+
     def test_review_record_for_older_head(self):
         self.reader.payloads["reviews-1"][0]["body"] = (
             f"Review record: {OLD} accept\nLimits: synthetic")
@@ -117,9 +136,67 @@ class ApprovalCheckTests(unittest.TestCase):
                    body=f"Review record: {HEAD} reject"))
         self.assertFalse(self.result()["review record"][0])
 
+    def test_near_miss_newer_record_blocks_older_accept(self):
+        cases = (
+            (f"Review record: {HEAD} reject   ", "reject"),
+            (f"Review record: `{HEAD}` reject", "malformed"),
+            (f"# Review\nReview record: {HEAD} reject", "malformed"),
+        )
+        for body, reason in cases:
+            with self.subTest(body=body):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(
+                    review(101, state="COMMENTED", body=body))
+                result = {name: (ok, detail) for name, ok, detail in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"][0])
+                self.assertIn(reason, result["review record"][1])
+
+    def test_pending_record_is_ignored_before_ordering(self):
+        pending = review(101, state="PENDING",
+                         body=f"Review record: {HEAD} reject")
+        del pending["submitted_at"]
+        self.reader.payloads["reviews-1"].append(pending)
+        self.assertTrue(self.result()["review record"][0])
+
+    def test_dismissed_or_change_request_record_cannot_accept(self):
+        for state in ("DISMISSED", "CHANGES_REQUESTED"):
+            with self.subTest(state=state):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"].append(
+                    review(101, state=state,
+                           body=f"Review record: {HEAD} accept"))
+                result = {name: ok for name, ok, _ in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"])
+
+    def test_record_order_uses_submission_time_then_id(self):
+        for same_time in (False, True):
+            with self.subTest(same_time=same_time):
+                reader = MemoryReader()
+                later = review(101, state="COMMENTED",
+                               body=f"Review record: {HEAD} reject")
+                if same_time:
+                    later["submitted_at"] = reader.payloads["reviews-1"][0][
+                        "submitted_at"]
+                reader.payloads["reviews-1"].insert(0, later)
+                result = {name: ok for name, ok, _ in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"])
+
     def test_record_from_unallowed_identity(self):
         self.reader.payloads["reviews-1"][0]["user"] = OTHER
         self.assertFalse(self.result()["review record"][0])
+
+    def test_identity_requires_matching_login_and_id(self):
+        for user in ({"login": "not-the-bot", "id": 334370883},
+                     {"login": "nfc-agent-dennis40816[bot]", "id": 999}):
+            with self.subTest(user=user):
+                reader = MemoryReader()
+                reader.payloads["reviews-1"][0]["user"] = user
+                result = {name: ok for name, ok, _ in
+                          approval.evaluate(reader, POLICY, None)}
+                self.assertFalse(result["review record"])
 
     def test_head_behind_base(self):
         self.reader.payloads["compare"]["behind_by"] = 1
@@ -140,6 +217,27 @@ class ApprovalCheckTests(unittest.TestCase):
             {"filename": "docs/moved.txt", "previous_filename": "tests/a.txt",
              "status": "renamed"}]
         self.assertIn("owner-gated", self.result()["gate"][1])
+
+    def test_non_added_test_statuses_are_owner_gated(self):
+        for status in ("removed", "copied", "changed"):
+            with self.subTest(status=status):
+                self.reader.payloads["files-1"] = [
+                    {"filename": "tests/sample.json", "status": status}]
+                self.assertIn("owner-gated", self.result()["gate"][1])
+
+    def test_rename_into_tests_is_owner_gated(self):
+        self.reader.payloads["files-1"] = [
+            {"filename": "tests/new_name.txt", "previous_filename": "docs/old.txt",
+             "status": "renamed"}]
+        self.assertIn("owner-gated", self.result()["gate"][1])
+
+    def test_policy_checker_and_workflow_are_owner_gated(self):
+        for path in (".github/approval-policy.json", "scripts/approval_check.py",
+                     ".github/workflows/approval.yml"):
+            with self.subTest(path=path):
+                self.reader.payloads["files-1"] = [
+                    {"filename": path, "status": "modified"}]
+                self.assertIn("owner-gated", self.result()["gate"][1])
 
     def test_base_branch_main_is_owner_gated(self):
         self.reader.payloads["pull"]["base"]["ref"] = "main"
@@ -164,6 +262,14 @@ class ApprovalCheckTests(unittest.TestCase):
             {"filename": "nested/scripts/check.py", "status": "added"}]
         self.assertIn("owner-gated", self.result()["gate"][1])
 
+    def test_more_than_thirty_pages_fails_closed(self):
+        for page in range(1, 31):
+            self.reader.payloads[f"files-{page}"] = [
+                {"filename": f"docs/{page}-{index}.md", "status": "added"}
+                for index in range(100)]
+        with self.assertRaisesRegex(approval.InputError, "exceeds 30 pages"):
+            self.reader.files()
+
     def test_pull_base_sha_old_but_live_tip_is_behind(self):
         self.reader.payloads["pull"]["base"]["sha"] = OLD
         self.reader.payloads["compare"]["behind_by"] = 1
@@ -176,10 +282,38 @@ class ApprovalCheckTests(unittest.TestCase):
         with self.assertRaises(approval.InputError):
             approval.evaluate(self.reader, POLICY, OLD)
 
+    def test_empty_checked_out_base_fails_closed(self):
+        with self.assertRaisesRegex(approval.InputError, "full SHA"):
+            approval.evaluate(self.reader, POLICY, "")
+
     def test_unavailable_live_base_tip_fails_closed(self):
         del self.reader.payloads["base-ref"]
         with self.assertRaises(approval.InputError):
             self.result()
+
+    def test_main_exit_codes_and_exception_mapping(self):
+        args = ["--repository", "Dennis40816/nvt-event-buffer-replay",
+                "--pull-request", "1", "--fixture", str(FIXTURE)]
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(approval.main(args), 0)
+        self.assertEqual(output.getvalue().count("- PASS "), 4)
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(approval.main(args + ["--checked-out-base", ""]), 1)
+        self.assertEqual(output.getvalue().count("- FAIL "), 4)
+        self.assertIn("input unavailable", output.getvalue())
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(approval.main(args[:4]), 1)
+        self.assertIn("--checked-out-base is required", output.getvalue())
+
+    def test_http_protocol_error_becomes_input_error(self):
+        reader = approval.Reader("Dennis40816/nvt-event-buffer-replay", 1, None)
+        with mock.patch.object(approval.urllib.request, "urlopen",
+                               side_effect=http.client.HTTPException("broken")):
+            with self.assertRaisesRegex(approval.InputError, "GitHub API"):
+                reader.pull()
 
     def test_contributing_patterns_equal_policy(self):
         text = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
@@ -205,6 +339,21 @@ class ApprovalCheckTests(unittest.TestCase):
                     for pattern in POLICY["owner_gated_patterns"]]
         self.assertEqual(actual, expected)
         self.assertIn("modified-versus-added", "\n".join(lines))
+
+    def test_policy_metadata_matches_contract(self):
+        self.assertEqual(POLICY["owner"],
+                         {"login": "Dennis40816", "id": 146855708})
+        self.assertEqual(POLICY["review_record_authors"], [
+            {"login": "Dennis40816", "id": 146855708},
+            {"login": "nfc-agent-dennis40816[bot]", "id": 334370883},
+        ])
+        for principal in [POLICY["owner"], *POLICY["review_record_authors"]]:
+            self.assertIsInstance(principal["login"], str)
+            self.assertIs(type(principal["id"]), int)
+        self.assertIsInstance(POLICY["owner_gated_patterns"], list)
+        self.assertEqual(POLICY["tests_non_added"], "tests/**")
+        self.assertEqual(POLICY["owner_gated_base_branch"], "main")
+        self.assertEqual(POLICY["required_check"], "build-and-test")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Check the live pull request against the base branch's approval policy.
 
 The workflow explicitly checks out the pull request's base branch, so this
-script and docs/governance/approval-policy.json come from the base, never the
+script and .github/approval-policy.json come from the base, never the
 PR head. It passes the checked-out SHA, which must equal the live branch tip.
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import http.client
 import json
 import os
 from pathlib import Path
@@ -81,20 +82,15 @@ class Reader:
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 return load_json(response.read(), label)
-        except (urllib.error.URLError, OSError) as error:
+        except (urllib.error.URLError, OSError, http.client.HTTPException) as error:
             raise InputError(f"GitHub API {label} failed: {error}") from error
 
-    def pages(self, label: str, path: str, key: str | None = None) -> list[dict]:
+    def pages(self, label: str, path: str) -> list[dict]:
         result: list[dict] = []
         for page in range(1, MAX_PAGES + 1):
             payload = self.get(label, path, page)
-            if key is not None:
-                require(isinstance(payload, dict) and isinstance(payload.get(key), list),
-                        f"{label} page {page} is malformed")
-                items = payload[key]
-            else:
-                require(isinstance(payload, list), f"{label} page {page} is malformed")
-                items = payload
+            require(isinstance(payload, list), f"{label} page {page} is malformed")
+            items = payload
             require(all(isinstance(item, dict) for item in items),
                     f"{label} page {page} has malformed items")
             result.extend(items)
@@ -129,6 +125,7 @@ class Reader:
 
     def reviews(self) -> list[dict]:
         return self.pages("reviews", f"pulls/{self.number}/reviews")
+
 
 def path_matches(path: str, pattern: str) -> bool:
     parts = path.replace("\\", "/").casefold().split("/")
@@ -179,17 +176,24 @@ def record_result(reviews: list[dict], policy: dict, head: str) -> tuple[bool, s
         if not any(identity(review, author)
                    for author in policy["review_record_authors"]):
             continue
+        if review.get("state") == "PENDING":
+            continue
         body = review.get("body") or ""
         require(isinstance(body, str), "review body is malformed")
-        first = body.splitlines()[0] if body.splitlines() else ""
-        match = RECORD.fullmatch(first)
-        if match is not None:
-            records.append((review_order(review), review, match))
+        lines = body.splitlines()
+        first = next((line.rstrip() for line in lines if line.strip()), "")
+        mentions_record = any(line.lstrip().startswith("Review record")
+                              for line in lines)
+        if first.startswith("Review record") or mentions_record:
+            records.append((review_order(review), review,
+                            RECORD.fullmatch(first)))
     if not records:
         return False, "no allowed pull request review has a review record"
     _, review, match = max(records, key=lambda entry: entry[0])
-    if review.get("state") in ("PENDING", "DISMISSED"):
-        return False, "latest review record is pending or dismissed"
+    if review.get("state") in ("DISMISSED", "CHANGES_REQUESTED"):
+        return False, "latest review record was dismissed or requests changes"
+    if match is None:
+        return False, "latest review record line is malformed"
     if match.group(1).lower() != head:
         return False, "latest review record names an older or different head"
     if match.group(2) != "accept":
@@ -199,12 +203,13 @@ def record_result(reviews: list[dict], policy: dict, head: str) -> tuple[bool, s
 
 def owner_result(reviews: list[dict], owner: dict, head: str) -> tuple[bool, str]:
     decisions = [review for review in reviews if identity(review, owner)
-                 and review.get("state") in ("APPROVED", "CHANGES_REQUESTED")]
+                 and review.get("state") in
+                 ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")]
     if not decisions:
         return False, "owner has no approval or change request"
     latest = max(decisions, key=review_order)
     if latest["state"] != "APPROVED":
-        return False, "owner's latest decision requests changes"
+        return False, f"owner's latest decision is {latest['state'].lower()}"
     if not isinstance(latest.get("commit_id"), str) or latest["commit_id"].lower() != head:
         return False, "owner approval is for an older or different head"
     return True, "owner's latest decision approves the current head"
@@ -220,7 +225,7 @@ def evaluate(reader: Reader, policy: dict,
     base_ref = base.get("ref")
     require(isinstance(base_ref, str) and base_ref, "base ref is missing")
     base_sha = reader.branch_tip(base_ref)
-    if checked_out_base:
+    if checked_out_base is not None:
         require(base_sha == sha(checked_out_base, "checked-out base SHA"),
                 "base moved since checkout; rerun with current base policy")
     comparison = reader.compare(base_sha, head_sha)
@@ -259,7 +264,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--checked-out-base")
     args = parser.parse_args(argv)
     try:
-        policy = load_json((ROOT / "docs/governance/approval-policy.json").read_bytes(),
+        require(args.fixture is not None or args.checked_out_base is not None,
+                "--checked-out-base is required for live checks")
+        policy = load_json((ROOT / ".github/approval-policy.json").read_bytes(),
                            "approval policy")
         require(isinstance(policy, dict), "approval policy is malformed")
         results = evaluate(Reader(args.repository, args.pull_request, args.fixture),

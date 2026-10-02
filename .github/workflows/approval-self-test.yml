@@ -1,0 +1,25 @@
+name: approval self-test
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    name: governance / approval self-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the proposed tests
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
+      - name: Run approval tests
+        run: python -B -m unittest discover -s tests/scripts -v
