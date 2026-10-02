@@ -44,11 +44,12 @@ Severities: **P0** ships wrong results, loses data or leaks private material;
 An `accept` verdict requires zero P0 and P1 findings.
 
 The latest pull request review from the owner or the GitHub App whose body
-contains the letters "review record", in any case or spacing, is the record
-in force. Write that first line exactly: any other form, including a review
-that only mentions a review record, reads as a malformed record and blocks
-the merge until a well-formed record follows. Issue comments and inline
-comments are not read.
+contains the letters "review record", in any case and with any spacing or
+punctuation between the two words, is the record in force. Write that first
+line exactly: any other form, including a review that only mentions a review
+record, reads as a malformed record and blocks the merge until a well-formed
+record follows. A record posted as a change request, or later dismissed, does
+not accept. Issue comments and inline comments are not read.
 
 ## Who approves
 
@@ -75,9 +76,10 @@ case. The exact pattern list is in
 - Any merge into `main`.
 
 Everything else is review-gated: other documents and new files under
-`tests/**`. A new source file in a test project can still change how existing
-tests run (an assembly-level attribute, a module initializer, a runner
-configuration file); the reviewer checks for that first.
+`tests/**`. A new file under `tests/**` can still change how existing tests
+run (for example an assembly-level attribute, a module initializer, a global
+using, a type that shadows one the tests use, or a runner configuration
+file); the reviewer checks for that first.
 
 Review-gated merge condition: the head contains the current head of the base
 branch, the latest review record is for that exact head with verdict `accept`

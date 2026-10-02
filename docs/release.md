@@ -46,7 +46,8 @@ The archive has one top-level directory and a closed set of files:
 - `tools/ffmpeg/`: `FFMPEG-RUNTIME.json`, `LICENSE.txt`, `NOTICE.txt`, and under `bin/` the `ffmpeg.exe` and `ffprobe.exe` executables with their FFmpeg DLLs, as pinned by `eng/ffmpeg-runtime.json`
 
 The exact list is `$AllowedPackageFiles` in `scripts/package.ps1`;
-`scripts/smoke-release.ps1` checks a fresh extraction against the same list.
+`scripts/smoke-release.ps1` checks a fresh extraction against its own copy of
+that list.
 
 The adjacent `.zip.sha256` covers the complete archive. Packaging starts from
 empty repository-owned staging directories, rejects dirty worktrees, and fails
