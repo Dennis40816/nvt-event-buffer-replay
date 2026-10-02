@@ -21,14 +21,30 @@ public sealed class ReplayPaintLabelDeterminismTests
         Assert.Equal(drawn, skipped);
     }
 
-    private static byte[] CaptureFinalFrame(bool drawIntermediate)
+    [AvaloniaFact]
+    public void Final_frame_labels_ignore_whether_first_scene_preceded_layout()
+    {
+        var beforeLayout = CaptureFinalFrame(drawIntermediate: true, showFirstBeforeLayout: true);
+        var afterLayout = CaptureFinalFrame(drawIntermediate: true, showFirstBeforeLayout: false);
+
+        Assert.Equal(afterLayout, beforeLayout);
+    }
+
+    private static byte[] CaptureFinalFrame(bool drawIntermediate, bool showFirstBeforeLayout = false)
     {
         var surface = new ReplayPaintSurface();
         var window = new Window { Width = 640, Height = 480, Content = surface };
         try
         {
+            if (showFirstBeforeLayout)
+            {
+                Assert.Equal(0, surface.Bounds.Width);
+                Assert.Equal(0, surface.Bounds.Height);
+                surface.Show(Scene(0, 80));
+            }
             window.Show();
-            surface.Show(Scene(0, 80));
+            if (!showFirstBeforeLayout)
+                surface.Show(Scene(0, 80));
             using (var initial = window.CaptureRenderedFrame())
                 Assert.NotNull(initial);
 
