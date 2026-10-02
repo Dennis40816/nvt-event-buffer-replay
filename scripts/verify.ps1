@@ -17,6 +17,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
 dotnet test (Join-Path $RepoRoot 'Nvt.EventBufferReplay.sln') --configuration Release --no-build
 if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
 & (Join-Path $PSScriptRoot 'check-line-budget.ps1')
+& (Join-Path $PSScriptRoot 'test-line-budget.ps1')
 if (-not $SkipPerformanceSmoke) { & (Join-Path $PSScriptRoot 'performance-gate.ps1') -Mode Smoke }
 
 Write-Output 'Repository verification passed.'
