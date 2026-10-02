@@ -1,5 +1,6 @@
 {
   "number": 1,
+  "state": "open",
   "base": {"ref": "0.1.2", "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
   "head": {"sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 }

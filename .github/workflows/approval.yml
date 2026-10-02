@@ -1,7 +1,8 @@
 name: approval
 
-# PR merge ref supplies this workflow; base checkout supplies the checker/policy.
-# Base moves emit no PR event: up-to-date and merger checks cover staleness; dual-event ruleset selection needs live verification.
+# GitHub reads this workflow from the pull request's merge ref.
+# Require commit status governance/approval-rule and build-and-test in rulesets.
+# Same-named check runs accumulate per head; the latest commit status wins.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, edited,
@@ -12,9 +13,10 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  statuses: write
 
 concurrency:
-  group: approval-${{ github.event.pull_request.number }}
+  group: approval-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -23,6 +25,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Mark approval pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APPROVAL_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          APPROVAL_STATUS_CONTEXT: governance/approval-rule
+          APPROVAL_STATUS_STATE: pending
+          APPROVAL_STATUS_DESCRIPTION: Approval rule is being evaluated
+          APPROVAL_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          for attempt in 1 2 3; do
+            if gh api -X POST "repos/$GH_REPO/statuses/$APPROVAL_HEAD_SHA" \
+              -f "state=$APPROVAL_STATUS_STATE" \
+              -f "context=$APPROVAL_STATUS_CONTEXT" \
+              -f "description=$APPROVAL_STATUS_DESCRIPTION" \
+              -f "target_url=$APPROVAL_RUN_URL"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 2; fi
+          done
+          exit 1
       - name: Check out the base branch
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -37,13 +60,46 @@ jobs:
           base_sha=$(git rev-parse HEAD)
           echo "APPROVAL_BASE_SHA=$base_sha" >> "$GITHUB_ENV"
       - name: Check approval
+        id: approval_check
         env:
           GITHUB_TOKEN: ${{ github.token }}
           APPROVAL_REPOSITORY: ${{ github.repository }}
           APPROVAL_PULL_REQUEST: ${{ github.event.pull_request.number }}
+          # New checker inputs use env so older base scripts ignore them.
+          APPROVAL_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
         run: >-
           python -B scripts/approval_check.py
           --repository "$APPROVAL_REPOSITORY"
           --pull-request "$APPROVAL_PULL_REQUEST"
           --checked-out-base "$APPROVAL_BASE_SHA"
           --summary "$GITHUB_STEP_SUMMARY"
+      - name: Report approval status
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APPROVAL_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          APPROVAL_OUTCOME: ${{ steps.approval_check.outcome }}
+          APPROVAL_STATUS_CONTEXT: governance/approval-rule
+          APPROVAL_SUCCESS_DESCRIPTION: Approval rule satisfied
+          APPROVAL_FAILURE_DESCRIPTION: Approval rule not satisfied
+          APPROVAL_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$APPROVAL_OUTCOME" = success ]; then
+            state=success
+            description="$APPROVAL_SUCCESS_DESCRIPTION"
+          else
+            state=failure
+            description="$APPROVAL_FAILURE_DESCRIPTION"
+          fi
+          for attempt in 1 2 3; do
+            if gh api -X POST "repos/$GH_REPO/statuses/$APPROVAL_HEAD_SHA" \
+              -f "state=$state" \
+              -f "context=$APPROVAL_STATUS_CONTEXT" \
+              -f "description=$description" \
+              -f "target_url=$APPROVAL_RUN_URL"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 2; fi
+          done
+          exit 1

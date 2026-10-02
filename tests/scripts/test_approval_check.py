@@ -8,6 +8,7 @@ import http.client
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import re
 import unittest
@@ -366,6 +367,69 @@ class ApprovalCheckTests(unittest.TestCase):
         with self.assertRaises(approval.InputError):
             approval.evaluate(self.reader, POLICY, OLD)
 
+    def test_expected_head_mismatch_fails_all_parts(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = approval.main([
+                "--repository", "Dennis40816/nvt-event-buffer-replay",
+                "--pull-request", "1", "--fixture", str(FIXTURE),
+                "--expected-head", OLD])
+        self.assertEqual(code, 1)
+        lines = output.getvalue().splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertTrue(all(line.startswith("- FAIL ") and
+                            "live head differs from expected head" in line
+                            for line in lines))
+
+    def test_expected_head_environment(self):
+        args = ["--repository", "Dennis40816/nvt-event-buffer-replay",
+                "--pull-request", "1", "--fixture", str(FIXTURE)]
+        for value, expected_code in ((OLD, 1), (HEAD, 0), ("", 0)):
+            with self.subTest(value=value):
+                output = io.StringIO()
+                with mock.patch.dict(os.environ,
+                                     {"APPROVAL_EXPECTED_HEAD": value}):
+                    with redirect_stdout(output):
+                        code = approval.main(args)
+                self.assertEqual(code, expected_code)
+                if value == OLD:
+                    self.assertEqual(output.getvalue().count("- FAIL "), 4)
+                    self.assertIn("live head differs from expected head",
+                                  output.getvalue())
+        with mock.patch.dict(os.environ, {}, clear=True):
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(approval.main(args), 0)
+
+    def test_explicit_expected_head_overrides_environment(self):
+        args = ["--repository", "Dennis40816/nvt-event-buffer-replay",
+                "--pull-request", "1", "--fixture", str(FIXTURE)]
+        for environment, explicit, expected_code in (
+                (OLD, HEAD, 0), (HEAD, OLD, 1)):
+            with self.subTest(environment=environment, explicit=explicit):
+                with mock.patch.dict(os.environ,
+                                     {"APPROVAL_EXPECTED_HEAD": environment}):
+                    with redirect_stdout(io.StringIO()):
+                        code = approval.main(args + ["--expected-head", explicit])
+                self.assertEqual(code, expected_code)
+
+    def test_closed_or_merged_pull_fails_all_parts(self):
+        for merged in (False, True):
+            with self.subTest(merged=merged):
+                self.reader.payloads["pull"]["state"] = "closed"
+                self.reader.payloads["pull"]["merged"] = merged
+                output = io.StringIO()
+                with mock.patch.object(approval, "Reader", return_value=self.reader):
+                    with redirect_stdout(output):
+                        code = approval.main([
+                            "--repository", "Dennis40816/nvt-event-buffer-replay",
+                            "--pull-request", "1", "--fixture", str(FIXTURE)])
+                self.assertEqual(code, 1)
+                lines = output.getvalue().splitlines()
+                self.assertEqual(len(lines), 4)
+                self.assertTrue(all(line.startswith("- FAIL ") and
+                                    "pull request is not open" in line
+                                    for line in lines))
+
     def test_empty_checked_out_base_fails_closed(self):
         with self.assertRaisesRegex(approval.InputError, "full SHA"):
             approval.evaluate(self.reader, POLICY, "")
@@ -438,6 +502,81 @@ class ApprovalCheckTests(unittest.TestCase):
         self.assertEqual(POLICY["tests_non_added"], "tests/**")
         self.assertEqual(POLICY["owner_gated_base_branch"], "main")
         self.assertEqual(POLICY["required_check"], "build-and-test")
+        self.assertEqual(POLICY["approval_status_context"],
+                         "governance/approval-rule")
+
+    def test_workflow_reports_approval_commit_status(self):
+        workflow = (ROOT / ".github/workflows/approval.yml").read_text(
+            encoding="utf-8")
+        self.assertIn("# GitHub reads this workflow from the pull request's "
+                      "merge ref.", workflow)
+        self.assertRegex(workflow, r"(?m)^  statuses: write$")
+        self.assertRegex(workflow, r"(?m)^  pull_request_review:$")
+        self.assertIn(
+            "  group: approval-${{ github.event.pull_request.number }}-"
+            "${{ github.event.pull_request.head.sha }}", workflow)
+        job_header = workflow.split("  approval:\n", 1)[1].split(
+            "    steps:\n", 1)[0]
+        self.assertNotRegex(job_header, r"(?m)^    if:")
+        self.assertNotIn("|| true", workflow)
+        self.assertNotIn("continue-on-error", workflow)
+        self.assertNotIn("--expected-head", workflow)
+        steps = re.findall(
+            r"(?ms)^      - name: [^\n]+\n.*?(?=^      - name: |\Z)",
+            workflow)
+
+        def named(name):
+            found = [step for step in steps
+                     if step.startswith(f"      - name: {name}\n")]
+            self.assertEqual(len(found), 1)
+            return found[0]
+
+        pending = named("Mark approval pending")
+        checkout = named("Check out the base branch")
+        check = named("Check approval")
+        status = named("Report approval status")
+        self.assertLess(workflow.index(pending), workflow.index(checkout))
+        checkouts = [step for step in steps
+                     if re.search(r"(?m)^        uses: actions/checkout@", step)]
+        self.assertEqual(checkouts, [checkout])
+        self.assertEqual(re.findall(r"(?m)^          ref: (.+)$", checkout),
+                         ["${{ github.event.pull_request.base.ref }}"])
+        self.assertRegex(check, r"(?m)^        id: approval_check$")
+        self.assertRegex(check, r"(?m)^          APPROVAL_EXPECTED_HEAD: "
+                         r"\$\{\{ github.event.pull_request.head.sha \}\}$")
+        self.assertRegex(status,
+                         r"(?m)^        if: \$\{\{ !cancelled\(\) \}\}$")
+        self.assertRegex(status, r"(?m)^          APPROVAL_OUTCOME: "
+                         r"\$\{\{ steps.approval_check.outcome \}\}$")
+        for step in (pending, status):
+            self.assertRegex(step, r"(?m)^          APPROVAL_HEAD_SHA: "
+                             r"\$\{\{ github.event.pull_request.head.sha \}\}$")
+            context = re.search(
+                r"(?m)^          APPROVAL_STATUS_CONTEXT: (.+)$", step)
+            self.assertIsNotNone(context)
+            self.assertEqual(context.group(1),
+                             POLICY["approval_status_context"])
+            body = step.split("        run: |\n", 1)[1]
+            self.assertNotIn("${{", body)
+            self.assertIn(
+                'gh api -X POST "repos/$GH_REPO/statuses/$APPROVAL_HEAD_SHA"',
+                body)
+            self.assertIn('-f "context=$APPROVAL_STATUS_CONTEXT"', body)
+            self.assertIn('-f "target_url=$APPROVAL_RUN_URL"', body)
+        self.assertRegex(pending,
+                         r"(?m)^          APPROVAL_STATUS_STATE: pending$")
+        self.assertIn('-f "state=$APPROVAL_STATUS_STATE"', pending)
+        body = status.split("        run: |\n", 1)[1]
+        self.assertRegex(body, r'if \[ "\$APPROVAL_OUTCOME" = success \]; then\n'
+                         r'            state=success\n'
+                         r'            description="\$APPROVAL_SUCCESS_DESCRIPTION"\n'
+                         r'          else\n'
+                         r'            state=failure\n'
+                         r'            description="\$APPROVAL_FAILURE_DESCRIPTION"')
+        self.assertEqual(re.findall(r"(?m)^            state=(\w+)$", body),
+                         ["success", "failure"])
+        self.assertIn("for attempt in 1 2 3; do", body)
+        self.assertIn('-f "state=$state"', body)
 
 
 if __name__ == "__main__":
