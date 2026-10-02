@@ -30,8 +30,9 @@ a new `0.2.0` trunk.
 
 ## Review record
 
-A review record starts with the line `Review record: <full head SHA>
-<verdict>` and gives:
+A review record is posted as a pull request review (not an issue comment).
+Its first non-empty line is `Review record: <full head SHA> <verdict>`;
+the record gives:
 
 - the verdict: `accept` or `reject`;
 - findings, each with a severity, `path:line`, the failing scenario and a fix;
@@ -40,20 +41,28 @@ A review record starts with the line `Review record: <full head SHA>
 Severities: **P0** ships wrong results, loses data or leaks private material;
 **P1** breaks a contract or required behavior, or misdirects an agent;
 **P2** should be fixed soon; **P3** is optional polish.
+An `accept` verdict requires zero P0 and P1 findings.
+
+The latest review from the owner or the GitHub App that contains the words
+"review record" is the record in force. Write that first line exactly: any
+other form, including a comment that only mentions a review record, reads as
+a malformed record and blocks the merge until a well-formed record follows.
 
 ## Who approves
 
 Owner-gated paths are everything that decides what is built, tested, checked,
 released or approved. A pull request that touches one is owner-gated as a
 whole. Every pattern below matches at any depth of the repository, ignoring
-case.
+case. The exact pattern list is in
+[`approval-policy.json`](.github/approval-policy.json).
 
 - Product and build graph: `src/**`, `*.sln`, `*.slnx`, `*.slnf`, `*.csproj`,
   `packages.lock.json`, `*.props`, `*.targets`, `*.rsp`, `global.json`,
   `nuget.config`, `.editorconfig`, `.globalconfig`.
-- Existing tests: modifying or deleting any file under `tests/**` that is
-  present on the base branch, including approved snapshots and fixtures
-  (`M` or `D` in `git diff --name-status --no-renames origin/<base>...<head>`).
+- Existing tests: any status other than `A` under `tests/**`, including
+  approved snapshots and fixtures. GitHub's changed-file list supplies the
+  status (`added` means `A`) and detects renames. A rename or copy into
+  `tests/**` is owner-gated even when its destination is new.
 - CI, gates and release: `.github/**`, `scripts/**`, `eng/**`, `VERSION`,
   `docs/release.md`, `CODEOWNERS`.
 - Decisions and contracts: `docs/adr/**`, `docs/product-spec.md`.
@@ -66,26 +75,50 @@ case.
 Everything else is review-gated: other documents and new files under
 `tests/**`.
 
-| Gate | Merge condition |
-| --- | --- |
-| Review-gated | The head contains the current head of the base branch, the latest review record is for that exact head with verdict `accept` and zero P0 and P1 findings, and the required check has completed green on it |
-| Owner-gated | The review-gated condition, plus the owner's latest GitHub review on that same head being an approval |
+Review-gated merge condition: the head contains the current head of the base
+branch, the latest review record is for that exact head with verdict `accept`
+and zero P0 and P1 findings, and the required check has completed green on it.
 
-The required check is the `build-and-test` job of `.github/workflows/ci.yml`.
+Owner-gated merge condition: all review-gated conditions, plus the owner's
+latest review decision being an approval on that same head. A later change
+request or dismissal blocks it.
+
+The required build check is the `build-and-test` job of
+`.github/workflows/ci.yml`. The `governance / approval` check enforces the
+approval rule on pull requests; its script does not read `build-and-test`.
+The repository ruleset must require both checks, Code Owner review with stale
+approval dismissal, and branches up to date. The GitHub App keeps no
+`workflows` permission by default.
+
+GitHub reads `approval.yml` from the pull request's merge ref, which the pull
+request can change. The workflow checks out the base branch's script and
+policy, but that checkout does not make the workflow definition trusted.
+Which run a ruleset uses when both PR and review events report the same check
+name remains unverified until a live pull request runs this workflow.
+
 The merging agent confirms each part of the condition for the exact head
 immediately before merging: `git fetch origin <base>` followed by
 `git merge-base --is-ancestor origin/<base> <head>`, then the check conclusion
 and the owner's review as GitHub reports them. A head behind its base branch,
 a pending or failed check, an open P0 or P1 finding, or an approval of an
 earlier commit blocks the merge.
+From a checkout of `origin/<base>`, the merging agent also runs
+`python scripts/approval_check.py` with `--repository`, `--pull-request` and
+`--checked-out-base` set to that checkout's `git rev-parse HEAD`, and requires
+exit 0 before merging. While a base branch has no checker yet (the pull
+request that introduces it, and the first release merge into `main`), the
+check stays red and this step cannot run: the merging agent confirms the
+other parts and the owner merges.
 
 Every merge moves the base branch, so the other open pull requests then need a
 rebase, a new review and a new check run. Ask for the owner's approval after
 the final rebase, and merge one pull request at a time.
 
 Agents open pull requests through the GitHub App, so the owner's account
-remains free to approve them. The owner merging a pull request personally
-also satisfies the owner gate.
+remains free to approve them. GitHub forbids approval of one's own pull
+request. An owner-authored owner-gated pull request leaves the check red;
+the owner merges it personally, through the ruleset bypass once a ruleset
+requires the check.
 
 Releases follow [`docs/release.md`](docs/release.md). Publishing a release is
 the owner's action, or an agent's on the owner's instruction for that version.

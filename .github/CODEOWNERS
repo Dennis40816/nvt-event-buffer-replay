@@ -1,0 +1,34 @@
+# Every path below is owner-gated by .github/approval-policy.json.
+# CODEOWNERS cannot express the modified-versus-added rule under tests/**,
+# case-insensitive matching, or the main base-branch rule. The script covers them.
+**/src/** @Dennis40816
+*.sln @Dennis40816
+*.slnx @Dennis40816
+*.slnf @Dennis40816
+*.csproj @Dennis40816
+**/packages.lock.json @Dennis40816
+*.props @Dennis40816
+*.targets @Dennis40816
+*.rsp @Dennis40816
+**/global.json @Dennis40816
+**/nuget.config @Dennis40816
+**/.editorconfig @Dennis40816
+**/.globalconfig @Dennis40816
+**/.github/** @Dennis40816
+**/scripts/** @Dennis40816
+**/eng/** @Dennis40816
+**/VERSION @Dennis40816
+**/docs/release.md @Dennis40816
+**/CODEOWNERS @Dennis40816
+**/docs/adr/** @Dennis40816
+**/docs/product-spec.md @Dennis40816
+**/AGENTS.md @Dennis40816
+**/AGENTS.override.md @Dennis40816
+**/CLAUDE.md @Dennis40816
+**/CONTRIBUTING.md @Dennis40816
+**/.agents/** @Dennis40816
+**/.claude/** @Dennis40816
+**/.codex/** @Dennis40816
+**/.mcp.json @Dennis40816
+**/.gitignore @Dennis40816
+**/.gitattributes @Dennis40816
