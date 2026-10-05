@@ -5,6 +5,7 @@
     <Version>$(NvtProductVersion)</Version>
     <AssemblyVersion>$(NvtProductVersion).0</AssemblyVersion>
     <FileVersion>$(NvtProductVersion).0</FileVersion>
+    <Copyright>Copyright (c) 2026 Dennis Liu. All rights reserved.</Copyright>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

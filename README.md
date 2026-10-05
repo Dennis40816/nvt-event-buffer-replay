@@ -154,3 +154,11 @@ smoke checks. See the [release process](docs/release.md).
 Private captures, firmware, QA records, and golden payloads must not be
 committed. Commit only synthetic fixtures, schemas, hashes, provenance, and
 reviewed observations.
+
+## License
+
+Copyright (c) 2026 Dennis Liu. All rights reserved.
+
+This software is proprietary. No permission is granted to use, copy, modify, or
+distribute it without prior written authorization from Dennis Liu. See
+[LICENSE](LICENSE). Third-party components keep their own licenses.
