@@ -790,7 +790,7 @@ public sealed class ReplayRangeExporter
                 for (var repeat = 0; repeat < entry.RepeatCount; repeat++)
                 {
                     var path = Path.Combine(temporaryDirectory, $"frame-{outputIndex++:D8}.png");
-                    await AtomicOutput.WriteAsync(path, (stream, token) => DeterministicPng.WriteRgbAsync(stream, rgb, options.Width, options.Height, token), cancellationToken);
+                    await Nvt.Core.IO.AtomicOutput.WriteAsync(path, (stream, token) => DeterministicPng.WriteRgbAsync(stream, rgb, options.Width, options.Height, token), cancellationToken);
                     if (outputIndex == totalFrames || outputIndex % progressStep == 0)
                         progress?.Report(new ReplayExportProgress(outputIndex, totalFrames, "Writing PNG fallback"));
                 }
@@ -835,6 +835,6 @@ public sealed class ReplayRangeExporter
     }
 
     private static Task WriteManifestAsync(string path, ReplayVideoManifest manifest, CancellationToken cancellationToken) =>
-        AtomicOutput.WriteAsync(path, (stream, token) => JsonSerializer.SerializeAsync(stream, manifest, JsonOptions, token), cancellationToken);
+        Nvt.Core.IO.AtomicOutput.WriteAsync(path, (stream, token) => JsonSerializer.SerializeAsync(stream, manifest, JsonOptions, token), cancellationToken);
 
 }

@@ -262,7 +262,7 @@ public partial class MainWindow : Window
         await using var memory = new MemoryStream();
         bitmap.Save(memory, PngBitmapEncoderOptions.Default);
         var png = memory.ToArray();
-        await AtomicOutput.WriteAsync(
+        await Nvt.Core.IO.AtomicOutput.WriteAsync(
             path,
             (stream, token) => stream.WriteAsync(png, token).AsTask(),
             cancellationToken);
@@ -327,7 +327,7 @@ public partial class MainWindow : Window
         await using var memory = new MemoryStream();
         bitmap.Save(memory, PngBitmapEncoderOptions.Default);
         var png = memory.ToArray();
-        await AtomicOutput.WriteAsync(
+        await Nvt.Core.IO.AtomicOutput.WriteAsync(
             path,
             (stream, token) => stream.WriteAsync(png, token).AsTask(),
             cancellationToken);

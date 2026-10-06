@@ -12,7 +12,7 @@ public sealed class HeatmapPngWriter
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
         ArgumentNullException.ThrowIfNull(report);
-        return AtomicOutput.WriteAsync(
+        return Nvt.Core.IO.AtomicOutput.WriteAsync(
             outputPath,
             (stream, token) => DeterministicPng.WriteHeatmapAsync(
                 stream,
