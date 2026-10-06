@@ -1,13 +1,8 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Nvt.Core.SourceFileNavigation;
+using CoreNavigator = Nvt.Core.SourceFileNavigation.SourceFileNavigator;
 
 namespace Nvt.Replay.Avalonia;
-
-internal sealed record SourceFileOpenResult(
-    bool Opened,
-    bool ExactLine,
-    string Application,
-    string? Error = null);
 
 internal static class SourceFileNavigator
 {
@@ -27,7 +22,7 @@ internal static class SourceFileNavigator
         foreach (var codePath in VisualStudioCodePaths())
         {
             if (!File.Exists(codePath)) continue;
-            if (TryStart(codePath, ["--reuse-window", "--goto", $"{path}:{Math.Max(1, lineNumber)}:1"], out var error))
+            if (CoreNavigator.TryStart(codePath, ["--reuse-window", "--goto", $"{path}:{Math.Max(1, lineNumber)}:1"], out var error))
                 return new SourceFileOpenResult(true, true, "Visual Studio Code");
             if (!string.IsNullOrWhiteSpace(error))
                 return new SourceFileOpenResult(false, false, "Visual Studio Code", error);
@@ -36,25 +31,13 @@ internal static class SourceFileNavigator
         foreach (var notepadPlusPlusPath in NotepadPlusPlusPaths())
         {
             if (!File.Exists(notepadPlusPlusPath)) continue;
-            if (TryStart(notepadPlusPlusPath, [$"-n{Math.Max(1, lineNumber)}", path], out var error))
+            if (CoreNavigator.TryStart(notepadPlusPlusPath, [$"-n{Math.Max(1, lineNumber)}", path], out var error))
                 return new SourceFileOpenResult(true, true, "Notepad++");
             if (!string.IsNullOrWhiteSpace(error))
                 return new SourceFileOpenResult(false, false, "Notepad++", error);
         }
 
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = path,
-                UseShellExecute = true,
-            });
-            return new SourceFileOpenResult(true, false, "default application");
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            return new SourceFileOpenResult(false, false, "default application", exception.Message);
-        }
+        return CoreNavigator.OpenDefault(path);
     }
 
     internal static bool PrefersExcel(string sourcePath) =>
@@ -128,27 +111,6 @@ internal static class SourceFileNavigator
         catch (InvalidComObjectException)
         {
             // The RCW was already released by a failed Automation call.
-        }
-    }
-
-    private static bool TryStart(string executable, IReadOnlyList<string> arguments, out string? error)
-    {
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = executable,
-                UseShellExecute = false,
-            };
-            foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
-            Process.Start(startInfo);
-            error = null;
-            return true;
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            error = exception.Message;
-            return false;
         }
     }
 
