@@ -27,6 +27,16 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
+
+      - name: Fetch Core packages
+        if: hashFiles('scripts/fetch_core_packages.py') != ''
+        timeout-minutes: 3
+        run: python -B scripts/fetch_core_packages.py
+
       - name: Restore
         timeout-minutes: 5
         run: dotnet restore Nvt.EventBufferReplay.sln --locked-mode
