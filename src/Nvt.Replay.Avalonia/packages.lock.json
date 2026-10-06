@@ -193,6 +193,11 @@
         "resolved": "3.0.1",
         "contentHash": "s/s20YTVY9r9TPfTrN5g8zPF1YhwxyqO6PxUkrYTGI2B+OGPe9AdajWZrLhFqXIvqIW23fnUE4+ztrUWNU1+9g=="
       },
+      "Nvt.Core": {
+        "type": "Transitive",
+        "resolved": "0.1.0",
+        "contentHash": "zwlxw7iHNVCjAtix9Wi1Ok1nEZk6fJtAkQFVI7BYQycKS2Xk5ZLo3X4mXU/SPdetJcHQQSPoEGNiYtVgoc+5yA=="
+      },
       "SkiaSharp": {
         "type": "Transitive",
         "resolved": "3.119.4",
@@ -236,7 +241,10 @@
         }
       },
       "nvt.replay.core": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Nvt.Core": "[0.1.0, 0.1.0]"
+        }
       },
       "nvt.replay.formats": {
         "type": "Project",

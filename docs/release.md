@@ -13,7 +13,6 @@ From a clean commit, run:
 ```powershell
 $version = (Get-Content ./VERSION -Raw).Trim()
 $commit = (git rev-parse HEAD).Trim()
-dotnet restore Nvt.EventBufferReplay.sln --locked-mode
 ./scripts/verify.ps1
 ./scripts/package.ps1 -Version $version -Commit $commit
 ./scripts/smoke-release.ps1 -PackagePath "./artifacts/release/NvtEventBufferReplay-v$version-win-x64.zip"
@@ -41,6 +40,8 @@ The archive has one top-level directory and a closed set of files:
 
 - `NvtEventBufferReplay.exe`
 - `nvt-replay.exe`
+- `LICENSE`: this tool's license
+- `licenses/Nvt.Core/LICENSE`: the Core license, copied unchanged from the downloaded `Nvt.Core` package; Core ships only under this license
 - `RELEASE.json` with version, commit, commit time, runtime, self-contained status, offline defaults, telemetry status, payload names, and the path of the bundled FFmpeg manifest
 - `SHA256SUMS.txt` covering every other file in the archive
 - `tools/ffmpeg/`: `FFMPEG-RUNTIME.json`, `LICENSE.txt`, `NOTICE.txt`, and under `bin/` the `ffmpeg.exe` and `ffprobe.exe` executables with their FFmpeg DLLs, as pinned by `eng/ffmpeg-runtime.json`
