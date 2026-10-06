@@ -14,8 +14,8 @@
       },
       "Nvt.Core": {
         "type": "Transitive",
-        "resolved": "0.1.0",
-        "contentHash": "zwlxw7iHNVCjAtix9Wi1Ok1nEZk6fJtAkQFVI7BYQycKS2Xk5ZLo3X4mXU/SPdetJcHQQSPoEGNiYtVgoc+5yA=="
+        "resolved": "0.2.0",
+        "contentHash": "k/mY/z0n19QLga/dln2mLWsRjAFvGUGfcjrhM2WmBCztOsiET6jpKn28lmVykgfEEy7DUd+YFLDRDifsWj7vqg=="
       },
       "SkiaSharp.NativeAssets.macOS": {
         "type": "Transitive",
@@ -38,7 +38,7 @@
       "nvt.replay.core": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Core": "[0.1.0, 0.1.0]"
+          "Nvt.Core": "[0.2.0, 0.2.0]"
         }
       },
       "nvt.replay.formats": {
