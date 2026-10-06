@@ -121,9 +121,11 @@ in [MVP evidence boundaries and deferrals](docs/mvp-limitations.md).
 
 ## Build
 
-Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band.
+Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band, and Python 3.10 or later.
+The first command downloads the Nvt.Core package from its GitHub Release and checks its hash.
 
 ```powershell
+python -B scripts/fetch_core_packages.py
 dotnet restore
 dotnet build --no-restore
 dotnet test --no-build

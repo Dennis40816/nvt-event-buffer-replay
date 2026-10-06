@@ -34,6 +34,8 @@ try {
     $env:NVT_REPLAY_PERF_COMMIT = (& git -C $RepoRoot rev-parse HEAD).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'Unable to resolve the current git commit.' }
 
+    & python -B (Join-Path $PSScriptRoot 'fetch_core_packages.py') --manifest (Join-Path $RepoRoot 'core-packages.json') --dest (Join-Path $RepoRoot 'artifacts/core-packages')
+    if ($LASTEXITCODE -ne 0) { throw 'Core package download failed.' }
     & dotnet restore (Join-Path $RepoRoot 'Nvt.EventBufferReplay.sln') --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Locked restore failed.' }
     & dotnet test (Join-Path $RepoRoot 'tests/Nvt.Replay.Tests/Nvt.Replay.Tests.csproj') `

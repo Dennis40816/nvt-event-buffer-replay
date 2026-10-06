@@ -10,6 +10,8 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 
 & (Join-Path $PSScriptRoot 'verify-release-identity.ps1') -ExpectedTag $ExpectedTag
+& python -B (Join-Path $PSScriptRoot 'fetch_core_packages.py') --manifest (Join-Path $RepoRoot 'core-packages.json') --dest (Join-Path $RepoRoot 'artifacts/core-packages')
+if ($LASTEXITCODE -ne 0) { throw 'Core package download failed.' }
 dotnet restore (Join-Path $RepoRoot 'Nvt.EventBufferReplay.sln') --locked-mode
 if ($LASTEXITCODE -ne 0) { throw 'Locked restore failed.' }
 dotnet build (Join-Path $RepoRoot 'Nvt.EventBufferReplay.sln') --configuration Release --no-restore

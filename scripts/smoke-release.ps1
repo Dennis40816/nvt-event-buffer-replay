@@ -39,6 +39,8 @@ try {
     $AllowedFiles = @(
         'NvtEventBufferReplay.exe',
         'nvt-replay.exe',
+        'LICENSE',
+        'licenses/Nvt.Core/LICENSE',
         'RELEASE.json',
         'SHA256SUMS.txt',
         'tools/ffmpeg/FFMPEG-RUNTIME.json',

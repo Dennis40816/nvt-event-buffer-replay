@@ -117,6 +117,23 @@ foreach ($Published in @(
 
 Copy-Item -LiteralPath (Join-Path $UiPublishRoot 'Nvt.Replay.Avalonia.exe') -Destination (Join-Path $PackageRoot 'NvtEventBufferReplay.exe')
 Copy-Item -LiteralPath (Join-Path $CliPublishRoot 'Nvt.Replay.Cli.exe') -Destination (Join-Path $PackageRoot 'nvt-replay.exe')
+Copy-Item -LiteralPath (Join-Path $RepoRoot 'LICENSE') -Destination (Join-Path $PackageRoot 'LICENSE')
+# Core is delivered only under its own license, taken unchanged from the downloaded package.
+& python -B (Join-Path $PSScriptRoot 'fetch_core_packages.py') --manifest (Join-Path $RepoRoot 'core-packages.json') --dest (Join-Path $RepoRoot 'artifacts/core-packages')
+if ($LASTEXITCODE -ne 0) { throw 'Core package download failed.' }
+$CorePackages = @(Get-ChildItem -LiteralPath (Join-Path $RepoRoot 'artifacts/core-packages') -Filter 'Nvt.Core.*.nupkg' | Where-Object { $_.Name -notlike 'Nvt.Core.Avalonia.*' })
+if ($CorePackages.Count -ne 1) { throw 'artifacts/core-packages must hold exactly one Nvt.Core package.' }
+$CoreLicenseRoot = Join-Path $PackageRoot 'licenses/Nvt.Core'
+[IO.Directory]::CreateDirectory($CoreLicenseRoot) | Out-Null
+$CoreArchive = [IO.Compression.ZipFile]::OpenRead($CorePackages[0].FullName)
+try {
+    $CoreLicense = $CoreArchive.GetEntry('LICENSE')
+    if ($null -eq $CoreLicense) { throw "$($CorePackages[0].Name) has no LICENSE." }
+    [IO.Compression.ZipFileExtensions]::ExtractToFile($CoreLicense, (Join-Path $CoreLicenseRoot 'LICENSE'))
+}
+finally {
+    $CoreArchive.Dispose()
+}
 & (Join-Path $PSScriptRoot 'install-ffmpeg.ps1') -Destination $FfmpegRuntimeRoot | Out-Null
 $CommitTime = (git -C $RepoRoot show -s --format=%cI $Commit).Trim()
 $ReleaseIdentity = [ordered]@{
@@ -138,6 +155,8 @@ $ReleaseIdentity | ConvertTo-Json | Set-Content -LiteralPath $IdentityPath -Enco
 $AllowedPackageFiles = @(
     'NvtEventBufferReplay.exe',
     'nvt-replay.exe',
+    'LICENSE',
+    'licenses/Nvt.Core/LICENSE',
     'RELEASE.json',
     'SHA256SUMS.txt',
     'tools/ffmpeg/FFMPEG-RUNTIME.json',
