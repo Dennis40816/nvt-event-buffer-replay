@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Nvt.Core.Csv;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 
@@ -157,12 +158,9 @@ public sealed class AnalysisOutputWriter
 
     private static void AppendRow(StringBuilder result, params string[] values)
     {
-        result.AppendJoin(',', values.Select(Csv));
+        result.AppendJoin(',', values.Select(CsvQuoting.Quote));
         result.Append('\n');
     }
-
-    private static string Csv(string value) =>
-        value.IndexOfAny([',', '"', '\r', '\n']) < 0 ? value : $"\"{value.Replace("\"", "\"\"")}\"";
 }
 
 internal sealed record AnalysisRecoveryJournal(
