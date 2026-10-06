@@ -93,7 +93,7 @@ public sealed class ReplaySidecarStore
         if (document.SchemaVersion != ReplaySidecarDocument.CurrentSchemaVersion)
             throw new ArgumentException($"Only schema version {ReplaySidecarDocument.CurrentSchemaVersion} can be written.", nameof(document));
         var portable = MakeEvidencePathsPortable(Path.GetFullPath(path), document);
-        await AtomicOutput.WriteAsync(
+        await Nvt.Core.IO.AtomicOutput.WriteAsync(
             path,
             (stream, token) => JsonSerializer.SerializeAsync(stream, portable, JsonOptions, token),
             cancellationToken);

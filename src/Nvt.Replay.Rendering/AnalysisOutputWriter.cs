@@ -75,7 +75,7 @@ public sealed class AnalysisOutputWriter
         await WriteTextAsync(result.EventsCsv, EventsCsv(report.Events), cancellationToken);
         await WriteJsonAsync(result.DiagnosticsJson, report.Diagnostics, cancellationToken);
         await WriteTextAsync(result.DiagnosticsCsv, DiagnosticsCsv(report.Diagnostics), cancellationToken);
-        await AtomicOutput.WriteAsync(
+        await Nvt.Core.IO.AtomicOutput.WriteAsync(
             result.HeatmapPng,
             (stream, token) => DeterministicPng.WriteHeatmapAsync(
                 stream,
@@ -92,13 +92,13 @@ public sealed class AnalysisOutputWriter
     }
 
     private static Task WriteJsonAsync<T>(string path, T value, CancellationToken cancellationToken) =>
-        AtomicOutput.WriteAsync(
+        Nvt.Core.IO.AtomicOutput.WriteAsync(
             path,
             (stream, token) => JsonSerializer.SerializeAsync(stream, value, JsonOptions, token),
             cancellationToken);
 
     private static Task WriteTextAsync(string path, string value, CancellationToken cancellationToken) =>
-        AtomicOutput.WriteAsync(
+        Nvt.Core.IO.AtomicOutput.WriteAsync(
             path,
             async (stream, token) =>
             {

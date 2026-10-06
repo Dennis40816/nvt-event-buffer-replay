@@ -44,7 +44,7 @@ public sealed class ReadableCommunicationLogWriter
         var jsonlPath = Path.Combine(fullDirectory, "communication-readable.jsonl");
         var rows = records.Select(record => ToRow(record, registerAnnotations)).ToArray();
 
-        await AtomicOutput.WriteAsync(csvPath, async (stream, token) =>
+        await Nvt.Core.IO.AtomicOutput.WriteAsync(csvPath, async (stream, token) =>
         {
             await using var writer = new StreamWriter(stream, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
             await writer.WriteLineAsync("index,stable_id,pc_time,operation,target,i2c_slave,address,declared_bytes,actual_bytes,register_profile,profile_resolution,region,register,meaning,raw_hex,line_number,byte_offset".AsMemory(), token);
@@ -56,7 +56,7 @@ public sealed class ReadableCommunicationLogWriter
             await writer.FlushAsync(token);
         }, cancellationToken);
 
-        await AtomicOutput.WriteAsync(jsonlPath, async (stream, token) =>
+        await Nvt.Core.IO.AtomicOutput.WriteAsync(jsonlPath, async (stream, token) =>
         {
             await using var writer = new StreamWriter(stream, new UTF8Encoding(false), 64 * 1024, leaveOpen: true);
             foreach (var row in rows)

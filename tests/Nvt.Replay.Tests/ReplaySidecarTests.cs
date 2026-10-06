@@ -93,7 +93,7 @@ public sealed class ReplaySidecarTests : IDisposable
         await File.WriteAllTextAsync(path, "original");
         using var cancellation = new CancellationTokenSource();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => AtomicOutput.WriteAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Nvt.Core.IO.AtomicOutput.WriteAsync(
             path,
             async (stream, token) =>
             {
