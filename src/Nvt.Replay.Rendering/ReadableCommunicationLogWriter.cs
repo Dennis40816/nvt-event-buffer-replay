@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Nvt.Core.Csv;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 
@@ -118,10 +119,7 @@ public sealed class ReadableCommunicationLogWriter
         row.RawHex,
         row.LineNumber.ToString(CultureInfo.InvariantCulture),
         row.ByteOffset.ToString(CultureInfo.InvariantCulture),
-    }.Select(Csv));
-
-    private static string Csv(string value) =>
-        value.IndexOfAny([',', '"', '\r', '\n']) < 0 ? value : $"\"{value.Replace("\"", "\"\"")}\"";
+    }.Select(CsvQuoting.Quote));
 
     private sealed record ReadableCommunicationRow(
         long Index,
