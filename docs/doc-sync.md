@@ -5,7 +5,7 @@ Run them from the repository root. Their [provenance](../tools/repo-checks/PROVE
 records the Core source.
 
 ```text
-python -B tools/repo-checks/doc_sync.py --repo . --config tools/repo-checks/doc-sync.nfu.json --base origin/0.2.0 --mode warn
+python -B tools/repo-checks/doc_sync.py --repo . --config tools/repo-checks/doc-sync.nfu.json --base origin/1.0.x --mode warn
 ```
 
 Choose the target branch as `--base`. The check compares `base...head` with
