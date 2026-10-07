@@ -1,6 +1,6 @@
 # NVT FW UTIL / Raw Data Analysis：Claude 交接文件
 
-更新：2026-09-29。這份文件交接**需求與工作狀態**，不是宣稱新功能已完成的操作手冊。請把 [TODO_NVT_FW_UTIL.md](../TODO_NVT_FW_UTIL.md) 當作逐項待辦的主索引；本文件補足決策脈絡、設計邊界、風險與接手順序。若本文件與使用者的新指示衝突，以新指示為準，並同步修訂待辦。
+更新：2026-09-29。這份文件交接**需求與工作狀態**，不是宣稱新功能已完成的操作手冊。請把 [ROADMAP.md](../ROADMAP.md) 當作逐項待辦的主索引；本文件補足決策脈絡、設計邊界、風險與接手順序。若本文件與使用者的新指示衝突，以新指示為準，並同步修訂待辦。
 
 ## 1. 接手時先知道的事
 
@@ -12,8 +12,8 @@
 
 ### 對應閱讀順序
 
-1. [產品待辦](../TODO_NVT_FW_UTIL.md)：FWU-01～FWU-10、已確認與待確認事項。
-2. [Roadmap](../ROADMAP.md) 的「Proposed next product slice — NVT FW UTIL」：產品方向。
+1. [產品待辦](../ROADMAP.md)：FWU-01～FWU-10、已確認與待確認事項。
+2. [Roadmap](../ROADMAP.md) 的「Next product slice: NVT FW UTIL」：產品方向。
 3. [README](../README.md) 與 [現有產品規格](product-spec.md)：不能破壞的 Event Buffer 基線、建置／測試入口。
 4. [來源介面](source-adapters.md)：既有 decoded-I²C adapter 的責任邊界；感測矩陣需要自己的資料模型。
 5. 實作時再讀相關 `src/`、`tests/` 與 [效能要求](performance.md)，不要僅憑本文更動既有 decoder。
@@ -142,4 +142,4 @@ Python 的 `frame.xy(x,y)` 是零起算座標，亦有 `frame.rc[row,col]`、逐
 2. 讀第 1 節列出的文件與 `nds_helper` 可存取的格式說明；若無權限，明確告知缺少來源，不要憑名稱猜格式或複製私有內容。
 3. 把「使用者確認」「工程建議」「待 golden」三類分開紀錄，尤其維持 **Stop FW Before Diff = NF on / CNC off**；不要把一般 Before／After 擅自映射成同一規則。
 4. 在動算法前，先請使用者提供第 7 節最前面的必要樣本與 NF／CNC 契約；可先做不依賴未知公式的 shell 或 read-only 匯入切片，但要有對應驗收。
-5. 每一切片都驗證既有 Event Buffer 工作流程、來源不變性、golden 與 UI 可讀性；更新 `TODO_NVT_FW_UTIL.md` 的狀態並記錄仍需人工審核的 gate。
+5. 每一切片都驗證既有 Event Buffer 工作流程、來源不變性、golden 與 UI 可讀性；更新 `ROADMAP.md` 的狀態並記錄仍需人工審核的 gate。
