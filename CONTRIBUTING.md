@@ -3,18 +3,17 @@
 ## Branch model
 
 - `main` holds released versions and receives release merges only.
-- A version branch such as `0.1.2` is the integration trunk of that version.
-  The owner decides when a trunk is created and when it is released.
+- A version branch such as `1.0.x` is the integration trunk of the next customer
+  version. The owner decides when a trunk is created and when it is released.
 - `feature/<version>/<topic>` carries one logical change and merges into its
   version trunk.
 - `VERSION` changes in the release-preparation commit, so on a trunk it names
   the previous release until then.
 
-Owner decision, 2026-10-02: `0.1.2` finishes the repository template adoption
-(agent documents, a check that enforces the approval rule below, and CI
-alignment) with no product behavior change, and keeps the checks that
-`ci.yml` and `scripts/verify.ps1` already run. NVT FW UTIL product work uses
-a new `0.2.0` trunk.
+Owner decision, 2026-10-07: the next customer version is `1.0.0`, and the
+trunk is `1.0.x` (renamed from `0.2.0`). Internal codes match the next
+customer version. The version rules are in `ROADMAP.md`. The owner agreed to the
+trunk name and CI trigger changes in this file on 2026-10-07 ("同意 (Recommended)").
 
 ## Change sequence
 
@@ -93,7 +92,8 @@ request or dismissal blocks it.
 
 The required build check is the `build-and-test` job of
 `.github/workflows/ci.yml`. CI runs on every pull request and on pushes to
-`main` and three-part numeric version trunks such as `0.1.2`. The job restores,
+`main`, three-part numeric version trunks such as `0.1.2`, and `x` trunks such as
+`1.0.x`. The job restores,
 builds, tests, enforces the 800-line per-file ceiling with recorded baseline
 exceptions, tests that checker, then runs the performance smoke gate. The
 `approval` workflow (job
