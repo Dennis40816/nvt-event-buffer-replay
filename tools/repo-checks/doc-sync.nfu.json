@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "mappings": [],
+  "bilingual": {
+    "exclude": [
+      ".github/**",
+      "AGENTS.md",
+      "CONTEXT.md",
+      "CONTRIBUTING.md",
+      "ROADMAP.md",
+      "captures/**",
+      "docs/**",
+      "golden/**",
+      "tests/**",
+      "tools/**"
+    ]
+  },
+  "moduleLists": {
+    "roots": [],
+    "lists": []
+  }
+}
