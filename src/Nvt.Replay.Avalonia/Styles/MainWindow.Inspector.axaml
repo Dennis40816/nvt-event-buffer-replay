@@ -1,80 +1,38 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Style Selector="Button.inspectorIcon">
-      <Setter Property="Width" Value="32" />
-      <Setter Property="Height" Value="32" />
-      <Setter Property="MinWidth" Value="32" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
-      <Setter Property="FontFamily" Value="Segoe Fluent Icons" />
-      <Setter Property="FontSize" Value="15" />
-    </Style>
-    <Style Selector="Button.inspectorIcon:pointerover">
-      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
-    </Style>
-    <Style Selector="Button.rawSourceOpen">
-      <Setter Property="Width" Value="28" />
-      <Setter Property="Height" Value="28" />
-      <Setter Property="MinWidth" Value="28" />
-      <Setter Property="HorizontalAlignment" Value="Center" />
-    </Style>
-    <Style Selector="Button.sourceLineLink">
-      <Setter Property="Height" Value="26" />
-      <Setter Property="MinWidth" Value="0" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="HorizontalAlignment" Value="Left" />
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-    </Style>
-    <Style Selector="Button.sourceLineLink:pointerover">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-    </Style>
-    <Style Selector="Button.sourceLineLink:focus-visible">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-    </Style>
-    <Style Selector="Button.sourceLineLink:disabled TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
-    </Style>
     <Style Selector="Border.inspectorMetric">
       <Setter Property="MinHeight" Value="38" />
       <Setter Property="Padding" Value="9,6" />
       <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Background" Value="{DynamicResource RaisedSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcSurfaceSubtleBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderSoftBrush}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style Selector="Border.healthGood">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcAccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcAccentBorderBrush}" />
     </Style>
     <Style Selector="Border.healthAlarm">
-      <Setter Property="Background" Value="{DynamicResource WarningSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcWarningSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcDangerTextBrush}" />
     </Style>
     <Style Selector="ListBox.inspectorContacts ListBoxItem">
       <Setter Property="Margin" Value="0,0,0,3" />
       <Setter Property="CornerRadius" Value="4" />
     </Style>
     <Style Selector="ListBox.inspectorContacts ListBoxItem:pointerover">
-      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcSelectionSurfaceBrush}" />
     </Style>
     <Style Selector="ListBox.inspectorContacts ListBoxItem:selected">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcAccentSurfaceBrush}" />
     </Style>
     <Style Selector="ListBox.inspectorContacts ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcAccentSurfaceBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="TextBlock.inspectorSectionTitle">
       <Setter Property="FontSize" Value="13.5" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextBrush}" />
     </Style>
 </Styles>

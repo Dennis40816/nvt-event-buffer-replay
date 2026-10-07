@@ -6,6 +6,11 @@
       "release": "core-v0.2.0",
       "asset": "Nvt.Core.0.2.0.nupkg",
       "sha256": "7d281f8fdc2ac8bfe2c43393c6c98485263a01c84db75e6d1dbcaaaa9bc6b22b"
+    },
+    {
+      "release": "core-v0.2.0",
+      "asset": "Nvt.Core.Avalonia.0.2.0.nupkg",
+      "sha256": "7ed0eec30edecba9cf6b2b78604829678a7838316703bd9e1f3f25f539e327a1"
     }
   ]
 }

@@ -306,6 +306,15 @@
         "resolved": "0.2.0",
         "contentHash": "k/mY/z0n19QLga/dln2mLWsRjAFvGUGfcjrhM2WmBCztOsiET6jpKn28lmVykgfEEy7DUd+YFLDRDifsWj7vqg=="
       },
+      "Nvt.Core.Avalonia": {
+        "type": "Transitive",
+        "resolved": "0.2.0",
+        "contentHash": "xyPQ3GMSdg6fhnTlFs/ysK2S8Z+VBxsJKVwk55f4Ub1kO32TVUgekmo53J2sFq1sPWMMbeI6Ov7S15Zeg4uxYQ==",
+        "dependencies": {
+          "Avalonia": "12.1.1",
+          "Nvt.Core": "0.2.0"
+        }
+      },
       "SkiaSharp": {
         "type": "Transitive",
         "resolved": "3.119.4",
@@ -424,6 +433,7 @@
           "Avalonia.Skia": "[12.1.1, )",
           "Avalonia.Themes.Fluent": "[12.1.1, )",
           "AvaloniaUI.DiagnosticsSupport": "[2.2.3, )",
+          "Nvt.Core.Avalonia": "[0.2.0, 0.2.0]",
           "Nvt.Replay.Analysis": "[0.1.1, )",
           "Nvt.Replay.Core": "[0.1.1, )",
           "Nvt.Replay.Formats": "[0.1.1, )",
