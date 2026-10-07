@@ -68,9 +68,10 @@ public partial class MainWindow : Window
             new("Writes / commands", RawRegisterFilter.WritesAndCommands),
             new("Ambiguous", RawRegisterFilter.Ambiguous),
         };
-        configuringRegisterProfile = true;
-        RegisterProfileComboBox.SelectedIndex = 0;
-        configuringRegisterProfile = false;
+        using (configuringRegisterProfile.Enter())
+        {
+            RegisterProfileComboBox.SelectedIndex = 0;
+        }
         RegisterFilterComboBox.SelectedIndex = 0;
         OutputContentComboBox.ItemsSource = new SelectOption[]
         {
@@ -84,14 +85,15 @@ public partial class MainWindow : Window
             new("All recorded points", "Show every occupied cell in the selected frame range", "all"),
             new("Repeated hotspots ≥ N", "Only show cells whose sample count reaches the chosen minimum", "repeated"),
         };
-        configuringOutputSettings = true;
-        OutputContentComboBox.SelectedIndex = 0;
-        HeatmapModeComboBox.SelectedIndex = 0;
-        OutputClockComboBox.SelectedIndex = 1;
-        OutputSpeedComboBox.SelectedIndex = 2;
-        OutputFrameRateComboBox.SelectedIndex = 3;
-        SyncOutputResolutionWithPanel();
-        configuringOutputSettings = false;
+        using (configuringOutputSettings.Enter())
+        {
+            OutputContentComboBox.SelectedIndex = 0;
+            HeatmapModeComboBox.SelectedIndex = 0;
+            OutputClockComboBox.SelectedIndex = 1;
+            OutputSpeedComboBox.SelectedIndex = 2;
+            OutputFrameRateComboBox.SelectedIndex = 3;
+            SyncOutputResolutionWithPanel();
+        }
         ShortcutModulesItemsControl.ItemsSource = ReplayShortcutCatalog.Modules;
         SettingsPage.CloseRequested += (_, _) => CloseSettingsPage();
         SettingsPage.ThemeToggleRequested += (_, _) => ToggleTheme();
