@@ -129,6 +129,7 @@ python -B scripts/fetch_core_packages.py
 dotnet restore
 dotnet build --no-restore
 dotnet test --no-build
+python -B -m unittest discover -s tests/repo-checks -v
 dotnet run --project src/Nvt.Replay.Cli -- formats
 dotnet run --project src/Nvt.Replay.Cli -- probe ./capture.txt --json
 dotnet run --project src/Nvt.Replay.Cli -- inspect ./capture.txt --event-buffer-version 0x83 --i2c-address 0x01
@@ -141,6 +142,9 @@ dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x
 dotnet run --project src/Nvt.Replay.Avalonia -- ./capture.txt --event-version 0x83 --register-profile 51927
 dotnet run --project src/Nvt.Replay.Cli -- readable ./capture.txt --output ./analysis --register-profile 51927
 ```
+
+See [documentation sync and handoff checks](docs/doc-sync.md) for the local
+checker commands and the warning rollout.
 
 The desktop startup options and IC register profiles are explicit operator choices for reproducible QA
 and screenshot runs. They do not infer Event Buffer Version or Benz Palm.
