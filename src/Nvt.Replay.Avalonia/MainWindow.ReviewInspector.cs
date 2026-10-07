@@ -42,8 +42,8 @@ public partial class MainWindow : Window
     private object? currentInspectorFrame;
     private ITouchReplaySnapshot? currentInspectorSnapshot;
     private InspectorFramePresentation? currentInspectorPresentation;
-    private bool synchronizingReviewSelection;
-    private bool synchronizingPaintMarkerSelection;
+    private readonly EventSuppressionScope synchronizingReviewSelection = new();
+    private readonly EventSuppressionScope synchronizingPaintMarkerSelection = new();
     private double expandedInspectorRailWidth = 286;
     private const double ExpandedReviewRailWidth = 260;
     private const double DefaultInspectorRailWidth = 286;
@@ -118,7 +118,7 @@ public partial class MainWindow : Window
 
     private void PaintMarkerListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (synchronizingPaintMarkerSelection ||
+        if (synchronizingPaintMarkerSelection.IsActive ||
             PaintMarkerListBox.SelectedItem is not PaintMarkerRow row ||
             reviewWorkspace is null)
             return;
@@ -193,7 +193,7 @@ public partial class MainWindow : Window
         {
             RegisterActivitySurface.SetSelected(row.Record.StableId);
             ShowRecord(row.Record, FindFrame(row.Record.StableId));
-            if (!synchronizingSelection && replaySession is not null)
+            if (!synchronizingSelection.IsActive && replaySession is not null)
             {
                 var logicalIndex = Array.FindIndex(decodedRows, item =>
                     item.PhysicalRecords.Any(source => source.StableId == row.Record.StableId));
@@ -289,7 +289,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!synchronizingSelection && replaySession is not null)
+        if (!synchronizingSelection.IsActive && replaySession is not null)
         {
             SeekReplay(row.LogicalIndex);
             return;
@@ -306,7 +306,7 @@ public partial class MainWindow : Window
 
     private void DiagnosticListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (synchronizingReviewSelection) return;
+        if (synchronizingReviewSelection.IsActive) return;
         if (DiagnosticListBox.SelectedItem is not ReviewGroupRow row)
         {
             reviewWorkspace?.ClearFindingSelection();
@@ -389,7 +389,7 @@ public partial class MainWindow : Window
 
     private void ReviewOccurrenceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (synchronizingReviewSelection || reviewWorkspace is null ||
+        if (synchronizingReviewSelection.IsActive || reviewWorkspace is null ||
             ReviewOccurrenceComboBox.SelectedItem is not ReviewOccurrenceRow row)
             return;
         var occurrence = reviewWorkspace.SelectOccurrence(row.Number - 1);
@@ -473,16 +473,11 @@ public partial class MainWindow : Window
         var occurrences = group.Occurrences
             .Select((occurrence, index) => new ReviewOccurrenceRow(index + 1, occurrence))
             .ToArray();
-        synchronizingReviewSelection = true;
-        try
+        using (synchronizingReviewSelection.Enter())
         {
             ReviewOccurrenceComboBox.ItemsSource = occurrences;
             ReviewOccurrenceComboBox.SelectedItem = occurrences.FirstOrDefault(row =>
                 row.Occurrence.Id.Equals(occurrenceId, StringComparison.Ordinal)) ?? occurrences.FirstOrDefault();
-        }
-        finally
-        {
-            synchronizingReviewSelection = false;
         }
         ReviewSelectionTitleText.Text = isMarker ? "MARKER FRAME" : "SELECTED FINDING";
         ReviewOccurrenceComboBox.IsVisible = !isMarker;
@@ -531,15 +526,10 @@ public partial class MainWindow : Window
             ClearReviewSelectionPresentation();
             return;
         }
-        synchronizingReviewSelection = true;
-        try
+        using (synchronizingReviewSelection.Enter())
         {
             DiagnosticListBox.SelectedItem = row;
             if (scrollIntoView) DiagnosticListBox.ScrollIntoView(row);
-        }
-        finally
-        {
-            synchronizingReviewSelection = false;
         }
         PresentReviewSelection(row.Group, reviewWorkspace.SelectedOccurrenceId);
     }
@@ -628,18 +618,13 @@ public partial class MainWindow : Window
     private void RefreshReviewQueue()
     {
         reviewRows = reviewWorkspace?.VisibleGroups.Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
-        synchronizingReviewSelection = true;
-        try
+        using (synchronizingReviewSelection.Enter())
         {
             DiagnosticListBox.ItemsSource = reviewRows;
             var selected = reviewWorkspace?.SelectedFindingGroupId is { } groupId
                 ? reviewRows.FirstOrDefault(row => row.Group.Id == groupId)
                 : null;
             DiagnosticListBox.SelectedItem = selected;
-        }
-        finally
-        {
-            synchronizingReviewSelection = false;
         }
         DiagnosticCountText.Text = reviewRows.Length.ToString(CultureInfo.InvariantCulture);
         ClearMarkersButton.IsEnabled = reviewWorkspace?.Markers.Count > 0;
@@ -669,17 +654,12 @@ public partial class MainWindow : Window
             })
             .ToArray() ?? [];
 
-        synchronizingPaintMarkerSelection = true;
-        try
+        using (synchronizingPaintMarkerSelection.Enter())
         {
             PaintMarkerListBox.ItemsSource = paintMarkerRows;
             PaintMarkerListBox.SelectedItem = reviewWorkspace?.SelectedMarkerId is { } markerId
                 ? paintMarkerRows.FirstOrDefault(row => row.MarkerId == markerId)
                 : null;
-        }
-        finally
-        {
-            synchronizingPaintMarkerSelection = false;
         }
         PaintMarkerCountText.Text = paintMarkerRows.Length.ToString(CultureInfo.InvariantCulture);
         RefreshPaintMarkerRailVisibility();

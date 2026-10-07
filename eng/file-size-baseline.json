@@ -2,9 +2,9 @@
   "files": {
     "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs": 948,
     "src/Nvt.Replay.Avalonia/MainWindow.axaml": 1550,
-    "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs": 1237,
-    "src/Nvt.Replay.Avalonia/MainWindow.Output.cs": 1485,
-    "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs": 1043,
+    "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs": 1231,
+    "src/Nvt.Replay.Avalonia/MainWindow.Output.cs": 1480,
+    "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs": 1023,
     "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs": 840
   }
 }
