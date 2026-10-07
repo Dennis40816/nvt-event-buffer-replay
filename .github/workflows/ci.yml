@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, '[0-9]+.[0-9]+.[0-9]+']
+    branches: [main, '[0-9]+.[0-9]+.[0-9]+', '[0-9]+.[0-9]+.x']
   pull_request:
 
 permissions:
@@ -21,6 +21,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -31,6 +32,18 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.13'
+
+      - name: Check documentation sync (warn)
+        if: github.event_name == 'pull_request'
+        shell: pwsh
+        env:
+          DOC_SYNC_BASE: origin/${{ github.base_ref }}
+        run: |
+          $event = Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          $bodyFile = Join-Path $env:RUNNER_TEMP 'doc-sync-pr-body.txt'
+          [IO.File]::WriteAllText($bodyFile, [string]$event.pull_request.body, [Text.UTF8Encoding]::new($false))
+          python -B tools/repo-checks/doc_sync.py --repo . --config tools/repo-checks/doc-sync.nfu.json --base $env:DOC_SYNC_BASE --pr-body-file $bodyFile --mode warn
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Fetch Core packages
         if: hashFiles('scripts/fetch_core_packages.py') != ''
