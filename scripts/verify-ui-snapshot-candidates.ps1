@@ -13,7 +13,10 @@ $project = Join-Path $repoRoot 'tests\Nvt.Replay.Avalonia.Tests\Nvt.Replay.Avalo
 $candidateDirectory = Join-Path $repoRoot 'artifacts\ui-snapshot-candidates'
 $auditRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('nvt-ui-candidate-' + [Guid]::NewGuid().ToString('N'))
 $buildOutputName = 'bin-ui-candidates'
-$testFilter = 'FullyQualifiedName~snapshot_matrix_covers_primary_workspaces_themes_and_widths'
+$testFilter = @(
+    'FullyQualifiedName~snapshot_matrix_covers_primary_workspaces_themes_and_widths'
+    'FullyQualifiedName~GapSnapshotTests'
+) -join '|'
 
 function Remove-IsolatedBuildOutputs {
     Get-ChildItem -LiteralPath $repoRoot -Directory -Recurse -Filter $buildOutputName -ErrorAction SilentlyContinue |

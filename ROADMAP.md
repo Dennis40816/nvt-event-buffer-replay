@@ -51,7 +51,7 @@ Version route (owner's provisional target, 2026-10-02): 0.x, then 1.0, then 2.0.
 | --- | --- | --- | --- |
 | Reorganize the Inspector Protocol, Raw and Review layers: remove repeated fields, fix the hierarchy, stay readable at 320, 380 and 520 px | 0.3.0 | Planned | none yet |
 | Comfortable and Compact density, or 100%, 110% and 125% UI scale, with verification and approved snapshots | 0.3.0 | Planned | none yet |
-| Approved snapshots still missing: Raw and Decoded at 1180 px with both rails open, Output loading and cancel, Data package PNG | 0.3.0 | Planned | none yet |
+| Approved snapshots added: Raw and Decoded at 1180 px with both rails open, Output loading and cancel, Data package PNG | 0.2.0 | Done after this pull request merges | [SNAPSHOT_CANDIDATES.md](tests/Nvt.Replay.Avalonia.Tests/SNAPSHOT_CANDIDATES.md) |
 | Split the Paint, Output, Review and Inspector XAML trees into separate views (code-behind is already split into partial classes) | 0.3.0 | Planned | none yet |
 | Fixed 11-slot array for the host state checkpoint (micro-optimization; the 100k and long-loop gates show no bottleneck) | unscheduled (version set if profiling shows a need) | Deferred | none yet |
 
