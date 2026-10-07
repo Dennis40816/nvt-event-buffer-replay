@@ -46,9 +46,9 @@ public partial class MainWindow : Window
 
     private bool maxReplaySpeed => playbackController.Rate.IsMaximum;
 
-    private bool synchronizingSelection;
+    private readonly EventSuppressionScope synchronizingSelection = new();
 
-    private bool synchronizingLoopControls;
+    private readonly EventSuppressionScope synchronizingLoopControls = new();
 
     private bool continuousTimelineSeekScheduled;
 
@@ -146,8 +146,7 @@ public partial class MainWindow : Window
 
         var clampedIndex = Math.Clamp(logicalIndex, 0, decodedRows.Length - 1);
         snapshot ??= replayFrames?[clampedIndex] ?? replaySession.Seek(clampedIndex);
-        synchronizingSelection = true;
-        try
+        using (synchronizingSelection.Enter())
         {
             var decodedRow = decodedRows[clampedIndex];
             DecodedFramesList.SelectedItem = decodedRow;
@@ -158,10 +157,6 @@ public partial class MainWindow : Window
                 RawRecordsList.SelectedItem = rawRow;
                 RawRecordsList.ScrollIntoView(rawRow);
             }
-        }
-        finally
-        {
-            synchronizingSelection = false;
         }
     }
 
@@ -365,7 +360,7 @@ public partial class MainWindow : Window
 
     private void ReplayTimelineSurface_OnSeekRequested(object? sender, ReplayTimelineSeekEventArgs e)
     {
-        if (synchronizingSelection || replaySession is null) return;
+        if (synchronizingSelection.IsActive || replaySession is null) return;
 
         if (e.IsContinuous)
         {
@@ -464,7 +459,7 @@ public partial class MainWindow : Window
 
     private void LoopToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingLoopControls || ReplayTimelineSurface is null) return;
+        if (synchronizingLoopControls.IsActive || ReplayTimelineSurface is null) return;
         var enabled = LoopToggleButton.IsChecked == true;
         var nextStart = loopIn;
         var nextEnd = loopOut;
@@ -495,14 +490,9 @@ public partial class MainWindow : Window
         var enabled = start is not null && end is not null;
         ApplyLoopConfiguration(enabled || loopEnabled, start, end);
         if (!enabled) return;
-        synchronizingLoopControls = true;
-        try
+        using (synchronizingLoopControls.Enter())
         {
             LoopToggleButton.IsChecked = true;
-        }
-        finally
-        {
-            synchronizingLoopControls = false;
         }
     }
 
