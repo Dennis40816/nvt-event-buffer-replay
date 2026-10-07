@@ -10,7 +10,10 @@ $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $project = Join-Path $repoRoot 'tests\Nvt.Replay.Avalonia.Tests\Nvt.Replay.Avalonia.Tests.csproj'
 $candidateDirectory = Join-Path $repoRoot 'artifacts\ui-snapshot-candidates'
 $buildOutputName = 'bin-ui-candidates'
-$testFilter = 'FullyQualifiedName~snapshot_matrix_covers_primary_workspaces_themes_and_widths'
+$testFilter = @(
+    'FullyQualifiedName~snapshot_matrix_covers_primary_workspaces_themes_and_widths'
+    'FullyQualifiedName~GapSnapshotTests'
+) -join '|'
 
 if (-not $Capture) {
     throw 'Candidate capture replaces local review artifacts. Re-run with -Capture to opt in explicitly.'
@@ -41,6 +44,7 @@ try {
     $totalBytes = ($snapshots | Measure-Object Length -Sum).Sum
     Write-Host "Captured local snapshot candidates: $($snapshots.Count)"
     Write-Host "Candidate bytes: $totalBytes"
+    Write-Host 'Covered states: primary workspace matrix; Raw/Decoded with both rails at 1180 px (dark/light); Output preparation/cancel requested; Data package with PNG.'
     Write-Host "Review directory (git-ignored): $candidateDirectory"
     Write-Host 'These are candidates, not approved visual baselines.'
 }

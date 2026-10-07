@@ -2,17 +2,15 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
-using Avalonia.Interactivity;
 using Avalonia.Styling;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nvt.Replay.Avalonia.Controls;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Rendering;
 using Xunit;
+using static Nvt.Replay.Avalonia.Tests.WorkspaceSnapshotTestHelpers;
 
 namespace Nvt.Replay.Avalonia.Tests;
 
@@ -343,73 +341,6 @@ public sealed class AdvancedWorkspaceSnapshotTests : IDisposable
             window.Close();
         }
     }
-
-    private static string Fixture(string fileName) => Path.Combine(AppContext.BaseDirectory, "fixtures", fileName);
-
-    private static MainWindow ShowWindow(double width, double height, ThemeVariant theme)
-    {
-        if (Application.Current is { } application) application.RequestedThemeVariant = theme;
-        var window = new MainWindow
-        {
-            Width = width,
-            Height = height,
-            WindowState = WindowState.Normal,
-        };
-        window.Show();
-        Stabilize(window);
-        return window;
-    }
-
-    private static void ExpandReviewRail(MainWindow window)
-    {
-        if (Required<Border>(window, "ReviewRailBorder").IsVisible) return;
-        RaiseClick(Required<Button>(window, "ReviewRailToggleButton"));
-    }
-
-    private static void ExpandInspectorRail(MainWindow window)
-    {
-        if (Required<Grid>(window, "InspectorRailContent").IsVisible) return;
-        RaiseClick(Required<Button>(window, "InspectorRailToggleButton"));
-    }
-
-    private static void RaiseClick(Button button)
-    {
-        button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Dispatcher.UIThread.RunJobs();
-    }
-
-    private static void Stabilize(Window window)
-    {
-        window.MouseMove(new Point(4, 88));
-        Dispatcher.UIThread.RunJobs();
-        VisualTestCapture.Stabilize(window);
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> predicate)
-    {
-        for (var attempt = 0; attempt < 400; attempt++)
-        {
-            Dispatcher.UIThread.RunJobs();
-            if (predicate()) return;
-            await Task.Delay(10);
-        }
-        throw new TimeoutException("The expected UI state did not become available.");
-    }
-
-    private static void AssertInside(Control control, Visual ancestor)
-    {
-        Assert.True(control.IsVisible, $"{control.Name ?? control.GetType().Name} is not visible.");
-        var origin = control.TranslatePoint(default, ancestor) ??
-            throw new InvalidOperationException($"{control.Name ?? control.GetType().Name} could not translate into its ancestor.");
-        var bounds = new Rect(origin, control.Bounds.Size);
-        Assert.True(bounds.Left >= -0.5, $"{control.Name} is clipped on the left: {bounds}.");
-        Assert.True(bounds.Top >= -0.5, $"{control.Name} is clipped on the top: {bounds}.");
-        Assert.True(bounds.Right <= ancestor.Bounds.Width + 0.5, $"{control.Name} is clipped on the right: {bounds} / {ancestor.Bounds}.");
-        Assert.True(bounds.Bottom <= ancestor.Bounds.Height + 0.5, $"{control.Name} is clipped on the bottom: {bounds} / {ancestor.Bounds}.");
-    }
-
-    private static T Required<T>(Control root, string name) where T : Control =>
-        root.FindControl<T>(name) ?? throw new InvalidOperationException($"Missing control '{name}'.");
 
     private static byte[] CommonPacket(byte asil, bool corruptCrc, ushort x)
     {
