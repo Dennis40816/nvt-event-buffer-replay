@@ -1,133 +1,102 @@
 # Roadmap
 
-## M1 — C# Parity Core
+This is the only plan file of the repository. It has three lines of work. Every item has a target version, a status and a link. Older plan files (`TODO_0.0.3.md`, `TODO_NVT_FW_UTIL.md`, `UI_TODO.md`) were merged into this file and removed. Git history keeps them.
 
-- [x] Stable domain records, diagnostics, provenance, and format descriptors
-- [x] Source probing and NDS/Saleae/KingstVIS/DSL/Acute/Excel/Canonical adapters
-- [x] Common 0x82-0x85 decoding and semantic parity
-- [x] Desay 0x97 two-transaction assembly and Standard/Benz Palm decode
-- [x] `nvt-replay formats`, `sources`, `probe`, `inspect`, and `analyze`
-- [x] Frozen Python parity observation plus synthetic/public fixtures and deterministic artifact goldens
+## Branches and versions
 
-## M2 — Replay Slice
+- Released: `v0.1.1` (current release tag). `VERSION` on the development line is `0.1.1`. The next minor is `0.2.0`.
+- Development line: branch `0.2.0`.
+- Hotfix line: branch `hotfix/<version>` from the latest release tag, for example `hotfix/0.1.2` from `v0.1.1`. After the release, merge the hotfix branch back into the development line.
+- Core integration work on the development line must not block a hotfix.
 
-- [x] Load and confirmation-driven auto Decode Configuration (no separate Decode action)
-- [x] Reported Frame and Host State Paint
-- [x] Explicit Recorded/Frame-paced 120 Hz clocks, absolute-deadline playback, late-frame coalescing, loop crossfade, and indexed Alarm/QA/Break/All Break auto-pause
-- [x] Logical stepping, physical drill-down, range, and sparse checkpoints
-- [x] Multi-track timeline with grouped transport controls, per-track counts, direct seek, loop handles, and frame-aware marker context actions
+## Line 1: Hotfix
 
-## M3 — Analysis Slice
+No open hotfix. Defects go to GitHub Issues with the `bug` label. A defect that hurts a released version gets a `hotfix/<version>` branch from the release tag.
 
-- [x] Protocol diagnostics and ASIL lifecycle
-- [x] Review Queue and occurrence grouping
-- [x] Structured Inspector with health-first frame state, color-linked Contact selection, Protocol/Raw/Review layers, and on-demand source identity
-- [x] Resizable 320–520 px Inspector rail with useful type/ASIL summary while collapsed
-- [x] Single-frame marker creation, rename/clear, `.nvtreplay.json` round trip, and full-row/timeline-frame Unmark menus
+| Item | Target | Status | Link |
+| --- | --- | --- | --- |
+| Register profile guard flag is not reset when the selection assignment throws (low risk, no known trigger) | 0.2.0 (the fix is part of the `SuppressEvents` item in line 3) | Open | [#39](https://github.com/Dennis40816/nvt-event-buffer-replay/issues/39) |
 
-## M4 — Export Slice
+## Line 2: Product
 
-- [x] Shared ReplayScene
-- [x] Single-content Output workspace for MP4 video, heatmap, or data package, without the unrelated replay transport or Inspector rail
-- [x] Exact desktop MP4 preview with its own seek line, draggable export-range handles, reusable frame buffers, and unobstructed full-screen review
-- [x] High-visibility MP4 settings rail with independent clock, customized speed, 1–240 FPS (including 180 FPS), and Paint/preset/custom resolution
-- [x] Shared hard-avoidance coordinate-label layout for Paint, exact Preview, and exported MP4
-- [x] Selected-range FFmpeg MP4 with PNG fallback
-- [x] Interactive heatmap with all-points/repeated-`N` modes, blue-to-red density scale, color bar, thresholded value labels, coordinate hover, and matching PNG output
-- [x] Parsed/diagnostic JSON and CSV
-- [x] Source/config/hash manifest
+### Next product slice: NVT FW UTIL
 
-## M5 — Hardening
+The shell becomes NVT FW UTIL (target 1.0, planned, no link yet). Event Buffer Analysis (Raw Explorer, Decoded Events, Paint, Output) is one tool inside it, and recent captures live inside that tool. Raw Data Analysis is a second tool. The work waits for owner evidence (file formats, formulas, golden data). Until the owner gives it, derived values stay disabled or marked unavailable. The runtime is C# only. `nds_helper.frame_extractor` is a format reference only. Private repositories, fixtures and real captures never enter this public repository.
 
-- [x] One-GB/one-million-record/eight-hour performance gate
-- [x] Immutable replay-frame cache, one-pass trail/auto-pause indexes, and throttled Inspector presentation during playback
-- [x] Cancellation, recovery journal, and atomic output
-- [x] Dedicated Settings workspace for theme, playback safety, output defaults, shortcuts, and performance preferences
-- [x] Keyboard, command palette, scaling, theme, accessibility, and Skia headless UI checks
-- [x] Windows self-contained portable package and release gates
+| ID | Item | Target | Status | Link |
+| --- | --- | --- | --- | --- |
+| FWU-01 | Raw Data Analysis as a separate tool with its own Load flow and source summary | 1.0 | Planned | none yet |
+| FWU-02 | Input probing for the first supported raw formats (timestamped `DiffData` CSV with optional Button Data, timestamped plain-matrix logs, single rectangular matrix). The probe must report uncertainty | 1.0 | Waiting for representative files | none yet |
+| FWU-03 | One original matrix frame at a time, with X/Y cell coordinates, values, frame navigation and source timestamp. Source bytes and frame order stay unchanged | 1.0 | Planned | none yet |
+| FWU-04 | Current-frame analysis in a right inspector. The operator picks the metrics (average, minimum, maximum, standard deviation first). Scope, signedness and invalid-cell rules need a contract | 1.0 | Waiting for the metric contract | none yet |
+| FWU-05 | TPMux2 slot. No numeric result until the owner gives inputs, formula, applicability and golden examples | after 1.0 | Waiting for the definition | none yet |
+| FWU-06 | Before Diff and After Diff at import. Confirmed: Stop FW Before Diff is NF-normalized with common-mode removal not applied. The other states and the arithmetic need evidence | 1.0 | Waiting for evidence | none yet |
+| FWU-07 | Responsive large captures: parse and index off the UI thread, bounded frame cache, calculate only enabled metrics. Verify with long captures | 1.0 | Planned | none yet |
+| FWU-08 | Review the launcher and raw workspace design with the owner. Verify dark, light and narrow layouts | 1.0 | Design review pending | none yet |
+| FWU-09 | NF-table reconstruction as an operator-editable ordered pipeline with reusable blocks, drag reorder and validated custom steps (placeholders such as `{col}`). Deterministic expression language, no unrestricted code. Original data stays untouched | 1.0 | Contract pending | none yet |
+| FWU-10 | Raw Check analysis. Scope and rules are not defined. Do not infer checks from the name | after 1.0 | Waiting for scope | none yet |
 
-## M6 — Register-aware communication log
+Version route (owner's provisional target, 2026-10-02): 0.x, then 1.0, then 2.0.0, which starts sharing the Core architecture.
 
-- [x] Shared register catalog for NDS and decoded-I2C sources; annotations never change source bytes
-- [x] Built-in IC address profiles for 51923, 51926, 51927, 51929/51932, and 51950/51951
-- [x] Profile-collision guard: `0x80800` remains unresolved until 51929/51932 or 51950/51951 is selected
-- [x] NDS overloaded address/access modeling: `Paint TP 0x00`–`0x7F` is an implicit Event Buffer read from that 7-bit slave, `Paint >=0x100` is an absolute-register read, and explicit Read/Write tokens are absolute registers even below `0x100`; source format remains visible in the window title
-- [x] Evidence-typed IC inference from decoded-I2C Switch Page transactions or NDS absolute Event Buffer registers
-- [x] Readable Raw Explorer column with IC candidate, region, register, raw value, and confirmed meaning
-- [x] Single-row Raw event disclosure for transaction/ACK context, register interpretation, complete payload, and immutable source evidence
-- [x] Separate FW Command parser for Event Buffer `+0x50`; unknown opcodes stay visible as raw values
-- [x] Operator-selected built-in register profile persisted in sidecars/manifests and reapplied before decode
-- [x] Export a paired `communication-readable.csv/jsonl` beside the immutable original log
-- [x] Register activity strip, search, and filters for reads, writes, changes, commands, reset, and ambiguous mappings
-- [ ] Custom register profile import (versioned JSON with validation and provenance)
+### Register-aware communication log
 
-### Confirmed register knowledge
+| Item | Target | Status | Link |
+| --- | --- | --- | --- |
+| Custom register profile import (versioned JSON with validation and provenance) | 0.3.0 | Planned | none yet |
+| Remaining FW data: register contracts, FW Command table, Common Buffer handshake, History layout, reset sequences, golden evidence | unscheduled (version set when the data arrives) | Waiting for FW and project owners | [register knowledge](docs/register-knowledge.md) |
 
-| Address / offset | Confirmed interpretation | Current decode rule |
-| --- | --- | --- |
-| `0xFF000`–`0xFF003` | Chip ID (4 bytes) | Raw bytes, no product inference |
-| `0xFF0FE ← 0x69` | Software Reset | Decode only for a write whose first byte is exactly `0x69` |
-| `0xFF00E`, `0xFF01A`, `0xFF06A` | `REG_MODE_FG`, `REG_MODE_FG2`, `REG_WAKEUP_SOURCE` | Common names only; values remain raw |
-| `0xFF43A`, `0xFF805`, `0xFF926` | TCON Calibration Enable, DP Error State, TP Ready Control | Common names only; values remain raw |
-| Event Buffer `+0x00` | Event Buffer | Register/region label; protocol decode still requires explicit Event Buffer Version |
-| Event Buffer `+0x50` | FW Command mailbox | Route write payload to the separate FW Command parser |
-| FW Command `0x23` | Baseline Reset | Confirmed command name; remaining payload stays raw |
-| FW Command `0x11`–`0x1C` (known subset) | Common scan-mode commands | Packed category/command byte; undefined values stay raw |
-| FW Command `0x41`–`0x4C` | Common MP-test commands | English command name only; payload/result schema still pending |
-| FW Command `0xD1`–`0xD4` | Common auto-engineering commands | English command name only; payload/handshake still pending |
-| Event Buffer `+0x60` | FW State | Only `0xA3 = Normal Run` is semantic; `0x00`, `0xA1`, `0xA2`, and other values stay raw until defined |
-| Event Buffer `+0x70` | Two-byte frame counter | Raw byte order, change tracking only; no endian guess |
-| Event Buffer `+0x76` | DP Version | Raw bytes |
-| Event Buffer `+0x78` | TP FW Version | Raw bytes |
-| Common Buffer base | Bulk-data transfer buffer used through handshake + read | Region label only until handshake protocol is specified |
-| History base | FW event history storage | Region label and raw bytes |
+### UI and quality
 
-### Built-in IC address profiles
+| Item | Target | Status | Link |
+| --- | --- | --- | --- |
+| Reorganize the Inspector Protocol, Raw and Review layers: remove repeated fields, fix the hierarchy, stay readable at 320, 380 and 520 px | 0.3.0 | Planned | none yet |
+| Comfortable and Compact density, or 100%, 110% and 125% UI scale, with verification and approved snapshots | 0.3.0 | Planned | none yet |
+| Approved snapshots still missing: Raw and Decoded at 1180 px with both rails open, Output loading and cancel, Data package PNG | 0.3.0 | Planned | none yet |
+| Split the Paint, Output, Review and Inspector XAML trees into separate views (code-behind is already split into partial classes) | 0.3.0 | Planned | none yet |
+| Fixed 11-slot array for the host state checkpoint (micro-optimization; the 100k and long-loop gates show no bottleneck) | unscheduled (version set if profiling shows a need) | Deferred | none yet |
 
-| IC family | Event Buffer | Common Buffer | History |
-| --- | ---: | ---: | ---: |
-| 51923 | `0x94000` | `0x941C0` | `0x9ACA0` |
-| 51926 | `0x96A00` | `0x97B9C` | `0x9BCA0` |
-| 51927 | `0x99000` | `0x8EC98` | `0x99200` |
-| 51929/51932 | `0x80800` | `0xA5200` | `0x9D130` |
-| 51950/51951 | `0x80800` | `0xAAD8C` | `0xA445C` |
+### Evidence gates and open questions
 
-`0x80800` appearing in two rows is a numeric collision between two independent
-IC profiles, not a shared register map. Without an explicit profile, the
-readable log must retain both candidates and leave register meaning unresolved.
-After an operator selects a profile, absolute Event/Common/History addresses
-must match that profile; an address owned only by another profile remains raw.
-Offset-only decoded-I2C reads with an unknown page are the sole exception and
-may retain their transport-level Event Buffer offset meaning.
+Every item waits for owner evidence or a decision. The target is unscheduled; a version is set when the evidence arrives.
 
-### Data still needed from FW/project owners
+| Item | Target | Status | Link |
+| --- | --- | --- | --- |
+| Acute real-export validation with continuation-row evidence | unscheduled | Waiting for evidence | none yet |
+| Raw waveform exports, real Linux and Android kernel log capture, scoped QA records for rule conversion | unscheduled | Waiting for evidence | none yet |
+| Multi-source clock alignment and comparison workflows | unscheduled | Waiting for design | none yet |
+| Complete register maps and FW command dictionaries | unscheduled | Waiting for FW and project owners | [register knowledge](docs/register-knowledge.md) |
+| Private Desay Standard and Benz Palm golden, needed before a formal release | unscheduled | Waiting for the owner to provide it | none yet |
+| Tools launcher behavior to confirm during FWU-01: keep full-width Paint and Output surfaces; pause playback but keep the session when returning to Tools; route direct Event Buffer file open to Event Buffer Analysis and a no-file start to Tools | 1.0 | Open question | none yet |
+| Raw calculation details to confirm: whether a separately labeled "normalized Before" matrix is a distinct input and which conversion directions are required; NF table format, dimensions and index mapping, value type, rounding and clamping, version dependence and one golden; units of the basic metrics (average, minimum, maximum, standard deviation); the first set of built-in function blocks and which placeholders may be used together with `{col}`; TPMux2 frame relationships, output meaning, output unit and failure behavior; whether Button Data takes part in any calculation; rebuild step scope (cell, column, frame or capture), the exact meaning of `{col}`, expression syntax, error handling, precision and a golden where step order changes the result; Raw Check inputs, presentation and golden | 1.0 | Open questions for FWU-02, FWU-04, FWU-05, FWU-06, FWU-09 and FWU-10 | none yet |
+| Approved Paint PNG built from a public, reproducible fixture (a private KingstVIS long golden was only checked by hand; no private capture enters the repository) | 0.3.0 | Open | none yet |
+| Side-by-side check of the approved reference images (control position and size within 4 px, font size within 1 px, only existing design tokens) | 0.3.0 | Open | none yet |
+| Real-time measurement artifacts of every playback speed combination on the private capture (deterministic tests and the 21,600-advance gate cover them today) | unscheduled | Open | none yet |
+| Formal `v0.0.3` tag and GitHub release (gate from the 0.0.3 plan). `v0.1.0` and `v0.1.1` superseded it; confirm with the owner that it can be dropped | 0.2.0 | Decision needed | none yet |
 
-- Register profile identity: IC/project name, FW version range, Event/Common/History bases, aliases, and source document/golden provenance.
-- Register contract: absolute address or base+offset, byte width, read/write permission, access side effects, and whether values are sampled or edge-triggered.
-- Value semantics: enums, bitmaps/bitfields, masks, signedness, scale/unit, valid/reserved ranges, clamp/wrap behavior, and byte order where confirmed.
-- Remaining FW Command table for Event Buffer `+0x50`: owner-confirmed aliases, request payload schema/length, response or handshake, timeout, side effects, and FW-version differences. `0x23` retains the product term Baseline Reset even though newer common FW also calls the operation force calibration.
-- Common Buffer handshake: request/ready/ack registers and values, transfer length/format, chunking, completion/error states, and representative NDS logs.
-- History layout: entry header, event IDs, length/timestamp rules, wrap behavior, clear behavior, and representative normal/failure logs.
-- Reset/control sequences beyond `0xFF0FE ← 0x69`, including required delays and observable follow-up state.
-- Golden evidence covering known values, unknown/reserved values, malformed byte counts, repeated reads, and profile-address collisions.
-- Conflict policy when the same address/offset differs by customer project or FW version; decoding must require an explicit profile rather than silently choosing.
+## Line 3: Core integration
 
-## Post-MVP evidence gates
+NFU takes shared modules from the Core repository `Dennis40816/nvt_fw_core`. Owner target: Core 1.0.0 in all three tools by 2026-10-15. Packages are downloaded at build time (`core-packages.json`, `scripts/fetch_core_packages.py`). No package file is committed.
 
-- Acute real-export validation and continuation-row evidence
-- raw waveform exports
-- real Linux/Android kernel log capture
-- scoped QA records suitable for rule conversion
-- multi-source clock alignment and comparison workflows
-- complete register maps, FW command dictionaries, Common Buffer handshake, and History layouts
+| Item | Target | Status | Link |
+| --- | --- | --- | --- |
+| Core 0.1.0 as a build-time download | 0.2.0 | Done | [#33](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/33) |
+| CI downloads Core packages before restore | 0.2.0 | Done | [#38](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/38) |
+| AtomicOutput from Core | 0.2.0 | Done | [#34](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/34) |
+| CsvQuoting from Core | 0.2.0 | Done | [#35](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/35) |
+| SourceFileNavigation from Core | 0.2.0 | Done | [#36](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/36) |
+| Core 0.2.0 package upgrade, zero difference (step one of the theme adoption) | 0.2.0 | Done | [#40](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/40) |
+| Theme look, step two: shared palette, buttons and scrollbars from `Nvt.Core.Avalonia`, in one pull request with before and after images for dark and light. Order of the three tools: NFC, then NFU, then NFH | 0.2.0 | In progress. The pull request goes to the owner after the NFC one is in review | none yet |
+| `SuppressEvents()` helper that replaces the `configuring*` and `synchronizing*` guard flags in `MainWindow` | 0.2.0 | Planned | [#39](https://github.com/Dennis40816/nvt-event-buffer-replay/issues/39) |
+| Core 1.0.0 adoption (version bump and verification) | 0.2.0 (NFU release number is set at release; owner target for Core 1.0.0 is 2026-10-15) | Waiting for the Core 1.0.0 release | none yet |
+| Move the `MainWindow` internal state into a ViewModel with bindings | after Core 1.0.0 | Planned | none yet |
+| Later Core modules (for example Locale, ReportList) when NFU needs them | unscheduled (version set when a module is needed) | Not started | none yet |
 
-## Proposed next product slice — NVT FW UTIL
+## Completed milestones
 
-- [ ] Rename the shell to NVT FW UTIL and make Event Buffer Analysis a tool workspace; keep Recent captures inside that workspace.
-- [ ] Add a C# Raw Data Analysis workspace with frame-by-frame matrix inspection and operator-selected per-frame metrics, using `nds_helper.frame_extractor` formats as an input reference only.
-- [ ] Specify and implement NF-table-based Before Diff / After Diff derivation as a user-editable ordered pipeline: common function blocks, drag reordering, and custom placeholder expressions (for example `{col}`), with immutable original data and verified golden evidence. Stop FW `Before Diff` is confirmed as NF-normalized with common-mode removal not yet applied.
-- [ ] Define and add Raw Check analysis after its input, checks, presentation, and golden evidence are specified.
-- [ ] Add TPMux2 only after its calculation contract and golden evidence are provided.
-- [ ] Version route: 0.x, then 1.0, then 2.0.0, which starts sharing the core architecture (owner's provisional target, 2026-10-02).
-
-Detailed decisions, scope boundaries, and open evidence are in [`TODO_NVT_FW_UTIL.md`](TODO_NVT_FW_UTIL.md).
+- M1 C# parity core: domain records, probing and format adapters, 0x82 to 0x85 decoding, Desay 0x97, `nvt-replay` CLI, frozen Python parity observation.
+- M2 Replay slice: Load with auto decode configuration, Reported Frame and Host State Paint, recorded and frame-paced clocks, logical stepping, multi-track timeline.
+- M3 Analysis slice: diagnostics and ASIL lifecycle, Review Queue, structured Inspector, markers with `.nvtreplay.json` round trip. See [Review Queue](docs/review-queue.md).
+- M4 Export slice: shared ReplayScene, Output workspace (MP4, heatmap, data package), exact MP4 preview, JSON and CSV, source manifest.
+- M5 Hardening: one-GB and eight-hour performance gate, cancellation and recovery journal, atomic output, Settings, accessibility checks, portable Windows package and release gates.
+- M6 Register-aware communication log: register catalog, built-in IC profiles, evidence-typed IC inference, FW Command parser, readable CSV and JSONL export, activity strip. Reference data: [register knowledge](docs/register-knowledge.md).
+- 0.0.3 stabilization: `MainWindow` split into partial classes, immutable replay-frame cache, 29 approved screenshots, UI polish items UI-01 to UI-19, UI-21 and UI-22.
