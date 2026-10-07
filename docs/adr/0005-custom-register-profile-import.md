@@ -1,6 +1,6 @@
 # ADR 0005: Custom register profile import
 
-Status: Proposed.
+Status: Accepted (owner decision 2026-10-07).
 
 ## Context
 
@@ -59,7 +59,7 @@ selection for imported profiles and does not extend that inference to them.
 
 ## Recommendation
 
-Prefer explicit versioned JSON file import, pending owner acceptance. Reuse the
+Use explicit versioned JSON file import. Reuse the
 linked v1 schema rather than adding executable plugins or folder discovery.
 
 Validate schema version, unknown properties, required fields, uniqueness,
@@ -84,8 +84,7 @@ interpretation unavailable, with raw evidence visible and no built-in fallback.
 For the first import slice, recommend activating base addresses only, retaining
 register/command rows as metadata until a separately reviewed contract defines
 their activation. Firmware applicability requires operator confirmation while
-v1 scope stays opaque. This ADR proposes a direction, not an implementation or
-an accepted product contract.
+v1 scope stays opaque. This ADR fixes the direction. The implementation is a separate pull request.
 
 ## Consequences
 
@@ -99,9 +98,11 @@ must retain definitions and evidence; missing profiles can block semantic
 replay. Schema validation cannot establish that an IC/FW map is correct, and
 firmware-specific value/command semantics still need owner evidence and review.
 
-## Open questions for the owner
+## Decision 2026-10-07
 
-| Question | Suggested answer | Effect |
+The owner accepted all six suggested answers on 2026-10-07.
+
+| Question | Decision | Effect |
 | --- | --- | --- |
 | What may the first import activate? | Base addresses only; register/command rows stay metadata. | Broader firmware semantics need a separate reviewed activation contract. |
 | Which provenance is required before selection? | Source document/golden reference, evidence SHA-256 and review/confirmation status. | Requires associated metadata bound to the profile hash without changing v1 JSON. |
