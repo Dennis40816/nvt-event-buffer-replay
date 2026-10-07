@@ -31,7 +31,7 @@ public partial class MainWindow : Window
     private static readonly ReplayExtent DefaultPaintExtent = new(2304, 1280);
     private ReplayPaintWorkspace? paintWorkspace;
     private int zoomHintRevision;
-    private bool synchronizingPaintControls;
+    private readonly EventSuppressionScope synchronizingPaintControls = new();
     internal ReplayPaintWorkspace? PaintWorkspace => paintWorkspace;
     private ReplayExtent CurrentPaintExtent => paintWorkspace?.Settings.PanelExtent ?? DefaultPaintExtent;
 
@@ -100,7 +100,7 @@ public partial class MainWindow : Window
 
     private ReplayPaintUpdate ApplyPaintSettings(ReplayPaintSettings settings)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return default;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return default;
         var previous = paintWorkspace.Settings;
         var update = paintWorkspace.Update(settings);
         if (!update.Changed) return update;
@@ -142,8 +142,7 @@ public partial class MainWindow : Window
     {
         if (paintWorkspace is null) return;
         var settings = paintWorkspace.Settings;
-        synchronizingPaintControls = true;
-        try
+        using (synchronizingPaintControls.Enter())
         {
             SelectOption(PaintModeComboBox, settings.PointView.ToString());
             SelectOption(TrailModeComboBox, settings.TrailRetention.ToString());
@@ -165,10 +164,6 @@ public partial class MainWindow : Window
             LegendCompactToggleButton.IsChecked = settings.LegendCollapsed;
             ApplyPaintSurfaceSettings(previous: null, settings);
             if (fit) PaintSurface.Fit();
-        }
-        finally
-        {
-            synchronizingPaintControls = false;
         }
         UpdatePaintZoomText();
     }
@@ -197,7 +192,7 @@ public partial class MainWindow : Window
 
     private void PaintModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayRenderMode>(option.Value, out var mode))
             return;
@@ -260,7 +255,7 @@ public partial class MainWindow : Window
 
     private void TrailModeComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayTrailMode>(option.Value, out var selectedMode))
             return;
@@ -270,7 +265,7 @@ public partial class MainWindow : Window
 
     private void TrailLengthComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         if ((sender as ComboBox)?.SelectedItem is not ComboBoxItem item ||
             !int.TryParse(item.Tag?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var selectedLength))
             return;
@@ -279,7 +274,7 @@ public partial class MainWindow : Window
 
     private void TraceToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         var visible = TraceToggleButton.IsChecked == true;
         ApplyPaintSettings(paintWorkspace.Settings with { TraceVisible = visible });
         SessionStatusText.Text = visible
@@ -289,7 +284,7 @@ public partial class MainWindow : Window
 
     private void TrailPointsToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         var visible = TrailPointsToggleButton.IsChecked == true;
         ApplyPaintSettings(paintWorkspace.Settings with { TrailPointsVisible = visible });
         SessionStatusText.Text = visible
@@ -305,7 +300,7 @@ public partial class MainWindow : Window
 
     private void LegendPositionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         if ((sender as ComboBox)?.SelectedItem is not SelectOption option ||
             !Enum.TryParse<ReplayLegendPosition>(option.Value, out var selectedPosition))
             return;
@@ -314,14 +309,14 @@ public partial class MainWindow : Window
 
     private void LegendVisibleToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         ApplyPaintSettings(
             paintWorkspace.Settings with { LegendVisible = LegendVisibleToggleButton.IsChecked == true });
     }
 
     private void LegendCompactToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         ApplyPaintSettings(
             paintWorkspace.Settings with { LegendCollapsed = LegendCompactToggleButton.IsChecked == true });
     }
@@ -334,7 +329,7 @@ public partial class MainWindow : Window
 
     private void ReverseAxisToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         ApplyPaintSettings(
             paintWorkspace.Settings with
             {
@@ -346,7 +341,7 @@ public partial class MainWindow : Window
 
     private void GridStrengthToggleButton_OnIsCheckedChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingPaintControls || paintWorkspace is null) return;
+        if (synchronizingPaintControls.IsActive || paintWorkspace is null) return;
         var strong = GridStrengthToggleButton.IsChecked == true;
         GridStrengthToggleButton.Content = strong ? "Grid +" : "Grid";
         ApplyPaintSettings(paintWorkspace.Settings with { StrongGrid = strong });

@@ -28,7 +28,7 @@ namespace Nvt.Replay.Avalonia;
 
 public partial class MainWindow : Window
 {
-    private bool synchronizingAutoPauseControls;
+    private readonly EventSuppressionScope synchronizingAutoPauseControls = new();
     private bool comboBoxDismissHandlersAttached;
     private void AttachComboBoxDismissHandlers()
     {
@@ -84,7 +84,7 @@ public partial class MainWindow : Window
 
     private void TransportAutoPauseOption_OnChanged(object? sender, RoutedEventArgs e)
     {
-        if (synchronizingAutoPauseControls || TransportPauseOnAlarmCheckBox is null) return;
+        if (synchronizingAutoPauseControls.IsActive || TransportPauseOnAlarmCheckBox is null) return;
         var preferences = new ReplayPlaybackPreferences(
             TransportPauseOnAlarmCheckBox.IsChecked == true,
             TransportPauseOnBreakCheckBox.IsChecked == true,
@@ -97,16 +97,11 @@ public partial class MainWindow : Window
     {
         if (syncTransportControls)
         {
-            synchronizingAutoPauseControls = true;
-            try
+            using (synchronizingAutoPauseControls.Enter())
             {
                 TransportPauseOnAlarmCheckBox.IsChecked = preferences.PauseOnAlarmOrQaFail;
                 TransportPauseOnBreakCheckBox.IsChecked = preferences.PauseOnBreak;
                 TransportPauseOnAllBreakCheckBox.IsChecked = preferences.PauseOnAllBreak;
-            }
-            finally
-            {
-                synchronizingAutoPauseControls = false;
             }
         }
         playbackController.ConfigureAutoPause(new ReplayPlaybackPauseOptions(
