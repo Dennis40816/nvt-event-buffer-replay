@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "mappings": [
+    {
+      "name": "Core module documents",
+      "paths": ["src/Nvt.Core/{module}/*/**", "src/Nvt.Core.Avalonia/{module}/*/**"],
+      "docs": ["docs/core/modules/{module}.md", "docs/core/modules/{module}.zh-TW.md"]
+    },
+    {
+      "name": "Core Fonts documents",
+      "paths": ["src/Nvt.Core.Fonts/**"],
+      "docs": ["docs/core/modules/Fonts.md", "docs/core/modules/Fonts.zh-TW.md"]
+    }
+  ],
+  "bilingual": {"exclude": []},
+  "moduleLists": {
+    "roots": ["src/Nvt.Core", "src/Nvt.Core.Avalonia"],
+    "lists": [
+      {
+        "path": "README.md",
+        "patterns": ["docs/core/modules/{module}.md"],
+        "reverse": true
+      },
+      {
+        "path": "README.zh-TW.md",
+        "patterns": ["docs/core/modules/{module}.zh-TW.md", "docs/core/modules/{module}.md"],
+        "reverse": true
+      },
+      {
+        "path": "docs/components.md",
+        "patterns": ["src/{lib}/{module}/"],
+        "reverse": false
+      }
+    ]
+  }
+}
