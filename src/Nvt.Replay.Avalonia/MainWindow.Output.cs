@@ -47,8 +47,8 @@ public partial class MainWindow : Window
     private string appliedHeatmapMode = "all";
     private bool outputFullscreenActive;
     private WindowState outputFullscreenPreviousWindowState = WindowState.Normal;
-    private bool configuringOutputSettings;
-    private bool configuringOutputRange;
+    private readonly EventSuppressionScope configuringOutputSettings = new();
+    private readonly EventSuppressionScope configuringOutputRange = new();
     private bool outputRangeUserDefined;
     private bool outputEncoderWarning;
     internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
@@ -658,7 +658,7 @@ public partial class MainWindow : Window
 
     private void OutputVideoSetting_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (configuringOutputSettings || OutputClockComboBox is null || OutputSpeedComboBox is null ||
+        if (configuringOutputSettings.IsActive || OutputClockComboBox is null || OutputSpeedComboBox is null ||
             OutputFrameRateComboBox is null)
             return;
 
@@ -706,7 +706,7 @@ public partial class MainWindow : Window
 
     private void ApplyOutputRangeFromControls()
     {
-        if (configuringOutputRange || replaySession is not { Count: > 0 }) return;
+        if (configuringOutputRange.IsActive || replaySession is not { Count: > 0 }) return;
         if (!int.TryParse(OutputRangeStartTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var start) ||
             !int.TryParse(OutputRangeEndTextBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var end) ||
             start < 1 || end < start || end > replaySession.Count)
@@ -770,15 +770,10 @@ public partial class MainWindow : Window
     private void SynchronizeOutputRangeControls(AnalysisRange range)
     {
         if (OutputRangeStartTextBox is null || OutputRangeEndTextBox is null) return;
-        configuringOutputRange = true;
-        try
+        using (configuringOutputRange.Enter())
         {
             OutputRangeStartTextBox.Text = (range.StartLogicalIndex + 1).ToString(CultureInfo.InvariantCulture);
             OutputRangeEndTextBox.Text = (range.EndLogicalIndex + 1).ToString(CultureInfo.InvariantCulture);
-        }
-        finally
-        {
-            configuringOutputRange = false;
         }
     }
 

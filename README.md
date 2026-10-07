@@ -1,3 +1,5 @@
+[English](README.md) | [繁體中文](README.zh-TW.md)
+
 # NVT Event Buffer Replay
 
 Offline C# and Avalonia workstation for replaying Novatek touch-controller

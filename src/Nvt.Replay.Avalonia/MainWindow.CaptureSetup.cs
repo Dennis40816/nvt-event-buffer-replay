@@ -18,22 +18,17 @@ public partial class MainWindow
         new("0x97", "Desay two-transaction format", "0x97"),
     ];
 
-    private bool configuringCaptureSetup;
+    private readonly EventSuppressionScope configuringCaptureSetup = new();
 
     private void ShowRegisterProfileInference(NvtRegisterProfileInferenceResult inference)
     {
         pendingRegisterProfileInference = inference;
-        configuringCaptureSetup = true;
-        try
+        using (configuringCaptureSetup.Enter())
         {
             CaptureSetupEventVersionComboBox.SelectedItem = CurrentCaptureSetupVersion();
             CaptureSetupI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
             CaptureSetupPalmProfileComboBox.SelectedIndex = Desay97ProfileComboBox.SelectedIndex;
             PresentCaptureSetupInference(inference, preserveSelectedProfile: false);
-        }
-        finally
-        {
-            configuringCaptureSetup = false;
         }
 
         UpdateCaptureSetupValidation();
@@ -163,17 +158,12 @@ public partial class MainWindow
             SelectRegisterProfileChoice(profileChoice.IcFamily);
         }
 
-        configuringEventVersion = true;
-        try
+        using (configuringEventVersion.Enter())
         {
             EventVersionComboBox.SelectedIndex = Array.FindIndex(
                 CaptureSetupEventVersions,
                 option => option.Value.Equals(version, StringComparison.OrdinalIgnoreCase));
             Desay97ProfileComboBox.SelectedIndex = palmProfile;
-        }
-        finally
-        {
-            configuringEventVersion = false;
         }
 
         HideRegisterProfileInference();
@@ -228,17 +218,17 @@ public partial class MainWindow
                     ? "REVIEW"
                     : "OPTIONAL";
         if (!isDesay97) CaptureSetupPalmProfileComboBox.SelectedIndex = -1;
-        if (!configuringCaptureSetup) UpdateCaptureSetupValidation();
+        if (!configuringCaptureSetup.IsActive) UpdateCaptureSetupValidation();
     }
 
     private void CaptureSetupPalmProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (!configuringCaptureSetup) UpdateCaptureSetupValidation();
+        if (!configuringCaptureSetup.IsActive) UpdateCaptureSetupValidation();
     }
 
     private void CaptureSetupRegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (!configuringCaptureSetup) UpdateCaptureSetupValidation();
+        if (!configuringCaptureSetup.IsActive) UpdateCaptureSetupValidation();
     }
 
     private void CaptureSetupI2cAddressTextBox_OnLostFocus(object? sender, RoutedEventArgs e)
@@ -257,14 +247,9 @@ public partial class MainWindow
         CaptureSetupTargetText.Text = $"I²C {FormatTargetI2cAddress(requested)}";
         var inference = NvtRegisterProfileInference.Infer(session.Records, requested);
         pendingRegisterProfileInference = inference;
-        configuringCaptureSetup = true;
-        try
+        using (configuringCaptureSetup.Enter())
         {
             PresentCaptureSetupInference(inference, preserveSelectedProfile: false);
-        }
-        finally
-        {
-            configuringCaptureSetup = false;
         }
         UpdateCaptureSetupValidation();
     }
