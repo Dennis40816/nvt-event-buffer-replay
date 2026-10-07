@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using SkiaSharp;
@@ -26,9 +27,22 @@ internal static class VisualTestCapture
         }
     }
 
+    // Core button styles animate brush changes for 120 ms. Let every transition finish so a capture
+    // never shows a half-faded button.
+    private static void SettleTransitions()
+    {
+        for (var tick = 0; tick < 15; tick++)
+        {
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(20);
+        }
+    }
+
     public static void Stabilize(Window window)
     {
         Dispatcher.UIThread.RunJobs();
+        SettleTransitions();
         window.InvalidateMeasure();
         window.InvalidateArrange();
         window.InvalidateVisual();
@@ -39,6 +53,10 @@ internal static class VisualTestCapture
         using var warmup = CreateBitmap(window);
         warmup.Render(window);
         Dispatcher.UIThread.RunJobs();
+        SettleTransitions();
+        warmup.Render(window);
+        Dispatcher.UIThread.RunJobs();
+        SettleTransitions();
     }
 
     public static string CaptureHash(Window window, string artifactName)

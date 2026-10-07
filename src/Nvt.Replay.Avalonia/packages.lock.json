@@ -70,6 +70,16 @@
           "Microsoft.IO.RecyclableMemoryStream": "3.0.1"
         }
       },
+      "Nvt.Core.Avalonia": {
+        "type": "Direct",
+        "requested": "[0.2.0, 0.2.0]",
+        "resolved": "0.2.0",
+        "contentHash": "xyPQ3GMSdg6fhnTlFs/ysK2S8Z+VBxsJKVwk55f4Ub1kO32TVUgekmo53J2sFq1sPWMMbeI6Ov7S15Zeg4uxYQ==",
+        "dependencies": {
+          "Avalonia": "12.1.1",
+          "Nvt.Core": "0.2.0"
+        }
+      },
       "Avalonia.Angle.Windows.Natives": {
         "type": "Transitive",
         "resolved": "2.1.27548.20260419",

@@ -1408,8 +1408,8 @@ public partial class MainWindow : Window
 
     private void SetOutputVideoPlaybackVisualState(bool playing)
     {
-        OutputPreviewPlayPauseButton.Classes.Set("playing", playing);
-        OutputFullscreenPlayPauseButton.Classes.Set("playing", playing);
+        OutputPreviewPlayPauseButton.Classes.Set("active", playing);
+        OutputFullscreenPlayPauseButton.Classes.Set("active", playing);
         OutputPreviewPlayPauseButton.Content = playing ? "\uE769" : "\uE768";
         OutputFullscreenPlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Play";
         AutomationProperties.SetName(OutputPreviewPlayPauseButton, playing ? "Pause MP4 preview" : "Play MP4 preview");

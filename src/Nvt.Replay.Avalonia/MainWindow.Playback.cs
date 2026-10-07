@@ -358,7 +358,7 @@ public partial class MainWindow : Window
 
     private void SetPlaybackVisualState(bool playing)
     {
-        PlayPauseButton.Classes.Set("playing", playing);
+        PlayPauseButton.Classes.Set("active", playing);
         PlayPauseButton.Content = playing ? "Ⅱ  Pause" : "▶  Play";
         AutomationProperties.SetName(PlayPauseButton, playing ? "Pause replay" : "Play replay");
     }

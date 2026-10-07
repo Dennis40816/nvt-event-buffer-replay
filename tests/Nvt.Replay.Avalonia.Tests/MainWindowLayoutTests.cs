@@ -399,19 +399,18 @@ public sealed class MainWindowLayoutTests : IDisposable
             Assert.Equal("Select", version.PlaceholderText);
             Assert.Equal(32, version.Bounds.Height);
             Assert.Equal(32, profile.Bounds.Height);
-            Assert.Equal(34, panelWidth.Height);
+            Assert.Equal(32, panelWidth.Height);
             Assert.Equal(32, load.Bounds.Height);
             Assert.NotNull(window.Icon);
-            Assert.Contains("headerPrimary", load.Classes);
+            Assert.Contains("actionPrimary", load.Classes);
+            Assert.Contains("actionGhost", save.Classes);
             Assert.Equal(VerticalAlignment.Center, version.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, panelWidth.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, load.VerticalContentAlignment);
-            Assert.Equal(
-                global::Avalonia.Media.Colors.Transparent,
-                Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(save.Background).Color);
-            Assert.Equal(
-                global::Avalonia.Media.Colors.Transparent,
-                Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(save.BorderBrush).Color);
+            AssertCoreBrush(save, "NfcSurfaceSubtleBrush", save.Background);
+            AssertCoreBrush(save, "NfcBorderMutedBrush", save.BorderBrush);
+            AssertCoreBrush(save, "NfcTextDisabledBrush", save.Foreground);
+            Assert.True(save.Focusable);
         }
         finally
         {
@@ -643,8 +642,9 @@ public sealed class MainWindowLayoutTests : IDisposable
             Dispatcher.UIThread.RunJobs();
             Assert.Contains("inspectorDisclosure", flatBytes.Classes);
             Assert.Contains("inspectorDisclosure", sourceIdentity.Classes);
-            Assert.True(flatBytes.Bounds.Width > 250, $"Flat bytes disclosure width was {flatBytes.Bounds.Width:0.##}.");
-            Assert.True(sourceIdentity.Bounds.Width > 250, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
+            // The shared 14 px Core scrollbar takes 12 px more of the 286 px rail than the former 2.5 px bar.
+            Assert.True(flatBytes.Bounds.Width > 238, $"Flat bytes disclosure width was {flatBytes.Bounds.Width:0.##}.");
+            Assert.True(sourceIdentity.Bounds.Width > 238, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
             sourceIdentity.IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
             var rawSections = Required<ItemsControl>(window, "RawByteSectionsItemsControl");
@@ -2985,11 +2985,17 @@ public sealed class MainWindowLayoutTests : IDisposable
             Assert.True(saveBounds.Right <= loadReviewBounds.Left);
             Assert.True(loadReviewBounds.Right <= reviewActions.Bounds.Width + 0.5);
 
+            save.Classes.Add("reducedMotion");
+            loadReview.Classes.Add("reducedMotion");
             save.IsEnabled = false;
             loadReview.IsEnabled = false;
             Dispatcher.UIThread.RunJobs();
-            Assert.True(IsTransparent(save.Background), $"Disabled Save background must be transparent, got {save.Background}.");
-            Assert.True(IsTransparent(loadReview.Background), $"Disabled Open review background must be transparent, got {loadReview.Background}.");
+            AssertCoreBrush(save, "NfcSurfaceSubtleBrush", save.Background);
+            AssertCoreBrush(save, "NfcBorderMutedBrush", save.BorderBrush);
+            AssertCoreBrush(save, "NfcTextDisabledBrush", save.Foreground);
+            AssertCoreBrush(loadReview, "NfcSurfaceSubtleBrush", loadReview.Background);
+            AssertCoreBrush(loadReview, "NfcBorderMutedBrush", loadReview.BorderBrush);
+            AssertCoreBrush(loadReview, "NfcTextDisabledBrush", loadReview.Foreground);
             Assert.All(
                 new[] { save, loadReview },
                 button => Assert.True(
@@ -2998,6 +3004,8 @@ public sealed class MainWindowLayoutTests : IDisposable
             save.IsEnabled = true;
             loadReview.IsEnabled = true;
             Dispatcher.UIThread.RunJobs();
+            save.Classes.Remove("reducedMotion");
+            loadReview.Classes.Remove("reducedMotion");
 
             Assert.Equal("38", Required<TextBlock>(window, "TimelinePhysicalCountText").Text);
             Assert.Equal("19", Required<TextBlock>(window, "TimelineLogicalCountText").Text);
@@ -3880,6 +3888,14 @@ public sealed class MainWindowLayoutTests : IDisposable
             await Task.Delay(10);
         }
         Assert.True(predicate(), "Timed out while waiting for the output preview.");
+    }
+
+    private static void AssertCoreBrush(Control owner, string resourceKey, IBrush? actual)
+    {
+        Assert.True(owner.TryFindResource(resourceKey, owner.ActualThemeVariant, out var resource));
+        Assert.Equal(
+            Assert.IsAssignableFrom<ISolidColorBrush>(resource).Color,
+            Assert.IsAssignableFrom<ISolidColorBrush>(actual).Color);
     }
 
     private static bool IsTransparent(IBrush? brush) =>

@@ -12,7 +12,7 @@
         WindowState="Maximized"
         MinWidth="1180"
         MinHeight="720"
-        Background="{DynamicResource WindowBrush}"
+        Background="{DynamicResource NfcAppBackgroundBrush}"
         FontSize="14"
         FontFamily="Segoe UI Variable,avares://Avalonia.Fonts.Inter/Assets#Inter">
   <Window.Styles>
@@ -32,15 +32,15 @@
       <RowDefinition Height="*" />
       <RowDefinition Height="0" />
     </Grid.RowDefinitions>
-    <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
-      <Grid Margin="12,0" ColumnDefinitions="Auto,10,Auto,14,200,10,Auto,10,Auto,*,8,Auto,4,Auto">
-        <StackPanel Grid.Column="0" Width="237" Orientation="Horizontal" VerticalAlignment="Center">
-          <TextBlock Text="NVT EVENT BUFFER REPLAY" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+    <Border Grid.Row="0" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="12,0" ColumnDefinitions="Auto,8,Auto,8,140,8,Auto,8,Auto,*,8,Auto,4,Auto">
+        <StackPanel Grid.Column="0" Width="220" Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="NVT EVENT BUFFER REPLAY" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource NfcTextBrush}" VerticalAlignment="Center" />
         </StackPanel>
 
         <Grid Grid.Column="2" VerticalAlignment="Center">
-          <Button x:Name="CancelButton" Classes="ghost" Height="32" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
-          <Button x:Name="LoadButton" Classes="headerAction headerPrimary" Height="32" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
+          <Button x:Name="CancelButton" Classes="actionGhost" Content="Cancel" IsVisible="False" Click="CancelButton_OnClick" AutomationProperties.Name="Cancel current operation" />
+          <Button x:Name="LoadButton" Classes="actionPrimary" Click="LoadButton_OnClick" ToolTip.Tip="Load or replace capture (Ctrl+O)" AutomationProperties.Name="Load capture file">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
               <TextBlock x:Name="LoadActionLabel" Text="Load" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -48,15 +48,15 @@
           </Button>
         </Grid>
 
-        <Grid Grid.Column="4" Width="200" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-          <TextBlock x:Name="SourceAdapterText" Margin="22,0,0,0" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+        <Grid Grid.Column="4" Width="140" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+          <TextBlock x:Name="SourceAdapterText" Margin="8,0,0,0" Text="Not selected" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcInfoTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Margin="8,0,0,0" Text="•" FontSize="13" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
           <ComboBox x:Name="SourceAdapterComboBox" Grid.ColumnSpan="2" IsVisible="False" PlaceholderText="Choose source adapter" SelectionChanged="SourceAdapterComboBox_OnSelectionChanged" />
           <TextBlock x:Name="SourceConfidenceText" Text="Source detection is advisory" IsVisible="False" />
         </Grid>
 
         <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-          <TextBlock x:Name="EventVersionLabel" Text="Event Buffer Version" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+          <TextBlock x:Name="EventVersionLabel" Text="Event Buffer Version" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" VerticalAlignment="Center" />
           <ComboBox x:Name="EventVersionComboBox" Classes="headerInlineSelect" MinWidth="72" PlaceholderText="Select" IsEnabled="False" SelectionChanged="EventVersionComboBox_OnSelectionChanged" DropDownClosed="EventVersionComboBox_OnDropDownClosed" AutomationProperties.Name="Event Buffer Version">
               <ComboBoxItem Content="0x82" />
               <ComboBoxItem Content="0x83" />
@@ -64,11 +64,11 @@
               <ComboBoxItem Content="0x85" />
               <ComboBoxItem Content="0x97" />
           </ComboBox>
-          <TextBlock Margin="10,0,0,0" Text="I²C Addr" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+          <TextBlock Margin="10,0,0,0" Text="I²C Addr" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" VerticalAlignment="Center" />
           <TextBox x:Name="TargetI2cAddressTextBox" Classes="headerInlineInput" Width="68" Text="0x01" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" LostFocus="TargetI2cAddressTextBox_OnLostFocus" KeyDown="TargetI2cAddressTextBox_OnKeyDown" ToolTip.Tip="Only this 7-bit I²C slave address is decoded. Raw Explorer keeps all devices visible." AutomationProperties.Name="Target 7-bit I2C address" />
         </StackPanel>
         <Grid Grid.Column="8" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
-          <TextBlock Margin="0,0,3,0" Text="•" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+          <TextBlock Margin="0,0,3,0" Text="•" FontSize="13" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
           <ComboBox x:Name="RegisterProfileComboBox" Grid.Column="1" Classes="headerInlineSelect" MinWidth="132" IsEnabled="False" SelectionChanged="RegisterProfileComboBox_OnSelectionChanged" AutomationProperties.Name="NVT IC register profile" />
           <ComboBox x:Name="Desay97ProfileComboBox" Grid.Column="1" Classes="headerInlineSelect" MinWidth="132" PlaceholderText="Palm profile" IsVisible="False" SelectedIndex="-1" SelectionChanged="Desay97ProfileComboBox_OnSelectionChanged" DropDownClosed="Desay97ProfileComboBox_OnDropDownClosed" AutomationProperties.Name="Desay 0x97 Benz Palm option">
             <ComboBoxItem Content="Standard" />
@@ -82,22 +82,22 @@
           <TextBlock x:Name="ConfigurationHintText" Text="Select a source and explicit Event Buffer version." IsVisible="False" />
         </Grid>
         <StackPanel x:Name="ReviewHeaderActions" Grid.Column="11" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
-          <Button x:Name="SaveReviewButton" Classes="headerAction" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
+          <Button x:Name="SaveReviewButton" Classes="actionGhost" IsEnabled="False" Click="SaveReviewButton_OnClick" ToolTip.Tip="Save review" AutomationProperties.Name="Save review">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock x:Name="SaveActionIcon" Text="&#xE74E;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
               <TextBlock x:Name="SaveActionLabel" Text="Save" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button x:Name="LoadReviewButton" Classes="headerAction" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review">
+          <Button x:Name="LoadReviewButton" Classes="actionGhost" IsVisible="False" IsEnabled="False" Click="LoadReviewButton_OnClick" ToolTip.Tip="Open review" AutomationProperties.Name="Open review">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock x:Name="LoadReviewActionIcon" Text="&#xE8E5;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
               <TextBlock x:Name="LoadReviewActionLabel" Text="Review" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button x:Name="ApplySidecarButton" Classes="primary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
+          <Button x:Name="ApplySidecarButton" Classes="actionPrimary" Content="Apply mismatch" IsVisible="False" Click="ApplySidecarButton_OnClick" />
         </StackPanel>
         <Border Grid.Column="12" Classes="separator" />
-        <Button x:Name="SettingsButton" Grid.Column="13" Classes="headerAction" Click="SettingsButton_OnClick" ToolTip.Tip="Settings" AutomationProperties.Name="Open settings">
+        <Button x:Name="SettingsButton" Grid.Column="13" Classes="actionGhost" Click="SettingsButton_OnClick" ToolTip.Tip="Settings" AutomationProperties.Name="Open settings">
           <StackPanel Orientation="Horizontal" Spacing="6"><TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" /><TextBlock x:Name="SettingsActionLabel" Text="Settings" /></StackPanel>
         </Button>
         <ProgressBar x:Name="LoadingProgress" Grid.ColumnSpan="14" Height="2" IsIndeterminate="True" IsVisible="False" VerticalAlignment="Bottom" />
@@ -111,23 +111,23 @@
         <ColumnDefinition Width="4" />
         <ColumnDefinition Width="286" MinWidth="280" MaxWidth="420" />
       </Grid.ColumnDefinitions>
-      <Border x:Name="ReviewRailBorder" Grid.Column="0" IsVisible="False" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-        <Grid RowDefinitions="46,*">
+      <Border x:Name="ReviewRailBorder" Grid.Column="0" IsVisible="False" Background="{DynamicResource NfcSurfaceSubtleBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,1,0">
+        <Grid RowDefinitions="40,*">
           <Grid Grid.Row="0" Margin="14,0,8,0" ColumnDefinitions="*,Auto,6,Auto,6,Auto">
-            <TextBlock x:Name="ReviewRailTitle" Text="Review" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
-            <Border x:Name="ReviewRailCountBadge" Grid.Column="1" Background="{DynamicResource RaisedSurfaceBrush}" CornerRadius="9" Padding="7,2" VerticalAlignment="Center">
-              <TextBlock x:Name="DiagnosticCountText" Text="0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+            <TextBlock x:Name="ReviewRailTitle" Text="Review" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" VerticalAlignment="Center" />
+            <Border x:Name="ReviewRailCountBadge" Grid.Column="1" Background="{DynamicResource NfcSurfaceSubtleBrush}" CornerRadius="9" Padding="7,2" VerticalAlignment="Center">
+              <TextBlock x:Name="DiagnosticCountText" Text="0" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
             </Border>
-            <Button x:Name="ClearMarkersButton" Grid.Column="3" Classes="canvasIcon" Content="&#xE74D;" IsEnabled="False" Click="ClearMarkersButton_OnClick" ToolTip.Tip="Clear all marks" AutomationProperties.Name="Clear all marks" />
-            <Button x:Name="ReviewRailToggleButton" Grid.Column="5" Classes="canvasIcon" Content="&#xE76B;" Click="ReviewRailToggleButton_OnClick" AutomationProperties.Name="Collapse review queue" />
+            <Button x:Name="ClearMarkersButton" Grid.Column="3" Classes="actionIconButton" FontFamily="Segoe Fluent Icons" FontSize="16" Content="&#xE74D;" IsEnabled="False" Click="ClearMarkersButton_OnClick" ToolTip.Tip="Clear all marks" AutomationProperties.Name="Clear all marks" />
+            <Button x:Name="ReviewRailToggleButton" Grid.Column="5" Classes="actionIconButton" FontFamily="Segoe Fluent Icons" FontSize="16" Content="&#xE76B;" Click="ReviewRailToggleButton_OnClick" AutomationProperties.Name="Collapse review queue" />
           </Grid>
           <Grid x:Name="ReviewRailContent" Grid.Row="1" Margin="14,4,14,14" RowDefinitions="Auto,10,*">
           <StackPanel Grid.Row="0" Spacing="8">
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <Button Classes="ghost" Content="All" Tag="All" Click="ReviewFilterButton_OnClick" />
-              <Button Classes="ghost" Content="Warn" Tag="Warnings" Click="ReviewFilterButton_OnClick" />
-              <Button Classes="ghost" Content="Alarm" Tag="Alarms" Click="ReviewFilterButton_OnClick" />
-              <Button Classes="ghost" Content="ASIL" Tag="Asil" Click="ReviewFilterButton_OnClick" />
+              <Button Classes="actionGhost" Content="All" Tag="All" Click="ReviewFilterButton_OnClick" />
+              <Button Classes="actionGhost" Content="Warn" Tag="Warnings" Click="ReviewFilterButton_OnClick" />
+              <Button Classes="actionGhost" Content="Alarm" Tag="Alarms" Click="ReviewFilterButton_OnClick" />
+              <Button Classes="actionGhost" Content="ASIL" Tag="Asil" Click="ReviewFilterButton_OnClick" />
             </StackPanel>
           </StackPanel>
           <ListBox x:Name="DiagnosticListBox" Grid.Row="2" SelectionChanged="DiagnosticListBox_OnSelectionChanged" AutomationProperties.Name="Review queue findings">
@@ -135,21 +135,21 @@
               <DataTemplate x:DataType="vm:ReviewGroupRow">
                 <Border Classes="reviewGroupHitTarget"
                         Background="Transparent"
-                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderBrush="{DynamicResource NfcBorderSoftBrush}"
                         BorderThickness="0,0,0,1"
                         Padding="8,10"
                         ContextRequested="ReviewGroupBorder_OnContextRequested">
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="*,Auto">
-                      <TextBlock Text="{Binding DisplayCode}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
-                      <TextBlock Grid.Column="1" Text="{Binding Severity}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
+                      <TextBlock Text="{Binding DisplayCode}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Column="1" Text="{Binding Severity}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcWarningTextBrush}" />
                     </Grid>
-                    <TextBlock Text="{Binding Message}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" MaxHeight="58" />
+                    <TextBlock Text="{Binding Message}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" TextWrapping="Wrap" MaxHeight="58" />
                     <Grid ColumnDefinitions="*,Auto">
-                      <TextBlock Text="{Binding Count}" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" />
-                      <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource InfoBrush}" />
+                      <TextBlock Text="{Binding Count}" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" />
+                      <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcInfoTextBrush}" />
                     </Grid>
-                    <TextBlock Text="{Binding Disposition}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{Binding Disposition}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" />
                   </StackPanel>
                 </Border>
               </DataTemplate>
@@ -159,7 +159,7 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="1" Background="{DynamicResource WorkspaceBrush}">
+      <Border Grid.Column="1" Background="{DynamicResource NfcAppBackgroundBrush}">
         <TabControl x:Name="WorkspaceTabs" Margin="0" SelectionChanged="WorkspaceTabs_OnSelectionChanged">
           <TabItem>
             <TabItem.Header>
@@ -169,26 +169,26 @@
               </StackPanel>
             </TabItem.Header>
             <Grid RowDefinitions="48,24,34,*">
-              <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+              <Border Grid.Row="0" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1">
                 <Grid Margin="10,0" ColumnDefinitions="Auto,8,Auto,14,*,14,Auto" VerticalAlignment="Center">
                   <TextBlock Text="Show" Classes="fieldLabel" />
                   <ComboBox x:Name="RegisterFilterComboBox" Grid.Column="2" SelectionChanged="RegisterFilterComboBox_OnSelectionChanged" AutomationProperties.Name="Register activity filter" />
                   <TextBox x:Name="RegisterSearchTextBox" Grid.Column="4" Classes="registerSearch" MinWidth="180" MaxWidth="360" HorizontalAlignment="Stretch" PlaceholderText="Search address, register, payload…" TextChanged="RegisterSearchTextBox_OnTextChanged" AutomationProperties.Name="Search physical records" />
-                  <Button x:Name="ExportReadableLogButton" Grid.Column="6" Classes="toolbarAction" Content="Export readable" IsEnabled="False" Click="ExportReadableLogButton_OnClick" AutomationProperties.Name="Export readable communication log" />
+                  <Button x:Name="ExportReadableLogButton" Grid.Column="6" Classes="actionNeutral" Content="Export readable" IsEnabled="False" Click="ExportReadableLogButton_OnClick" AutomationProperties.Name="Export readable communication log" />
                 </Grid>
               </Border>
               <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="10,0" VerticalAlignment="Center">
                 <controls:RegisterActivitySurface x:Name="RegisterActivitySurface" Height="22" IsEnabled="False"
-                                                  TrackBrush="{DynamicResource BorderBrush}"
-                                                  ReadBrush="{DynamicResource InfoBrush}"
-                                                  WriteBrush="{DynamicResource WarningBrush}"
-                                                  CommandBrush="{DynamicResource AccentBrush}"
-                                                  ResetBrush="{DynamicResource DangerBrush}"
-                                                  AmbiguousBrush="{DynamicResource MutedTextBrush}"
-                                                  SelectionBrush="{DynamicResource PrimaryTextBrush}"
+                                                  TrackBrush="{DynamicResource NfcBorderSoftBrush}"
+                                                  ReadBrush="{DynamicResource NfcInfoTextBrush}"
+                                                  WriteBrush="{DynamicResource NfcWarningTextBrush}"
+                                                  CommandBrush="{DynamicResource NfcAccentBrush}"
+                                                  ResetBrush="{DynamicResource NfcDangerTextBrush}"
+                                                  AmbiguousBrush="{DynamicResource NfcTextMutedBrush}"
+                                                  SelectionBrush="{DynamicResource NfcTextBrush}"
                                                   ToolTip.Tip="Read cyan · write amber · command lime · reset red · click a tick to inspect"
                                                   AutomationProperties.Name="Register activity timeline" />
-                <TextBlock x:Name="RegisterResultText" Grid.Column="1" Margin="12,0,0,0" Text="0 records · 0 register events" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="RegisterResultText" Grid.Column="1" Margin="12,0,0,0" Text="0 records · 0 register events" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
               </Grid>
               <Grid Grid.Row="2" ColumnDefinitions="64,100,132,190,200,70,*,60" Margin="10,0">
                 <TextBlock Classes="section" Text="INDEX" VerticalAlignment="Center" />
@@ -203,21 +203,21 @@
               <ListBox x:Name="RawRecordsList" Classes="rawRecords" Grid.Row="3" SelectionMode="Single" SelectionChanged="RawRecordsList_OnSelectionChanged" AutomationProperties.Name="Physical source records">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:RawRecordRow">
-                    <Border Classes="rawRecordRow" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" PointerPressed="RawRecordRow_OnPointerPressed">
+                    <Border Classes="rawRecordRow" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1" PointerPressed="RawRecordRow_OnPointerPressed">
                       <Grid RowDefinitions="Auto,Auto">
                         <Grid ColumnDefinitions="64,100,132,190,200,70,*,60" Margin="10,9">
-                          <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                          <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                          <TextBlock Grid.Column="2" Text="{Binding I2cEndpoint}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" ToolTip.Tip="7-bit I²C slave address and transfer direction" />
+                          <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
+                          <TextBlock Grid.Column="2" Text="{Binding I2cEndpoint}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" ToolTip.Tip="7-bit I²C slave address and transfer direction" />
                           <StackPanel Grid.Column="3" Spacing="1" ToolTip.Tip="{Binding AddressTooltip}">
-                            <TextBlock Text="{Binding AddressPrimary}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                            <TextBlock Text="{Binding RawRegisterAddress}" IsVisible="{Binding HasSecondaryAddress}" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                            <TextBlock Text="{Binding AddressPrimary}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                            <TextBlock Text="{Binding RawRegisterAddress}" IsVisible="{Binding HasSecondaryAddress}" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
                           </StackPanel>
-                          <TextBlock Grid.Column="4" Text="{Binding Register}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource InfoBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
-                          <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                          <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="4" Text="{Binding Register}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcInfoTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Register}" />
+                          <TextBlock Grid.Column="5" Text="{Binding ByteCount}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
+                          <TextBlock Grid.Column="6" Text="{Binding Preview}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource NfcTextMutedBrush}" TextTrimming="CharacterEllipsis" />
                           <Button Grid.Column="7"
-                                  Classes="inspectorIcon rawSourceOpen"
+                                  Classes="actionIconButton actionGhost rawSourceOpen" FontFamily="Segoe Fluent Icons" FontSize="15"
                                   Content="&#xE8A7;"
                                   Click="RawSourceOpenButton_OnClick"
                                   ToolTip.Tip="{Binding SourceNavigationLabel}"
@@ -232,8 +232,8 @@
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate x:DataType="vm:RawDetailField">
                                     <Grid ColumnDefinitions="96,*" Margin="0,0,0,5">
-                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" />
-                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" TextWrapping="Wrap" />
                                     </Grid>
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -246,8 +246,8 @@
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate x:DataType="vm:RawDetailField">
                                     <Grid ColumnDefinitions="96,*" Margin="0,0,0,5">
-                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" />
-                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
                                     </Grid>
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -260,8 +260,8 @@
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate x:DataType="vm:RawDetailField">
                                     <Grid ColumnDefinitions="76,*" Margin="0,0,0,5">
-                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" />
-                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                      <TextBlock Text="{Binding Label}" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource NfcTextSecondaryBrush}" TextWrapping="Wrap" />
                                     </Grid>
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -270,11 +270,11 @@
 
                             <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="7">
                               <TextBlock Classes="section" Text="FULL PAYLOAD" />
-                              <TextBlock Text="{Binding Detail.FullPayload}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Detail.FullPayload}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource NfcTextSecondaryBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="2" Spacing="7">
                               <TextBlock Classes="section" Text="ORIGINAL SOURCE LINE" />
-                              <TextBlock Text="{Binding Detail.SourceText}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" MaxHeight="90" />
+                              <TextBlock Text="{Binding Detail.SourceText}" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" MaxHeight="90" />
                             </StackPanel>
                           </Grid>
                         </Border>
@@ -305,14 +305,14 @@
               <ListBox x:Name="DecodedFramesList" Grid.Row="1" SelectionChanged="DecodedFramesList_OnSelectionChanged" AutomationProperties.Name="Decoded logical frames">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:DecodedFrameRow">
-                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10,9">
+                    <Border BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1" Padding="10,9">
                       <Grid ColumnDefinitions="70,110,90,90,100,*">
-                        <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
-                        <TextBlock Grid.Column="2" Text="{Binding Touches}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                        <TextBlock Grid.Column="3" Text="{Binding Crc}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-                        <TextBlock Grid.Column="4" Text="{Binding State}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
-                        <TextBlock Grid.Column="5" Text="{Binding SourceId}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Index}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Timestamp}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Touches}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                        <TextBlock Grid.Column="3" Text="{Binding Crc}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" />
+                        <TextBlock Grid.Column="4" Text="{Binding State}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcWarningTextBrush}" />
+                        <TextBlock Grid.Column="5" Text="{Binding SourceId}" FontFamily="Cascadia Mono" FontSize="13" Foreground="{DynamicResource NfcTextMutedBrush}" TextTrimming="CharacterEllipsis" />
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -334,17 +334,17 @@
                     <Border Classes="liveSettingGroup">
                       <Grid ColumnDefinitions="Auto,1,64,Auto,64">
                         <TextBlock Margin="12,0" Text="Panel" Classes="liveSettingLabel" />
-                        <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderBrush}" />
-                        <TextBox x:Name="PanelWidthTextBox" Grid.Column="2" Classes="panelSize" Height="34" Width="64" BorderThickness="0" Background="Transparent" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
-                        <TextBlock Grid.Column="3" Text="×" Margin="4,0" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                        <TextBox x:Name="PanelHeightTextBox" Grid.Column="4" Classes="panelSize" Height="34" Width="64" BorderThickness="0" Background="Transparent" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
+                        <Border Grid.Column="1" Width="1" Background="{DynamicResource NfcBorderSoftBrush}" />
+                        <TextBox x:Name="PanelWidthTextBox" Grid.Column="2" Classes="panelSize" Height="{DynamicResource NfcControlHeight}" Width="64" BorderThickness="0" Background="Transparent" Text="2304" PlaceholderText="X" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel X resolution. Press Enter to apply." AutomationProperties.Name="Panel width" />
+                        <TextBlock Grid.Column="3" Text="×" Margin="4,0" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
+                        <TextBox x:Name="PanelHeightTextBox" Grid.Column="4" Classes="panelSize" Height="{DynamicResource NfcControlHeight}" Width="64" BorderThickness="0" Background="Transparent" Text="1280" PlaceholderText="Y" KeyDown="PanelResolutionTextBox_OnKeyDown" LostFocus="PanelResolutionTextBox_OnLostFocus" ToolTip.Tip="Panel Y resolution. Press Enter to apply." AutomationProperties.Name="Panel height" />
                       </Grid>
                     </Border>
                     <Border Classes="liveSettingGroup">
                       <Grid ColumnDefinitions="Auto,1,Auto">
                         <TextBlock Margin="12,0" Text="Point view" Classes="liveSettingLabel" />
-                        <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderBrush}" />
-                        <ComboBox x:Name="PaintModeComboBox" Grid.Column="2" Classes="semanticSelect" Height="34" BorderThickness="0" Background="Transparent" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Choose host, report, or comparison points" AutomationProperties.Name="Point view">
+                        <Border Grid.Column="1" Width="1" Background="{DynamicResource NfcBorderSoftBrush}" />
+                        <ComboBox x:Name="PaintModeComboBox" Grid.Column="2" Classes="semanticSelect" Height="{DynamicResource NfcControlHeight}" BorderThickness="0" Background="Transparent" SelectionChanged="PaintModeComboBox_OnSelectionChanged" ToolTip.Tip="Choose host, report, or comparison points" AutomationProperties.Name="Point view">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectOption">
                           <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -364,8 +364,8 @@
                     <Border Classes="liveSettingGroup">
                       <Grid ColumnDefinitions="Auto,1,Auto">
                         <TextBlock Margin="12,0" Text="Trail" Classes="liveSettingLabel" />
-                        <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderBrush}" />
-                        <ComboBox x:Name="TrailModeComboBox" Grid.Column="2" Classes="semanticSelect" Height="34" BorderThickness="0" Background="Transparent" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
+                        <Border Grid.Column="1" Width="1" Background="{DynamicResource NfcBorderSoftBrush}" />
+                        <ComboBox x:Name="TrailModeComboBox" Grid.Column="2" Classes="semanticSelect" Height="{DynamicResource NfcControlHeight}" BorderThickness="0" Background="Transparent" SelectionChanged="TrailModeComboBox_OnSelectionChanged" ToolTip.Tip="Trajectory retention" AutomationProperties.Name="Trail retention mode">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectOption">
                           <Grid Width="218" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -385,8 +385,8 @@
                     <Border x:Name="TrailLengthGroup" Classes="liveSettingGroup" IsVisible="False">
                       <Grid ColumnDefinitions="Auto,1,Auto">
                         <TextBlock x:Name="TrailLengthLabel" Margin="12,0" Text="Trace length" Classes="liveSettingLabel" VerticalAlignment="Center" />
-                        <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderBrush}" />
-                        <ComboBox x:Name="TrailLengthComboBox" Grid.Column="2" Classes="canvasControl" Height="34" BorderThickness="0" Background="Transparent" SelectedIndex="5" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
+                        <Border Grid.Column="1" Width="1" Background="{DynamicResource NfcBorderSoftBrush}" />
+                        <ComboBox x:Name="TrailLengthComboBox" Grid.Column="2" Classes="canvasControl" Height="{DynamicResource NfcControlHeight}" BorderThickness="0" Background="Transparent" SelectedIndex="5" SelectionChanged="TrailLengthComboBox_OnSelectionChanged" AutomationProperties.Name="Recent trail frame count">
                         <ComboBoxItem Content="2" Tag="2" />
                         <ComboBoxItem Content="5" Tag="5" />
                         <ComboBoxItem Content="10" Tag="10" />
@@ -404,13 +404,13 @@
                         Grid.Column="0"
                         Width="212"
                         IsVisible="False"
-                        Background="{DynamicResource PanelBrush}"
-                        BorderBrush="{DynamicResource StrongBorderBrush}"
+                        Background="{DynamicResource NfcSurfaceSubtleBrush}"
+                        BorderBrush="{DynamicResource NfcBorderBrush}"
                         BorderThickness="0,0,1,0">
                   <Grid RowDefinitions="44,*">
                     <Grid Margin="14,0,10,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                      <TextBlock Text="MARKS" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.45" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                      <TextBlock x:Name="PaintMarkerCountText" Grid.Column="1" Text="0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                      <TextBlock Text="MARKS" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.45" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
+                      <TextBlock x:Name="PaintMarkerCountText" Grid.Column="1" Text="0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" VerticalAlignment="Center" />
                     </Grid>
                     <ListBox x:Name="PaintMarkerListBox"
                              Classes="paintMarkerList"
@@ -421,10 +421,7 @@
                         <DataTemplate x:DataType="vm:PaintMarkerRow">
                           <Grid Classes="paintMarkerRow" ColumnDefinitions="34,*" MinHeight="54">
                             <Button Grid.Column="0"
-                                    Classes="paintMarkerRemove"
-                                    Width="30"
-                                    Height="30"
-                                    Padding="0"
+                                    Classes="actionIconButton actionDanger paintMarkerRemove"
                                     Content="&#xE733;"
                                     FontFamily="Segoe Fluent Icons"
                                     FontSize="15"
@@ -433,8 +430,8 @@
                                     ToolTip.Tip="Remove this mark"
                                     AutomationProperties.Name="Remove mark" />
                             <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                              <TextBlock Text="{Binding FrameLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                              <TextBlock Text="{Binding TimeLabel}" FontFamily="Cascadia Mono" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                              <TextBlock Text="{Binding FrameLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                              <TextBlock Text="{Binding TimeLabel}" FontFamily="Cascadia Mono" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
                             </StackPanel>
                           </Grid>
                         </DataTemplate>
@@ -443,28 +440,28 @@
                   </Grid>
                 </Border>
                 <Grid Grid.Column="1">
-                <Border Background="{DynamicResource CanvasBrush}">
+                <Border Background="{DynamicResource NfcAppBackgroundBrush}">
                   <controls:ReplayPaintSurface x:Name="PaintSurface" ZoomChanged="PaintSurface_OnZoomChanged" AutomationProperties.Name="Touch replay Paint surface" />
                 </Border>
                 <StackPanel Margin="14" Spacing="7" VerticalAlignment="Top" HorizontalAlignment="Right">
                   <Border Classes="canvasQuickBar">
-                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                      <ToggleButton x:Name="TraceToggleButton" Classes="canvasQuick" Content="Trace" IsChecked="True" IsCheckedChanged="TraceToggleButton_OnIsCheckedChanged" ToolTip.Tip="Show or hide touch trajectories" AutomationProperties.Name="Show touch traces" />
-                      <ToggleButton x:Name="TrailPointsToggleButton" Classes="canvasQuick" Content="Points" IsChecked="True" IsCheckedChanged="TrailPointsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Show every reported touch sample independently of the trajectory line" AutomationProperties.Name="Show reported trail points" />
-                      <ToggleButton x:Name="GridStrengthToggleButton" Classes="canvasQuick" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
-                      <ToggleButton x:Name="ReverseXToggleButton" Classes="canvasQuick" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
-                      <ToggleButton x:Name="ReverseYToggleButton" Classes="canvasQuick" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
-                      <ToggleButton x:Name="SwapAxesToggleButton" Classes="canvasQuick" Content="Swap XY" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" ToolTip.Tip="Swap the displayed X and Y axes without changing source data" AutomationProperties.Name="Swap X and Y axes" />
-                      <Button Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE9A6;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
-                      <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="canvasQuick" Width="34" MinWidth="34" Padding="0" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="16" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <ToggleButton x:Name="TraceToggleButton" Classes="chipAction" Content="Trace" IsChecked="True" IsCheckedChanged="TraceToggleButton_OnIsCheckedChanged" ToolTip.Tip="Show or hide touch trajectories" AutomationProperties.Name="Show touch traces" />
+                      <ToggleButton x:Name="TrailPointsToggleButton" Classes="chipAction" Content="Points" IsChecked="True" IsCheckedChanged="TrailPointsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Show every reported touch sample independently of the trajectory line" AutomationProperties.Name="Show reported trail points" />
+                      <ToggleButton x:Name="GridStrengthToggleButton" Classes="chipAction" Content="Grid" IsCheckedChanged="GridStrengthToggleButton_OnIsCheckedChanged" ToolTip.Tip="Use stronger coordinate grid lines" AutomationProperties.Name="Stronger coordinate grid" />
+                      <ToggleButton x:Name="ReverseXToggleButton" Classes="chipAction" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
+                      <ToggleButton x:Name="ReverseYToggleButton" Classes="chipAction" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
+                      <ToggleButton x:Name="SwapAxesToggleButton" Classes="chipAction" Content="Swap XY" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" ToolTip.Tip="Swap the displayed X and Y axes without changing source data" AutomationProperties.Name="Swap X and Y axes" />
+                      <Button Classes="actionIconButton actionGhost" Content="&#xE9A6;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
+                      <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="actionIconButton chipAction" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="16" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
                     </StackPanel>
                   </Border>
 
                   <Border x:Name="CanvasSettingsPanel" Classes="canvasSettingsPanel" Width="320" IsVisible="False" HorizontalAlignment="Right">
                     <StackPanel Spacing="8">
-                      <TextBlock Text="CANVAS SETTINGS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" LetterSpacing="0.4" VerticalAlignment="Center" />
+                      <TextBlock Text="CANVAS SETTINGS" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" LetterSpacing="0.4" VerticalAlignment="Center" />
                       <Grid ColumnDefinitions="Auto,8,Auto,8,*">
-                        <TextBlock Text="Legend" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Legend" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                         <ComboBox x:Name="LegendPositionComboBox" Grid.Column="2" Classes="canvasControl" SelectionChanged="LegendPositionComboBox_OnSelectionChanged" AutomationProperties.Name="Legend position">
                           <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:SelectOption">
@@ -477,19 +474,19 @@
                             </DataTemplate>
                           </ComboBox.SelectionBoxItemTemplate>
                         </ComboBox>
-                        <ToggleButton x:Name="LegendVisibleToggleButton" Grid.Column="4" Classes="canvasQuick" MinWidth="60" Content="Show" IsChecked="True" IsCheckedChanged="LegendVisibleToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Show legend" />
+                        <ToggleButton x:Name="LegendVisibleToggleButton" Grid.Column="4" Classes="chipAction" MinWidth="60" Content="Show" IsChecked="True" IsCheckedChanged="LegendVisibleToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Show legend" />
                       </Grid>
                       <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Click legend to expand · L show/hide" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                        <ToggleButton x:Name="LegendCompactToggleButton" Grid.Column="1" Classes="canvasQuick" MinWidth="76" Content="Compact" IsChecked="True" IsCheckedChanged="LegendCompactToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Compact legend" />
+                        <TextBlock Text="Click legend to expand · L show/hide" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
+                        <ToggleButton x:Name="LegendCompactToggleButton" Grid.Column="1" Classes="chipAction" MinWidth="76" Content="Compact" IsChecked="True" IsCheckedChanged="LegendCompactToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Compact legend" />
                       </Grid>
-                      <TextBlock Text="Scroll to zoom · hold left mouse button and drag to pan." FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock Text="Scroll to zoom · hold left mouse button and drag to pan." FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
                 </StackPanel>
 
-                <Border x:Name="PaintZoomHintBorder" Margin="14" Padding="9,5" IsVisible="False" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource AccentBorderBrush}" BorderThickness="1" CornerRadius="4" VerticalAlignment="Bottom" HorizontalAlignment="Right" IsHitTestVisible="False">
-                  <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                <Border x:Name="PaintZoomHintBorder" Margin="14" Padding="9,5" IsVisible="False" Background="{DynamicResource NfcSurfaceSubtleBrush}" BorderBrush="{DynamicResource NfcAccentBorderBrush}" BorderThickness="1" CornerRadius="4" VerticalAlignment="Bottom" HorizontalAlignment="Right" IsHitTestVisible="False">
+                  <TextBlock x:Name="PaintZoomText" Text="100%" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" />
                 </Border>
                 </Grid>
                 </Grid>
@@ -505,53 +502,50 @@
             </TabItem.Header>
             <Grid Margin="0" ColumnDefinitions="*,12,372">
                 <Grid x:Name="OutputVideoPanel" Grid.ColumnSpan="3">
-                  <Border Background="{DynamicResource CanvasBrush}" BorderThickness="0" Padding="0">
+                  <Border Background="{DynamicResource NfcAppBackgroundBrush}" BorderThickness="0" Padding="0">
                     <Grid RowDefinitions="0,0,*">
                       <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="4">
-                          <TextBlock x:Name="AnalysisSummaryText" Text="Open Output to prepare a preview." FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                          <TextBlock Text="Preview and export share the same sampler, renderer, range, and video settings." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                          <TextBlock x:Name="AnalysisSummaryText" Text="Open Output to prepare a preview." FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
+                          <TextBlock Text="Preview and export share the same sampler, renderer, range, and video settings." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Text="2304 × 1280  /  120 FPS  /  1×" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="OutputVideoBadgeText" Grid.Column="1" Text="2304 × 1280  /  120 FPS  /  1×" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                       </Grid>
                       <Grid x:Name="OutputPageLayout" Grid.Row="2" ColumnDefinitions="*,12,372">
-                        <Grid RowDefinitions="*,8,60,8,Auto">
-                          <Border Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+                        <Grid RowDefinitions="*,8,52,8,Auto">
+                          <Border Background="{DynamicResource NfcAppBackgroundBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
                             <Grid MinHeight="360">
                               <controls:ReplayVideoPreviewSurface x:Name="OutputVideoPreview" AutomationProperties.Name="MP4 replay preview" />
                             </Grid>
                           </Border>
                           <Border Grid.Row="2" Classes="outputPreviewTransport">
-                            <Grid ColumnDefinitions="46,1,14,Auto,18,*,18,42,1,8,42" VerticalAlignment="Center">
+                            <Grid ColumnDefinitions="40,1,10,Auto,12,*,12,40,1,8,40" VerticalAlignment="Center">
                               <Button x:Name="OutputPreviewPlayPauseButton"
-                                      Classes="outputPreviewPlay"
+                                      Classes="actionIconButton chipAction" FontFamily="Segoe Fluent Icons" FontSize="20"
                                       Content="&#xE768;"
                                       Click="OutputPreviewPlayPauseButton_OnClick"
                                       ToolTip.Tip="Play or pause MP4 preview (Space)"
                                       AutomationProperties.Name="Play MP4 preview" />
                               <Border Grid.Column="1" Classes="separator" Height="28" />
-                              <TextBlock x:Name="OutputPreviewClockText" Grid.Column="3" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" />
+                              <TextBlock x:Name="OutputPreviewClockText" Grid.Column="3" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcInfoTextBrush}" VerticalAlignment="Center" />
                               <controls:OutputVideoTimelineSurface x:Name="OutputVideoTimeline"
                                                                    Grid.Column="5"
                                                                    Height="42"
-                                                                   TrackBrush="{DynamicResource CanvasTextBrush}"
-                                                                   HoverTrackBrush="{DynamicResource PrimaryTextBrush}"
-                                                                   ProgressBrush="{DynamicResource AccentBrush}"
-                                                                   PlayheadBrush="{DynamicResource PrimaryTextBrush}"
-                                                                   LabelSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
-                                                                   LabelTextBrush="{DynamicResource PrimaryTextBrush}"
+                                                                   TrackBrush="{DynamicResource NfcTextBrush}"
+                                                                   HoverTrackBrush="{DynamicResource NfcTextBrush}"
+                                                                   ProgressBrush="{DynamicResource NfcAccentBrush}"
+                                                                   PlayheadBrush="{DynamicResource NfcTextBrush}"
+                                                                   LabelSurfaceBrush="{DynamicResource NfcSurfaceSubtleBrush}"
+                                                                   LabelTextBrush="{DynamicResource NfcTextBrush}"
                                                                    SeekRequested="OutputVideoTimeline_OnSeekRequested"
                                                                    RangeChanged="OutputVideoTimeline_OnRangeChanged"
                                                                    AutomationProperties.Name="Scrub MP4 preview time" />
                               <TextBlock x:Name="OutputPreviewFrameText" Grid.Column="7" Text="output 0 / 0" IsVisible="False" />
                               <Border Grid.Column="8" Classes="separator" Height="28" />
-                              <ToggleButton x:Name="OutputPreviewRepeatToggleButton" Grid.Column="7" Classes="canvasQuick" Width="42" Height="42" MinWidth="42" Padding="0" IsChecked="True" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="18" ToolTip.Tip="Repeat preview playback" AutomationProperties.Name="Repeat MP4 preview" />
+                              <ToggleButton x:Name="OutputPreviewRepeatToggleButton" Grid.Column="7" Classes="actionIconButton chipAction" IsChecked="True" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="18" ToolTip.Tip="Repeat preview playback" AutomationProperties.Name="Repeat MP4 preview" />
                               <Button x:Name="OutputPreviewFullscreenButton"
                                       Grid.Column="10"
-                                      Classes="headerIcon"
-                                      Width="42"
-                                      Height="42"
-                                      Padding="0"
+                                      Classes="actionIconButton actionGhost"
                                       Content="&#xE740;"
                                       FontFamily="Segoe Fluent Icons"
                                       FontSize="18"
@@ -561,23 +555,23 @@
                             </Grid>
                           </Border>
                           <Grid Grid.Row="4">
-                            <Border x:Name="OutputExportWarningPanel" IsVisible="False" Padding="12" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1" CornerRadius="4">
+                            <Border x:Name="OutputExportWarningPanel" IsVisible="False" Padding="12" Background="{DynamicResource NfcWarningSurfaceBrush}" BorderBrush="{DynamicResource NfcWarningTextBrush}" BorderThickness="1" CornerRadius="4">
                               <Grid ColumnDefinitions="*,12,Auto,8,Auto">
                                 <StackPanel>
-                                  <TextBlock x:Name="OutputExportWarningTitleText" Text="Long MP4 export" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                                  <TextBlock x:Name="OutputExportWarningText" Text="Review the estimated duration before starting." FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                                  <TextBlock x:Name="OutputExportWarningTitleText" Text="Long MP4 export" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                                  <TextBlock x:Name="OutputExportWarningText" Text="Review the estimated duration before starting." FontSize="12.5" Foreground="{DynamicResource NfcTextSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
-                                <Button x:Name="OutputExportContinueButton" Grid.Column="2" Classes="primary" Content="Export anyway" Click="OutputExportContinueButton_OnClick" AutomationProperties.Name="Confirm long MP4 export" />
-                                <Button x:Name="OutputExportDismissButton" Grid.Column="4" Classes="ghost" Content="Cancel" Click="OutputExportDismissButton_OnClick" AutomationProperties.Name="Dismiss long MP4 export warning" />
+                                <Button x:Name="OutputExportContinueButton" Grid.Column="2" Classes="actionPrimary" Content="Export anyway" Click="OutputExportContinueButton_OnClick" AutomationProperties.Name="Confirm long MP4 export" />
+                                <Button x:Name="OutputExportDismissButton" Grid.Column="4" Classes="actionGhost" Content="Cancel" Click="OutputExportDismissButton_OnClick" AutomationProperties.Name="Dismiss long MP4 export warning" />
                               </Grid>
                             </Border>
                           </Grid>
                         </Grid>
 
-                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
+                        <Border x:Name="OutputSettingsRailBorder" Grid.Column="2" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
                           <ScrollViewer x:Name="OutputSettingsScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                             <StackPanel Spacing="8">
-                              <TextBlock x:Name="OutputModeTitleText" Margin="0,0,0,2" Text="VIDEO SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
+                              <TextBlock x:Name="OutputModeTitleText" Margin="0,0,0,2" Text="VIDEO SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource NfcTextBrush}" />
 
                               <Border Classes="outputSettingRow" MinHeight="76">
                                 <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="34,92,*">
@@ -587,7 +581,7 @@
                                     <ComboBoxItem Content="Recorded timing" Tag="recorded" />
                                     <ComboBoxItem Content="Frame-paced · 120 Hz" Tag="frame" />
                                   </ComboBox>
-                                  <TextBlock x:Name="OutputClockDescriptionText" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3,8,0" Text="Frame-paced skips long idle gaps while REC timestamps stay original." FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                                  <TextBlock x:Name="OutputClockDescriptionText" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3,8,0" Text="Frame-paced skips long idle gaps while REC timestamps stay original." FontSize="11.5" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                                 </Grid>
                               </Border>
 
@@ -632,7 +626,7 @@
                               </StackPanel>
                               <StackPanel IsVisible="False">
                                 <TextBlock Classes="fieldLabel" Text="FINDINGS" />
-                                <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock x:Name="OutputFindingsText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
                               </StackPanel>
                             </StackPanel>
                           </ScrollViewer>
@@ -643,32 +637,32 @@
                 </Grid>
 
                 <Grid x:Name="OutputHeatmapPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="*,12,372">
-                  <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
+                  <Border Grid.Column="0" Background="{DynamicResource NfcAppBackgroundBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
                     <Grid RowDefinitions="Auto,14,*,12,Auto">
                       <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="4">
-                          <TextBlock Text="Touch density" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                          <TextBlock Text="Circle area represents samples; color moves from low-density blue to peak red." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
+                          <TextBlock Text="Touch density" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                          <TextBlock Text="Circle area represents samples; color moves from low-density blue to peak red." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
                         </StackPanel>
-                        <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="OutputHotspotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                       </Grid>
                       <controls:AnalysisHeatmapSurface x:Name="AnalysisHeatmapPreview"
                                                        Grid.Row="2"
                                                        MinHeight="190"
-                                                       AccentBrush="{DynamicResource AccentBrush}"
-                                                       GridBrush="{DynamicResource StrongBorderBrush}"
-                                                       TextBrush="{DynamicResource CanvasMutedTextBrush}"
-                                                       ToolTipSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
-                                                       ToolTipBorderBrush="{DynamicResource AccentBorderBrush}"
+                                                       AccentBrush="{DynamicResource NfcAccentBrush}"
+                                                       GridBrush="{DynamicResource NfcBorderBrush}"
+                                                       TextBrush="{DynamicResource NfcTextMutedBrush}"
+                                                       ToolTipSurfaceBrush="{DynamicResource NfcSurfaceSubtleBrush}"
+                                                       ToolTipBorderBrush="{DynamicResource NfcAccentBorderBrush}"
                                                        AutomationProperties.Name="Output hotspot preview" />
-                      <TextBlock Grid.Row="4" Text="Hover a hotspot for coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" HorizontalAlignment="Right" />
+                      <TextBlock Grid.Row="4" Text="Hover a hotspot for coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" HorizontalAlignment="Right" />
                     </Grid>
                   </Border>
 
-                  <Border x:Name="HeatmapSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
+                  <Border x:Name="HeatmapSettingsRailBorder" Grid.Column="2" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                       <StackPanel Spacing="8">
-                        <TextBlock Margin="0,0,0,2" Text="HEATMAP SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
+                        <TextBlock Margin="0,0,0,2" Text="HEATMAP SETTINGS" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource NfcTextBrush}" />
 
                         <Border Classes="outputSettingRow" MinHeight="76">
                           <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="34,92,*">
@@ -689,7 +683,7 @@
                                 </DataTemplate>
                               </ComboBox.SelectionBoxItemTemplate>
                             </ComboBox>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3,8,0" Text="Display every reported point or only repeatedly occupied cells." FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,3,8,0" Text="Display every reported point or only repeatedly occupied cells." FontSize="11.5" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                           </Grid>
                         </Border>
 
@@ -707,7 +701,7 @@
                             <TextBlock Grid.Column="1" Text="Value labels" Classes="outputSettingLabel" />
                             <Grid Grid.Column="2" ColumnDefinitions="*,Auto">
                               <TextBox x:Name="HeatmapLabelThresholdTextBox" Classes="panelSize" Width="64" HorizontalAlignment="Right" Text="65" KeyDown="HeatmapSetting_OnKeyDown" LostFocus="HeatmapSetting_OnLostFocus" ToolTip.Tip="Show a count when a cell reaches this percentage of the visible peak" AutomationProperties.Name="Heatmap value label threshold percent" />
-                              <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="%" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                              <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="%" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                             </Grid>
                           </Grid>
                         </Border>
@@ -716,7 +710,7 @@
                           <Grid ColumnDefinitions="34,92,*">
                             <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
                             <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
-                            <TextBlock x:Name="HeatmapRangeText" Grid.Column="2" Text="Selected replay range" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <TextBlock x:Name="HeatmapRangeText" Grid.Column="2" Text="Selected replay range" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
                           </Grid>
                         </Border>
                       </StackPanel>
@@ -725,50 +719,50 @@
                 </Grid>
 
                 <Grid x:Name="OutputPointPlotPanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="*,12,372">
-                  <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
+                  <Border Grid.Column="0" Background="{DynamicResource NfcAppBackgroundBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="18">
                     <Grid RowDefinitions="Auto,14,*,12,Auto">
                       <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Spacing="4">
-                          <TextBlock Text="Reported point history" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                          <TextBlock Text="One dot per valid reported coordinate; color stays consistent with contact ID." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                          <TextBlock Text="Reported point history" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                          <TextBlock Text="One dot per valid reported coordinate; color stays consistent with contact ID." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <TextBlock x:Name="OutputPointPlotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasMutedTextBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="OutputPointPlotText" Grid.Column="1" Text="Waiting for preview" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                       </Grid>
                       <controls:AnalysisPointPlotSurface x:Name="AnalysisPointPlotPreview"
                                                          Grid.Row="2"
                                                          MinHeight="190"
-                                                         SurfaceBrush="{DynamicResource CanvasBrush}"
-                                                         GridBrush="{DynamicResource StrongBorderBrush}"
-                                                         TextBrush="{DynamicResource CanvasMutedTextBrush}"
-                                                         ToolTipSurfaceBrush="{DynamicResource RaisedSurfaceBrush}"
-                                                         ToolTipBorderBrush="{DynamicResource AccentBorderBrush}"
+                                                         SurfaceBrush="{DynamicResource NfcAppBackgroundBrush}"
+                                                         GridBrush="{DynamicResource NfcBorderBrush}"
+                                                         TextBrush="{DynamicResource NfcTextMutedBrush}"
+                                                         ToolTipSurfaceBrush="{DynamicResource NfcSurfaceSubtleBrush}"
+                                                         ToolTipBorderBrush="{DynamicResource NfcAccentBorderBrush}"
                                                          AutomationProperties.Name="Reported point history preview" />
-                      <TextBlock Grid.Row="4" Text="Hover a point for frame, ID, type, state, and coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource CanvasMutedTextBrush}" HorizontalAlignment="Right" />
+                      <TextBlock Grid.Row="4" Text="Hover a point for frame, ID, type, state, and coordinates · origin top-left" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" HorizontalAlignment="Right" />
                     </Grid>
                   </Border>
 
-                  <Border x:Name="PointPlotSettingsRailBorder" Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
+                  <Border x:Name="PointPlotSettingsRailBorder" Grid.Column="2" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
                     <StackPanel Spacing="8">
-                      <TextBlock Margin="0,0,0,2" Text="POINT PLOT" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource PrimaryTextBrush}" />
+                      <TextBlock Margin="0,0,0,2" Text="POINT PLOT" FontSize="13" FontWeight="SemiBold" LetterSpacing="0.4" Foreground="{DynamicResource NfcTextBrush}" />
                       <Border Classes="outputSettingRow">
                         <Grid ColumnDefinitions="34,92,*">
                           <TextBlock Text="&#xE81E;" Classes="outputSettingIcon" />
                           <TextBlock Grid.Column="1" Text="Samples" Classes="outputSettingLabel" />
-                          <TextBlock Grid.Column="2" Text="Valid reports" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Text="Valid reports" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" VerticalAlignment="Center" />
                         </Grid>
                       </Border>
                       <Border Classes="outputSettingRow">
                         <Grid ColumnDefinitions="34,92,*">
                           <TextBlock Text="&#xE790;" Classes="outputSettingIcon" />
                           <TextBlock Grid.Column="1" Text="Color" Classes="outputSettingLabel" />
-                          <TextBlock Grid.Column="2" Text="Contact ID" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Text="Contact ID" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" VerticalAlignment="Center" />
                         </Grid>
                       </Border>
                       <Border Classes="outputSettingRow">
                         <Grid ColumnDefinitions="34,92,*">
                           <TextBlock Text="&#xE8B7;" Classes="outputSettingIcon" />
                           <TextBlock Grid.Column="1" Text="Range" Classes="outputSettingLabel" />
-                          <TextBlock x:Name="PointPlotRangeText" Grid.Column="2" Text="Selected output range" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                          <TextBlock x:Name="PointPlotRangeText" Grid.Column="2" Text="Selected output range" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
                         </Grid>
                       </Border>
                     </StackPanel>
@@ -776,29 +770,29 @@
                 </Grid>
 
                 <Grid x:Name="OutputPackagePanel" Grid.ColumnSpan="3" IsVisible="False" ColumnDefinitions="*,12,372">
-                  <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
+                  <Border Grid.Column="0" Background="{DynamicResource NfcAppBackgroundBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1" CornerRadius="4" Padding="22">
                     <StackPanel Spacing="12">
                       <StackPanel Spacing="4">
-                        <TextBlock Text="Data package" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                        <TextBlock Text="Nine linked files for QA, automation, and traceable hand-off." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" />
+                        <TextBlock Text="Data package" FontSize="19" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                        <TextBlock Text="Nine linked files for QA, automation, and traceable hand-off." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
                       </StackPanel>
-                      <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv / communication-readable.jsonl&#x0a;manifest.json&#x0a;heatmap.png" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" LineHeight="24" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock x:Name="OutputFilesText" Text="analysis-report.json&#x0a;events.json / events.csv&#x0a;diagnostics.json / diagnostics.csv&#x0a;communication-readable.csv / communication-readable.jsonl&#x0a;manifest.json&#x0a;heatmap.png" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" LineHeight="24" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </Border>
-                  <Border Grid.Column="2" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
+                  <Border Grid.Column="2" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1,0,0,0" Padding="14,132,10,210">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="18">
                       <StackPanel Spacing="7">
-                        <TextBlock Text="Configuration" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                        <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="Configuration" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                        <TextBlock x:Name="OutputConfigurationText" Text="Decoder configuration will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                       </StackPanel>
                       <StackPanel Spacing="7">
-                        <TextBlock Text="Source identity" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                        <TextBlock x:Name="OutputSourceText" Text="Source identity will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="Source identity" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                        <TextBlock x:Name="OutputSourceText" Text="Source identity will appear here." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                       </StackPanel>
                       <StackPanel Spacing="7">
-                        <TextBlock Text="Last output" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" />
-                        <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock Text="Last output" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                        <TextBlock x:Name="AnalysisOutputText" Text="Nothing exported in this session." FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                       </StackPanel>
                     </StackPanel>
                     </ScrollViewer>
@@ -807,16 +801,16 @@
 
                 <Border Grid.Column="2"
                         ZIndex="10"
-                        Height="126"
+                        Height="104"
                         VerticalAlignment="Top"
-                        Background="{DynamicResource HeaderBrush}"
-                        BorderBrush="{DynamicResource StrongBorderBrush}"
+                        Background="{DynamicResource NfcSurfaceBrush}"
+                        BorderBrush="{DynamicResource NfcBorderBrush}"
                         BorderThickness="1,0,0,1"
                         Padding="14,9,10,9">
-                  <Grid RowDefinitions="36,10,52">
+                  <Grid RowDefinitions="32,8,40">
                     <Grid ColumnDefinitions="92,10,*" VerticalAlignment="Center">
-                    <TextBlock x:Name="OutputTypeLabelText" Text="Output type" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                    <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Margin="4,0,0,0" Classes="semanticSelect" Height="36" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
+                    <TextBlock x:Name="OutputTypeLabelText" Text="Output type" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
+                    <ComboBox x:Name="OutputContentComboBox" Grid.Column="2" Margin="0" Classes="semanticSelect" Height="{DynamicResource NfcControlHeight}" HorizontalAlignment="Stretch" SelectionChanged="OutputContentComboBox_OnSelectionChanged" AutomationProperties.Name="Output content">
                       <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:SelectOption">
                           <Grid Width="244" Margin="2,4" RowDefinitions="Auto,Auto">
@@ -834,11 +828,11 @@
                     <TextBlock x:Name="OutputContentDescriptionText" IsVisible="False" Text="Preview and export use the same renderer" />
                     </Grid>
                     <Grid Grid.Row="2" ColumnDefinitions="92,10,*,6,Auto,6,*,8,Auto" VerticalAlignment="Center">
-                      <TextBlock x:Name="OutputFramesLabelText" Text="Frames" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-                      <TextBox x:Name="OutputRangeStartTextBox" Grid.Column="2" Classes="panelSize" MinWidth="48" HorizontalAlignment="Stretch" Text="1" KeyDown="OutputRangeTextBox_OnKeyDown" LostFocus="OutputRangeTextBox_OnLostFocus" ToolTip.Tip="First source frame to export (1-based)" AutomationProperties.Name="Output range first frame" />
-                      <TextBlock Grid.Column="4" Text="to" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                      <TextBlock x:Name="OutputFramesLabelText" Text="Frames" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
+                      <TextBox x:Name="OutputRangeStartTextBox" Grid.Column="2" Classes="panelSize" MinWidth="48" HorizontalAlignment="Left" Text="1" KeyDown="OutputRangeTextBox_OnKeyDown" LostFocus="OutputRangeTextBox_OnLostFocus" ToolTip.Tip="First source frame to export (1-based)" AutomationProperties.Name="Output range first frame" />
+                      <TextBlock Grid.Column="4" Text="to" FontSize="12" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                       <TextBox x:Name="OutputRangeEndTextBox" Grid.Column="6" Classes="panelSize" MinWidth="48" HorizontalAlignment="Stretch" Text="1" KeyDown="OutputRangeTextBox_OnKeyDown" LostFocus="OutputRangeTextBox_OnLostFocus" ToolTip.Tip="Last source frame to export (1-based)" AutomationProperties.Name="Output range last frame" />
-                      <Button x:Name="OutputRangeFullButton" Grid.Column="8" Classes="ghost" Height="32" MinWidth="44" Padding="8,0" Content="Full" Click="OutputRangeFullButton_OnClick" ToolTip.Tip="Use the full decoded capture" AutomationProperties.Name="Use full output range" />
+                      <Button x:Name="OutputRangeFullButton" Grid.Column="8" Classes="actionGhost" MinWidth="44" Content="Full" Click="OutputRangeFullButton_OnClick" ToolTip.Tip="Use the full decoded capture" AutomationProperties.Name="Use full output range" />
                     </Grid>
                   </Grid>
                 </Border>
@@ -848,12 +842,12 @@
                         ZIndex="10"
                         Height="204"
                         VerticalAlignment="Bottom"
-                        Background="{DynamicResource HeaderBrush}"
-                        BorderBrush="{DynamicResource StrongBorderBrush}"
+                        Background="{DynamicResource NfcSurfaceBrush}"
+                        BorderBrush="{DynamicResource NfcBorderBrush}"
                         BorderThickness="1,1,0,0"
                         Padding="14,12,10,10">
                   <Grid RowDefinitions="Auto,8,Auto,6,Auto,12,Auto,12,*">
-                    <TextBlock Text="OUTPUT INFO" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.45" Foreground="{DynamicResource MutedTextBrush}" />
+                    <TextBlock Text="OUTPUT INFO" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.45" Foreground="{DynamicResource NfcTextMutedBrush}" />
                     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" RowDefinitions="Auto,5,Auto,5,Auto">
                       <TextBlock Text="Format" Classes="outputInfoLabel" />
                       <TextBlock x:Name="OutputInfoFormatText" Grid.Column="1" Text="MP4 · H.264" Classes="outputInfoValue" />
@@ -862,30 +856,27 @@
                       <TextBlock x:Name="OutputInfoSizeLabelText" Grid.Row="4" Text="Estimated size" Classes="outputInfoLabel" />
                       <TextBlock x:Name="OutputInfoSizeText" Grid.Row="4" Grid.Column="1" Text="Waiting for preview" Classes="outputInfoValue" ToolTip.Tip="H.264 and PNG sizes vary with image content and encoder settings. Exact size appears after export." />
                     </Grid>
-                    <TextBlock x:Name="OutputInfoDetailText" Grid.Row="4" Text="120 FPS · range - · duration -" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                    <Border x:Name="OutputExportActivityPanel" Grid.Row="6" IsVisible="False" Padding="0,10,0,0" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
+                    <TextBlock x:Name="OutputInfoDetailText" Grid.Row="4" Text="120 FPS · range - · duration -" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
+                    <Border x:Name="OutputExportActivityPanel" Grid.Row="6" IsVisible="False" Padding="0,10,0,0" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="0,1,0,0">
                       <Grid RowDefinitions="Auto,7,4" ColumnDefinitions="*,8,32">
                         <Grid ColumnDefinitions="*,Auto">
-                          <TextBlock x:Name="OutputExportStatusText" Text="Preparing MP4 export" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                          <TextBlock x:Name="OutputExportProgressText" Grid.Column="1" Margin="8,0,0,0" Text="0%" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                          <TextBlock x:Name="OutputExportStatusText" Text="Preparing MP4 export" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <TextBlock x:Name="OutputExportProgressText" Grid.Column="1" Margin="8,0,0,0" Text="0%" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" VerticalAlignment="Center" />
                         </Grid>
                         <Button x:Name="OutputExportCancelButton"
                                 Grid.Column="2"
                                 Grid.RowSpan="3"
-                                Classes="inspectorIcon"
-                                Width="32"
-                                Height="32"
-                                Padding="0"
+                                Classes="actionIconButton actionGhost"
                                 Content="&#xE711;"
                                 FontFamily="Segoe Fluent Icons"
                                 FontSize="14"
                                 Click="OutputExportCancelButton_OnClick"
                                 ToolTip.Tip="Cancel MP4 export"
                                 AutomationProperties.Name="Cancel MP4 export" />
-                        <ProgressBar x:Name="OutputExportProgressBar" Grid.Row="2" Minimum="0" Maximum="100" Value="0" IsIndeterminate="False" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BorderBrush}" />
+                        <ProgressBar x:Name="OutputExportProgressBar" Grid.Row="2" Minimum="0" Maximum="100" Value="0" IsIndeterminate="False" Foreground="{DynamicResource NfcAccentBrush}" Background="{DynamicResource NfcBorderSoftBrush}" />
                       </Grid>
                     </Border>
-                    <Button x:Name="ExportSelectedOutputButton" Grid.Row="8" Classes="primary" Height="36" MinWidth="132" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
+                    <Button x:Name="ExportSelectedOutputButton" Grid.Row="8" Classes="actionPrimary" MinWidth="132" HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Export MP4" Click="ExportSelectedOutputButton_OnClick" AutomationProperties.Name="Export selected output" />
                   </Grid>
                 </Border>
             </Grid>
@@ -895,42 +886,42 @@
 
       <GridSplitter x:Name="InspectorGridSplitter" Grid.Column="2" Margin="0,44,0,0" Classes="inspectorSplitter" Width="4" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" />
 
-      <Border x:Name="InspectorRailBorder" Grid.Column="3" Margin="0,44,0,0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1,0,0,0">
-        <Grid RowDefinitions="38,*">
+      <Border x:Name="InspectorRailBorder" Grid.Column="3" Margin="0,44,0,0" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="1,0,0,0">
+        <Grid RowDefinitions="40,*">
           <Grid Grid.Row="0" Margin="12,0,8,0" ColumnDefinitions="*,Auto,4,Auto">
-            <TextBlock x:Name="InspectorRailTitle" Text="INSPECTOR" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-            <Button x:Name="CopyInspectorButton" Grid.Column="1" Classes="inspectorIcon" Content="&#xE8C8;" Click="CopyInspectorButton_OnClick" ToolTip.Tip="Copy current frame summary" AutomationProperties.Name="Copy current frame summary" />
-            <Button x:Name="InspectorRailToggleButton" Grid.Column="3" Classes="canvasIcon" Content="&#xE76C;" Click="InspectorRailToggleButton_OnClick" AutomationProperties.Name="Collapse inspector" />
+            <TextBlock x:Name="InspectorRailTitle" Text="INSPECTOR" FontSize="12.5" FontWeight="SemiBold" LetterSpacing="0.5" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
+            <Button x:Name="CopyInspectorButton" Grid.Column="1" Classes="actionIconButton actionGhost" FontFamily="Segoe Fluent Icons" FontSize="15" Content="&#xE8C8;" Click="CopyInspectorButton_OnClick" ToolTip.Tip="Copy current frame summary" AutomationProperties.Name="Copy current frame summary" />
+            <Button x:Name="InspectorRailToggleButton" Grid.Column="3" Classes="actionIconButton" FontFamily="Segoe Fluent Icons" FontSize="16" Content="&#xE76C;" Click="InspectorRailToggleButton_OnClick" AutomationProperties.Name="Collapse inspector" />
           </Grid>
           <Grid x:Name="InspectorCollapsedSummary" Grid.Row="1" IsVisible="False" Margin="0,8,0,12" RowDefinitions="Auto,10,Auto,6,Auto,6,Auto,12,Auto">
             <TextBlock Text="LIVE" Classes="section" HorizontalAlignment="Center" />
             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
               <controls:TouchTypeIcon Width="17" Height="17" ContactId="1" TouchType="Finger" />
-              <TextBlock x:Name="CollapsedFingerText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+              <TextBlock x:Name="CollapsedFingerText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" VerticalAlignment="Center" />
             </StackPanel>
             <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
               <controls:TouchTypeIcon Width="17" Height="17" ContactId="2" TouchType="Glove" />
-              <TextBlock x:Name="CollapsedGloveText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+              <TextBlock x:Name="CollapsedGloveText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" VerticalAlignment="Center" />
             </StackPanel>
             <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
               <controls:TouchTypeIcon Width="17" Height="17" ContactId="3" TouchType="Palm" />
-              <TextBlock x:Name="CollapsedPalmText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center" />
+              <TextBlock x:Name="CollapsedPalmText" Text="0" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" VerticalAlignment="Center" />
             </StackPanel>
             <Border x:Name="CollapsedAsilBadge" Grid.Row="8" Classes="inspectorMetric" Margin="6,12,6,0" Padding="4,6">
-              <TextBlock x:Name="CollapsedAsilText" Text="ASIL -" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" TextAlignment="Center" TextWrapping="NoWrap" />
+              <TextBlock x:Name="CollapsedAsilText" Text="ASIL -" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextSecondaryBrush}" TextAlignment="Center" TextWrapping="NoWrap" />
             </Border>
           </Grid>
 
           <Grid x:Name="InspectorRailContent" Grid.Row="1" RowDefinitions="Auto,Auto,*">
-            <Border Padding="14,3,14,11" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Border Padding="14,3,14,11" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1">
               <StackPanel Spacing="8">
                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,3,Auto">
                   <StackPanel Orientation="Horizontal" Spacing="7">
-                    <TextBlock x:Name="InspectorTitleText" Text="Frame" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                    <TextBlock x:Name="InspectorLogicalText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="InspectorTitleText" Text="Frame" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                    <TextBlock x:Name="InspectorLogicalText" Text="-" FontFamily="Cascadia Mono" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" VerticalAlignment="Center" />
                   </StackPanel>
-                  <TextBlock x:Name="InspectorTimestampText" Grid.Column="1" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                  <TextBlock x:Name="InspectorSubtitleText" Grid.Row="2" Grid.ColumnSpan="2" Text="Select a physical record or decoded event." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                  <TextBlock x:Name="InspectorTimestampText" Grid.Column="1" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" VerticalAlignment="Center" />
+                  <TextBlock x:Name="InspectorSubtitleText" Grid.Row="2" Grid.ColumnSpan="2" Text="Select a physical record or decoded event." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                 </Grid>
 
                 <Grid RowDefinitions="Auto,6,Auto">
@@ -954,47 +945,47 @@
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <TextBlock Text="ASIL" Classes="fieldLabel" />
                         <TextBlock x:Name="InspectorAsilText" Text="-" Classes="monoValue healthTextNormal" />
-                        <TextBlock x:Name="InspectorAsilRawText" Text="" FontFamily="Cascadia Mono" FontSize="11.5" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="InspectorAsilRawText" Text="" FontFamily="Cascadia Mono" FontSize="11.5" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                       </StackPanel>
                     </Border>
                     <Border x:Name="InspectorAllBreakBadge" Background="Transparent" BorderThickness="0" Padding="0" Margin="14,0,0,0" IsVisible="False">
-                      <TextBlock x:Name="InspectorAllBreakText" Text="ALL BREAK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" />
+                      <TextBlock x:Name="InspectorAllBreakText" Text="ALL BREAK" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcDangerTextBrush}" />
                     </Border>
                   </WrapPanel>
                 </Grid>
 
-                <Border x:Name="InspectorAlertBorder" IsVisible="False" Padding="9,7" CornerRadius="4" Background="{DynamicResource WarningSurfaceBrush}" BorderBrush="{DynamicResource WarningBrush}" BorderThickness="1">
+                <Border x:Name="InspectorAlertBorder" IsVisible="False" Padding="9,7" CornerRadius="4" Background="{DynamicResource NfcWarningSurfaceBrush}" BorderBrush="{DynamicResource NfcWarningTextBrush}" BorderThickness="1">
                   <Grid ColumnDefinitions="*,Auto,3,Auto">
-                    <TextBlock x:Name="InspectorAlertText" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                    <Button x:Name="PreviousFindingButton" Grid.Column="1" Classes="inspectorIcon" Content="&#xE70E;" Click="PreviousFindingButton_OnClick" ToolTip.Tip="Previous finding" AutomationProperties.Name="Previous finding" />
-                    <Button x:Name="NextFindingButton" Grid.Column="3" Classes="inspectorIcon" Content="&#xE70D;" Click="NextFindingButton_OnClick" ToolTip.Tip="Next finding" AutomationProperties.Name="Next finding" />
+                    <TextBlock x:Name="InspectorAlertText" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcWarningTextBrush}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button x:Name="PreviousFindingButton" Grid.Column="1" Classes="actionIconButton actionGhost" FontFamily="Segoe Fluent Icons" FontSize="15" Content="&#xE70E;" Click="PreviousFindingButton_OnClick" ToolTip.Tip="Previous finding" AutomationProperties.Name="Previous finding" />
+                    <Button x:Name="NextFindingButton" Grid.Column="3" Classes="actionIconButton actionGhost" FontFamily="Segoe Fluent Icons" FontSize="15" Content="&#xE70D;" Click="NextFindingButton_OnClick" ToolTip.Tip="Next finding" AutomationProperties.Name="Next finding" />
                   </Grid>
                 </Border>
               </StackPanel>
             </Border>
 
-            <Border Grid.Row="1" Padding="14,10,14,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Border Grid.Row="1" Padding="14,10,14,8" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1">
               <StackPanel Spacing="7">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="Contacts" Classes="inspectorSectionTitle" VerticalAlignment="Center" />
-                  <TextBlock x:Name="InspectorContactCountText" Grid.Column="1" Text="0 active" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                  <TextBlock x:Name="InspectorContactCountText" Grid.Column="1" Text="0 active" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
                 </Grid>
-                <TextBlock x:Name="InspectorNoContactsText" IsVisible="False" Text="No active contacts in this frame." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                <TextBlock x:Name="InspectorNoContactsText" IsVisible="False" Text="No active contacts in this frame." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
                 <ListBox x:Name="InspectorContactsList" Classes="inspectorContacts" MaxHeight="236" SelectionMode="Single" SelectionChanged="InspectorContactsList_OnSelectionChanged" AutomationProperties.Name="Contacts in current frame">
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:InspectorContactRow">
                       <Grid Margin="7,6" ColumnDefinitions="26,8,*,Auto" RowDefinitions="Auto,3,Auto">
                         <controls:TouchTypeIcon Grid.RowSpan="3" Width="24" Height="24" ContactId="{Binding Id}" TouchType="{Binding Type}" Invalid="{Binding Invalid}" VerticalAlignment="Center" />
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7">
-                          <TextBlock Text="{Binding IdLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                          <TextBlock Text="{Binding TypeLabel}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
+                          <TextBlock Text="{Binding IdLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                          <TextBlock Text="{Binding TypeLabel}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
                         </StackPanel>
-                        <TextBlock Grid.Column="3" Text="{Binding StateLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="3" Text="{Binding StateLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" VerticalAlignment="Center" />
                         <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="10">
                           <StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="X" Classes="fieldLabel" /><TextBlock Text="{Binding XLabel}" Classes="monoValue" /></StackPanel>
                           <StackPanel Orientation="Horizontal" Spacing="4"><TextBlock Text="Y" Classes="fieldLabel" /><TextBlock Text="{Binding YLabel}" Classes="monoValue" /></StackPanel>
                         </StackPanel>
-                        <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding SourceLabel}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding SourceLabel}" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
                       </Grid>
                     </DataTemplate>
                   </ListBox.ItemTemplate>
@@ -1011,21 +1002,21 @@
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:InspectorDetailRow">
                           <Grid ColumnDefinitions="108,*" Margin="0,0,0,8">
-                            <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
-                            <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
                           </Grid>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+                    <Border BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
                       <StackPanel Spacing="7">
                         <TextBlock Classes="inspectorSectionTitle" Text="I²C transaction" />
                         <ItemsControl x:Name="TransportFieldsItemsControl">
                           <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:InspectorDetailRow">
                               <Grid ColumnDefinitions="108,*" Margin="0,0,0,8">
-                                <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Value}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
                               </Grid>
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
@@ -1041,18 +1032,18 @@
                   <StackPanel Margin="0,10,0,16">
                     <StackPanel Margin="14,0,14,10" Spacing="14">
                       <StackPanel Spacing="3">
-                        <TextBlock x:Name="RawLayoutTitleText" Text="Raw transaction" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" TextWrapping="Wrap" />
-                        <TextBlock x:Name="RawLayoutSummaryText" Text="Select a decoded frame to inspect its byte layout." FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="RawLayoutTitleText" Text="Raw transaction" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="RawLayoutSummaryText" Text="Select a decoded frame to inspect its byte layout." FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                       </StackPanel>
                       <ItemsControl x:Name="RawByteSectionsItemsControl">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="rendering:RawByteSection">
-                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,7,0,8">
+                            <Border BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1" Padding="0,7,0,8">
                               <Grid ColumnDefinitions="48,*" RowDefinitions="Auto,4,Auto,3,Auto">
-                                <TextBlock Text="{Binding Offset}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Bytes}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource CanvasTextBrush}" TextWrapping="Wrap" />
-                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Detail}" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Offset}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Bytes}" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" TextWrapping="Wrap" />
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Detail}" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                               </Grid>
                             </Border>
                           </DataTemplate>
@@ -1061,38 +1052,38 @@
                     </StackPanel>
                     <Expander x:Name="FlatBytesExpander" Classes="inspectorDisclosure">
                       <Expander.Header>
-                        <TextBlock Text="Flat bytes" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                        <TextBlock Text="Flat bytes" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
                       </Expander.Header>
-                      <Border Margin="14,2,14,14" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
-                        <TextBlock x:Name="RawBytesText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource CanvasMutedTextBrush}" TextWrapping="Wrap" />
+                      <Border Margin="14,2,14,14" Background="{DynamicResource NfcAppBackgroundBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="1" CornerRadius="4" Padding="12">
+                        <TextBlock x:Name="RawBytesText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                       </Border>
                     </Expander>
                     <Expander x:Name="SourceIdentityExpander" Classes="inspectorDisclosure">
                       <Expander.Header>
-                        <TextBlock Text="Source identity" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                        <TextBlock Text="Source identity" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
                       </Expander.Header>
                       <StackPanel Margin="14,2,14,14" Spacing="7">
                         <Grid ColumnDefinitions="86,*" RowDefinitions="Auto,7,Auto,7,Auto">
                           <TextBlock Classes="fieldLabel" Text="Source line" />
                           <Button x:Name="SourceLineButton"
                                   Grid.Column="1"
-                                  Classes="sourceLineLink"
+                                  Classes="actionGhost" HorizontalAlignment="Left" HorizontalContentAlignment="Left"
                                   IsEnabled="False"
                                   Click="SourceLineButton_OnClick"
                                   ToolTip.Tip="Open the original capture at this line"
                                   AutomationProperties.Name="Open original source line">
                             <StackPanel Orientation="Horizontal" Spacing="7">
-                              <TextBlock x:Name="SourceLineText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-                              <TextBlock Text="&#xE8A7;" FontFamily="Segoe Fluent Icons" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                              <TextBlock x:Name="SourceLineText" Text="-" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                              <TextBlock Text="&#xE8A7;" FontFamily="Segoe Fluent Icons" FontSize="13" VerticalAlignment="Center" />
                             </StackPanel>
                           </Button>
                           <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Byte offset" />
                           <TextBlock x:Name="SourceOffsetText" Grid.Row="2" Grid.Column="1" Classes="monoValue" Text="-" />
                           <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Stable ID" />
-                          <TextBlock x:Name="StableIdText" Grid.Row="4" Grid.Column="1" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock x:Name="StableIdText" Grid.Row="4" Grid.Column="1" Text="-" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextTrimming="CharacterEllipsis" />
                         </Grid>
-                        <TextBlock x:Name="SourceFieldsText" Text="No adapter-specific source fields." FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
-                        <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="SourceFieldsText" Text="No adapter-specific source fields." FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="SourceHashText" Text="SHA-256 appears after loading" FontFamily="Cascadia Mono" FontSize="12.5" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                       </StackPanel>
                     </Expander>
                   </StackPanel>
@@ -1102,37 +1093,37 @@
               <TabItem x:Name="InspectorReviewTab" Header="Review">
                 <ScrollViewer>
                   <StackPanel Margin="14,10,14,16" Spacing="10">
-                    <Button Classes="toolbarAction" HorizontalAlignment="Stretch" Click="ReviewRailToggleButton_OnClick" AutomationProperties.Name="Open full review queue">
+                    <Button Classes="actionNeutral" HorizontalAlignment="Stretch" Click="ReviewRailToggleButton_OnClick" AutomationProperties.Name="Open full review queue">
                       <StackPanel Orientation="Horizontal" Spacing="7">
                         <TextBlock Text="&#xE8FD;" FontFamily="Segoe Fluent Icons" FontSize="14" />
                         <TextBlock Text="Open review queue" />
                       </StackPanel>
                     </Button>
-                    <TextBlock x:Name="ReviewEmptyText" Text="No finding is selected. Choose one from the Review queue or use the alert arrows." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="ReviewEmptyText" Text="No finding is selected. Choose one from the Review queue or use the alert arrows." FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                     <StackPanel x:Name="ReviewActionsPanel" Spacing="7" IsVisible="False">
                       <TextBlock x:Name="ReviewSelectionTitleText" Classes="section" Text="SELECTED FINDING" />
                       <ComboBox x:Name="ReviewOccurrenceComboBox" PlaceholderText="Occurrence" SelectionChanged="ReviewOccurrenceComboBox_OnSelectionChanged" />
-                      <TextBlock x:Name="MarkerOccurrenceText" IsVisible="False" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock x:Name="MarkerOccurrenceText" IsVisible="False" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextSecondaryBrush}" TextWrapping="Wrap" />
                       <WrapPanel x:Name="FindingWorkflowActionsPanel">
-                        <Button Classes="ghost" Content="Acknowledge" Margin="0,0,5,5" Click="AcknowledgeReviewButton_OnClick" />
-                        <Button Classes="ghost" Content="Resolve" Margin="0,0,5,5" Click="ResolveReviewButton_OnClick" />
-                        <Button Classes="ghost" Content="Expected" Margin="0,0,5,5" Tag="Expected" Click="DispositionReviewButton_OnClick" />
-                        <Button Classes="ghost" Content="False positive" Margin="0,0,5,5" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
+                        <Button Classes="actionGhost" Content="Acknowledge" Margin="0,0,5,5" Click="AcknowledgeReviewButton_OnClick" />
+                        <Button Classes="actionGhost" Content="Resolve" Margin="0,0,5,5" Click="ResolveReviewButton_OnClick" />
+                        <Button Classes="actionGhost" Content="Expected" Margin="0,0,5,5" Tag="Expected" Click="DispositionReviewButton_OnClick" />
+                        <Button Classes="actionGhost" Content="False positive" Margin="0,0,5,5" Tag="FalsePositive" Click="DispositionReviewButton_OnClick" />
                       </WrapPanel>
                       <StackPanel x:Name="AnnotationMetadataPanel" Spacing="5" IsVisible="False">
                         <TextBlock Classes="section" Text="MARKER DETAILS" />
                         <Grid ColumnDefinitions="*,8,Auto">
                           <TextBox x:Name="MarkerNameTextBox" PlaceholderText="Marker name" FontSize="13" AutomationProperties.Name="Selected marker name" />
-                          <Button x:Name="RenameMarkerButton" Grid.Column="2" Classes="ghost" Content="Rename" Click="RenameMarkerButton_OnClick" AutomationProperties.Name="Rename selected marker" />
+                          <Button x:Name="RenameMarkerButton" Grid.Column="2" Classes="actionGhost" Content="Rename" Click="RenameMarkerButton_OnClick" AutomationProperties.Name="Rename selected marker" />
                         </Grid>
                         <TextBox x:Name="MarkerQaCaseTextBox" PlaceholderText="QA case IDs (comma separated)" FontSize="13" />
                         <WrapPanel>
-                          <Button Classes="ghost" Content="Apply QA refs" Margin="0,0,5,5" Click="ApplyMarkerQaButton_OnClick" />
-                          <Button Classes="ghost" Content="Attach raw log" Margin="0,0,5,5" Click="AttachMarkerEvidenceButton_OnClick" />
-                          <Button x:Name="UnmarkButton" Classes="ghost" Content="Unmark" Margin="0,0,5,5" Click="UnmarkButton_OnClick" AutomationProperties.Name="Remove selected marker" />
+                          <Button Classes="actionGhost" Content="Apply QA refs" Margin="0,0,5,5" Click="ApplyMarkerQaButton_OnClick" />
+                          <Button Classes="actionGhost" Content="Attach raw log" Margin="0,0,5,5" Click="AttachMarkerEvidenceButton_OnClick" />
+                          <Button x:Name="UnmarkButton" Classes="actionGhost" Content="Unmark" Margin="0,0,5,5" Click="UnmarkButton_OnClick" AutomationProperties.Name="Remove selected marker" />
                         </WrapPanel>
                       </StackPanel>
-                      <TextBlock x:Name="ReviewStateText" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+                      <TextBlock x:Name="ReviewStateText" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
                     </StackPanel>
                   </StackPanel>
                 </ScrollViewer>
@@ -1143,20 +1134,20 @@
       </Border>
     </Grid>
 
-    <Border x:Name="ReplayTransportBorder" Grid.Row="2" IsVisible="False" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="0,1,0,0">
+    <Border x:Name="ReplayTransportBorder" Grid.Row="2" IsVisible="False" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="0,1,0,0">
       <Grid x:Name="TimelineControlBar" Margin="22,8" ColumnDefinitions="Auto,12,Auto,12,Auto,18,*,18,Auto" ClipToBounds="True">
         <StackPanel x:Name="TransportPlaybackGroup" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-          <Button x:Name="PreviousFrameButton" Classes="headerIcon" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous logical frame (Left)" AutomationProperties.Name="Previous logical frame" />
-          <Button x:Name="PlayPauseButton" Classes="transportPlay" MinWidth="84" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" ToolTip.Tip="Play or pause replay (Space)" AutomationProperties.Name="Play replay" />
-          <Button x:Name="NextFrameButton" Classes="headerIcon" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" ToolTip.Tip="Next logical frame (Right)" AutomationProperties.Name="Next logical frame" />
+          <Button x:Name="PreviousFrameButton" Classes="actionIconButton actionGhost" FontFamily="Segoe Fluent Icons" FontSize="17" Content="&#xE892;" IsEnabled="False" Click="PreviousFrameButton_OnClick" ToolTip.Tip="Previous logical frame (Left)" AutomationProperties.Name="Previous logical frame" />
+          <Button x:Name="PlayPauseButton" Classes="chipAction" MinWidth="84" Content="▶  Play" IsEnabled="False" Click="PlayPauseButton_OnClick" ToolTip.Tip="Play or pause replay (Space)" AutomationProperties.Name="Play replay" />
+          <Button x:Name="NextFrameButton" Classes="actionIconButton actionGhost" FontFamily="Segoe Fluent Icons" FontSize="17" Content="&#xE893;" IsEnabled="False" Click="NextFrameButton_OnClick" ToolTip.Tip="Next logical frame (Right)" AutomationProperties.Name="Next logical frame" />
         </StackPanel>
 
         <Grid x:Name="TransportTimingGroup" Grid.Column="2" ColumnDefinitions="Auto,8,Auto" VerticalAlignment="Center">
-          <ComboBox x:Name="ClockModeComboBox" Height="36" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
+          <ComboBox x:Name="ClockModeComboBox" Height="{DynamicResource NfcControlHeight}" SelectedIndex="1" SelectionChanged="ClockModeComboBox_OnSelectionChanged" AutomationProperties.Name="Replay clock domain">
             <ComboBoxItem Content="Recorded timing" ToolTip.Tip="Use elapsed time between captured records" />
             <ComboBoxItem Content="Frame-paced · 120 Hz" ToolTip.Tip="Advance each logical TP frame at 120 Hz while keeping original timestamps visible" />
           </ComboBox>
-          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="2" Height="36" SelectedIndex="6" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
+          <ComboBox x:Name="ReplaySpeedComboBox" Grid.Column="2" Height="{DynamicResource NfcControlHeight}" SelectedIndex="6" SelectionChanged="ReplaySpeedComboBox_OnSelectionChanged" AutomationProperties.Name="Replay speed">
             <ComboBoxItem Content="0.01×" Tag="0.01" />
             <ComboBoxItem Content="0.02×" Tag="0.02" />
             <ComboBoxItem Content="0.05×" Tag="0.05" />
@@ -1172,37 +1163,37 @@
         </Grid>
 
         <StackPanel x:Name="TransportAnnotationGroup" Grid.Column="4" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-          <ToggleButton x:Name="LoopToggleButton" Classes="canvasQuick" Width="36" MinWidth="36" Padding="0" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="16" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" ToolTip.Tip="Loop selected range" AutomationProperties.Name="Enable loop range" />
-          <Button x:Name="AddMarkerButton" Classes="ghost" IsEnabled="False" Click="AddMarkerButton_OnClick" AutomationProperties.Name="Mark special event">
+          <ToggleButton x:Name="LoopToggleButton" Classes="actionIconButton chipAction" Content="&#xE8EE;" FontFamily="Segoe Fluent Icons" FontSize="16" IsEnabled="False" IsCheckedChanged="LoopToggleButton_OnIsCheckedChanged" ToolTip.Tip="Loop selected range" AutomationProperties.Name="Enable loop range" />
+          <Button x:Name="AddMarkerButton" Classes="actionGhost" IsEnabled="False" Click="AddMarkerButton_OnClick" AutomationProperties.Name="Mark special event">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" />
               <TextBlock Text="Mark" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-          <Button x:Name="AutoPauseSettingsButton" Classes="canvasQuick" Width="36" MinWidth="36" Padding="0" Content="&#xE7ED;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="AutoPauseSettingsButton_OnClick" ToolTip.Tip="Auto-pause rules" AutomationProperties.Name="Configure replay auto-pause rules" />
+          <Button x:Name="AutoPauseSettingsButton" Classes="actionIconButton chipAction" Content="&#xE7ED;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="AutoPauseSettingsButton_OnClick" ToolTip.Tip="Auto-pause rules" AutomationProperties.Name="Configure replay auto-pause rules" />
         </StackPanel>
 
         <Grid Grid.Column="6" RowDefinitions="18,26" MinWidth="220" VerticalAlignment="Center">
           <Grid x:Name="TimelineStatusGrid" ColumnDefinitions="Auto,10,Auto,*,Auto,10,Auto">
-            <TextBlock x:Name="TimelineStatusText" Text="Load a capture" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-            <TextBlock x:Name="ReplayClockText" Grid.Column="2" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-            <TextBlock x:Name="LoopRangeText" Grid.Column="4" Text="Loop: off" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
-            <TextBlock x:Name="ReplayEndClockText" Grid.Column="6" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" VerticalAlignment="Center" />
+            <TextBlock x:Name="TimelineStatusText" Text="Load a capture" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+            <TextBlock x:Name="ReplayClockText" Grid.Column="2" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextSecondaryBrush}" VerticalAlignment="Center" />
+            <TextBlock x:Name="LoopRangeText" Grid.Column="4" Text="Loop: off" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
+            <TextBlock x:Name="ReplayEndClockText" Grid.Column="6" Text="00:00.000" FontFamily="Cascadia Mono" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" VerticalAlignment="Center" />
           </Grid>
           <controls:ReplayTimelineSurface x:Name="ReplayTimelineSurface"
                                           Grid.Row="1"
                                           Height="24"
                                           IsEnabled="False"
-                                          TrackBrush="{DynamicResource BorderBrush}"
-                                          HoverTrackBrush="{DynamicResource SecondaryTextBrush}"
-                                          PhysicalBrush="{DynamicResource MutedTextBrush}"
-                                          LogicalBrush="{DynamicResource AccentBrush}"
-                                          EvidenceBrush="{DynamicResource WarningBrush}"
-                                          PlayheadBrush="{DynamicResource PrimaryTextBrush}"
-                                          LoopBrush="{DynamicResource AccentBrush}"
-                                          LoopSurfaceBrush="{DynamicResource AccentSurfaceBrush}"
-                                          MarkerBrush="{DynamicResource SecondaryTextBrush}"
-                                          ActiveMarkerBrush="{DynamicResource WarningBrush}"
+                                          TrackBrush="{DynamicResource NfcBorderSoftBrush}"
+                                          HoverTrackBrush="{DynamicResource NfcTextSecondaryBrush}"
+                                          PhysicalBrush="{DynamicResource NfcTextMutedBrush}"
+                                          LogicalBrush="{DynamicResource NfcAccentBrush}"
+                                          EvidenceBrush="{DynamicResource NfcWarningTextBrush}"
+                                          PlayheadBrush="{DynamicResource NfcTextBrush}"
+                                          LoopBrush="{DynamicResource NfcAccentBrush}"
+                                          LoopSurfaceBrush="{DynamicResource NfcAccentSurfaceBrush}"
+                                          MarkerBrush="{DynamicResource NfcTextSecondaryBrush}"
+                                          ActiveMarkerBrush="{DynamicResource NfcWarningTextBrush}"
                                           SeekRequested="ReplayTimelineSurface_OnSeekRequested"
                                           LoopRangeChanged="ReplayTimelineSurface_OnLoopRangeChanged"
                                           ContextFrameRequested="ReplayTimelineSurface_OnMarkerContextRequested"
@@ -1211,16 +1202,16 @@
 
         <StackPanel x:Name="TimelineTrackLabels" Grid.Column="8" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
           <StackPanel Spacing="0">
-            <TextBlock Text="PHYSICAL" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
-            <TextBlock x:Name="TimelinePhysicalCountText" Text="0" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedTextBrush}" />
+            <TextBlock Text="PHYSICAL" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" />
+            <TextBlock x:Name="TimelinePhysicalCountText" Text="0" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextMutedBrush}" />
           </StackPanel>
           <StackPanel Spacing="0">
-            <TextBlock Text="LOGICAL" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-            <TextBlock x:Name="TimelineLogicalCountText" Text="0" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="LOGICAL" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" />
+            <TextBlock x:Name="TimelineLogicalCountText" Text="0" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" />
           </StackPanel>
           <StackPanel Spacing="0">
-            <TextBlock Text="EVENTS" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
-            <TextBlock x:Name="TimelineEvidenceCountText" Text="0" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
+            <TextBlock Text="EVENTS" FontSize="9.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcWarningTextBrush}" />
+            <TextBlock x:Name="TimelineEvidenceCountText" Text="0" FontFamily="Cascadia Mono" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource NfcWarningTextBrush}" />
           </StackPanel>
         </StackPanel>
 
@@ -1230,32 +1221,32 @@
       </Grid>
     </Border>
 
-    <Border x:Name="TransportAutoPausePanel" Grid.Row="1" IsVisible="False" ZIndex="80" Width="286" Margin="520,0,0,10" Padding="16,14" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="{DynamicResource RaisedSurfaceBrush}" BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1" CornerRadius="6">
+    <Border x:Name="TransportAutoPausePanel" Grid.Row="1" IsVisible="False" ZIndex="80" Width="286" Margin="520,0,0,10" Padding="16,14" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="{DynamicResource NfcSurfaceSubtleBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1" CornerRadius="6">
       <StackPanel Spacing="10">
         <StackPanel Spacing="2">
-          <TextBlock Text="AUTO-PAUSE" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
-          <TextBlock Text="Stop replay on the selected decoded events." FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" TextWrapping="Wrap" />
+          <TextBlock Text="AUTO-PAUSE" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" />
+          <TextBlock Text="Stop replay on the selected decoded events." FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" TextWrapping="Wrap" />
         </StackPanel>
         <CheckBox x:Name="TransportPauseOnAlarmCheckBox" Content="Alarm or QA Fail" IsChecked="True" IsCheckedChanged="TransportAutoPauseOption_OnChanged" />
         <CheckBox x:Name="TransportPauseOnBreakCheckBox" Content="Reported contact Break" IsChecked="False" IsCheckedChanged="TransportAutoPauseOption_OnChanged" />
         <CheckBox x:Name="TransportPauseOnAllBreakCheckBox" Content="Decoded All Break" IsChecked="False" IsCheckedChanged="TransportAutoPauseOption_OnChanged" />
-        <Border Height="1" Background="{DynamicResource BorderBrush}" />
-        <Button Classes="ghost" HorizontalAlignment="Left" Content="More playback settings" Click="OpenPlaybackSettingsButton_OnClick" />
+        <Border Height="1" Background="{DynamicResource NfcBorderSoftBrush}" />
+        <Button Classes="actionGhost" HorizontalAlignment="Left" Content="More playback settings" Click="OpenPlaybackSettingsButton_OnClick" />
       </StackPanel>
     </Border>
 
     <Border x:Name="OutputFullscreenOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="90" Background="#FF000000" KeyDown="OutputFullscreenOverlay_OnKeyDown" AutomationProperties.Name="Full-screen MP4 output preview">
       <Grid RowDefinitions="*,76">
         <controls:ReplayVideoPreviewSurface x:Name="OutputFullscreenVideoPreview" Margin="18,18,18,0" AutomationProperties.Name="Full-screen MP4 replay preview" />
-        <Border Grid.Row="1" Margin="18,8,18,14" Padding="12,8" Background="#E6161C20" BorderBrush="#FF35434B" BorderThickness="1" CornerRadius="5">
+        <Border Grid.Row="1" Margin="18,8,18,14" Padding="12,8" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderBrush}" BorderThickness="1" CornerRadius="5">
           <Grid ColumnDefinitions="Auto,12,Auto,14,*,14,Auto,12,Auto">
             <Button x:Name="OutputFullscreenPlayPauseButton"
-                    Classes="transportPlay"
+                    Classes="chipAction"
                     MinWidth="88"
                     Content="▶  Play"
                     Click="OutputPreviewPlayPauseButton_OnClick"
                     AutomationProperties.Name="Play full-screen MP4 preview" />
-            <TextBlock x:Name="OutputFullscreenClockText" Grid.Column="2" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="#FFF2F6F8" VerticalAlignment="Center" />
+            <TextBlock x:Name="OutputFullscreenClockText" Grid.Column="2" Text="00:00.000 / 00:00.000" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" VerticalAlignment="Center" />
             <controls:OutputVideoTimelineSurface x:Name="OutputFullscreenTimeline"
                                                   Grid.Column="4"
                                                   Height="42"
@@ -1268,13 +1259,10 @@
                                                   LabelTextBrush="#FFF2F6F8"
                                                   SeekRequested="OutputVideoTimeline_OnSeekRequested"
                                                   AutomationProperties.Name="Scrub full-screen MP4 preview time" />
-            <TextBlock x:Name="OutputFullscreenFrameText" Grid.Column="6" Text="0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="#FFAFC0C9" VerticalAlignment="Center" />
+            <TextBlock x:Name="OutputFullscreenFrameText" Grid.Column="6" Text="0 / 0" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextSecondaryBrush}" VerticalAlignment="Center" />
             <Button x:Name="OutputFullscreenExitButton"
                     Grid.Column="8"
-                    Classes="canvasIcon"
-                    Width="40"
-                    Height="36"
-                    Padding="0"
+                    Classes="actionIconButton"
                     Content="&#xE73F;"
                     FontFamily="Segoe Fluent Icons"
                     FontSize="18"
@@ -1293,21 +1281,21 @@
             IsVisible="False"
             Focusable="True"
             ZIndex="96"
-            Background="{DynamicResource OverlayBrush}"
+            Background="{DynamicResource NfcModalScrimBrush}"
             KeyDown="RegisterProfileInferenceOverlay_OnKeyDown"
             AutomationProperties.Name="Capture setup">
       <Border Width="720"
               CornerRadius="8"
-              Background="{DynamicResource HeaderBrush}"
-              BorderBrush="{DynamicResource StrongBorderBrush}"
+              Background="{DynamicResource NfcSurfaceBrush}"
+              BorderBrush="{DynamicResource NfcBorderBrush}"
               BorderThickness="1"
               HorizontalAlignment="Center"
               VerticalAlignment="Center">
         <Grid RowDefinitions="Auto,Auto,Auto">
-          <Border Padding="22,18" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+          <Border Padding="22,18" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1">
             <Grid ColumnDefinitions="Auto,14,*">
-              <Border Width="38" Height="38" CornerRadius="6" Background="{DynamicResource AccentSurfaceBrush}" VerticalAlignment="Top">
-                <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Border Width="38" Height="38" CornerRadius="6" Background="{DynamicResource NfcAccentSurfaceBrush}" VerticalAlignment="Top">
+                <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="{DynamicResource NfcAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
               <StackPanel Grid.Column="2" Spacing="3">
                 <TextBlock Text="CAPTURE SETUP" Classes="section" />
@@ -1315,10 +1303,10 @@
                            Text="Confirm decoder settings"
                            FontSize="20"
                            FontWeight="SemiBold"
-                           Foreground="{DynamicResource PrimaryTextBrush}" />
+                           Foreground="{DynamicResource NfcTextBrush}" />
                 <TextBlock Text="Confirm the Event Buffer format and review the IC recommendation before decoding."
                            FontSize="12.5"
-                           Foreground="{DynamicResource MutedTextBrush}"
+                           Foreground="{DynamicResource NfcTextMutedBrush}"
                            TextWrapping="Wrap" />
               </StackPanel>
             </Grid>
@@ -1328,8 +1316,8 @@
             <Border Grid.Row="0"
                     Padding="14,12"
                     CornerRadius="6"
-                    Background="{DynamicResource PanelBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}"
+                    Background="{DynamicResource NfcSurfaceSubtleBrush}"
+                    BorderBrush="{DynamicResource NfcBorderSoftBrush}"
                     BorderThickness="1">
               <Grid RowDefinitions="Auto,8,Auto,10,Auto">
                 <Grid ColumnDefinitions="Auto,12,*">
@@ -1337,22 +1325,22 @@
                           Classes="captureSetupBadge"
                           Padding="8,4"
                           CornerRadius="4"
-                          Background="{DynamicResource AccentSurfaceBrush}"
-                          BorderBrush="{DynamicResource AccentBorderBrush}"
+                          Background="{DynamicResource NfcAccentSurfaceBrush}"
+                          BorderBrush="{DynamicResource NfcAccentBorderBrush}"
                           BorderThickness="1"
                           VerticalAlignment="Center">
                     <TextBlock x:Name="RegisterProfileInferenceBadgeText"
                                Text="NO MATCH"
                                FontSize="11.5"
                                FontWeight="Bold"
-                               Foreground="{DynamicResource AccentBrush}" />
+                               Foreground="{DynamicResource NfcAccentBrush}" />
                   </Border>
                   <TextBlock x:Name="CaptureSetupDetectionTitleText"
                              Grid.Column="2"
                              Text="No IC profile inferred"
                              FontSize="14"
                              FontWeight="SemiBold"
-                             Foreground="{DynamicResource PrimaryTextBrush}"
+                             Foreground="{DynamicResource NfcTextBrush}"
                              VerticalAlignment="Center" />
                 </Grid>
 
@@ -1360,7 +1348,7 @@
                            Grid.Row="2"
                            Text="No verified Event Buffer address evidence was found."
                            FontSize="12.5"
-                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           Foreground="{DynamicResource NfcTextSecondaryBrush}"
                            TextWrapping="Wrap" />
 
                 <Grid Grid.Row="4" ColumnDefinitions="Auto,*,24,Auto,Auto">
@@ -1371,7 +1359,7 @@
                              Text="-"
                              FontSize="12.5"
                              FontWeight="SemiBold"
-                             Foreground="{DynamicResource PrimaryTextBrush}"
+                             Foreground="{DynamicResource NfcTextBrush}"
                              TextTrimming="CharacterEllipsis"
                              VerticalAlignment="Center" />
                   <TextBlock Grid.Column="3" Text="Target" Classes="fieldLabel" VerticalAlignment="Center" />
@@ -1382,7 +1370,7 @@
                              FontFamily="Cascadia Mono"
                              FontSize="12.5"
                              FontWeight="SemiBold"
-                             Foreground="{DynamicResource PrimaryTextBrush}"
+                             Foreground="{DynamicResource NfcTextBrush}"
                              VerticalAlignment="Center" />
                 </Grid>
               </Grid>
@@ -1392,11 +1380,11 @@
               <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="Event Buffer Version" Classes="fieldLabel" />
-                  <TextBlock Grid.Column="1" Text="REQUIRED" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}" />
+                  <TextBlock Grid.Column="1" Text="REQUIRED" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource NfcWarningTextBrush}" />
                 </Grid>
                 <ComboBox x:Name="CaptureSetupEventVersionComboBox"
                           Classes="semanticSelect"
-                          Height="38"
+                          Height="{DynamicResource NfcControlHeight}"
                           HorizontalAlignment="Stretch"
                           PlaceholderText="Choose a version"
                           SelectionChanged="CaptureSetupEventVersionComboBox_OnSelectionChanged"
@@ -1405,7 +1393,7 @@
                     <DataTemplate x:DataType="vm:SelectOption">
                       <StackPanel Margin="2,5" Spacing="2">
                         <TextBlock Text="{Binding Label}" FontSize="14" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{DynamicResource MutedTextBrush}" />
+                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="{DynamicResource NfcTextMutedBrush}" />
                       </StackPanel>
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
@@ -1420,11 +1408,11 @@
               <StackPanel Grid.Column="2" Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="IC profile" Classes="fieldLabel" />
-                  <TextBlock x:Name="CaptureSetupProfileHintText" Grid.Column="1" Text="OPTIONAL" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource MutedTextBrush}" />
+                  <TextBlock x:Name="CaptureSetupProfileHintText" Grid.Column="1" Text="OPTIONAL" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource NfcTextMutedBrush}" />
                 </Grid>
                 <ComboBox x:Name="InferredRegisterProfileComboBox"
                           Classes="semanticSelect"
-                          Height="38"
+                          Height="{DynamicResource NfcControlHeight}"
                           HorizontalAlignment="Stretch"
                           SelectionChanged="CaptureSetupRegisterProfileComboBox_OnSelectionChanged"
                           AutomationProperties.Name="Choose inferred IC profile">
@@ -1445,7 +1433,7 @@
                 <TextBlock Text="7-bit I²C address" Classes="fieldLabel" />
                 <TextBox x:Name="CaptureSetupI2cAddressTextBox"
                          Classes="canvasField"
-                         Height="38"
+                         Height="{DynamicResource NfcControlHeight}"
                          Text="0x01"
                          HorizontalContentAlignment="Center"
                          LostFocus="CaptureSetupI2cAddressTextBox_OnLostFocus"
@@ -1461,7 +1449,7 @@
               <TextBlock Text="0x97 Palm profile" Classes="fieldLabel" />
               <ComboBox x:Name="CaptureSetupPalmProfileComboBox"
                         Classes="semanticSelect"
-                        Height="38"
+                        Height="{DynamicResource NfcControlHeight}"
                         HorizontalAlignment="Stretch"
                         PlaceholderText="Choose Palm profile"
                         SelectionChanged="CaptureSetupPalmProfileComboBox_OnSelectionChanged"
@@ -1478,19 +1466,19 @@
                        Text="Choose an Event Buffer Version to continue."
                        FontSize="12.5"
                        FontWeight="Medium"
-                       Foreground="{DynamicResource WarningBrush}"
+                       Foreground="{DynamicResource NfcWarningTextBrush}"
                        TextWrapping="Wrap" />
           </Grid>
 
-          <Border Grid.Row="2" Padding="22,14" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+          <Border Grid.Row="2" Padding="22,14" Background="{DynamicResource NfcSurfaceSubtleBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Text="Source bytes stay unchanged. Esc opens Raw Explorer."
                          FontSize="12.5"
-                         Foreground="{DynamicResource MutedTextBrush}"
+                         Foreground="{DynamicResource NfcTextMutedBrush}"
                          VerticalAlignment="Center" />
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                <Button x:Name="CaptureSetupRawButton" Classes="ghost" Content="Inspect raw" Click="CancelRegisterProfileInferenceButton_OnClick" />
-                <Button x:Name="CaptureSetupDecodeButton" Classes="primary" Content="Decode capture" IsEnabled="False" Click="ApplyRegisterProfileInferenceButton_OnClick" />
+                <Button x:Name="CaptureSetupRawButton" Classes="actionGhost" Content="Inspect raw" Click="CancelRegisterProfileInferenceButton_OnClick" />
+                <Button x:Name="CaptureSetupDecodeButton" Classes="actionPrimary" Content="Decode capture" IsEnabled="False" Click="ApplyRegisterProfileInferenceButton_OnClick" />
               </StackPanel>
             </Grid>
           </Border>
@@ -1498,16 +1486,16 @@
       </Border>
     </Border>
 
-    <Border x:Name="CommandPaletteOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="100" Background="{DynamicResource OverlayBrush}" KeyDown="CommandPaletteOverlay_OnKeyDown" AutomationProperties.Name="Command palette">
-      <Border Width="720" MaxHeight="680" Padding="24" CornerRadius="8" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Border x:Name="CommandPaletteOverlay" Grid.RowSpan="3" IsVisible="False" Focusable="True" ZIndex="100" Background="{DynamicResource NfcModalScrimBrush}" KeyDown="CommandPaletteOverlay_OnKeyDown" AutomationProperties.Name="Command palette">
+      <Border Width="720" MaxHeight="680" Padding="24" CornerRadius="8" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcAccentBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
         <Grid RowDefinitions="Auto,16,*,14,Auto">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel>
               <TextBlock Text="REPLAY CONTROLS" Classes="section" />
-              <TextBlock Text="Keyboard shortcuts" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-              <TextBlock Text="One key map for transport, frame review and reporting" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+              <TextBlock Text="Keyboard shortcuts" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+              <TextBlock Text="One key map for transport, frame review and reporting" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
             </StackPanel>
-            <Button Grid.Column="1" Classes="ghost" Content="Esc" Click="CloseCommandPaletteButton_OnClick" AutomationProperties.Name="Close command palette" />
+            <Button Grid.Column="1" Classes="actionGhost" Content="Esc" Click="CloseCommandPaletteButton_OnClick" AutomationProperties.Name="Close command palette" />
           </Grid>
           <ScrollViewer Grid.Row="2" MaxHeight="520" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="ShortcutModulesItemsControl">
@@ -1518,18 +1506,18 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ReplayShortcutModule">
-                  <Border Width="315" Margin="0,0,10,14" Padding="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                  <Border Width="315" Margin="0,0,10,14" Padding="0,10,0,0" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,1,0,0">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                      <TextBlock Text="{Binding Description}" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+                      <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                      <TextBlock Text="{Binding Description}" FontSize="12.5" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
                       <ItemsControl ItemsSource="{Binding Items}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:ReplayShortcutDefinition">
-                            <Button Classes="shortcutRow" Tag="{Binding Action}" Click="ShortcutAction_OnClick">
+                            <Button Classes="actionGhost" HorizontalContentAlignment="Stretch" Tag="{Binding Action}" Click="ShortcutAction_OnClick">
                               <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" VerticalAlignment="Center" />
                                 <Border Grid.Column="1" Classes="keycap">
-                                  <TextBlock Text="{Binding Gesture}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                  <TextBlock Text="{Binding Gesture}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                               </Grid>
                             </Button>
@@ -1542,7 +1530,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
-          <TextBlock Grid.Row="4" Text="Ctrl+K opens this map · shortcuts yield while text fields and selectors are being edited" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+          <TextBlock Grid.Row="4" Text="Ctrl+K opens this map · shortcuts yield while text fields and selectors are being edited" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
         </Grid>
       </Border>
     </Border>
