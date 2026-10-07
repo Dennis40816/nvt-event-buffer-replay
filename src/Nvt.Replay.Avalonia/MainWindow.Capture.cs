@@ -62,15 +62,15 @@ public partial class MainWindow : Window
 
     private long activeCaptureDecodeGeneration;
 
-    private bool configuringEventVersion;
+    private readonly EventSuppressionScope configuringEventVersion = new();
 
     private string? pendingSourcePath;
 
     private bool pendingSourceRequiresConfiguration;
 
-    private bool configuringSourceChoice;
+    private readonly EventSuppressionScope configuringSourceChoice = new();
 
-    private bool configuringRegisterProfile;
+    private readonly EventSuppressionScope configuringRegisterProfile = new();
 
     private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference;
 
@@ -210,15 +210,16 @@ public partial class MainWindow : Window
             {
                 pendingSourcePath = path;
                 pendingSourceRequiresConfiguration = promptForConfiguration;
-                configuringSourceChoice = true;
-                SourceAdapterComboBox.ItemsSource = exception.Candidates
-                    .Select(candidate => new SourceAdapterChoice(candidate.AdapterId, candidate.DisplayName, candidate.Confidence))
-                    .ToArray();
-                ComboBoxAutoSizer.Fit(SourceAdapterComboBox);
-                SourceAdapterComboBox.SelectedIndex = -1;
-                SourceAdapterComboBox.IsVisible = true;
-                SourceAdapterText.IsVisible = false;
-                configuringSourceChoice = false;
+                using (configuringSourceChoice.Enter())
+                {
+                    SourceAdapterComboBox.ItemsSource = exception.Candidates
+                        .Select(candidate => new SourceAdapterChoice(candidate.AdapterId, candidate.DisplayName, candidate.Confidence))
+                        .ToArray();
+                    ComboBoxAutoSizer.Fit(SourceAdapterComboBox);
+                    SourceAdapterComboBox.SelectedIndex = -1;
+                    SourceAdapterComboBox.IsVisible = true;
+                    SourceAdapterText.IsVisible = false;
+                }
                 SessionStatusText.Text = "Source selection required; no adapter was chosen automatically";
                 SourceConfidenceText.Text = "The highest-confidence probe is tied";
                 ConfigurationHintText.Text = "Choose the correct source adapter; Event Buffer Version remains a separate decision.";
@@ -254,9 +255,10 @@ public partial class MainWindow : Window
                 ConfigurationHintText.Text = $"Unsupported startup IC register profile: {registerProfile}";
                 return;
             }
-            configuringRegisterProfile = true;
-            RegisterProfileComboBox.SelectedItem = profileChoice;
-            configuringRegisterProfile = false;
+            using (configuringRegisterProfile.Enter())
+            {
+                RegisterProfileComboBox.SelectedItem = profileChoice;
+            }
             await ApplyRegisterProfileAsync(profileChoice);
         }
 
@@ -279,14 +281,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        configuringEventVersion = true;
-        try
+        using (configuringEventVersion.Enter())
         {
             EventVersionComboBox.SelectedIndex = versionIndex;
-        }
-        finally
-        {
-            configuringEventVersion = false;
         }
         if (versionIndex == 4)
         {
@@ -532,7 +529,7 @@ public partial class MainWindow : Window
                     : $"0x97 pending · {ActiveDecodeContext()} · select Standard or Benz Palm."
                 : "Version confirmed · decoding automatically; source detection did not infer it.";
         }
-        if (!configuringEventVersion && session is not null && !isDesay97 &&
+        if (!configuringEventVersion.IsActive && session is not null && !isDesay97 &&
             comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false } &&
             !SelectedDecodeConfigurationMatchesActive())
             await DecodeSelectedAsync();
@@ -598,7 +595,7 @@ public partial class MainWindow : Window
 
     private async void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (configuringRegisterProfile || session is null ||
+        if (configuringRegisterProfile.IsActive || session is null ||
             RegisterProfileComboBox.SelectedItem is not RegisterProfileChoice choice)
             return;
 
@@ -612,9 +609,10 @@ public partial class MainWindow : Window
         var choice = choices?.FirstOrDefault(item =>
             string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
         if (choice is null && icFamily is null) choice = choices?.FirstOrDefault(item => item.IcFamily is null);
-        configuringRegisterProfile = true;
-        RegisterProfileComboBox.SelectedItem = choice;
-        configuringRegisterProfile = false;
+        using (configuringRegisterProfile.Enter())
+        {
+            RegisterProfileComboBox.SelectedItem = choice;
+        }
     }
 
     internal NvtRegisterProfileInferenceResult? PendingRegisterProfileInferenceForTesting => pendingRegisterProfileInference;
@@ -889,7 +887,7 @@ public partial class MainWindow : Window
 
     private async void SourceAdapterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (configuringSourceChoice || pendingSourcePath is not { } path ||
+        if (configuringSourceChoice.IsActive || pendingSourcePath is not { } path ||
             SourceAdapterComboBox.SelectedItem is not SourceAdapterChoice choice)
             return;
         await OpenCaptureAsync(
@@ -944,9 +942,10 @@ public partial class MainWindow : Window
         RegisterSearchTextBox.Text = string.Empty;
         TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
         RegisterFilterComboBox.SelectedIndex = 0;
-        configuringRegisterProfile = true;
-        RegisterProfileComboBox.SelectedIndex = 0;
-        configuringRegisterProfile = false;
+        using (configuringRegisterProfile.Enter())
+        {
+            RegisterProfileComboBox.SelectedIndex = 0;
+        }
         RegisterProfileComboBox.IsEnabled = false;
         ExportReadableLogButton.IsEnabled = false;
         RegisterActivitySurface.IsEnabled = false;
@@ -1008,8 +1007,7 @@ public partial class MainWindow : Window
         PaintSurface.Fit();
         PaintZoomText.Text = "100%";
         PaintZoomHintBorder.IsVisible = false;
-        synchronizingPaintControls = true;
-        try
+        using (synchronizingPaintControls.Enter())
         {
             PaintModeComboBox.SelectedIndex = 0;
             TrailModeComboBox.SelectedIndex = 1;
@@ -1031,10 +1029,6 @@ public partial class MainWindow : Window
             PaintSurface.SetLegendPosition(ReplayLegendPosition.TopLeft);
             PaintSurface.SetLegendVisible(true);
             PaintSurface.SetLegendCollapsed(true);
-        }
-        finally
-        {
-            synchronizingPaintControls = false;
         }
         PaintSurface.Clear();
         DiagnosticCountText.Text = "0";
