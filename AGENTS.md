@@ -55,7 +55,7 @@ evidence the way [`golden/README.md`](golden/README.md) does.
 ## NVT FW UTIL work
 
 Before planning or implementing the NVT FW UTIL shell, the tool launcher or
-Raw Data Analysis, read [`TODO_NVT_FW_UTIL.md`](TODO_NVT_FW_UTIL.md) and
+Raw Data Analysis, read [`ROADMAP.md`](ROADMAP.md) and
 [`docs/nvt-fw-util-claude-handoff.md`](docs/nvt-fw-util-claude-handoff.md).
 They list what the owner has confirmed and what still waits for a formula, a
 representative input or a golden example. Where they name a working branch,
