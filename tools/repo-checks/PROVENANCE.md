@@ -21,3 +21,14 @@ use `doc-sync.nfu.json`.
 Engine, test, and reference-config updates come from Core, not local edits.
 Fix shared behavior in Core first, then copy the reviewed files and update
 this provenance. NFU policy belongs in `doc-sync.nfu.json`.
+
+## Approval check
+
+`scripts/approval_check.py` is a byte-identical copy of the Core action script.
+
+- Source repository: [Dennis40816/nvt_fw_core](https://github.com/Dennis40816/nvt_fw_core).
+- Source commit: `60d278aa0b353061c025bbe37c1f60857e59c460`.
+- Source path: `actions/approval-check/approval_check.py`.
+- Replaced version: `b40be44` (NFU's own 375-line script). To roll back, run `git checkout b40be44 -- scripts/approval_check.py`.
+
+The workflow call in `.github/workflows/approval.yml` and the policy file stay unchanged. Fix shared behavior in Core first, then copy the reviewed file and update this section.

@@ -8,6 +8,8 @@ PR head. It passes the checked-out SHA, which must equal the live branch tip.
 from __future__ import annotations
 
 import argparse
+import base64
+import difflib
 import fnmatch
 import html
 import http.client
@@ -115,11 +117,39 @@ class Reader:
         require(pull.get("number") == self.number, "wrong pull request number")
         return pull
 
-    def compare(self, base: str, head: str) -> dict:
-        value = self.get("compare", f"compare/{base}...{head}")
+    def compare(self, base: str, head: str, label: str = "compare") -> dict:
+        value = self.get(label, f"compare/{base}...{head}")
         require(isinstance(value, dict) and type(value.get("behind_by")) is int,
                 "compare response is malformed")
         return value
+
+    def tree(self, commit: str) -> dict[str, dict]:
+        value = self.get(f"commit-{commit}", f"git/commits/{commit}")
+        require(isinstance(value, dict) and isinstance(value.get("tree"), dict),
+                "carryover commit has no tree")
+        tree_sha = sha(value["tree"].get("sha"), "carryover tree SHA")
+        value = self.get(f"tree-{tree_sha}", f"git/trees/{tree_sha}?recursive=1")
+        require(isinstance(value, dict) and value.get("truncated") is False
+                and isinstance(value.get("tree"), list),
+                "carryover tree is unavailable or truncated")
+        result = {}
+        for item in value["tree"]:
+            require(isinstance(item, dict) and isinstance(item.get("path"), str)
+                    and isinstance(item.get("mode"), str)
+                    and isinstance(item.get("type"), str),
+                    "carryover tree entry is malformed")
+            require(item["path"] not in result, "duplicate carryover tree path")
+            sha(item.get("sha"), "carryover tree entry SHA")
+            result[item["path"]] = item
+        return result
+
+    def text(self, blob: str) -> str:
+        value = self.get(f"blob-{blob}", f"git/blobs/{blob}")
+        require(isinstance(value, dict) and value.get("encoding") == "base64"
+                and isinstance(value.get("content"), str)
+                and value.get("sha") == blob, "carryover blob is malformed")
+        return base64.b64decode("".join(value["content"].split()),
+                                validate=True).decode("utf-8")
 
     def branch_tip(self, branch: str) -> str:
         encoded = urllib.parse.quote(branch, safe="/")
@@ -225,8 +255,10 @@ def normalized_attempt_text(text: str) -> str:
 
 
 def classify(policy: dict, base_ref: str, files: list[dict]) -> tuple[str, str]:
-    if base_ref.casefold() == policy["owner_gated_base_branch"].casefold():
+    owner_branch = policy.get("owner_gated_base_branch")
+    if owner_branch is not None and base_ref.casefold() == owner_branch.casefold():
         return "owner-gated", f"base branch {base_ref}"
+    tests_non_added = policy.get("tests_non_added")
     for item in files:
         name, status = item.get("filename"), item.get("status")
         require(isinstance(name, str) and isinstance(status, str),
@@ -240,12 +272,158 @@ def classify(policy: dict, base_ref: str, files: list[dict]) -> tuple[str, str]:
             if any(path_matches(path, pattern)
                    for pattern in policy["owner_gated_patterns"]):
                 return "owner-gated", f"owner-gated path {path}"
-            if status != "added" and path_matches(path, policy["tests_non_added"]):
+            if (status != "added" and tests_non_added is not None
+                    and path_matches(path, tests_non_added)):
                 return "owner-gated", f"{status} file under tests: {path}"
     return "review-gated", "no owner-gated path or base branch"
 
 
-def record_result(reviews: list[dict], policy: dict, head: str) -> tuple[bool, str]:
+def net_changes(comparison: dict) -> dict[str, tuple[str, str, str | None]]:
+    files = comparison.get("files")
+    # GitHub caps this list at 300 without reporting the omitted file count.
+    require(isinstance(files, list) and len(files) < 300
+            and not comparison.get("truncated"),
+            "carryover comparison is unavailable or may be truncated")
+    result = {}
+    for item in files:
+        require(isinstance(item, dict) and isinstance(item.get("filename"), str)
+                and isinstance(item.get("status"), str),
+                "carryover changed file is malformed")
+        previous = item.get("previous_filename")
+        require(previous is None or isinstance(previous, str),
+                "carryover previous filename is malformed")
+        name = item["filename"]
+        require(name not in result, "duplicate carryover changed path")
+        result[name] = (item["status"], sha(item.get("sha"), "carryover blob SHA"),
+                        previous)
+    return result
+
+
+def carryover_lines(text: str) -> tuple[list[str], list[bool]]:
+    """Mark unsafe lines using the entire file, not a possibly partial patch."""
+    require(re.search(r"`{3,}|~{3,}", text) is None,
+            "carryover file contains forbidden content: fence-like text")
+    lines = text.splitlines(keepends=True)
+    unsafe = []
+    markup = None
+    quote = None
+    elements = []
+    previous = ""
+    for line in lines:
+        html_line = bool(elements) or markup is not None or "<" in line or ">" in line
+        cursor = 0
+        while cursor < len(line):
+            char = line[cursor]
+            if markup == "comment":
+                if line.startswith("-->", cursor):
+                    markup = None
+                    cursor += 3
+                    continue
+            elif markup == "tag":
+                if quote is not None:
+                    if char == quote:
+                        quote = None
+                elif char in "\"'":
+                    quote = char
+                elif char == ">":
+                    markup = None
+            elif line.startswith("<!--", cursor):
+                markup = "comment"
+                cursor += 4
+                continue
+            elif char == "<":
+                tag = re.match(r"</?([A-Za-z][A-Za-z0-9:._-]*)(?=[\s/>]|$)", line[cursor:])
+                if tag is not None and not tag.group(1).endswith(":"):
+                    name = tag.group(1).casefold()
+                    if tag.group().startswith("</"):
+                        if elements and elements[-1] == name:
+                            elements.pop()
+                    elif name not in ("area", "base", "br", "col", "embed", "hr", "img",
+                                      "input", "link", "meta", "param", "source", "track", "wbr"):
+                        # Treat non-void self-closing tags conservatively as open.
+                        elements.append(name)
+                markup = "tag"
+            cursor += 1
+        visible = html.unescape(line)
+        url = re.search(r"[a-z][a-z0-9+.-]*:(?=\S)|www\."
+                        r"|\]\s*\(|^\s*\[[^\]]+\]:", visible, re.IGNORECASE)
+        link = any(char in visible or char in previous for char in "[]<(")
+        link = link or previous.rstrip().endswith(":")
+        unsafe.append(html_line or url is not None
+                      or link
+                      or any(unicodedata.category(char) == "Cf" for char in visible))
+        if visible.strip():
+            previous = visible
+    return lines, unsafe
+
+
+def carryover_result(reader: Reader, policy: dict, accepted: str, head: str,
+                     base: str, comparison: dict) -> tuple[bool, str]:
+    allowlist = policy["review_carryover"].get("allowlist")
+    require(isinstance(allowlist, list)
+            and all(isinstance(pattern, str) and pattern for pattern in allowlist),
+            "carryover allowlist is malformed")
+    old = net_changes(reader.compare(base, accepted, "compare-accepted"))
+    new = net_changes(comparison)
+    old_tree, new_tree = reader.tree(accepted), reader.tree(head)
+    paths = old.keys() | new.keys()
+    changed = {path for path in paths if old.get(path) != new.get(path)}
+    # Blob SHAs do not encode mode. A mode-only change must not bypass D.
+    for path in paths:
+        before, after = old_tree.get(path), new_tree.get(path)
+        for item, entry in ((old.get(path), before), (new.get(path), after)):
+            if item is not None:
+                require((entry is None if item[0] == "removed" else
+                         entry is not None and entry["sha"] == item[1]),
+                        f"carryover comparison and tree disagree: {path}")
+        if before and after and (before["mode"], before["type"]) != (
+                after["mode"], after["type"]):
+            changed.add(path)
+    require(len(changed) <= 5, "carryover exceeds 5 files")
+    total = 0
+    for path in sorted(changed):
+        require(any(path_matches(path, pattern) for pattern in allowlist)
+                and not any(path_matches(path, pattern)
+                            for pattern in policy["owner_gated_patterns"]),
+                f"carryover path is not eligible: {path}")
+        require(Path(path).suffix.casefold() in (".md", ".txt"),
+                f"carryover path is not .md or .txt: {path}")
+        require(all(item is None or item[0] in ("modified", "added")
+                    for item in (old.get(path), new.get(path))),
+                f"carryover status is not modified or added: {path}")
+        before, after = old_tree.get(path), new_tree.get(path)
+        require(after is not None and after["type"] == "blob"
+                and after["mode"] == "100644"
+                and (before is None or (before["type"] == "blob"
+                                        and before["mode"] == after["mode"])),
+                f"carryover file is deleted, special, or changes mode: {path}")
+        require(before is None or not path_matches(path, policy["tests_non_added"]),
+                f"carryover modifies an owner-gated test: {path}")
+        old_lines, old_unsafe = carryover_lines(reader.text(before["sha"]) if before else "")
+        new_lines, new_unsafe = carryover_lines(reader.text(after["sha"]))
+        for tag, start, end, new_start, new_end in difflib.SequenceMatcher(
+                None, old_lines, new_lines, autojunk=False).get_opcodes():
+            if tag == "equal":
+                continue
+            total += end - start + new_end - new_start
+            require(total <= 40, "carryover exceeds 40 added/deleted lines")
+            require(not any(old_unsafe[start:end]) and not any(new_unsafe[new_start:new_end]),
+                    f"carryover changes forbidden content: {path}")
+    if changed:
+        base_tree = reader.tree(base)
+        for path in sorted(changed):
+            entry = base_tree.get(path)
+            if entry is not None:
+                require(entry["type"] == "blob" and entry["mode"] == "100644",
+                        f"carryover base file is special: {path}")
+                carryover_lines(reader.text(entry["sha"]))
+    return True, (f"accept carried over from {accepted}; {len(changed)} file(s), "
+                  f"{total} added/deleted line(s); files: {json.dumps(sorted(changed))}")
+
+
+def record_result(reviews: list[dict], policy: dict, head: str,
+                  reader: Reader | None = None, base: str | None = None,
+                  net_comparison: dict | None = None) -> tuple[bool, str]:
     records = []
     for review in reviews:
         if not any(identity(review, author)
@@ -270,6 +448,15 @@ def record_result(reviews: list[dict], policy: dict, head: str) -> tuple[bool, s
     if match is None:
         return False, "latest review record line is malformed"
     if match.group(1).lower() != head:
+        setting = policy.get("review_carryover")
+        if (match.group(2) == "accept" and isinstance(setting, dict)
+                and setting.get("enabled") is True and reader is not None
+                and base is not None and net_comparison is not None):
+            try:
+                return carryover_result(reader, policy, match.group(1).lower(),
+                                        head, base, net_comparison)
+            except (InputError, KeyError, TypeError, ValueError) as error:
+                return False, f"accept carryover unavailable: {error}"
         return False, "latest review record names an older or different head"
     if match.group(2) != "accept":
         return False, "latest review record says reject"
@@ -313,9 +500,12 @@ def evaluate(reader: Reader, policy: dict,
     require(behind >= 0, "negative behind_by")
     gate, gate_reason = classify(policy, base_ref, reader.files())
     reviews = reader.reviews()
-    record_ok, record_reason = record_result(reviews, policy, head_sha)
+    record_ok, record_reason = record_result(reviews, policy, head_sha,
+                                           reader, base_sha, comparison)
     if gate == "owner-gated":
         owner_ok, owner_reason = owner_result(reviews, policy["owner"], head_sha)
+        if policy.get("owner_requires_review_record", True) is False:
+            record_ok, record_reason = True, "not required for owner-gated pull request"
     else:
         owner_ok, owner_reason = True, "not required for review-gated pull request"
     if reader.fixture is None:
@@ -342,6 +532,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pull-request", required=True, type=int)
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--summary", type=Path)
+    parser.add_argument("--policy", type=Path)
     parser.add_argument("--checked-out-base")
     parser.add_argument("--expected-head",
                         default=os.environ.get("APPROVAL_EXPECTED_HEAD") or None)
@@ -349,7 +540,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         require(args.fixture is not None or args.checked_out_base is not None,
                 "--checked-out-base is required for live checks")
-        policy = load_json((ROOT / ".github/approval-policy.json").read_bytes(),
+        policy = load_json((args.policy or ROOT / ".github/approval-policy.json").read_bytes(),
                            "approval policy")
         require(isinstance(policy, dict), "approval policy is malformed")
         results = evaluate(Reader(args.repository, args.pull_request, args.fixture),
