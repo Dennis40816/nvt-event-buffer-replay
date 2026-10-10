@@ -72,8 +72,13 @@ internal abstract record PendingCaptureOperation
 {
     private PendingCaptureOperation() { }
 
-    // The record instance is the load token. Decode tokens come from the existing controller.
-    internal sealed record Load : PendingCaptureOperation;
+    // The instance is the load token, so equality is by reference. Decode tokens come from the existing controller.
+    internal sealed record Load : PendingCaptureOperation
+    {
+        public bool Equals(Load? other) => ReferenceEquals(this, other);
+
+        public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+    }
     internal sealed record Decode(CaptureSession Source, CaptureDecodeOperation Operation) : PendingCaptureOperation;
 }
 
