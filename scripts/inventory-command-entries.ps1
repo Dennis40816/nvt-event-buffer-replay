@@ -88,7 +88,7 @@ try {
     $result = [ordered]@{ schemaVersion = 1; scope = 'AXAML handlers, event subscriptions, routed events, keyboard override and dispatcher. Lifecycle events are retained for completeness.'; entries = $orderedEntries }
     $destination = [IO.Path]::GetFullPath($OutputPath, $Root)
     [void][IO.Directory]::CreateDirectory((Split-Path $destination -Parent))
-    [IO.File]::WriteAllText($destination, ($result | ConvertTo-Json -Depth 20) + "`n")
+    [IO.File]::WriteAllText($destination, (($result | ConvertTo-Json -Depth 20) -replace "`r`n", "`n") + "`n")
     $entries | Group-Object { $_.kind } | Sort-Object Name -Culture ([Globalization.CultureInfo]::InvariantCulture) | ForEach-Object { Write-Output "$($_.Name): $($_.Count)" }
     if ($BindingOutputPath) {
         $bindings = @(Sort-Ordinal @(Get-ChildItem (Join-Path $Root 'src') -Recurse -Filter '*.axaml' -File) { param($f) $f.FullName.Replace('\', '/') } | ForEach-Object {
@@ -99,6 +99,6 @@ try {
         })
         $destination = [IO.Path]::GetFullPath($BindingOutputPath, $Root)
         [void][IO.Directory]::CreateDirectory((Split-Path $destination -Parent))
-        [IO.File]::WriteAllText($destination, ([ordered]@{ schemaVersion = 1; files = $bindings } | ConvertTo-Json -Depth 10) + "`n")
+        [IO.File]::WriteAllText($destination, (([ordered]@{ schemaVersion = 1; files = $bindings } | ConvertTo-Json -Depth 10) -replace "`r`n", "`n") + "`n")
     }
 } finally { $context.Unload() }

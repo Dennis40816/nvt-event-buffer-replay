@@ -5,8 +5,12 @@ namespace Nvt.Replay.Architecture.Tests;
 
 internal static class InventoryPolicy
 {
+    // Git may check the committed file out with CRLF on Windows. Compare the content without CR bytes.
     internal static bool Matches(string committed, string generated) =>
-        File.ReadAllBytes(committed).AsSpan().SequenceEqual(File.ReadAllBytes(generated));
+        WithoutCarriageReturns(committed).AsSpan().SequenceEqual(WithoutCarriageReturns(generated));
+
+    private static byte[] WithoutCarriageReturns(string path) =>
+        File.ReadAllBytes(path).Where(value => value != (byte)13).ToArray();
 
     internal static string Describe(string committed, string generated)
     {
