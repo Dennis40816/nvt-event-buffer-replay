@@ -77,10 +77,8 @@ the branch model in [`CONTRIBUTING.md`](CONTRIBUTING.md) is the current one.
 
 ## C# code and test rules
 
-Before adding C# code or tests, read Core's
-[conventions](https://github.com/Dennis40816/nvt_fw_core/blob/main/docs/core/conventions.md):
-State management, C# code rules, Architecture rules, and Test rules.
-The 11 state rules and the test standard apply to new code.
+New C# code and tests follow Core's docs/core/conventions.md and docs/core/testing.md. Existing code is the baseline and may only go down.
+Core main: [conventions](https://github.com/Dennis40816/nvt_fw_core/blob/main/docs/core/conventions.md) and [testing](https://github.com/Dennis40816/nvt_fw_core/blob/main/docs/core/testing.md).
 Existing debt is recorded in [the health baseline](eng/code-health/baseline.json).
 
 ## Commands
