@@ -1,0 +1,2 @@
+namespace Nvt.Replay.Avalonia;
+public partial class MainWindow { }

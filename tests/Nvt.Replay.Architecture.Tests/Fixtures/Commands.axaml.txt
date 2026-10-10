@@ -1,0 +1,1 @@
+<Window xmlns="https://github.com/avaloniaui"><Button Click="FirstClick" /></Window>

@@ -1,0 +1,1 @@
+<UserControl xmlns="https://github.com/avaloniaui"><TextBlock Text="{Binding Name}" /></UserControl>

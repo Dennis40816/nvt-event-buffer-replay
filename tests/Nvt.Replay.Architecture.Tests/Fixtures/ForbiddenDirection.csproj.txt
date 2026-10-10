@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup><ProjectReference Include="../Nvt.Replay.Avalonia/Nvt.Replay.Avalonia.csproj" /></ItemGroup>
+</Project>

@@ -32,3 +32,10 @@ this provenance. NFU policy belongs in `doc-sync.nfu.json`.
 - Replaced version: `b40be44` (NFU's own 375-line script). To roll back, run `git checkout b40be44 -- scripts/approval_check.py`.
 
 The workflow call in `.github/workflows/approval.yml` and the policy file stay unchanged. Fix shared behavior in Core first, then copy the reviewed file and update this section.
+
+## Syntax health ratchet
+
+Source repository: [Dennis40816/nvt_fw_core](https://github.com/Dennis40816/nvt_fw_core).
+Source commit: `f07d1568af2336229a488aca9b3e497c2531d7bb`.
+Source paths: `tools/repo-checks/repo-health.ps1` and `tools/repo-checks/repo-health.md`.
+These files are byte-identical, update from Core only.

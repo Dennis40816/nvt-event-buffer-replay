@@ -1,0 +1,6 @@
+namespace Nvt.Replay.Avalonia;
+public partial class MainWindow
+{
+    private void FirstClick(object? sender, object e) { }
+    private void AddedClick(object? sender, object e) { }
+}

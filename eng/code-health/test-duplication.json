@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "counting": "Matching C# files, not call sites. Includes shared helpers. Excludes bin, obj and Fixtures. Workspace classes exclude Tests and TestHelpers consumers. Source reads match literal source paths or the shared ReadSourceText seam.",
+  "testFiles": 64,
+  "metrics": {
+    "tempPaths": {
+      "count": 19,
+      "files": [
+        "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/AdvancedWorkspaceSnapshotTests.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/RegisterProjectionPresentationTests.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/VisualTestCapture.cs",
+        "tests/Nvt.Replay.Tests/AtomicOutputAdoptionParityTests.cs",
+        "tests/Nvt.Replay.Tests/BuiltInAdapterAcceptanceContractTests.cs",
+        "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+        "tests/Nvt.Replay.Tests/CommonNdsInspectorTests.cs",
+        "tests/Nvt.Replay.Tests/DecodedI2cAdapterTests.cs",
+        "tests/Nvt.Replay.Tests/Desay97NdsInspectorTests.cs",
+        "tests/Nvt.Replay.Tests/NdsCaptureSessionTests.cs",
+        "tests/Nvt.Replay.Tests/NdsCommunicationLogAdapterTests.cs",
+        "tests/Nvt.Replay.Tests/NvtRegisterProfileSchemaTests.cs",
+        "tests/Nvt.Replay.Tests/ReadableCommunicationLogWriterTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayCliContractTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+        "tests/Nvt.Replay.Tests/ReplaySidecarTests.cs"
+      ]
+    },
+    "workspaceClasses": {
+      "count": 1,
+      "files": [
+        "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs"
+      ]
+    },
+    "fakeClocks": {
+      "count": 0,
+      "files": []
+    },
+    "realTimeWaits": {
+      "count": 6,
+      "files": [
+        "tests/Nvt.Replay.Avalonia.Tests/AdvancedWorkspaceSnapshotTests.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/EventSuppressionTests.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/WorkspaceSnapshotTestHelpers.cs",
+        "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayExportTests.cs"
+      ]
+    },
+    "elapsedTime": {
+      "count": 2,
+      "files": [
+        "tests/Nvt.Replay.Avalonia.Tests/ReplayTrailBatchCacheTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayLoopPerformanceTests.cs"
+      ]
+    },
+    "headlessSetup": {
+      "count": 1,
+      "files": [
+        "tests/Nvt.Replay.Avalonia.Tests/TestAppBuilder.cs"
+      ]
+    },
+    "childProcesses": {
+      "count": 2,
+      "files": [
+        "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs",
+        "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs"
+      ]
+    },
+    "repoRootFinders": {
+      "count": 1,
+      "files": [
+        "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs"
+      ]
+    },
+    "sourceTextReads": {
+      "count": 0,
+      "files": []
+    }
+  },
+  "duplicateFakeClasses": {
+    "FakeReplay": {
+      "count": 6,
+      "files": [
+        "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayLoopPerformanceTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayOutputWorkspaceTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayPaintWorkspaceTests.cs",
+        "tests/Nvt.Replay.Tests/ReplayTrailHistoryTests.cs"
+      ]
+    }
+  }
+}
