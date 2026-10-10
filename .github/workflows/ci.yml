@@ -62,6 +62,14 @@ jobs:
         timeout-minutes: 7
         run: dotnet test Nvt.EventBufferReplay.sln --configuration Release --no-build
 
+      - name: Enforce syntax health baseline
+        shell: pwsh
+        run: ./tools/repo-checks/repo-health.ps1 -Mode Verify -Repo nfu -Root .
+
+      - name: Enforce test duplication baseline
+        shell: pwsh
+        run: ./scripts/measure-test-duplication.ps1 -Verify
+
       - name: Enforce handwritten per-file line ceiling
         shell: pwsh
         run: ./scripts/check-line-budget.ps1
