@@ -4,6 +4,13 @@
 param([string]$Root = '.', [string]$OutputPath = 'eng/architecture/command-entries.json', [string]$BindingOutputPath = '')
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+function Sort-Ordinal([object[]]$Items, [scriptblock]$Key) {
+    $i = 0
+    $keys = [string[]]@($Items | ForEach-Object { (& $Key $_) + '|' + ($i++).ToString('D8') })
+    $values = [object[]]@($Items)
+    [Array]::Sort([Array]$keys, [Array]$values, [Collections.IComparer][StringComparer]::Ordinal)
+    $values
+}
 $Root = [IO.Path]::GetFullPath($Root)
 $sdk = (& dotnet --version).Trim()
 if ($LASTEXITCODE) { throw 'SDK selection failed.' }
@@ -18,7 +25,7 @@ try {
     $directory = Join-Path $Root 'src/Nvt.Replay.Avalonia'
     $methods = @{}
     $trees = @()
-    foreach ($file in @(Get-ChildItem $directory -Filter 'MainWindow*.cs' -File | Sort-Object Name)) {
+    foreach ($file in @(Sort-Ordinal @(Get-ChildItem $directory -Filter 'MainWindow*.cs' -File) { param($f) $f.Name })) {
         $tree = $parse.Invoke($null, @([IO.File]::ReadAllText($file.FullName), $null, $file.FullName, $null, [Threading.CancellationToken]::None))
         $nodes = @($tree.GetRoot().DescendantNodes())
         $path = [IO.Path]::GetRelativePath($Root, $file.FullName).Replace('\', '/')
@@ -71,20 +78,20 @@ try {
     foreach ($name in @('OnKeyDown', 'HandleWindowKeyDown')) {
         if ($methods.ContainsKey($name)) { $m = $methods[$name][0]; Add-Entry 'keyboard' 'KeyDown' $name $m.file $m.startLine $m.endLine }
     }
-    foreach ($name in @($methods.Keys | Sort-Object)) {
+    foreach ($name in @(Sort-Ordinal @($methods.Keys) { param($k) $k })) {
         if ($name -match '_On\w+$' -and $name -notin @($entries | ForEach-Object { $_.method })) {
             $m = $methods[$name][0]
             Add-Entry 'unwired' 'Unregistered' $name $m.file $m.startLine $m.endLine
         }
     }
-    $orderedEntries = @($entries | Sort-Object { $_.registration.file }, { $_.registration.startLine }, event, method)
+    $orderedEntries = @(Sort-Ordinal @($entries) { param($e) "$($e.registration.file)|$($e.registration.startLine.ToString('D8'))|$($e.event)|$($e.method)" })
     $result = [ordered]@{ schemaVersion = 1; scope = 'AXAML handlers, event subscriptions, routed events, keyboard override and dispatcher. Lifecycle events are retained for completeness.'; entries = $orderedEntries }
     $destination = [IO.Path]::GetFullPath($OutputPath, $Root)
     [void][IO.Directory]::CreateDirectory((Split-Path $destination -Parent))
     [IO.File]::WriteAllText($destination, ($result | ConvertTo-Json -Depth 20) + "`n")
-    $entries | Group-Object { $_.kind } | Sort-Object Name | ForEach-Object { Write-Output "$($_.Name): $($_.Count)" }
+    $entries | Group-Object { $_.kind } | Sort-Object Name -Culture ([Globalization.CultureInfo]::InvariantCulture) | ForEach-Object { Write-Output "$($_.Name): $($_.Count)" }
     if ($BindingOutputPath) {
-        $bindings = @(Get-ChildItem (Join-Path $Root 'src') -Recurse -Filter '*.axaml' -File | Sort-Object FullName | ForEach-Object {
+        $bindings = @(Sort-Ordinal @(Get-ChildItem (Join-Path $Root 'src') -Recurse -Filter '*.axaml' -File) { param($f) $f.FullName.Replace('\', '/') } | ForEach-Object {
             $text = [IO.File]::ReadAllText($_.FullName)
             $xml = [Xml.Linq.XDocument]::Parse($text)
             $x = [Xml.Linq.XNamespace]::Get('http://schemas.microsoft.com/winfx/2006/xaml')

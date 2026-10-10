@@ -3,6 +3,390 @@
   "scope": "AXAML handlers, event subscriptions, routed events, keyboard override and dispatcher. Lifecycle events are retained for completeness.",
   "entries": [
     {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "ExportPointPlotButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "startLine": 187,
+      "endLine": 232,
+      "asyncVoid": true,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+        "startLine": 187,
+        "endLine": 232,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "ExportHeatmapButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "startLine": 271,
+      "endLine": 316,
+      "asyncVoid": true,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+        "startLine": 271,
+        "endLine": 316,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "ExportAnalysisButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "startLine": 336,
+      "endLine": 387,
+      "asyncVoid": true,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+        "startLine": 336,
+        "endLine": 387,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "ExportReplayButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "startLine": 389,
+      "endLine": 390,
+      "asyncVoid": true,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+        "startLine": 389,
+        "endLine": 390,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "OpenOutputPreviewButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "startLine": 653,
+      "endLine": 657,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+        "startLine": 653,
+        "endLine": 657,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "LoopInButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
+      "startLine": 436,
+      "endLine": 446,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
+        "startLine": 436,
+        "endLine": 446,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "LoopOutButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
+      "startLine": 448,
+      "endLine": 458,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
+        "startLine": 448,
+        "endLine": 458,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "item.Click",
+      "method": "<lambda>",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
+      "startLine": 365,
+      "endLine": 369,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
+        "startLine": 365,
+        "endLine": 369,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "menu.Closed",
+      "method": "<lambda>",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
+      "startLine": 375,
+      "endLine": 378,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
+        "startLine": 375,
+        "endLine": 378,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "comboBox.DropDownClosed",
+      "method": "ComboBox_OnAnyDropDownClosed",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs",
+      "startLine": 41,
+      "endLine": 42,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs",
+        "startLine": 38,
+        "endLine": 38,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "CommandPaletteButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 94,
+      "endLine": 94,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+        "startLine": 94,
+        "endLine": 94,
+        "element": ""
+      }
+    },
+    {
+      "kind": "unwired",
+      "handlerAttribute": null,
+      "event": "Unregistered",
+      "method": "ThemeButton_OnClick",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 134,
+      "endLine": 135,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+        "startLine": 134,
+        "endLine": 135,
+        "element": ""
+      }
+    },
+    {
+      "kind": "keyboard",
+      "handlerAttribute": null,
+      "event": "KeyDown",
+      "method": "OnKeyDown",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 227,
+      "endLine": 232,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+        "startLine": 227,
+        "endLine": 232,
+        "element": ""
+      }
+    },
+    {
+      "kind": "keyboard",
+      "handlerAttribute": null,
+      "event": "KeyDown",
+      "method": "HandleWindowKeyDown",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 234,
+      "endLine": 262,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+        "startLine": 234,
+        "endLine": 262,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "SettingsPage.CloseRequested",
+      "method": "<lambda>",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+      "startLine": 98,
+      "endLine": 98,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 98,
+        "endLine": 98,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "SettingsPage.ThemeToggleRequested",
+      "method": "<lambda>",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+      "startLine": 99,
+      "endLine": 99,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 99,
+        "endLine": 99,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "SettingsPage.PlaybackPreferencesChanged",
+      "method": "SettingsPage_OnPlaybackPreferencesChanged",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs",
+      "startLine": 70,
+      "endLine": 73,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 100,
+        "endLine": 100,
+        "element": ""
+      }
+    },
+    {
+      "kind": "routed-event",
+      "handlerAttribute": null,
+      "event": "InputElement.KeyDownEvent",
+      "method": "MainWindow_OnPreviewKeyDown",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 213,
+      "endLine": 216,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 122,
+        "endLine": 126,
+        "element": ""
+      }
+    },
+    {
+      "kind": "routed-event",
+      "handlerAttribute": null,
+      "event": "InputElement.KeyUpEvent",
+      "method": "MainWindow_OnPreviewKeyUp",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 218,
+      "endLine": 225,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 127,
+        "endLine": 131,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "PaintSurface.LegendCollapsedChanged",
+      "method": "PaintSurface_OnLegendCollapsedChanged",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
+      "startLine": 324,
+      "endLine": 328,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 132,
+        "endLine": 132,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "RegisterActivitySurface.ActivitySelected",
+      "method": "RegisterActivitySurface_OnActivitySelected",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "startLine": 841,
+      "endLine": 846,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 133,
+        "endLine": 133,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "Opened",
+      "method": "<lambda>",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+      "startLine": 134,
+      "endLine": 138,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 134,
+        "endLine": 138,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "SizeChanged",
+      "method": "MainWindow_OnSizeChanged",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 37,
+      "endLine": 37,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 139,
+        "endLine": 139,
+        "element": ""
+      }
+    },
+    {
+      "kind": "subscription",
+      "handlerAttribute": null,
+      "event": "application.ActualThemeVariantChanged",
+      "method": "Application_OnActualThemeVariantChanged",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "startLine": 83,
+      "endLine": 92,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "startLine": 140,
+        "endLine": 140,
+        "element": ""
+      }
+    },
+    {
       "kind": "axaml",
       "handlerAttribute": "Click",
       "event": "Click",
@@ -52,22 +436,6 @@
     },
     {
       "kind": "axaml",
-      "handlerAttribute": "SelectionChanged",
-      "event": "SelectionChanged",
-      "method": "EventVersionComboBox_OnSelectionChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "startLine": 509,
-      "endLine": 536,
-      "asyncVoid": true,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 60,
-        "endLine": 60,
-        "element": "ComboBox"
-      }
-    },
-    {
-      "kind": "axaml",
       "handlerAttribute": "DropDownClosed",
       "event": "DropDownClosed",
       "method": "EventVersionComboBox_OnDropDownClosed",
@@ -84,18 +452,18 @@
     },
     {
       "kind": "axaml",
-      "handlerAttribute": "LostFocus",
-      "event": "LostFocus",
-      "method": "TargetI2cAddressTextBox_OnLostFocus",
+      "handlerAttribute": "SelectionChanged",
+      "event": "SelectionChanged",
+      "method": "EventVersionComboBox_OnSelectionChanged",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "startLine": 705,
-      "endLine": 706,
+      "startLine": 509,
+      "endLine": 536,
       "asyncVoid": true,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 68,
-        "endLine": 68,
-        "element": "TextBox"
+        "startLine": 60,
+        "endLine": 60,
+        "element": "ComboBox"
       }
     },
     {
@@ -106,6 +474,22 @@
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
       "startLine": 708,
       "endLine": 719,
+      "asyncVoid": true,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
+        "startLine": 68,
+        "endLine": 68,
+        "element": "TextBox"
+      }
+    },
+    {
+      "kind": "axaml",
+      "handlerAttribute": "LostFocus",
+      "event": "LostFocus",
+      "method": "TargetI2cAddressTextBox_OnLostFocus",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "startLine": 705,
+      "endLine": 706,
       "asyncVoid": true,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -996,12 +1380,12 @@
     },
     {
       "kind": "axaml",
-      "handlerAttribute": "LostFocus",
-      "event": "LostFocus",
-      "method": "OutputCustomSetting_OnLostFocus",
+      "handlerAttribute": "KeyDown",
+      "event": "KeyDown",
+      "method": "OutputCustomSetting_OnKeyDown",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 688,
-      "endLine": 688,
+      "startLine": 681,
+      "endLine": 686,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -1012,12 +1396,12 @@
     },
     {
       "kind": "axaml",
-      "handlerAttribute": "KeyDown",
-      "event": "KeyDown",
-      "method": "OutputCustomSetting_OnKeyDown",
+      "handlerAttribute": "LostFocus",
+      "event": "LostFocus",
+      "method": "OutputCustomSetting_OnLostFocus",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 681,
-      "endLine": 686,
+      "startLine": 688,
+      "endLine": 688,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -1156,12 +1540,12 @@
     },
     {
       "kind": "axaml",
-      "handlerAttribute": "LostFocus",
-      "event": "LostFocus",
-      "method": "OutputRangeTextBox_OnLostFocus",
+      "handlerAttribute": "KeyDown",
+      "event": "KeyDown",
+      "method": "OutputRangeTextBox_OnKeyDown",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 697,
-      "endLine": 698,
+      "startLine": 690,
+      "endLine": 695,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -1172,12 +1556,12 @@
     },
     {
       "kind": "axaml",
-      "handlerAttribute": "KeyDown",
-      "event": "KeyDown",
-      "method": "OutputRangeTextBox_OnKeyDown",
+      "handlerAttribute": "LostFocus",
+      "event": "LostFocus",
+      "method": "OutputRangeTextBox_OnLostFocus",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 690,
-      "endLine": 695,
+      "startLine": 697,
+      "endLine": 698,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -1968,390 +2352,6 @@
         "startLine": 1528,
         "endLine": 1528,
         "element": "Button"
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "SettingsPage.CloseRequested",
-      "method": "<lambda>",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-      "startLine": 98,
-      "endLine": 98,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 98,
-        "endLine": 98,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "SettingsPage.ThemeToggleRequested",
-      "method": "<lambda>",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-      "startLine": 99,
-      "endLine": 99,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 99,
-        "endLine": 99,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "SettingsPage.PlaybackPreferencesChanged",
-      "method": "SettingsPage_OnPlaybackPreferencesChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs",
-      "startLine": 70,
-      "endLine": 73,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 100,
-        "endLine": 100,
-        "element": ""
-      }
-    },
-    {
-      "kind": "routed-event",
-      "handlerAttribute": null,
-      "event": "InputElement.KeyDownEvent",
-      "method": "MainWindow_OnPreviewKeyDown",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 213,
-      "endLine": 216,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 122,
-        "endLine": 126,
-        "element": ""
-      }
-    },
-    {
-      "kind": "routed-event",
-      "handlerAttribute": null,
-      "event": "InputElement.KeyUpEvent",
-      "method": "MainWindow_OnPreviewKeyUp",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 218,
-      "endLine": 225,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 127,
-        "endLine": 131,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "PaintSurface.LegendCollapsedChanged",
-      "method": "PaintSurface_OnLegendCollapsedChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
-      "startLine": 324,
-      "endLine": 328,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 132,
-        "endLine": 132,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "RegisterActivitySurface.ActivitySelected",
-      "method": "RegisterActivitySurface_OnActivitySelected",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "startLine": 841,
-      "endLine": 846,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 133,
-        "endLine": 133,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "Opened",
-      "method": "<lambda>",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-      "startLine": 134,
-      "endLine": 138,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 134,
-        "endLine": 138,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "SizeChanged",
-      "method": "MainWindow_OnSizeChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 37,
-      "endLine": 37,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 139,
-        "endLine": 139,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "application.ActualThemeVariantChanged",
-      "method": "Application_OnActualThemeVariantChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 83,
-      "endLine": 92,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
-        "startLine": 140,
-        "endLine": 140,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "ExportPointPlotButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 187,
-      "endLine": 232,
-      "asyncVoid": true,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-        "startLine": 187,
-        "endLine": 232,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "ExportHeatmapButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 271,
-      "endLine": 316,
-      "asyncVoid": true,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-        "startLine": 271,
-        "endLine": 316,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "ExportAnalysisButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 336,
-      "endLine": 387,
-      "asyncVoid": true,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-        "startLine": 336,
-        "endLine": 387,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "ExportReplayButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 389,
-      "endLine": 390,
-      "asyncVoid": true,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-        "startLine": 389,
-        "endLine": 390,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "OpenOutputPreviewButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "startLine": 653,
-      "endLine": 657,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-        "startLine": 653,
-        "endLine": 657,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "LoopInButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
-      "startLine": 436,
-      "endLine": 446,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
-        "startLine": 436,
-        "endLine": 446,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "LoopOutButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
-      "startLine": 448,
-      "endLine": 458,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
-        "startLine": 448,
-        "endLine": 458,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "item.Click",
-      "method": "<lambda>",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "startLine": 365,
-      "endLine": 369,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-        "startLine": 365,
-        "endLine": 369,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "menu.Closed",
-      "method": "<lambda>",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "startLine": 375,
-      "endLine": 378,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-        "startLine": 375,
-        "endLine": 378,
-        "element": ""
-      }
-    },
-    {
-      "kind": "subscription",
-      "handlerAttribute": null,
-      "event": "comboBox.DropDownClosed",
-      "method": "ComboBox_OnAnyDropDownClosed",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs",
-      "startLine": 41,
-      "endLine": 42,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs",
-        "startLine": 38,
-        "endLine": 38,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "CommandPaletteButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 94,
-      "endLine": 94,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 94,
-        "endLine": 94,
-        "element": ""
-      }
-    },
-    {
-      "kind": "unwired",
-      "handlerAttribute": null,
-      "event": "Unregistered",
-      "method": "ThemeButton_OnClick",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 134,
-      "endLine": 135,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 134,
-        "endLine": 135,
-        "element": ""
-      }
-    },
-    {
-      "kind": "keyboard",
-      "handlerAttribute": null,
-      "event": "KeyDown",
-      "method": "OnKeyDown",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 227,
-      "endLine": 232,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 227,
-        "endLine": 232,
-        "element": ""
-      }
-    },
-    {
-      "kind": "keyboard",
-      "handlerAttribute": null,
-      "event": "KeyDown",
-      "method": "HandleWindowKeyDown",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 234,
-      "endLine": 262,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 234,
-        "endLine": 262,
-        "element": ""
       }
     }
   ]
