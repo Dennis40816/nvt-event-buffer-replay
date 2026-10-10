@@ -118,7 +118,7 @@ public partial class MainWindow : Window
         ReplayEndClockText.Text = FormatClock(SelectedEndTime());
         var physicalMaximum = Math.Max(1, session?.Records.Count - 1 ?? 1);
         var physicalValue = Math.Min(physicalMaximum, snapshot.PrimarySource.Index);
-        var evidenceMaximum = Math.Max(1, diagnosticRows.Length);
+        var evidenceMaximum = Math.Max(1, diagnosticRows.Count);
         var evidenceValue = CountDiagnosticsThroughLine(snapshot.PrimarySource.Location.LineNumber);
         ReplayTimelineSurface.SetFrameState(
             snapshot.LogicalIndex,
@@ -129,7 +129,7 @@ public partial class MainWindow : Window
     private int CountDiagnosticsThroughLine(int lineNumber)
     {
         var low = 0;
-        var high = diagnosticLineNumbers.Length;
+        var high = diagnosticLineNumbers.Count;
         while (low < high)
         {
             var middle = low + (high - low) / 2;
@@ -141,10 +141,10 @@ public partial class MainWindow : Window
 
     private void SynchronizeReplayLists(int logicalIndex, ITouchReplaySnapshot? snapshot = null)
     {
-        if (replaySession is null || decodedRows.Length == 0 || logicalIndex < 0)
+        if (replaySession is null || decodedRows.Count == 0 || logicalIndex < 0)
             return;
 
-        var clampedIndex = Math.Clamp(logicalIndex, 0, decodedRows.Length - 1);
+        var clampedIndex = Math.Clamp(logicalIndex, 0, decodedRows.Count - 1);
         snapshot ??= replayFrames?[clampedIndex] ?? replaySession.Seek(clampedIndex);
         using (synchronizingSelection.Enter())
         {

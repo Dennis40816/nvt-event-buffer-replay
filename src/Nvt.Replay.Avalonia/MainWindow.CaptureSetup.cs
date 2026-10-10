@@ -22,7 +22,7 @@ public partial class MainWindow
 
     private void ShowRegisterProfileInference(NvtRegisterProfileInferenceResult inference)
     {
-        pendingRegisterProfileInference = inference;
+        _captureWorkspace.Configure(inference);
         using (configuringCaptureSetup.Enter())
         {
             CaptureSetupEventVersionComboBox.SelectedItem = CurrentCaptureSetupVersion();
@@ -116,7 +116,7 @@ public partial class MainWindow
 
     private void HideRegisterProfileInference()
     {
-        pendingRegisterProfileInference = null;
+        _captureWorkspace.DeferConfiguration();
         RegisterProfileInferenceOverlay.IsVisible = false;
         InferredRegisterProfileComboBox.ItemsSource = null;
         InferredRegisterProfileComboBox.SelectedIndex = -1;
@@ -167,7 +167,7 @@ public partial class MainWindow
         }
 
         HideRegisterProfileInference();
-        await DecodeSelectedAsync();
+        await _replayShell.ExecuteAsync(_replayShell.DecodeCommand);
     }
 
     private bool TryReadCaptureSetup(
@@ -246,7 +246,7 @@ public partial class MainWindow
         CaptureSetupI2cAddressTextBox.Text = FormatTargetI2cAddress(requested);
         CaptureSetupTargetText.Text = $"I²C {FormatTargetI2cAddress(requested)}";
         var inference = NvtRegisterProfileInference.Infer(session.Records, requested);
-        pendingRegisterProfileInference = inference;
+        _captureWorkspace.Configure(inference);
         using (configuringCaptureSetup.Enter())
         {
             PresentCaptureSetupInference(inference, preserveSelectedProfile: false);
