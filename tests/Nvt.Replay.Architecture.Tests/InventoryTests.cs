@@ -8,6 +8,19 @@ internal static class InventoryPolicy
     internal static bool Matches(string committed, string generated) =>
         File.ReadAllBytes(committed).AsSpan().SequenceEqual(File.ReadAllBytes(generated));
 
+    internal static string Describe(string committed, string generated)
+    {
+        var left = File.ReadAllText(committed).Split('\n');
+        var right = File.ReadAllText(generated).Split('\n');
+        var count = Math.Min(left.Length, right.Length);
+        for (var i = 0; i < count; i++)
+        {
+            if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+                return $"First difference at line {i + 1}. Committed: [{left[i].TrimEnd('\r')}] Fresh: [{right[i].TrimEnd('\r')}]. Lines: {left.Length} and {right.Length}.";
+        }
+        return $"No line differs in the shared range. Lines: {left.Length} and {right.Length}.";
+    }
+
     internal static async Task GenerateAsync(string root, string output)
     {
         var result = await ChildProcessFixture.ScriptAsync(root, "scripts/inventory-command-entries.ps1", "-Root", root, "-OutputPath", output);
@@ -35,7 +48,8 @@ public sealed class InventoryTests
         using var workspace = new TempWorkspace();
         var output = workspace.PathFor("commands.json");
         await InventoryPolicy.GenerateAsync(RepositoryFiles.Root, output);
-        Assert.True(InventoryPolicy.Matches(Path.Combine(RepositoryFiles.Root, "eng/architecture/command-entries.json"), output));
+        var committed = Path.Combine(RepositoryFiles.Root, "eng/architecture/command-entries.json");
+        Assert.True(InventoryPolicy.Matches(committed, output), InventoryPolicy.Describe(committed, output));
     }
 
     [Fact]
