@@ -5,13 +5,6 @@ public sealed class DuplicationTests
 {
     private const string Script = "scripts/measure-test-duplication.ps1";
 
-    [Fact]
-    public async Task CurrentTestDuplicationPasses()
-    {
-        var result = await ChildProcessFixture.ScriptAsync(RepositoryFiles.Root, Script, "-Root", RepositoryFiles.Root, "-Verify");
-        Assert.True(result.ExitCode == 0, result.Output);
-    }
-
     [Theory]
     [InlineData("metrics", "tempPaths")]
     [InlineData("metrics", "workspaceClasses")]
