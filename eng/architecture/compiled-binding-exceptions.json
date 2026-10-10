@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "file": "src/Nvt.Replay.Avalonia/App.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
+      "bindingCount": 82,
+      "dataTypeCount": 27,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.Canvas.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.FieldsTransport.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.Inspector.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.InspectorDisclosure.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.Output.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.Shared.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.TypographyButtons.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Styles/MainWindow.WorkspacePanels.axaml",
+      "bindingCount": 0,
+      "dataTypeCount": 0,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    },
+    {
+      "file": "src/Nvt.Replay.Avalonia/Views/SettingsView.axaml",
+      "bindingCount": 5,
+      "dataTypeCount": 2,
+      "rootDataType": false,
+      "compiledBindingCount": 0,
+      "compileBindingsDeclarations": []
+    }
+  ]
+}

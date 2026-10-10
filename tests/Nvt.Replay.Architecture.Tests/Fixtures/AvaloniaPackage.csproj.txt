@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup><PackageReference Include="Nvt.Core.Avalonia" Version="1.0.0" /></ItemGroup>
+</Project>

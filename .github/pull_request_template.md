@@ -13,6 +13,8 @@ Reason (paths or base branch):
 
 Commands run and results:
 
+- [ ] State rules 7, 9, and 10 checked; new tests follow the test rules.
+
 ## Review
 
 Post `Review record: <full head SHA> <accept|reject>` as a pull request

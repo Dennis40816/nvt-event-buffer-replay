@@ -1,0 +1,1871 @@
+{
+  "schemaVersion": 1,
+  "measurementVersion": "roslyn-physical-v1",
+  "snapshotCommit": "e04edd03e2a72099467d893e8e3f741896ecd837",
+  "limits": {
+    "fileLines": 800,
+    "partialFiles": 8,
+    "stateMembers": 30,
+    "viewTypeLines": 800,
+    "axamlCodeBehindLines": 150,
+    "methodLines": 80
+  },
+  "findings": [
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Analysis",
+      "path": "src/Nvt.Replay.Analysis/CaptureDecodeController.cs",
+      "line": 82,
+      "member": "Nvt.Replay.Analysis.CaptureDecodeController.fields:nextGeneration",
+      "symbol": "Nvt.Replay.Analysis.CaptureDecodeController.nextGeneration",
+      "syntaxHash": "b3c4caf3d2db9afa8af05f6492e235ee66df0c68059a1575153a9ea7bb6b3a1a",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/App.axaml.cs",
+      "line": 29,
+      "member": "Nvt.Replay.Avalonia.App.OnFrameworkInitializationCompleted()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "9fd78bafce47d8f55d2a3608897ba3e407d345fb497cc828cb52b7b17467169f",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 59,
+      "member": "Nvt.Replay.Avalonia.MainWindow.fields:nextCaptureLoadGeneration",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.nextCaptureLoadGeneration",
+      "syntaxHash": "b4b8372b589223d0e55e5539f63cdc06f8ff6018e64347029d8a903cf059d7ab",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 61,
+      "member": "Nvt.Replay.Avalonia.MainWindow.fields:activeCaptureLoadGeneration",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.activeCaptureLoadGeneration",
+      "syntaxHash": "f607ed39ad940ca2c74de72bcbf33b9ea0f5344498edacb0e691a85f77458a65",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 63,
+      "member": "Nvt.Replay.Avalonia.MainWindow.fields:activeCaptureDecodeGeneration",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.activeCaptureDecodeGeneration",
+      "syntaxHash": "c9921cbc39d1298ea3c0081602ea57519b97b677fe9049db9a6ee29b5dbbd8ef",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 85,
+      "member": "Nvt.Replay.Avalonia.MainWindow.LoadButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.LoadButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "452a47071e2a68cdbe2f1cd0f2e6fc78871c64b6cca01ac84447bf280faabed5",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 509,
+      "member": "Nvt.Replay.Avalonia.MainWindow.EventVersionComboBox_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.EventVersionComboBox_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "syntaxHash": "7166eb5aa2dde6c4f5f8f4b46bf2305c62aad41b4361a9d32b9e0603af1edd18",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 544,
+      "member": "Nvt.Replay.Avalonia.MainWindow.EventVersionComboBox_OnDropDownClosed(object?,EventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.EventVersionComboBox_OnDropDownClosed(object?,EventArgs)",
+      "syntaxHash": "3008a02efc30976e39b872bfdb9d06784a5da4b052ce79e3488dda93a3cbbb61",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 553,
+      "member": "Nvt.Replay.Avalonia.MainWindow.Desay97ProfileComboBox_OnDropDownClosed(object?,EventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.Desay97ProfileComboBox_OnDropDownClosed(object?,EventArgs)",
+      "syntaxHash": "e5bb9131286a2bfced9db8609fa1da13756651465eeab1221dc088cac850add5",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 596,
+      "member": "Nvt.Replay.Avalonia.MainWindow.RegisterProfileComboBox_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.RegisterProfileComboBox_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "syntaxHash": "88f3cc3053d520c3e1bf59aaca6df8f792e7f358667d5d3e15463909592ccc3f",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 705,
+      "member": "Nvt.Replay.Avalonia.MainWindow.TargetI2cAddressTextBox_OnLostFocus(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.TargetI2cAddressTextBox_OnLostFocus(object?,RoutedEventArgs)",
+      "syntaxHash": "c23d72d4d1934a080a5e70ba272af66db827e354521c6da757b374b07218565a",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 708,
+      "member": "Nvt.Replay.Avalonia.MainWindow.TargetI2cAddressTextBox_OnKeyDown(object?,KeyEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.TargetI2cAddressTextBox_OnKeyDown(object?,KeyEventArgs)",
+      "syntaxHash": "7237f5b28e77667c0317eb7ea8f84d4b47ea4954c156f94a35dca1736df227ee",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 848,
+      "member": "Nvt.Replay.Avalonia.MainWindow.ExportReadableLogButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ExportReadableLogButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "bb62a0d354ab2461d605576a2cabbef591180e915a79025062a245833e41ce88",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+      "line": 888,
+      "member": "Nvt.Replay.Avalonia.MainWindow.SourceAdapterComboBox_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.SourceAdapterComboBox_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "syntaxHash": "a6e1a617660a4f789eb55721679f7b4e7da5a752592d384f90dd6ac02cd6dc7d",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.CaptureSetup.cs",
+      "line": 128,
+      "member": "Nvt.Replay.Avalonia.MainWindow.ApplyRegisterProfileInferenceButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ApplyRegisterProfileInferenceButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "cf9a76cc5780b612c5c8384e0c732321409dcb3b3fbe5e0585bf84f39c599f16",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 40,
+      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputPreviewGeneration",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.outputPreviewGeneration",
+      "syntaxHash": "69c526b7139683881f3f754ba4b794bdd14ababbc39769f552635ad3aca0681a",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 187,
+      "member": "Nvt.Replay.Avalonia.MainWindow.ExportPointPlotButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ExportPointPlotButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "59cc9e228412058ac13e1aab58010be8bbfc7bca71f6c4d0cb8c9830fcee5e58",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 271,
+      "member": "Nvt.Replay.Avalonia.MainWindow.ExportHeatmapButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ExportHeatmapButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "1ea5ed1db8670e33baea9cbf70c17b77d51386d92e7b520dfe4bf44493b8b896",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 336,
+      "member": "Nvt.Replay.Avalonia.MainWindow.ExportAnalysisButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ExportAnalysisButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "15faa08b557c9f04e5e14db420a06a12fccfc8a1249c3719c7415ffb63b8855e",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 389,
+      "member": "Nvt.Replay.Avalonia.MainWindow.ExportReplayButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ExportReplayButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "279bdbd526ad8f4924ddc44157afbe94d10967ebc448b4a39109c6619fc495c9",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 392,
+      "member": "Nvt.Replay.Avalonia.MainWindow.OutputExportContinueButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.OutputExportContinueButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "be72d8093d4da612c5a759cd87e16634aab3599bd5d4bbbe35b3806972156abd",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 1341,
+      "member": "Nvt.Replay.Avalonia.MainWindow.OutputPreviewPlayPauseButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.OutputPreviewPlayPauseButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "71ef9363994fc77d97f4cc48c67bc31630786375e1b12e215dda4e6a9db010c3",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+      "line": 530,
+      "member": "Nvt.Replay.Avalonia.MainWindow.BeginReplayExportAsync(bool)",
+      "symbol": "Result",
+      "syntaxHash": "8711ad272d57772d83789313f284ed3e76083f1fc4cfd3a515cb8847229b6c47",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; domain Result access may need classification.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
+      "line": 33,
+      "member": "Nvt.Replay.Avalonia.MainWindow.fields:zoomHintRevision",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.zoomHintRevision",
+      "syntaxHash": "2ea55210ec0e63f1195ac1316d80aeb5502c63011b201531ef627658cac43d06",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
+      "line": 240,
+      "member": "Nvt.Replay.Avalonia.MainWindow.PaintSurface_OnZoomChanged(object?,EventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.PaintSurface_OnZoomChanged(object?,EventArgs)",
+      "syntaxHash": "fd1ddf1afdb089c8501f06dd03f6bb2742e22782fdf247bca3ee0eb1a48d759a",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
+      "line": 69,
+      "member": "Nvt.Replay.Avalonia.MainWindow.CopyInspectorButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.CopyInspectorButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "678352070f7270ea967b75067f4b3f573e4d14da0f3c8d1705dcde8be7320178",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+      "line": 144,
+      "member": "Nvt.Replay.Avalonia.MainWindow.WorkspaceTabs_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.WorkspaceTabs_OnSelectionChanged(object?,SelectionChangedEventArgs)",
+      "syntaxHash": "f994d82ca43f02de3ac7dfc6bf436b99541298fdf0e746e5c97ace9d0f043fce",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
+      "line": 32,
+      "member": "Nvt.Replay.Avalonia.MainWindow.AttachMarkerEvidenceButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.AttachMarkerEvidenceButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "24245af8ca3499998f4c1c7744e1549fe03a14add9a7f3336a769a8c63a56e1b",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
+      "line": 94,
+      "member": "Nvt.Replay.Avalonia.MainWindow.SaveReviewButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.SaveReviewButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "892281b2f3942f96fac0877ec34bb0c390f4542322ce43cf6a404b608e24da63",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
+      "line": 132,
+      "member": "Nvt.Replay.Avalonia.MainWindow.LoadReviewButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.LoadReviewButton_OnClick(object?,RoutedEventArgs)",
+      "syntaxHash": "a9e73df94a9793a930f872523d38c8d48a87dca277054f784f0d46a58c093a1f",
+      "count": 1,
+      "candidate": false,
+      "note": "",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
+      "line": 34,
+      "member": "Nvt.Replay.Avalonia.MainWindow.AttachMarkerEvidenceButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "9330ca7342f37e0886a3da16751c75ae2b583e31152cc6e1806ea63add9d58d9",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
+      "line": 134,
+      "member": "Nvt.Replay.Avalonia.MainWindow.LoadReviewButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "e3935bc1497a32049a0721fb0c29508dde4d795339d2e72dfaa234d24e8c0f08",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
+      "line": 196,
+      "member": "Nvt.Replay.Avalonia.MainWindow.ApplySidecarButton_OnClick(object?,RoutedEventArgs)",
+      "symbol": "Result",
+      "syntaxHash": "23ee68308987779c0a96b7ab541405318a1a482d82e502e63ce95263954a1d0a",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; domain Result access may need classification.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Avalonia",
+      "path": "src/Nvt.Replay.Avalonia/ViewModels/OutputReportService.cs",
+      "line": 42,
+      "member": "Nvt.Replay.Avalonia.ViewModels.OutputReportService.fields:nextGeneration",
+      "symbol": "Nvt.Replay.Avalonia.ViewModels.OutputReportService.nextGeneration",
+      "syntaxHash": "b3c4caf3d2db9afa8af05f6492e235ee66df0c68059a1575153a9ea7bb6b3a1a",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Rendering",
+      "path": "src/Nvt.Replay.Rendering/AnalysisOutputWriter.cs",
+      "line": 103,
+      "member": "Nvt.Replay.Rendering.AnalysisOutputWriter.WriteTextAsync(string,string,CancellationToken)",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "00ce48b3b86ad1a639630ea05a10ad7619303dc20fd5b5f9234c8d9bbf7898f6",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Rendering",
+      "path": "src/Nvt.Replay.Rendering/ReadableCommunicationLogWriter.cs",
+      "line": 47,
+      "member": "Nvt.Replay.Rendering.ReadableCommunicationLogWriter.WriteAsync(string,IReadOnlyList<SourceRecord>,RegisterAnnotationProjection?,CancellationToken)",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "a4ca2eeead3add26218f3141747c5ea3b9a73514dbef4daa1e963715ddd590c7",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Rendering",
+      "path": "src/Nvt.Replay.Rendering/ReadableCommunicationLogWriter.cs",
+      "line": 59,
+      "member": "Nvt.Replay.Rendering.ReadableCommunicationLogWriter.WriteAsync(string,IReadOnlyList<SourceRecord>,RegisterAnnotationProjection?,CancellationToken)",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "51fb233dde3bd5e86034405c6c1a9eb8623c9abe30feb82de355b365b12608af",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "generationFields",
+      "project": "Nvt.Replay.Rendering",
+      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
+      "line": 21,
+      "member": "Nvt.Replay.Rendering.ReplayOutputPlanService.fields:nextGeneration",
+      "symbol": "Nvt.Replay.Rendering.ReplayOutputPlanService.nextGeneration",
+      "syntaxHash": "b3c4caf3d2db9afa8af05f6492e235ee66df0c68059a1575153a9ea7bb6b3a1a",
+      "count": 1,
+      "candidate": false,
+      "note": "Increment/adoption semantics require review.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Architecture.Tests",
+      "path": "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs",
+      "line": 33,
+      "member": "Nvt.Replay.Architecture.Tests.TempWorkspace",
+      "symbol": "Nvt.Replay.Architecture.Tests.TempWorkspace",
+      "syntaxHash": "de05ef386721c5ee4d72b7a051eae109a92322b03fceb6c1ef9a030fb4b44319",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/AdvancedWorkspaceSnapshotTests.cs",
+      "line": 21,
+      "member": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests",
+      "symbol": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests",
+      "syntaxHash": "11a394f1af867fa50f2a1eca6ef15ec8bbf554c217b1b2e44fdca7de45c3c9ac",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/AdvancedWorkspaceSnapshotTests.cs",
+      "line": 313,
+      "member": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests.Output_export_progress_uses_the_info_rail_without_reducing_preview_controls()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "09b8a2fec148a5674d1b66d24ac8ce912254b0c1c03d4902304130904e7b0c59",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/GapSnapshotTests.cs",
+      "line": 115,
+      "member": "Nvt.Replay.Avalonia.Tests.GapSnapshotTests.CaptureOutputExportAsync(bool,string)",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "a6f412aa12b7c0b9b2163f61bbf76c43164c1ca6a22e549026bd9d2286bffba4",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 27,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests",
+      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests",
+      "syntaxHash": "b81c455270485e9c1a306b29e2daddf708e5d4267b3940468b5ff52f7946d5eb",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1987,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Background_output_job_reports_progress_allows_navigation_and_cancels_without_blocking()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "b799b3db308adee7d6e9d1c6cd14330350e279a1fa42b058e625a9d7b1fb8e30",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 3404,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Evidence_attachment_is_discarded_when_a_capture_load_supersedes_the_picker()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "05c3e323756bc44658d581580e60b5bbd37994f8228000f55a0a1456becd8130",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 3443,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Sidecar_load_is_discarded_when_a_capture_load_supersedes_the_read()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "8176c80a7cfe004c4a97372a325663f8083b69bef7d8b5c28ec4756aee245051",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1627,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Cancelling_a_new_decode_keeps_the_previous_replay_markers_and_ignores_late_progress()",
+      "symbol": "Wait",
+      "syntaxHash": "cd0f63ae5d92697775955dd6177ab34187176f8bdd16e10acf37105b0ec89680",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1630,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Cancelling_a_new_decode_keeps_the_previous_replay_markers_and_ignores_late_progress()",
+      "symbol": "Wait",
+      "syntaxHash": "e93ccdbb66b36f2e52662d835308ab8a038733700252a4fbdd2d55f7b8662504",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1666,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Closing_the_window_cancels_an_inflight_decode_without_late_UI_updates()",
+      "symbol": "Wait",
+      "syntaxHash": "cd0f63ae5d92697775955dd6177ab34187176f8bdd16e10acf37105b0ec89680",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1670,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Closing_the_window_cancels_an_inflight_decode_without_late_UI_updates()",
+      "symbol": "Wait",
+      "syntaxHash": "e93ccdbb66b36f2e52662d835308ab8a038733700252a4fbdd2d55f7b8662504",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1704,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Opening_another_capture_supersedes_an_inflight_decode_without_a_stale_commit()",
+      "symbol": "Wait",
+      "syntaxHash": "cd0f63ae5d92697775955dd6177ab34187176f8bdd16e10acf37105b0ec89680",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1708,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Opening_another_capture_supersedes_an_inflight_decode_without_a_stale_commit()",
+      "symbol": "Wait",
+      "syntaxHash": "e93ccdbb66b36f2e52662d835308ab8a038733700252a4fbdd2d55f7b8662504",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1742,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.A_stale_cancelled_load_cannot_overwrite_the_newer_capture_or_busy_state()",
+      "symbol": "Wait",
+      "syntaxHash": "cd0f63ae5d92697775955dd6177ab34187176f8bdd16e10acf37105b0ec89680",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 1746,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.A_stale_cancelled_load_cannot_overwrite_the_newer_capture_or_busy_state()",
+      "symbol": "Wait",
+      "syntaxHash": "e93ccdbb66b36f2e52662d835308ab8a038733700252a4fbdd2d55f7b8662504",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 2123,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Slow_output_planning_is_single_flight_and_does_not_block_tab_navigation()",
+      "symbol": "Wait",
+      "syntaxHash": "cd0f63ae5d92697775955dd6177ab34187176f8bdd16e10acf37105b0ec89680",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 2161,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Output_report_is_single_flight_across_preview_heatmap_package_and_caller_cancellation()",
+      "symbol": "Wait",
+      "syntaxHash": "cd0f63ae5d92697775955dd6177ab34187176f8bdd16e10acf37105b0ec89680",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "line": 2307,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Superseded_capture_cannot_publish_a_late_output_report()",
+      "symbol": "Wait",
+      "syntaxHash": "c921165e1e190fb7a2ceeef54c919af237c63d4a70c425edacb03df14a2f2fec",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/RegisterProjectionPresentationTests.cs",
+      "line": 10,
+      "member": "Nvt.Replay.Avalonia.Tests.RegisterProjectionPresentationTests",
+      "symbol": "Nvt.Replay.Avalonia.Tests.RegisterProjectionPresentationTests",
+      "syntaxHash": "76faccd62bacdc14dccb2327659bf74f6c8ada20d307fd6290572a990fd50930",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs",
+      "line": 10,
+      "member": "Nvt.Replay.Avalonia.Tests.SourceFileNavigatorAdoptionParityTests",
+      "symbol": "Nvt.Replay.Avalonia.Tests.SourceFileNavigatorAdoptionParityTests",
+      "syntaxHash": "aecffc0b610eb522a59b14909de06cbb2a715a838cac3ee51a08131cbe61184b",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/AtomicOutputAdoptionParityTests.cs",
+      "line": 8,
+      "member": "Nvt.Replay.Tests.AtomicOutputAdoptionParityTests",
+      "symbol": "Nvt.Replay.Tests.AtomicOutputAdoptionParityTests",
+      "syntaxHash": "f8ae848a846fcc60e6e9eaaab3cc85040a3c64913212f3c0b10de077d8074091",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/BuiltInAdapterAcceptanceContractTests.cs",
+      "line": 7,
+      "member": "Nvt.Replay.Tests.BuiltInAdapterAcceptanceContractTests",
+      "symbol": "Nvt.Replay.Tests.BuiltInAdapterAcceptanceContractTests",
+      "syntaxHash": "8afd0056882bbb5a6676ee3715ac8200bbac633ec8223be01feeb64468fe94cf",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "line": 8,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests",
+      "symbol": "Nvt.Replay.Tests.CaptureAnalysisTests",
+      "syntaxHash": "4fe47c270248b4f6bbb4f260f0a13342b96452e017a08956940fb657262dcd34",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/CaptureDecodeControllerTests.cs",
+      "line": 18,
+      "member": "Nvt.Replay.Tests.CaptureDecodeControllerTests.New_operation_cancels_and_prevents_stale_first_publication()",
+      "symbol": "Wait",
+      "syntaxHash": "3f51625b60ff79a0d62c87d3c4705d9d10f7054e2edc8161b73f798ee88dfb0b",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/CaptureDecodeControllerTests.cs",
+      "line": 47,
+      "member": "Nvt.Replay.Tests.CaptureDecodeControllerTests.Cancellation_and_failure_preserve_the_last_successful_result()",
+      "symbol": "Wait",
+      "syntaxHash": "3f51625b60ff79a0d62c87d3c4705d9d10f7054e2edc8161b73f798ee88dfb0b",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/CaptureDecodeControllerTests.cs",
+      "line": 220,
+      "member": "Nvt.Replay.Tests.CaptureDecodeControllerTests.Prepared_and_path_requests_share_latest_wins_generation_and_publication()",
+      "symbol": "Wait",
+      "syntaxHash": "f1da9df6f7f99e190da73ca6f42c0a05179db4ab2d7a383c1df6dc3871ef2ffb",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/CaptureDecodeControllerTests.cs",
+      "line": 261,
+      "member": "Nvt.Replay.Tests.CaptureDecodeControllerTests.Prepared_capture_cancellation_and_failure_keep_the_last_successful_result()",
+      "symbol": "Wait",
+      "syntaxHash": "f1da9df6f7f99e190da73ca6f42c0a05179db4ab2d7a383c1df6dc3871ef2ffb",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/CaptureDecodeControllerTests.cs",
+      "line": 300,
+      "member": "Nvt.Replay.Tests.CaptureDecodeControllerTests.BlockingProgress.Report(CaptureDecodeProgress)",
+      "symbol": "Wait",
+      "syntaxHash": "04bc6c0e36690cb87617f54cad55ef16a636c053e7e9f3c444f72a7a7ec8962b",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/CommonNdsInspectorTests.cs",
+      "line": 7,
+      "member": "Nvt.Replay.Tests.CommonNdsInspectorTests",
+      "symbol": "Nvt.Replay.Tests.CommonNdsInspectorTests",
+      "syntaxHash": "f2499faffc5984d51beb8b4ba95f9c8ff79d22bcb1516b6c2452a60fb42b30d6",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/DecodedI2cAdapterTests.cs",
+      "line": 9,
+      "member": "Nvt.Replay.Tests.DecodedI2cAdapterTests",
+      "symbol": "Nvt.Replay.Tests.DecodedI2cAdapterTests",
+      "syntaxHash": "b79fc7ea8f2d3e1513974b19acb6802d942e1cb4a198efcbf72c7b85e0a12a67",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/DecodedI2cAdapterTests.cs",
+      "line": 85,
+      "member": "Nvt.Replay.Tests.DecodedI2cAdapterTests.Excel_malformed_timestamp_is_diagnosed_and_cancel_is_observed()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "5fe6b2f8925e6b5e2b0f8895e6c8a27afeb9ab76192618b02482b9a1e12701ff",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/DecodedI2cAdapterTests.cs",
+      "line": 401,
+      "member": "Nvt.Replay.Tests.DecodedI2cAdapterTests.Cancellation_is_observed_before_records_are_committed(ISourceAdapter,string,Func<string>)",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "5fe6b2f8925e6b5e2b0f8895e6c8a27afeb9ab76192618b02482b9a1e12701ff",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/Desay97NdsInspectorTests.cs",
+      "line": 8,
+      "member": "Nvt.Replay.Tests.Desay97NdsInspectorTests",
+      "symbol": "Nvt.Replay.Tests.Desay97NdsInspectorTests",
+      "syntaxHash": "6aab66d6ccf5cadddbd6cc518d5add9be1b0ebacdca7796f0e1c12b6948797cf",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 21,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Runs_on_a_background_thread_reports_progress_and_allows_only_one_active_job()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "ed1c470e319f02bb9476f3473e7835c0578a42f59739ebb266fc3456d61da8e9",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 56,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancel_is_idempotent_and_waits_for_a_cooperative_job_to_finish()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "9a5f654e0bebf89011c4fdef59ec33e361ea75583491d53381aaa1fc97a0de48",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 81,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancellation_callbacks_can_read_service_state_without_running_under_the_service_lock()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "cae1b6fb25e73277d0fcd7f3f3de07e740fd133dae1017ec6924a223bc2f46a8",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 109,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.A_result_returned_after_cancellation_is_suppressed()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "c018029d5449d7b6965b62913d67775a3f3b847d6334bb853f89ca268e7a7c8f",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 140,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Late_progress_from_an_old_job_cannot_replace_the_new_job_snapshot()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "fb6dcc913887fac5150cd98036bbc24a938e51a20d09889589786e60b17a299f",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 45,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Runs_on_a_background_thread_reports_progress_and_allows_only_one_active_job()",
+      "symbol": "Result",
+      "syntaxHash": "8711ad272d57772d83789313f284ed3e76083f1fc4cfd3a515cb8847229b6c47",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; domain Result access may need classification.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 71,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancel_is_idempotent_and_waits_for_a_cooperative_job_to_finish()",
+      "symbol": "Result",
+      "syntaxHash": "8711ad272d57772d83789313f284ed3e76083f1fc4cfd3a515cb8847229b6c47",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; domain Result access may need classification.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 122,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.A_result_returned_after_cancellation_is_suppressed()",
+      "symbol": "Result",
+      "syntaxHash": "8711ad272d57772d83789313f284ed3e76083f1fc4cfd3a515cb8847229b6c47",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; domain Result access may need classification.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "line": 85,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancellation_callbacks_can_read_service_state_without_running_under_the_service_lock()",
+      "symbol": "GetResult",
+      "syntaxHash": "aafc221f49b6f95b7325bb257c5be32c46ed94987730bad9e0eae4e5162a1e8e",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/NdsCaptureSessionTests.cs",
+      "line": 7,
+      "member": "Nvt.Replay.Tests.NdsCaptureSessionTests",
+      "symbol": "Nvt.Replay.Tests.NdsCaptureSessionTests",
+      "syntaxHash": "0deba5b9683c25c1ef2e74a15ca7392c4247a7aa6f91ec3d01edefcc7f6fb4f7",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/NdsCommunicationLogAdapterTests.cs",
+      "line": 7,
+      "member": "Nvt.Replay.Tests.NdsCommunicationLogAdapterTests",
+      "symbol": "Nvt.Replay.Tests.NdsCommunicationLogAdapterTests",
+      "syntaxHash": "bdedc1a54fa114bbeec74439b1085cc1c9326d35209574b6ee86a13c81ae1479",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/NdsCommunicationLogAdapterTests.cs",
+      "line": 226,
+      "member": "Nvt.Replay.Tests.NdsCommunicationLogAdapterTests.Reader_observes_cancellation_before_publishing_a_record()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "9e824845270a8640c61af0437e2f163595e2d1bdb6ed7ea39efe7cf1828a3115",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/NvtRegisterProfileSchemaTests.cs",
+      "line": 6,
+      "member": "Nvt.Replay.Tests.NvtRegisterProfileSchemaTests",
+      "symbol": "Nvt.Replay.Tests.NvtRegisterProfileSchemaTests",
+      "syntaxHash": "2af10a3236dc165664eb01da077039a79465838e36a9bd667c64961446b09616",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ReadableCommunicationLogWriterTests.cs",
+      "line": 8,
+      "member": "Nvt.Replay.Tests.ReadableCommunicationLogWriterTests",
+      "symbol": "Nvt.Replay.Tests.ReadableCommunicationLogWriterTests",
+      "syntaxHash": "0f53b68a8a1464ab83f76cd3ca44106cd411da136b0be2daba547833bdc51c00",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ReplayCliContractTests.cs",
+      "line": 5,
+      "member": "Nvt.Replay.Tests.ReplayCliContractTests",
+      "symbol": "Nvt.Replay.Tests.ReplayCliContractTests",
+      "syntaxHash": "c6060e81147d55c2c057636a265f6d0e2ecac54c85554a97b35ea75ce4396201",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "line": 9,
+      "member": "Nvt.Replay.Tests.ReplayExportTests",
+      "symbol": "Nvt.Replay.Tests.ReplayExportTests",
+      "syntaxHash": "c492b109417f57886917bde88526de4f75128be60e19945521868202c3c82de9",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ReplayOutputWorkspaceTests.cs",
+      "line": 185,
+      "member": "Nvt.Replay.Tests.ReplayOutputWorkspaceTests.Plan_service_is_non_blocking_single_flight_and_reuses_sampling_for_resolution_changes()",
+      "symbol": "Wait",
+      "syntaxHash": "244c41f735b11730eb421d5ab8c83300c87f77ec9570e9cee494d24c0862fc38",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "blockingWait",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ReplayOutputWorkspaceTests.cs",
+      "line": 194,
+      "member": "Nvt.Replay.Tests.ReplayOutputWorkspaceTests.Plan_service_is_non_blocking_single_flight_and_reuses_sampling_for_resolution_changes()",
+      "symbol": "Wait",
+      "syntaxHash": "f4dc9fca6701e61bf296ec53a37ae511a25d410159f11acbf824f875c2c44bdb",
+      "count": 1,
+      "candidate": true,
+      "note": "Syntax candidate; Task/ValueTask and dedicated-thread approval are H03/review classifications.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "workspaceDuplicates",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ReplaySidecarTests.cs",
+      "line": 8,
+      "member": "Nvt.Replay.Tests.ReplaySidecarTests",
+      "symbol": "Nvt.Replay.Tests.ReplaySidecarTests",
+      "syntaxHash": "85857637fe5a7c64872d9c563f4849360f615ca622f87079c9e5b16733897053",
+      "count": 1,
+      "candidate": true,
+      "note": "Temp-directory lifecycle clone candidate.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    },
+    {
+      "rule": "asyncVoid",
+      "project": "Nvt.Replay.Tests",
+      "path": "tests/Nvt.Replay.Tests/ReplaySidecarTests.cs",
+      "line": 98,
+      "member": "Nvt.Replay.Tests.ReplaySidecarTests.Interrupted_atomic_write_preserves_prior_output_and_removes_temporary_file()",
+      "symbol": "async-lambda:unresolved-void-delegate",
+      "syntaxHash": "91e3868268810df1bcec20d957541d6792b31a2f38e6c1ef4a97cba4346bab8a",
+      "count": 1,
+      "candidate": true,
+      "note": "Unresolved conversions are retained as candidates; H03 resolves project references.",
+      "owner": "NFU",
+      "removeBy": "2026-10-31"
+    }
+  ],
+  "entities": [
+    {
+      "project": "Nvt.Replay.Analysis",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Analysis.CaptureAnalyzer.Analyze(string,string,ReplayDecodeConfiguration,EvidenceStatus,ITouchReplaySession,IEnumerable<ReplayDiagnostic>,ReviewSession?,AnalysisRange?,int,int,int,int,CancellationToken,IReadOnlyList<ITouchReplaySnapshot>?)",
+      "locations": [
+        "src/Nvt.Replay.Analysis/CaptureAnalysis.cs"
+      ],
+      "line": 114,
+      "contentHash": "12ed390457946fc249d470d78859392a3525b84926c05e6dd9318be43db2572f",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 203
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Analysis",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Analysis.CaptureAnalyzer.BuildAsilSummary(IReadOnlyList<AnalysisDiagnostic>,IReadOnlyList<AnalysisEvent>,ReviewSession?,CancellationToken)",
+      "locations": [
+        "src/Nvt.Replay.Analysis/CaptureAnalysis.cs"
+      ],
+      "line": 318,
+      "contentHash": "d466384c2b25373771a6a17e7521d92eeb434772de98c2e66ba3d69a30f5b486",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 95
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "file",
+      "symbol": "file:Nvt.Replay.Avalonia.Controls.ReplayPaintSurface;Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.ContactLabelData;Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.PaintPalette",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs"
+      ],
+      "line": 1,
+      "contentHash": "179d762ca93d2b9783453dcbf76bb8e0a62af0eb4d747904aa345dce654467bc",
+      "locationLines": {},
+      "ceilings": {
+        "fileLines": 948
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.DrawLegend(DrawingContext,Rect,ReplayScene)",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs"
+      ],
+      "line": 533,
+      "contentHash": "cb179c3eb46a731b08b9d8a5a722521a8200e19cb279446be6415b0080524305",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 86
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "type",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.CaptureSetup.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
+        "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs"
+      ],
+      "line": 29,
+      "contentHash": "e2cea39ec3d7e8d7db727cfe7f064a418b0abee2536423991f382f195cda72c8",
+      "locationLines": {
+        "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.CaptureSetup.cs": 10,
+        "src/Nvt.Replay.Avalonia/MainWindow.Output.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.Settings.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs": 29,
+        "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs": 29
+      },
+      "ceilings": {
+        "stateMembers": 69,
+        "partialFiles": 10,
+        "viewTypeLines": 5611
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow..ctor()",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs"
+      ],
+      "line": 33,
+      "contentHash": "3d2042c37f3e6955ec7ce9b0870ea78c283f07dbd1499d7ec8aeabb1e267928c",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 109
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "file",
+      "symbol": "file:Nvt.Replay.Avalonia.MainWindow;Nvt.Replay.Avalonia.MainWindow.CaptureDecodePresentation;Nvt.Replay.Avalonia.MainWindow.InlineProgress`1;Nvt.Replay.Avalonia.MainWindow.SourceAdapterChoice",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs"
+      ],
+      "line": 1,
+      "contentHash": "e50d6b3d51036dcb106fab7d444386737881407c229f035282614863e739b125",
+      "locationLines": {},
+      "ceilings": {
+        "fileLines": 1231
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.OpenCaptureAsync(string,string?,bool)",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs"
+      ],
+      "line": 106,
+      "contentHash": "a1e2e903fcbb267dfaf549968aa8e1d8ee17a92fdb00d7bf6948bf963a089a9f",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 139
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.DecodeSelectedAsync(bool,ReviewWorkspaceState?,TabItem?)",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs"
+      ],
+      "line": 312,
+      "contentHash": "78a58ba93eaabff62bf78585301b89fa9c59f33f108d538a6af75e3ac53e0a51",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 183
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ClearSession()",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs"
+      ],
+      "line": 907,
+      "contentHash": "2fe95238cd5b564f1ff51e8fc3bd421f4954d641a5f8688ad4483adb4edb0082",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 163
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "file",
+      "symbol": "file:Nvt.Replay.Avalonia.MainWindow;Nvt.Replay.Avalonia.MainWindow.OutputOperationIdentity",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.Output.cs"
+      ],
+      "line": 1,
+      "contentHash": "a69bd42d9bbe80c8ebe530e18fbb564c0077858cf8d541c849595468b61b48f3",
+      "locationLines": {},
+      "ceilings": {
+        "fileLines": 1480
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.BeginReplayExportAsync(bool)",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.Output.cs"
+      ],
+      "line": 409,
+      "contentHash": "300d6b589778e5ec62f189a8b2b58e76dc2a9464f4b296bd6e352de64fb9d279",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 143
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "file",
+      "symbol": "file:Nvt.Replay.Avalonia.MainWindow;Nvt.Replay.Avalonia.MainWindow.ReviewOperationIdentity;Nvt.Replay.Avalonia.MainWindow.ReviewWorkspaceState",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs"
+      ],
+      "line": 1,
+      "contentHash": "43457230c2dff46947d8dd4664ec93e627fe7835e1901fc7aa0b3e59c90d283a",
+      "locationLines": {},
+      "ceilings": {
+        "fileLines": 1023
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.MainWindow.ExecuteShortcut(ReplayShortcutAction)",
+      "locations": [
+        "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs"
+      ],
+      "line": 272,
+      "contentHash": "1058c24541e3efff4f7f13e1957ea58714fda756a56572e9b1d774b7f11d79a2",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 88
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Cli",
+      "kind": "member",
+      "symbol": "ReplayCli.ExportReplayAsync(string[],TextWriter,TextWriter,bool)",
+      "locations": [
+        "src/Nvt.Replay.Cli/Program.cs"
+      ],
+      "line": 126,
+      "contentHash": "a3ef44cd2ce71fd74722f8fc1b0c90d22cf36557d0604bc17bee05ab0e830dda",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 132
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Cli",
+      "kind": "member",
+      "symbol": "ReplayCli.AnalyzeAsync(string[],TextWriter,TextWriter,bool)",
+      "locations": [
+        "src/Nvt.Replay.Cli/Program.cs"
+      ],
+      "line": 259,
+      "contentHash": "a07ffd6cd0fe6dadb51d2686726cf19cc09e3854c7faf2a8c641909ada0fd330",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 111
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Formats",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Formats.Common.CommonEventBufferDecoder.Decode(SourceRecord,CommonEventBufferVersion)",
+      "locations": [
+        "src/Nvt.Replay.Formats/Common/CommonEventBufferDecoder.cs"
+      ],
+      "line": 11,
+      "contentHash": "832c2e9cc7114ddfeea54ac472ae27aa46a2968d1abbd288c41b4150a4319893",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 147
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Formats",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Formats.Desay97.Desay97Assembler.Assemble(IEnumerable<SourceRecord>,CancellationToken)",
+      "locations": [
+        "src/Nvt.Replay.Formats/Desay97/Desay97Assembler.cs"
+      ],
+      "line": 22,
+      "contentHash": "688cace849b29d76edc8ce1ec4077747b142109a37cc38cbe6192d99773fcabd",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 130
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Formats",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Formats.Desay97.Desay97Decoder.Decode(Desay97AssembledPacket,Desay97Profile)",
+      "locations": [
+        "src/Nvt.Replay.Formats/Desay97/Desay97Decoder.cs"
+      ],
+      "line": 11,
+      "contentHash": "870ec1cc7d16ccb066bfaa98cffc0025558928d0e781305a97c1dd049d5b63d7",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 110
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Rendering",
+      "kind": "file",
+      "symbol": "file:Nvt.Replay.Rendering.ReplayExportClock;Nvt.Replay.Rendering.ReplayExportKind;Nvt.Replay.Rendering.ReplayExportOptions;Nvt.Replay.Rendering.ReplayExportProgress;Nvt.Replay.Rendering.ReplayExportResult;Nvt.Replay.Rendering.ReplayFramePlan;Nvt.Replay.Rendering.ReplayFramePlanEntry;Nvt.Replay.Rendering.ReplayFramePlanIdentity;Nvt.Replay.Rendering.ReplayFramePlanSnapshot;Nvt.Replay.Rendering.ReplayRangeExporter;Nvt.Replay.Rendering.ReplayVideoManifest",
+      "locations": [
+        "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs"
+      ],
+      "line": 1,
+      "contentHash": "6e3decc7cf5e0eec1a9e4a9edb21bd279348bec676df88373437bf32af751d2c",
+      "locationLines": {},
+      "ceilings": {
+        "fileLines": 840
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Sources",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Sources.AcuteDecodedI2cAdapter.ReadAsync(SourceOpenContext,CancellationToken)",
+      "locations": [
+        "src/Nvt.Replay.Sources/AcuteDecodedI2cAdapter.cs"
+      ],
+      "line": 34,
+      "contentHash": "8d49ed12e29efa26cf454b1294ff00afb67abcf3ebc0952e74faf271114af258",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 103
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Sources",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Sources.DslDecodedI2cAdapter.ReadAsync(SourceOpenContext,CancellationToken)",
+      "locations": [
+        "src/Nvt.Replay.Sources/DslDecodedI2cAdapter.cs"
+      ],
+      "line": 25,
+      "contentHash": "1d47f762aeae11c2b897d94752950d6bb6521b3d71a0290e1f2b38fa0611aa36",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 105
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Sources",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Sources.KingstVisDecodedI2cAdapter.ReadAsync(SourceOpenContext,CancellationToken)",
+      "locations": [
+        "src/Nvt.Replay.Sources/KingstVisDecodedI2cAdapter.cs"
+      ],
+      "line": 31,
+      "contentHash": "3118bc1be1e0d8953510355bb9e704047e7a55d810ea370a6b8b26029460d9ab",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 90
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Sources",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Sources.NdsCommunicationLogAdapter.ReadAsync(SourceOpenContext,CancellationToken)",
+      "locations": [
+        "src/Nvt.Replay.Sources/NdsCommunicationLogAdapter.cs"
+      ],
+      "line": 62,
+      "contentHash": "649ad1da1ce104514cbbb96924942e34489d13c7a636940cf965b5b1d8b451e2",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 82
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Sources",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Sources.NvtRegisterProfileInference.Infer(IEnumerable<SourceRecord>,int)",
+      "locations": [
+        "src/Nvt.Replay.Sources/NvtRegisterProfileInference.cs"
+      ],
+      "line": 68,
+      "contentHash": "1a163303c8ca317a953cd2a7b4f81e4895651510a9192156b36b4a02961455d6",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 93
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "file",
+      "symbol": "file:Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs"
+      ],
+      "line": 1,
+      "contentHash": "217461513f254aaf416ca7a4a0c0f807ef494e0dd27727a63cfc9e91d786803a",
+      "locationLines": {},
+      "ceilings": {
+        "fileLines": 3910
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Golden_capture_renders_distinct_Paint_and_exact_MP4_preview_themes()",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs"
+      ],
+      "line": 465,
+      "contentHash": "7eb6e9c151e92952544dc4d4d38dfa2956db350e17d12cfbaf124ac3d47fe8a1",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 102
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Inspector_header_layers_copy_and_all_break_visibility_match_the_selected_golden_frame()",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs"
+      ],
+      "line": 613,
+      "contentHash": "348cbc5a323e6f5bed7efa8d1df6be0bf02b0f61e64223360e5fb57f63638d1e",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 87
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Output_selector_shows_one_primary_surface_and_video_settings_drive_preview_sampling()",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs"
+      ],
+      "line": 880,
+      "contentHash": "efa4d7882c654a3e12fab8def57f7ea0fc76e8d4aef31919e91b02fe61fa1d91",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 154
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Paint_workspace_is_authoritative_and_applies_the_smallest_redraw_for_each_setting()",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs"
+      ],
+      "line": 1180,
+      "contentHash": "982913e8ac66aa48759e9a96f4fc1e74c706ceecfed4ff4627085d239d06b9ab",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 95
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Output_controls_project_one_workspace_and_no_op_custom_input_keeps_the_plan()",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs"
+      ],
+      "line": 1765,
+      "contentHash": "89ca2b136a7ab98902464d39cb9d6c26aceb79dccd86eaca144700053e878b46",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 92
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Timeline_toolbar_groups_actions_and_places_counts_beside_their_tracks_at_minimum_width()",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs"
+      ],
+      "line": 2928,
+      "contentHash": "70be58260103b12e58d5d559ae164975b4a1de3f6365ce995f3857e9d74fffa7",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 105
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "kind": "member",
+      "symbol": "Nvt.Replay.Avalonia.Tests.VisualTestCapture.WriteDiff(byte[],byte[],string)",
+      "locations": [
+        "tests/Nvt.Replay.Avalonia.Tests/VisualTestCapture.cs"
+      ],
+      "line": 163,
+      "contentHash": "1bbebc459f830610b95f36cfe912a691350cfb738f0cf5b76dc4b7cd2c2ae50b",
+      "locationLines": {},
+      "ceilings": {
+        "methodLines": 96
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    },
+    {
+      "project": "Nvt.Replay.Tests",
+      "kind": "file",
+      "symbol": "file:Nvt.Replay.Tests.ReplayExportTests;Nvt.Replay.Tests.ReplayExportTests.FakeReplay;Nvt.Replay.Tests.ReplayExportTests.FakeSnapshot;Nvt.Replay.Tests.ReplayExportTests.InlineProgress`1",
+      "locations": [
+        "tests/Nvt.Replay.Tests/ReplayExportTests.cs"
+      ],
+      "line": 1,
+      "contentHash": "1b955261a051dfab8ca88956884a8b4525f6b5f2951c68d651206c0e42038104",
+      "locationLines": {},
+      "ceilings": {
+        "fileLines": 840
+      },
+      "owner": "NFU",
+      "issue": "health-refactor/2026-10-31"
+    }
+  ]
+}

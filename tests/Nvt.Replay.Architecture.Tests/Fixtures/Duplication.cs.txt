@@ -1,0 +1,16 @@
+class TempDir { }
+class FakeClock : TimeProvider { }
+class FakeReplay { }
+class Examples
+{
+    string FindRepositoryRoot() => "root";
+    void ExamplesOnly()
+    {
+        Path.GetTempPath();
+        Task.Delay(1);
+        Stopwatch.StartNew();
+        UseHeadless();
+        new ProcessStartInfo();
+        File.ReadAllText("Owner.cs");
+    }
+}
