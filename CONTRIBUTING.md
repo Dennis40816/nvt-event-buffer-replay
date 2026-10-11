@@ -96,10 +96,9 @@ The required build check is the `build-and-test` job of
 `1.0.x`. The job restores,
 builds, tests, enforces the 800-line per-file ceiling with recorded baseline
 exceptions, tests that checker, then runs the performance smoke gate. The
-proposed H10b CI patch adds a parallel `health` job for full Core health Verify
-with `-Solution Nvt.EventBufferReplay.sln`; the owner applies the workflow patch.
-Until then, CI's old health invocation is incompatible with the adopted checker.
-Local `scripts/verify.ps1` checks Core bundle drift and runs full health Verify.
+parallel `health` job runs full Core health Verify with
+`-Solution Nvt.EventBufferReplay.sln`. Local `scripts/verify.ps1` checks Core
+bundle drift and runs the same Verify.
 `eng/code-health/baseline.json` records structural allowances and diagnostic
 fingerprints; `eng/code-health/test-debt.json` records test-debt fingerprints.
 New fingerprints and growing counts fail, and fixes require the affected ledger

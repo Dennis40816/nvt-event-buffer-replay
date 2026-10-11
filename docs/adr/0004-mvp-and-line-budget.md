@@ -10,7 +10,7 @@ mark a range, and export MP4 plus machine results.
 
 The MVP shipped in v0.1.1. Every handwritten production `.cs` or `.axaml`
 file under `src/` that is not in `eng/file-size-baseline.json` has an 800-line
-ceiling. Grandfathered files are capped at their recorded sizes. A
+ceiling. The six grandfathered files are capped at their recorded sizes. A
 shrink requires lowering its recorded ceiling; an entry is removed when its
 file reaches 800 lines or is deleted. The check reports total and per-project
 line counts without applying a total limit. The owner approves every change
