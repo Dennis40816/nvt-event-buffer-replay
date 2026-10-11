@@ -108,6 +108,7 @@ NFU takes shared modules from the Core repository `Dennis40816/nvt_fw_core`. Own
 | CsvQuoting from Core | 1.0.0 | Done | [#35](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/35) |
 | SourceFileNavigation from Core | 1.0.0 | Done | [#36](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/36) |
 | Core 0.2.0 package upgrade, zero difference (step one of the theme adoption) | 1.0.0 | Done | [#40](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/40) |
+| Core 0.9.0 package upgrade, zero difference (build-time download, no source change) | 1.0.0 | In review | none yet |
 | Theme look, step two: shared palette, buttons and scrollbars from `Nvt.Core.Avalonia`, in one pull request with before and after images for dark and light. Order of the three tools: NFC, then NFU, then NFH | 1.0.0 | In progress. The pull request goes to the owner after the NFC one is in review | none yet |
 | `SuppressEvents()` helper that replaces the `configuring*` and `synchronizing*` guard flags in `MainWindow` | 1.0.0 | Done | [#43](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/43) |
 | Core 1.0.0 adoption (version bump and verification) | 1.0.0 (owner target for Core 1.0.0 is 2026-10-15) | Waiting for the Core 1.0.0 release | none yet |

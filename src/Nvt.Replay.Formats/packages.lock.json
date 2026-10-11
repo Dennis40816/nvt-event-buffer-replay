@@ -5,14 +5,14 @@
       "nvt.replay.core": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Core": "[0.2.0, 0.2.0]"
+          "Nvt.Core": "[0.9.0, 0.9.0]"
         }
       },
       "Nvt.Core": {
         "type": "CentralTransitive",
-        "requested": "[0.2.0, 0.2.0]",
-        "resolved": "0.2.0",
-        "contentHash": "k/mY/z0n19QLga/dln2mLWsRjAFvGUGfcjrhM2WmBCztOsiET6jpKn28lmVykgfEEy7DUd+YFLDRDifsWj7vqg=="
+        "requested": "[0.9.0, 0.9.0]",
+        "resolved": "0.9.0",
+        "contentHash": "D6SPx6FKlf4fVVD6zBSzi2zddwKOqHQy1srz2ZnGJGWd92yJwepFUqEI3Y5I1XOBtQ20zRo4bDdLUl5pPvYTDw=="
       }
     },
     "net10.0/win-x64": {}
