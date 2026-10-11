@@ -182,6 +182,7 @@ public partial class MainWindow : Window
     private void SetBusy(bool busy, string status)
     {
         operationInProgress = busy;
+        _replayShell.RefreshAvailability();
         LoadingProgress.IsVisible = busy;
         LoadButton.IsVisible = !busy;
         LoadButton.IsEnabled = !busy && !outputExportJobs.IsActive;
@@ -274,8 +275,7 @@ public partial class MainWindow : Window
         switch (action)
         {
             case ReplayShortcutAction.LoadCapture:
-                LoadButton_OnClick(this, new RoutedEventArgs());
-                return true;
+                return _replayShell.TryExecuteLoad();
             case ReplayShortcutAction.SaveReview when SaveReviewButton.IsEnabled:
                 SaveReviewButton_OnClick(this, new RoutedEventArgs());
                 return true;
@@ -370,8 +370,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        activeCaptureLoadGeneration = 0;
-        activeCaptureDecodeGeneration = 0;
+        if (_captureWorkspace.Pending is { } pending) _captureWorkspace.Fail(pending);
         ExitOutputFullscreen();
         StopPlayback();
         StopOutputVideoPreviewPlayback();
