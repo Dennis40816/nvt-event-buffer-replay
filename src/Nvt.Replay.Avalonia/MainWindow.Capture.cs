@@ -52,7 +52,7 @@ public partial class MainWindow : Window
     private (UiFailureReporter Reporter, ReplayShellViewModel Shell) CreateUiServices()
     {
         var reporter = new UiFailureReporter(new(TimeProvider.System,
-            (_, status) => SetBusy(false, status), UiFailureReporter.TraceFailure, StopOutputVideoPreviewPlayback, UpdateCaptureSetupValidation));
+            (operation, status) => { if (UiFailureReporter.OwnsBusy(operation)) SetBusy(false, status); else SessionStatusText.Text = status; }, UiFailureReporter.TraceFailure, StopOutputVideoPreviewPlayback, UpdateCaptureSetupValidation));
         return (reporter, new ReplayShellViewModel(_captureWorkspace, new ReplayShellSeams(
             PickCaptureSourceAsync,
             path => OpenCaptureAsync(path, promptForConfiguration: true),

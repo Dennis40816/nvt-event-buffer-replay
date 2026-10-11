@@ -60,6 +60,12 @@ internal sealed class UiFailureReporter
         }
     }
 
+    // Only these operations call SetBusy(true). A failure elsewhere must not clear the busy state of another operation.
+    internal static bool OwnsBusy(string operation) => operation is
+        "capture.load" or "capture.source-adapter" or "capture.startup" or "capture.decode" or
+        "capture.register-profile" or "capture.apply-setup" or "capture.export-readable-log" or
+        "output.export-points" or "output.export-heatmap" or "output.export-analysis";
+
     private static string FailureLabel(string operation) => operation switch
     {
         "capture.load" or "capture.source-adapter" or "capture.startup" => "Load failed",

@@ -30,6 +30,31 @@ public sealed class UiFailureWindowTests
         }
     }
 
+    [AvaloniaTheory]
+    [InlineData("paint.zoom")]
+    [InlineData("workspace.selection")]
+    [InlineData("review.copy-inspector")]
+    [InlineData("task.unobserved")]
+    public async Task FailureOfAnotherOperationKeepsTheBusyState(string operation)
+    {
+        var window = new MainWindow();
+        window.Show();
+        try
+        {
+            window.SetBusy(true, "Opening capture");
+
+            await window.FailureReporter.Runner.RunAsync(operation, _ => Task.FromException(new InvalidOperationException("clipboard locked")));
+
+            Assert.True(Required<Button>(window, "CancelButton").IsVisible);
+            Assert.False(Required<Button>(window, "LoadButton").IsVisible);
+            Assert.Contains("clipboard locked", Required<TextBlock>(window, "SessionStatusText").Text, StringComparison.Ordinal);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [AvaloniaFact]
     public async Task FailureUsesExistingLoadStatusPath()
     {
