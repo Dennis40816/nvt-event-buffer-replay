@@ -78,6 +78,18 @@ public sealed class UnsupportedReplaySidecarVersionException(int version)
 
 public sealed class ReplaySidecarStore
 {
+    private readonly Func<string, CancellationToken, Task<string>> hashFile;
+
+    public ReplaySidecarStore() : this((path, token) => FileHasher.ComputeSha256Async(path, token))
+    {
+    }
+
+    // Tests inject the hash step to use a small size limit or a file that changes during the read.
+    internal ReplaySidecarStore(Func<string, CancellationToken, Task<string>> hashFile)
+    {
+        this.hashFile = hashFile;
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -143,7 +155,7 @@ public sealed class ReplaySidecarStore
         return document with { Markers = markers };
     }
 
-    private static async Task<IReadOnlyList<ReplayEvidenceResolution>> ResolveEvidenceAsync(
+    private async Task<IReadOnlyList<ReplayEvidenceResolution>> ResolveEvidenceAsync(
         string sidecarPath,
         IEnumerable<ReplayMarker> markers,
         CancellationToken cancellationToken)
@@ -163,13 +175,13 @@ public sealed class ReplaySidecarStore
                 {
                     hashMatches = string.Equals(
                         reference.Sha256,
-                        await FileHasher.ComputeSha256Async(resolved, cancellationToken),
+                        await hashFile(resolved, cancellationToken),
                         StringComparison.OrdinalIgnoreCase);
                 }
                 catch (FileNotHashableException exception)
                 {
                     // An evidence file that is too large or still growing must not block the review from opening.
-                    notVerifiedReason = exception.Message;
+                    notVerifiedReason = exception.Reason;
                 }
             }
             result.Add(new ReplayEvidenceResolution(reference, resolved, exists, hashMatches, notVerifiedReason));

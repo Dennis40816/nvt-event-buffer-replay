@@ -59,6 +59,7 @@ public sealed class FileHasherTests
             FileHasher.ComputeSha256Async(stream, 90, Limit, CancellationToken.None));
 
         Assert.Equal("The file changed while it was read. Copy the file and load the copy.", exception.Message);
+        Assert.Equal("The file changed while it was read.", exception.Reason);
     }
 
     [Fact]
