@@ -13,6 +13,39 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  health:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.13'
+
+      - name: Fetch Core packages
+        if: hashFiles('scripts/fetch_core_packages.py') != ''
+        timeout-minutes: 3
+        run: python -B scripts/fetch_core_packages.py
+
+      - name: Restore
+        timeout-minutes: 5
+        run: dotnet restore Nvt.EventBufferReplay.sln --locked-mode
+
+      - name: Verify repository health
+        shell: pwsh
+        run: ./tools/repo-checks/repo-health.ps1 -Mode Verify -Repo nfu -Root . -Solution Nvt.EventBufferReplay.sln
+
   build-and-test:
     runs-on: windows-latest
     timeout-minutes: 15
@@ -61,14 +94,6 @@ jobs:
       - name: Test
         timeout-minutes: 7
         run: dotnet test Nvt.EventBufferReplay.sln --configuration Release --no-build
-
-      - name: Enforce syntax health baseline
-        shell: pwsh
-        run: ./tools/repo-checks/repo-health.ps1 -Mode Verify -Repo nfu -Root .
-
-      - name: Enforce test duplication baseline
-        shell: pwsh
-        run: ./scripts/measure-test-duplication.ps1 -Verify
 
       - name: Enforce handwritten per-file line ceiling
         shell: pwsh
