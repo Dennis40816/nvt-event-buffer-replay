@@ -1,14 +1,15 @@
-class TempDir { }
+// Copyright (c) 2026 Dennis Liu. All rights reserved.
+namespace First;
+class TestWorkspace { }
 class FakeClock : TimeProvider { }
 class FakeReplay { }
 class Examples
 {
-    string FindRepositoryRoot() => "root";
     void ExamplesOnly()
     {
         Path.GetTempPath();
         Task.Delay(1);
-        Stopwatch.StartNew();
+        Assert.Equal(default, Stopwatch.StartNew().Elapsed);
         UseHeadless();
         new ProcessStartInfo();
         File.ReadAllText("Owner.cs");

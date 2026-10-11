@@ -10,11 +10,16 @@ mark a range, and export MP4 plus machine results.
 
 The MVP shipped in v0.1.1. Every handwritten production `.cs` or `.axaml`
 file under `src/` that is not in `eng/file-size-baseline.json` has an 800-line
-ceiling. The six grandfathered files are capped at their recorded sizes. A
+ceiling. Grandfathered files are capped at their recorded sizes. A
 shrink requires lowering its recorded ceiling; an entry is removed when its
 file reaches 800 lines or is deleted. The check reports total and per-project
 line counts without applying a total limit. The owner approves every change
 under `src/` under the repository approval policy.
+
+This file ceiling remains a separate gate. Core health's
+`eng/code-health/baseline.json` records structural and diagnostic debt;
+`eng/code-health/test-debt.json` records test-debt fingerprints. Neither replaces
+`eng/file-size-baseline.json` or relaxes this production-file ceiling.
 
 The former total cap blocked owner-agreed new scope without constraining
 file concentration. The 25,000-line architecture review threshold was
