@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Avalonia;
@@ -40,7 +39,7 @@ public partial class MainWindow : Window
                 FileTypeFilter = [new FilePickerFileType("Raw log evidence") { Patterns = ["*.log", "*.txt", "*.dmesg", "*.trace"] }, FilePickerFileTypes.All],
             });
             return files.SingleOrDefault()?.TryGetLocalPath();
-        }, ComputeEvidenceSha256Async);
+        }, path => FileHasher.ComputeSha256Async(path, CancellationToken.None));
     }
 
     internal async Task AttachSelectedMarkerEvidenceAsync(
@@ -83,12 +82,6 @@ public partial class MainWindow : Window
         {
             SessionStatusText.Text = $"Evidence attach failed · {exception.Message}";
         }
-    }
-
-    private static async Task<string> ComputeEvidenceSha256Async(string path)
-    {
-        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024, true);
-        return Convert.ToHexStringLower(await SHA256.HashDataAsync(stream));
     }
 
     private async void SaveReviewButton_OnClick(object? sender, RoutedEventArgs e)
