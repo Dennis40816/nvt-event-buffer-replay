@@ -16,6 +16,11 @@ file reaches 800 lines or is deleted. The check reports total and per-project
 line counts without applying a total limit. The owner approves every change
 under `src/` under the repository approval policy.
 
+This file ceiling remains a separate gate. Core health's
+`eng/code-health/baseline.json` records structural and diagnostic debt;
+`eng/code-health/test-debt.json` records test-debt fingerprints. Neither replaces
+`eng/file-size-baseline.json` or relaxes this production-file ceiling.
+
 The former total cap blocked owner-agreed new scope without constraining
 file concentration. The 25,000-line architecture review threshold was
 crossed in v0.1.0 without a recorded review. MainWindow code and styles hold

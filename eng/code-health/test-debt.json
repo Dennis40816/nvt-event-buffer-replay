@@ -1,0 +1,797 @@
+{
+  "schemaVersion": 1,
+  "measurementVersion": "roslyn-physical-v1",
+  "snapshotCommit": "6330dab1d4020adf136eedce218810d696906fe3",
+  "findings": [
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs",
+      "syntaxHash": "5799cc8bca5de2ec802b85b922eb73c88c3627c73f85fd1cb465652df9f8fc5f",
+      "project": "Nvt.Replay.Architecture.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Architecture.Tests.ChildProcessFixture.RunAsync(string,string,params string[])",
+      "symbol": "new Process",
+      "rule": "childProcessInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs",
+      "syntaxHash": "c5f81d47d1cfbc6f2900b6aa3c3d178e116a21f00827b38c21c1b8ec0729ff14",
+      "project": "Nvt.Replay.Architecture.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Architecture.Tests.ChildProcessFixture.RunAsync(string,string,params string[])",
+      "symbol": "new ProcessStartInfo",
+      "rule": "childProcessInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs",
+      "syntaxHash": "53decf56e016ca0543939d4b40078f172cb54d5e1a2038da6dd802cad9f8c30e",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.SourceFileNavigatorAdoptionParityTests.OracleOpenDefault(string)",
+      "symbol": "new ProcessStartInfo",
+      "rule": "childProcessInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs",
+      "syntaxHash": "b4cad7009a90588ab4c0bca8ef5a170dd41075b8c5bce69658b1f4ebf8ecdab8",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.SourceFileNavigatorAdoptionParityTests.OracleOpenDefault(string)",
+      "symbol": "Process.Start",
+      "rule": "childProcessInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs",
+      "syntaxHash": "f80dfae987500d26324d5cc53e096954899c12fc541545d4991530a212dd5b3c",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.SourceFileNavigatorAdoptionParityTests.OracleTryStart(string,IReadOnlyList<string>,out string?)",
+      "symbol": "new ProcessStartInfo",
+      "rule": "childProcessInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs",
+      "syntaxHash": "0e470824c97f4e3efd430d536ab4a0d46b72c295a0bff85a05755ede214039fb",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.SourceFileNavigatorAdoptionParityTests.OracleTryStart(string,IReadOnlyList<string>,out string?)",
+      "symbol": "Process.Start",
+      "rule": "childProcessInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/ReplayTrailBatchCacheTests.cs",
+      "syntaxHash": "ca98867285f88164c1ff6826870e3447c0e0e6c4548c80aadf2fb4610d464708",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.ReplayTrailBatchCacheTests.Hundred_thousand_points_render_as_exact_batched_lines_and_markers()",
+      "symbol": "Assert.True",
+      "rule": "elapsedAssertionsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPlaybackScheduleTests.cs",
+      "syntaxHash": "804539f062cd9df8bf1e0578d8fa925fe1021b8f6f783df3fc3891576f8ec161",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPlaybackScheduleTests.Catch_up_bounds_zero_delay_work_per_UI_tick()",
+      "symbol": "Assert.Equal",
+      "rule": "elapsedAssertionsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPlaybackScheduleTests.cs",
+      "syntaxHash": "3156c985eadb5c5da61fc88f13220293a4133eeab2534f7e20e4f9cd6ea5db74",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPlaybackScheduleTests.Catch_up_never_skips_an_alarm_or_QA_pause_frame()",
+      "symbol": "Assert.Equal",
+      "rule": "elapsedAssertionsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPlaybackScheduleTests.cs",
+      "syntaxHash": "a7add4f4ded3b3958483c98c372c9e9309e194517463fa5abec326312adf1cb1",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPlaybackScheduleTests.Catch_up_rejects_a_non_positive_work_budget()",
+      "symbol": "Assert.Throws",
+      "rule": "elapsedAssertionsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPlaybackScheduleTests.cs",
+      "syntaxHash": "ecbd7b534ebb4384c8c81354497c88ee5101e74a2d0eeb6f045e2911bec7d96a",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPlaybackScheduleTests.Catch_up_skips_late_visual_frames_without_shifting_the_absolute_schedule()",
+      "symbol": "Assert.Equal",
+      "rule": "elapsedAssertionsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPlaybackScheduleTests.cs",
+      "syntaxHash": "12e050942898cfd17dfbb1070dc70c8d7a923d0a2613e472c002019fdcd6e8b6",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPlaybackScheduleTests.Catch_up_waits_when_the_next_frame_is_not_due()",
+      "symbol": "Assert.Equal",
+      "rule": "elapsedAssertionsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/TestAppBuilder.cs",
+      "syntaxHash": "bee13ec07414abcd166767acb8d093c3771c0513a792e3dc868b990d7fe13419",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "file:Nvt.Replay.Avalonia.Tests.TestAppBuilder",
+      "symbol": "AvaloniaTestApplication",
+      "rule": "headlessSessionSetups"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/TestAppBuilder.cs",
+      "syntaxHash": "72e85bbb4fcbc5456deb9062255a38253693607629df6bf8b0a46c697fa0322d",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.TestAppBuilder.BuildAvaloniaApp()",
+      "symbol": "UseSkia().UseHeadless",
+      "rule": "headlessSessionSetups"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/InspectorPresentationTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.InspectorPresentationTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/ReviewInspectorWorkspaceTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.ReviewInspectorWorkspaceTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "112d9997cf9110232223d872aa9eda0480173710d42b3ae6a966e0bca6dda35a",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.FakeReplay",
+      "symbol": "FakeReplay",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "112d9997cf9110232223d872aa9eda0480173710d42b3ae6a966e0bca6dda35a",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.FakeReplay",
+      "symbol": "FakeReplay",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayLoopPerformanceTests.cs",
+      "syntaxHash": "112d9997cf9110232223d872aa9eda0480173710d42b3ae6a966e0bca6dda35a",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayLoopPerformanceTests.FakeReplay",
+      "symbol": "FakeReplay",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayOutputWorkspaceTests.cs",
+      "syntaxHash": "112d9997cf9110232223d872aa9eda0480173710d42b3ae6a966e0bca6dda35a",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayOutputWorkspaceTests.FakeReplay",
+      "symbol": "FakeReplay",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPaintWorkspaceTests.cs",
+      "syntaxHash": "112d9997cf9110232223d872aa9eda0480173710d42b3ae6a966e0bca6dda35a",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPaintWorkspaceTests.FakeReplay",
+      "symbol": "FakeReplay",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPaintWorkspaceTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPaintWorkspaceTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayPlaybackControllerTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayPlaybackControllerTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayTrailHistoryTests.cs",
+      "syntaxHash": "112d9997cf9110232223d872aa9eda0480173710d42b3ae6a966e0bca6dda35a",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayTrailHistoryTests.FakeReplay",
+      "symbol": "FakeReplay",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayTrailHistoryTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayTrailHistoryTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayWorkspaceBuilderTests.cs",
+      "syntaxHash": "d89b1600231a665f312cefc2b7d4710d84004a615f68f162e3e9966d4274f409",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayWorkspaceBuilderTests.FakeSnapshot",
+      "symbol": "FakeSnapshot",
+      "rule": "sameNameFakes"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "05152731afc409b46d73b1a2a1535fc627b84adb794f110735f3db9d4cb73c50",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.Analysis_outputs_are_complete_and_heatmap_is_deterministic()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "a41b353234023a9350649b24516c760fc3a159f4002bf2ade1a5f7942dfb02c2",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.Analysis_outputs_are_complete_and_heatmap_is_deterministic()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "bd18e662e892f908b29d5e475cc6924f441c6edb6eb76e8ca4c73ce5daac375c",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.Analysis_outputs_are_complete_and_heatmap_is_deterministic()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "3d72fe548fe9afe706ac7160ac53e94f0d632576442797756fae5f278ac11992",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.Cancelled_output_preserves_prior_file_and_removes_temporary_file()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "5a57bb3f49cd85aead4cdafa4eb3e11f11c1feed362f6618f18e8fc70d377b51",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.Successful_retry_replaces_a_stale_recovery_journal_and_commits_manifest_last()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/NvtRegisterProfileSchemaTests.cs",
+      "syntaxHash": "ce75626eca2666249c332cd1aa527cccce2569914bc8a3c68ebe20469b9c3215",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.NvtRegisterProfileSchemaTests.Save_and_load_roundtrip_the_canonical_document()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReadableCommunicationLogWriterTests.cs",
+      "syntaxHash": "72c10412e9acd1102946071edfa022003165c0df23e8c1d8dd6b546ebd1f9652",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReadableCommunicationLogWriterTests.Writer_overlays_selected_profile_without_modifying_the_source_record()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReadableCommunicationLogWriterTests.cs",
+      "syntaxHash": "72c10412e9acd1102946071edfa022003165c0df23e8c1d8dd6b546ebd1f9652",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReadableCommunicationLogWriterTests.Writer_pairs_csv_and_jsonl_with_profile_semantics_and_original_provenance()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReadableCommunicationLogWriterTests.cs",
+      "syntaxHash": "d058a156143a31e4da23eb64dc0102989bee8a0c18e4ba0db3ff3089b48e9a6e",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReadableCommunicationLogWriterTests.Writer_pairs_csv_and_jsonl_with_profile_semantics_and_original_provenance()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayCliContractTests.cs",
+      "syntaxHash": "35b5f77f470c1fe2d883cc396621b641424adc45a4e3c349c08a24251b4b6f29",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayCliContractTests.Analyze_manifest_keeps_format_evidence_and_decode_configuration()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "6608c4caa03feff939ac49dfccaaf89c26a1ee92d3dea714aa6d4aa4eb1ab605",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.Existing_output_is_never_overwritten()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "665e00fd7cd7ae11721da6a1e86cc719c5808d960a0c4e913e786509a13a1ca0",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.Export_manifest_records_the_visual_settings_used_by_preview_and_mp4()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "665e00fd7cd7ae11721da6a1e86cc719c5808d960a0c4e913e786509a13a1ca0",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.Missing_encoder_atomically_exports_a_headless_PNG_sequence_and_manifest()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "665e00fd7cd7ae11721da6a1e86cc719c5808d960a0c4e913e786509a13a1ca0",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.Prebuilt_preview_plan_is_the_exact_final_sampler_without_replanning()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplaySidecarTests.cs",
+      "syntaxHash": "11680941d09d0145fdcd252d23ad47c2cbccafe99cc5deaa5da7960b2a329d01",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplaySidecarTests.Interrupted_atomic_write_preserves_prior_output_and_removes_temporary_file()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplaySidecarTests.cs",
+      "syntaxHash": "13e1fb68ecf594031301ad9969d496db08c061f05496afb9dc670985d7cf1718",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplaySidecarTests.Marker_review_QA_and_evidence_round_trip_with_portable_path()",
+      "symbol": "ReadAllTextAsync",
+      "rule": "sourceTextReadsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Architecture.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Architecture.Tests.TempWorkspace.Dispose()",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Architecture.Tests/TestSupport.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Architecture.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Architecture.Tests.TempWorkspace.Root",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/AdvancedWorkspaceSnapshotTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests.fields:temporaryDirectory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.fields:temporaryDirectory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Successful_export_reveal_opens_the_containing_output_folder()",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/RegisterProjectionPresentationTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.RegisterProjectionPresentationTests.fields:temporaryDirectory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/SourceFileNavigatorAdoptionParityTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.SourceFileNavigatorAdoptionParityTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/VisualTestCapture.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.VisualTestCapture.fields:DefaultAuditRoot",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/AtomicOutputAdoptionParityTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.AtomicOutputAdoptionParityTests.fields:root",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/BuiltInAdapterAcceptanceContractTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.BuiltInAdapterAcceptanceContractTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CaptureAnalysisTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CaptureAnalysisTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/CommonNdsInspectorTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.CommonNdsInspectorTests.fields:temporaryDirectory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/DecodedI2cAdapterTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.DecodedI2cAdapterTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/Desay97NdsInspectorTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.Desay97NdsInspectorTests.fields:temporaryDirectory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/NdsCaptureSessionTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.NdsCaptureSessionTests.fields:temporaryDirectory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/NdsCommunicationLogAdapterTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.NdsCommunicationLogAdapterTests.fields:temporaryDirectory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/NvtRegisterProfileSchemaTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.NvtRegisterProfileSchemaTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReadableCommunicationLogWriterTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReadableCommunicationLogWriterTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayCliContractTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayCliContractTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplaySidecarTests.cs",
+      "syntaxHash": "15972ffd0281f42a70b858ebd4b9b60671db7a9de50925492572bf0bb8b91a6f",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplaySidecarTests.fields:directory",
+      "symbol": "Path.GetTempPath",
+      "rule": "tempPathInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/AdvancedWorkspaceSnapshotTests.cs",
+      "syntaxHash": "25eaebf4afb9324e8037c3e8e8e62289b53b3a633c178c3767ba57e0588673f6",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests.Output_export_progress_uses_the_info_rail_without_reducing_preview_controls()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/EventSuppressionTests.cs",
+      "syntaxHash": "7ad4f9997883da8a34012a3a82ce4b60e5768f5fffa8203a26921027becb6fcb",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.EventSuppressionTests.WaitUntilAsync(Func<bool>)",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "25eaebf4afb9324e8037c3e8e8e62289b53b3a633c178c3767ba57e0588673f6",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Background_output_job_reports_progress_allows_navigation_and_cancels_without_blocking()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "c73952ef846802dd1568252526f8709ade30e5d431996ca345ba0f3830cfa19f",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Output_controls_project_one_workspace_and_no_op_custom_input_keeps_the_plan()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "d1cd872d8f5f1d172a1d11fdfa008d88053272c73bf213b6d6f971e574dfce9e",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Output_report_cache_tracks_effective_human_review_changes_only()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "01f5a2ba24e09b00c8df20a0470675d173bc44e4e63596e633cf66201f4d843b",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Playback_fast_path_throttles_expensive_inspector_presentations()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "1871a2c9835c38ceaa6fa5e971937b9095443e33595bd6eaa893059812e86aae",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Rapid_speed_changes_replace_playback_without_leaking_a_stale_runner()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "5e651768a3d57e9a96dbaa212accdfa19744b43ab68c6c978f8ad7ceaea7c3da",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Superseded_capture_cannot_publish_a_late_output_report()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "bbb4109235d766608ac59f79b1ce4bba9cb5c58b8eb6a26a050e771e9b180e7d",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Ten_x_loop_yields_to_the_UI_and_remains_stoppable()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
+      "syntaxHash": "0815a33f3fcb669bfdaa2bb791b3f223c621861f5d6c2fa07c6f9a4da2bad2af",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.WaitUntilAsync(Func<bool>,TimeSpan?)",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Avalonia.Tests/WorkspaceSnapshotTestHelpers.cs",
+      "syntaxHash": "0815a33f3fcb669bfdaa2bb791b3f223c621861f5d6c2fa07c6f9a4da2bad2af",
+      "project": "Nvt.Replay.Avalonia.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Avalonia.Tests.WorkspaceSnapshotTestHelpers.WaitUntilAsync(Func<bool>)",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "syntaxHash": "25eaebf4afb9324e8037c3e8e8e62289b53b3a633c178c3767ba57e0588673f6",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancel_is_idempotent_and_waits_for_a_cooperative_job_to_finish()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
+      "syntaxHash": "25eaebf4afb9324e8037c3e8e8e62289b53b3a633c178c3767ba57e0588673f6",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancellation_callbacks_can_read_service_state_without_running_under_the_service_lock()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    },
+    {
+      "owner": "NFU",
+      "path": "tests/Nvt.Replay.Tests/ReplayExportTests.cs",
+      "syntaxHash": "c081b9e1e9c648cebbe2433b8bf7a8702090b91b6dc13d6a9fed592f725297ce",
+      "project": "Nvt.Replay.Tests",
+      "count": 1,
+      "member": "Nvt.Replay.Tests.ReplayExportTests.Encoder_cleanup_waits_for_a_released_Windows_file_lock()",
+      "symbol": "Task.Delay",
+      "rule": "timeWaitsInTests"
+    }
+  ]
+}

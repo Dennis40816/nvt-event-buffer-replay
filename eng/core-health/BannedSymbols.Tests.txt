@@ -1,0 +1,3 @@
+T:System.Diagnostics.Stopwatch
+M:System.IO.Path.GetTempPath
+F:System.Reflection.BindingFlags.NonPublic

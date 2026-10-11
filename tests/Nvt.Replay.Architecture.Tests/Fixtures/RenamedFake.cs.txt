@@ -1,0 +1,3 @@
+// Copyright (c) 2026 Dennis Liu. All rights reserved.
+namespace Third;
+class FakeReplay { }

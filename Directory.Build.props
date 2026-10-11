@@ -6,12 +6,20 @@
     <AssemblyVersion>$(NvtProductVersion).0</AssemblyVersion>
     <FileVersion>$(NvtProductVersion).0</FileVersion>
     <Copyright>Copyright (c) 2026 Dennis Liu. All rights reserved.</Copyright>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RepoHealthRoot>$(MSBuildThisFileDirectory)</RepoHealthRoot>
   </PropertyGroup>
+
+  <Import Project="eng/code-health/projects.props" />
+  <Import Project="eng/core-health/Directory.Build.props" />
 </Project>

@@ -1,0 +1,380 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Core C# health contracts",
+  "$comment": "H03 contracts. Select a document definition by JSON Pointer. policy.json is unnecessary: limits and versions are fixed by this checker and bundle.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/policy"
+    },
+    {
+      "$ref": "#/$defs/baseline"
+    },
+    {
+      "$ref": "#/$defs/seam-owners"
+    },
+    {
+      "$ref": "#/$defs/core-health.lock"
+    }
+  ],
+  "$defs": {
+    "policy": {
+      "$comment": "eng/code-health/policy.json: no field names or document shape are defined in the plan.",
+      "not": {}
+    },
+    "core-health.lock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "coreCommit",
+        "files"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "coreCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "Directory.Build.props",
+            ".editorconfig",
+            "BannedSymbols.Common.txt",
+            "BannedSymbols.Files.txt",
+            "BannedSymbols.Tests.txt",
+            "schema.json"
+          ],
+          "properties": {
+            "Directory.Build.props": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            ".editorconfig": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "BannedSymbols.Common.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "BannedSymbols.Files.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "BannedSymbols.Tests.txt": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "schema.json": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "seam-owners": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "entries"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "entries": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/seam-owner-entry"
+          }
+        }
+      }
+    },
+    "nonempty-string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "seam-owner-entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "member",
+        "symbol",
+        "owner",
+        "reason",
+        "kind",
+        "review"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "member": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "symbol": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "owner": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "kind": {
+          "const": "permanent-seam"
+        },
+        "review": {
+          "$ref": "#/$defs/nonempty-string"
+        }
+      },
+      "$comment": "Exact repository-relative path, member and banned symbol. A file capability uses member=\"*\"; symbol never accepts wildcards. Counts are reported separately from debt."
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "Only metric names from the plan's Metric contract table (lines 502-520).",
+      "properties": {
+        "asyncVoid": {
+          "$ref": "#/$defs/count"
+        },
+        "unsafeUiHandler": {
+          "$ref": "#/$defs/count"
+        },
+        "blockingWait": {
+          "$ref": "#/$defs/count"
+        },
+        "bannedApi": {
+          "$ref": "#/$defs/count"
+        },
+        "stateMembers": {
+          "$ref": "#/$defs/count"
+        },
+        "fileLines": {
+          "$ref": "#/$defs/count"
+        },
+        "methodLines": {
+          "$ref": "#/$defs/count"
+        },
+        "partialFiles": {
+          "$ref": "#/$defs/count"
+        },
+        "axamlCodeBehindLines": {
+          "$ref": "#/$defs/count"
+        },
+        "viewTypeLines": {
+          "$ref": "#/$defs/count"
+        },
+        "suppressions": {
+          "$ref": "#/$defs/count"
+        },
+        "sourceTextAssertions": {
+          "$ref": "#/$defs/count"
+        },
+        "fakeClockDuplicates": {
+          "$ref": "#/$defs/count"
+        },
+        "workspaceDuplicates": {
+          "$ref": "#/$defs/count"
+        },
+        "generationFields": {
+          "$ref": "#/$defs/count"
+        },
+        "nativeImportDuplicates": {
+          "$ref": "#/$defs/count"
+        },
+        "localizedBranchCandidates": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "baseline-entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project",
+        "kind",
+        "symbol",
+        "locations",
+        "ceilings",
+        "owner",
+        "issue"
+      ],
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "type",
+            "member"
+          ]
+        },
+        "symbol": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "locations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonempty-string"
+          }
+        },
+        "ceilings": {
+          "$ref": "#/$defs/metrics"
+        },
+        "owner": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "issue": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "baseline-finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule",
+        "project",
+        "path",
+        "member",
+        "symbol",
+        "syntaxHash",
+        "count",
+        "owner",
+        "removeBy"
+      ],
+      "properties": {
+        "rule": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "project": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "path": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "member": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "symbol": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "syntaxHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "$comment": "Diagnostic syntax v1: find the token at the 1-based diagnostic line/UTF-16 column; choose its nearest StatementSyntax (excluding BlockSyntax), otherwise nearest MemberDeclarationSyntax, otherwise compilation unit. Join DescendantTokens().Text in source order with one ASCII space, excluding trivia. SHA-256 of UTF-8 without BOM; lowercase hex. Resolve member using the SDK Roslyn parser. Project, rule, member, symbol, syntaxHash and count determine identity; path/line are display-only, so a file rename is stable. Syntax metrics retain roslyn-physical-v1 normalization of their recognized node. Locationless project findings hash the trimmed invariant diagnostic message."
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "owner": {
+          "$ref": "#/$defs/nonempty-string"
+        },
+        "removeBy": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "measurementVersion",
+        "snapshotCommit",
+        "limits",
+        "entities",
+        "findings"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "measurementVersion": {
+          "const": "roslyn-physical-v1"
+        },
+        "snapshotCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{7,40}$"
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fileLines",
+            "methodLines",
+            "partialFiles",
+            "stateMembers",
+            "axamlCodeBehindLines"
+          ],
+          "properties": {
+            "fileLines": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 800
+            },
+            "methodLines": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 80
+            },
+            "partialFiles": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8
+            },
+            "stateMembers": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "axamlCodeBehindLines": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 150
+            },
+            "viewTypeLines": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 800
+            }
+          }
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/baseline-entity"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/baseline-finding"
+          }
+        }
+      }
+    }
+  }
+}

@@ -120,7 +120,7 @@ dark/light palettes。以 Skia 為基礎的 Avalonia headless suite 會在 CI
 
 ## 建置
 
-需求：.NET SDK 10.0.303 或相容的較新 .NET 10 feature band，以及 Python 3.10 或更新版本。
+需求：.NET SDK 10.0.303 或同一 feature band 的較新 10.0.3xx patch，以及 Python 3.10 或更新版本。
 第一個命令會從 GitHub Release 下載 Nvt.Core package 並檢查其 hash。
 
 ```powershell

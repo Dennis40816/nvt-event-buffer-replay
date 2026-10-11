@@ -20,10 +20,10 @@ dotnet test (Join-Path $RepoRoot 'Nvt.EventBufferReplay.sln') --configuration Re
 if ($LASTEXITCODE -ne 0) { throw 'Tests failed.' }
 & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'check-central-packages.ps1') -Root $RepoRoot
 if ($LASTEXITCODE -ne 0) { throw 'Central package check failed.' }
-& pwsh -NoProfile -File (Join-Path $RepoRoot 'tools/repo-checks/repo-health.ps1') -Mode Verify -Repo nfu -Root $RepoRoot
-if ($LASTEXITCODE -ne 0) { throw 'Syntax health ratchet failed.' }
-& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'measure-test-duplication.ps1') -Root $RepoRoot -Verify
-if ($LASTEXITCODE -ne 0) { throw 'Test duplication ratchet failed.' }
+& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'check-core-health.ps1') -Root $RepoRoot
+if ($LASTEXITCODE -ne 0) { throw 'Core health bundle drift check failed.' }
+& pwsh -NoProfile -File (Join-Path $RepoRoot 'tools/repo-checks/repo-health.ps1') -Mode Verify -Repo nfu -Root $RepoRoot -Solution Nvt.EventBufferReplay.sln
+if ($LASTEXITCODE -ne 0) { throw 'Repository health verification failed.' }
 & (Join-Path $PSScriptRoot 'check-line-budget.ps1')
 & (Join-Path $PSScriptRoot 'test-line-budget.ps1')
 if (-not $SkipPerformanceSmoke) { & (Join-Path $PSScriptRoot 'performance-gate.ps1') -Mode Smoke }

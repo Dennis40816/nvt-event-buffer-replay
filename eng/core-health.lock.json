@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "coreCommit": "a6cea94ab679e4c06f28aa864a3336eeafcdc35e",
+  "files": {
+    "Directory.Build.props": "26a1dce105b061cc7b243f9edccb8b786d82f7e73e1ff5dda4f311976b7a8f2e",
+    ".editorconfig": "3845322a721254c76e9d4d851f64012726b0cee871b3eb01bbad823948f957c4",
+    "BannedSymbols.Common.txt": "2bed3cfdc57f2083b7557331281112485a986a6bd29a9d7d948657581d6a84d8",
+    "BannedSymbols.Files.txt": "de16dd734fda8ee8bd1514eb52edb8873d5d21e1b6d7f3759b2094874bebc318",
+    "BannedSymbols.Tests.txt": "a7c9797aac63eb1b4a4831ee0e8c4b5966aa4185528218cec5dbcb04579293f4",
+    "schema.json": "e1446e0609ebc8e1fc5e9c15f167aaa9ed9f2eb2849f167ec3b3f8689029b664"
+  }
+}

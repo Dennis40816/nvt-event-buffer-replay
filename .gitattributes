@@ -1,0 +1,5 @@
+# Core health bundle and its mirrors are byte-compared; keep LF on every checkout.
+/.editorconfig text eol=lf
+/eng/core-health/** text eol=lf
+/eng/core-health.lock.json text eol=lf
+/tools/repo-checks/schema.json text eol=lf

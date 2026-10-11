@@ -55,7 +55,8 @@ empty repository-owned staging directories, rejects dirty worktrees, and fails
 if the staged file set differs from this closed allowlist.
 
 `scripts/verify.ps1` is the shared local, preview, and stable-candidate gate. It
-performs locked restore, warning-free Release build, tests, the handwritten
+performs locked restore, Release build, tests, Core health bundle
+drift and full health Verify (including the test-debt ledger), the handwritten
 production per-file ceiling check, and the performance smoke gate.
 `smoke-release.ps1` verifies the outer
 and inner hashes, identity, allowlist, packaged CLI format inventory, and—when

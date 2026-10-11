@@ -123,7 +123,7 @@ in [MVP evidence boundaries and deferrals](docs/mvp-limitations.md).
 
 ## Build
 
-Requirements: .NET SDK 10.0.303 or a compatible later .NET 10 feature band, and Python 3.10 or later.
+Requirements: .NET SDK 10.0.303 or a later 10.0.3xx patch of the same feature band, and Python 3.10 or later.
 The first command downloads the Nvt.Core package from its GitHub Release and checks its hash.
 
 ```powershell

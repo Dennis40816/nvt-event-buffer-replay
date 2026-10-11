@@ -181,6 +181,10 @@ HTML/PDF reports, evidence ZIP packaging, and redaction UI are post-MVP.
   remove it when the file reaches 800 lines or is deleted. Total and
   per-project line counts are reported without a limit. Tests are counted
   separately; generated code cannot hide product logic.
+- Core health additionally checks structural allowances and diagnostic
+  fingerprints in `eng/code-health/baseline.json` and test-debt fingerprints in
+  `eng/code-health/test-debt.json`. New or growing debt fails; fixes must reduce
+  the affected ledger. These ledgers do not replace ADR 0004's file ceiling.
 
 ## Deferred capabilities
 
