@@ -1,24 +1,11 @@
-using System.Globalization;
-using System.Diagnostics;
-using System.Text;
 using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Nvt.Replay.Analysis;
-using Nvt.Replay.Core;
-using Nvt.Replay.Formats.Common;
-using Nvt.Replay.Formats.Desay97;
-using Nvt.Replay.Rendering;
-using Nvt.Replay.Sources;
 using Nvt.Replay.Avalonia.ViewModels;
-using Nvt.Replay.Avalonia.Controls;
-using Nvt.Replay.Avalonia.Views;
 
 namespace Nvt.Replay.Avalonia;
 
@@ -48,8 +35,8 @@ public partial class MainWindow : Window
         }
         // The review queue is secondary evidence, so it never consumes the first
         // viewport unless the user explicitly opens it.
-        SetReviewRailCollapsed(reviewRailUserPreference ?? true);
-        SetInspectorRailCollapsed(inspectorRailUserPreference ?? width < 1240);
+        SetReviewRailCollapsed(_reviewRail.ResolveDefault(fallback: true));
+        SetInspectorRailCollapsed(_inspectorRail.ResolveDefault(width < 1240));
     }
 
     private void SetOutputWorkspaceChrome(bool active, bool showReplayTransport)
@@ -60,7 +47,7 @@ public partial class MainWindow : Window
             ? new GridLength(ReplayTransportHeight)
             : new GridLength(0);
         InspectorRailBorder.IsVisible = !active;
-        InspectorGridSplitter.IsVisible = !active && !inspectorRailCollapsed;
+        InspectorGridSplitter.IsVisible = !active && !_inspectorRail.Collapsed;
         var inspectorColumn = WorkspaceShellGrid.ColumnDefinitions[3];
         if (active)
         {
@@ -72,7 +59,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            SetInspectorRailCollapsed(inspectorRailUserPreference ?? Bounds.Width < 1240);
+            SetInspectorRailCollapsed(_inspectorRail.ResolveDefault(Bounds.Width < 1240));
         }
     }
 
@@ -231,7 +218,7 @@ public partial class MainWindow : Window
 
     private void HandleWindowKeyDown(KeyEventArgs e)
     {
-        if (outputFullscreenActive && e.Key == Key.Escape)
+        if (_outputFullscreenRestoreState.HasValue && e.Key == Key.Escape)
         {
             ExitOutputFullscreen();
             e.Handled = true;
