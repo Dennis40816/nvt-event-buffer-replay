@@ -1,19 +1,10 @@
 using System.Globalization;
-using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using Avalonia.Styling;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
@@ -28,8 +19,6 @@ namespace Nvt.Replay.Avalonia;
 
 public partial class MainWindow : Window
 {
-
-
     private void MainWindow_OnOpened(object? sender, EventArgs e)
     {
         ApplyResponsiveRails(Bounds.Width);
@@ -38,7 +27,7 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        _replayShell = CreateReplayShell();
+        (FailureReporter, _replayShell) = CreateUiServices();
         InitializeComponent();
         PaintModeComboBox.ItemsSource = new SelectOption[]
         {
@@ -142,6 +131,4 @@ public partial class MainWindow : Window
         SizeChanged += MainWindow_OnSizeChanged;
         if (Application.Current is { } application) application.ActualThemeVariantChanged += Application_OnActualThemeVariantChanged;
     }
-
-
 }

@@ -1,19 +1,11 @@
+using Avalonia.Styling;
 using System.Globalization;
-using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using Avalonia.Styling;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
@@ -237,7 +229,8 @@ public partial class MainWindow : Window
     private void UpdatePaintZoomText() =>
         PaintZoomText.Text = PaintSurface.ZoomFactor.ToString("P0", CultureInfo.InvariantCulture);
 
-    private async void PaintSurface_OnZoomChanged(object? sender, EventArgs e)
+    private void PaintSurface_OnZoomChanged(object? sender, EventArgs e) => FailureReporter.Runner.Run("paint.zoom", _ => ShowPaintZoomHintAsync(sender, e), CancellationToken.None);
+    private async Task ShowPaintZoomHintAsync(object? sender, EventArgs e)
     {
         UpdatePaintZoomText();
         if (PaintSurface.ZoomFactor == 1)
@@ -248,7 +241,7 @@ public partial class MainWindow : Window
 
         var revision = ++zoomHintRevision;
         PaintZoomHintBorder.IsVisible = true;
-        await Task.Delay(900);
+        await Task.Delay(TimeSpan.FromMilliseconds(900), FailureReporter.TimeProvider);
         if (revision == zoomHintRevision)
             PaintZoomHintBorder.IsVisible = false;
     }
@@ -346,5 +339,4 @@ public partial class MainWindow : Window
         GridStrengthToggleButton.Content = strong ? "Grid +" : "Grid";
         ApplyPaintSettings(paintWorkspace.Settings with { StrongGrid = strong });
     }
-
 }

@@ -125,7 +125,8 @@ public partial class MainWindow
         CaptureSetupPalmProfilePanel.IsVisible = false;
     }
 
-    private async void ApplyRegisterProfileInferenceButton_OnClick(object? sender, RoutedEventArgs e)
+    private void ApplyRegisterProfileInferenceButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("capture.apply-setup", _ => ApplyRegisterProfileInferenceAsync(sender, e), CancellationToken.None);
+    private async Task ApplyRegisterProfileInferenceAsync(object? sender, RoutedEventArgs e)
     {
         if (!TryReadCaptureSetup(
                 out var version,

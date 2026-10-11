@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Dennis Liu. All rights reserved.
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
+using Nvt.Core.Threading;
 
 namespace Nvt.Replay.Avalonia.ViewModels;
 
@@ -16,15 +17,17 @@ internal sealed class ReplayShellViewModel
 {
     private readonly CaptureWorkspaceViewModel _capture;
     private readonly ReplayShellSeams _seams;
+    private readonly UiEventRunner? _uiEvents;
     // UI thread only. Guards direct ExecuteAsync calls as well as ICommand entry points.
     private ICommand? _executingCommand;
 
-    internal ReplayShellViewModel(CaptureWorkspaceViewModel capture, ReplayShellSeams seams)
+    internal ReplayShellViewModel(CaptureWorkspaceViewModel capture, ReplayShellSeams seams, UiEventRunner? uiEvents = null)
     {
         _capture = capture;
         _seams = seams;
-        LoadCommand = new AsyncRelayCommand(LoadAsync, CanLoad);
-        DecodeCommand = new AsyncRelayCommand(DecodeAsync, CanDecode);
+        _uiEvents = uiEvents;
+        LoadCommand = new AsyncRelayCommand(() => ObserveAsync("capture.load", LoadAsync), CanLoad);
+        DecodeCommand = new AsyncRelayCommand(() => ObserveAsync("capture.decode", DecodeAsync), CanDecode);
         CancelCommand = new RelayCommand(Cancel, () => _seams.IsBusy());
     }
 
@@ -53,6 +56,9 @@ internal sealed class ReplayShellViewModel
 
     private bool CanLoad() => _executingCommand is null && !_seams.IsBusy() && !_seams.IsExportActive();
     private bool CanDecode() => _executingCommand is null && !_seams.IsBusy() && _capture.State is not CaptureState.Empty;
+
+    private Task ObserveAsync(string operation, Func<Task> action) =>
+        _uiEvents is { } runner ? runner.RunAsync(operation, _ => action(), CancellationToken.None) : action();
 
     private async Task LoadAsync()
     {

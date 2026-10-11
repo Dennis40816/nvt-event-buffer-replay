@@ -1,0 +1,7 @@
+// Copyright (c) 2026 Dennis Liu. All rights reserved.
+namespace Nvt.Replay.Avalonia;
+public partial class MainWindow { }
+public sealed class AsyncWorker
+{
+    public async void Execute() { await System.Threading.Tasks.Task.CompletedTask; }
+}
