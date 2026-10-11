@@ -552,8 +552,8 @@
       "event": "Click",
       "method": "SaveReviewButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
-      "startLine": 94,
-      "endLine": 130,
+      "startLine": 87,
+      "endLine": 123,
       "asyncVoid": true,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -568,8 +568,8 @@
       "event": "Click",
       "method": "LoadReviewButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
-      "startLine": 132,
-      "endLine": 145,
+      "startLine": 125,
+      "endLine": 138,
       "asyncVoid": true,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -584,8 +584,8 @@
       "event": "Click",
       "method": "ApplySidecarButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
-      "startLine": 188,
-      "endLine": 197,
+      "startLine": 181,
+      "endLine": 190,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -1848,8 +1848,8 @@
       "event": "Click",
       "method": "AttachMarkerEvidenceButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs",
-      "startLine": 32,
-      "endLine": 44,
+      "startLine": 31,
+      "endLine": 43,
       "asyncVoid": true,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",

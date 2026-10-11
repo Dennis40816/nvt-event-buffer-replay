@@ -1356,7 +1356,7 @@
       "ceilings": {
         "stateMembers": 51,
         "partialFiles": 10,
-        "viewTypeLines": 5528
+        "viewTypeLines": 5522
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
