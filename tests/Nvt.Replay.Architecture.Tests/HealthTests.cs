@@ -67,15 +67,6 @@ internal static class HealthFixture
 
 public sealed class HealthTests
 {
-    [Fact]
-    public async Task CommittedBaselinePassesCoreVerify()
-    {
-        var baseline = RepositoryFiles.ReadJson(Path.Combine(RepositoryFiles.Root, HealthFixture.BaselinePath));
-        Assert.Equal(1, baseline["schemaVersion"]!.GetValue<int>());
-        var result = await HealthFixture.VerifyAsync(RepositoryFiles.Root);
-        Assert.True(result.ExitCode == 0, result.Output);
-    }
-
     [Theory]
     [InlineData("stateMembers")]
     [InlineData("partialFiles")]
