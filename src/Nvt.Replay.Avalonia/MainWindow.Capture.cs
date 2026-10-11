@@ -32,47 +32,31 @@ public partial class MainWindow : Window
 
     private CancellationTokenSource? operationCancellation;
 
-    private CaptureSession? session;
+    private readonly CaptureWorkspaceViewModel _captureWorkspace = new();
+    private readonly ReplayShellViewModel _replayShell;
 
-    private ITouchReplaySession? replaySession;
-
-    private ReplayFrameCache? replayFrames;
-
-    private RawRecordRow[] allRawRows = [];
-
-    private RegisterActivityEntry[] registerActivities = [];
-
-    private Dictionary<string, RawRecordRow> rawRowsById = [];
-
-    private Dictionary<string, DecodedFrameRow> decodedRowsBySourceId = [];
-
-    private DecodedFrameRow[] decodedRows = [];
-
-    private DiagnosticRow[] diagnosticRows = [];
-
-    private int[] diagnosticLineNumbers = [];
-
-    private ReplayDecodeConfiguration? decodeConfiguration;
+    private CaptureSession? session => _captureWorkspace.Capture?.Session;
+    private ITouchReplaySession? replaySession => _captureWorkspace.Replay?.Session;
+    private ReplayFrameCache? replayFrames => _captureWorkspace.Replay?.Frames;
+    private IReadOnlyList<RawRecordRow> allRawRows => _captureWorkspace.Capture?.Raw.Rows ?? [];
+    private IReadOnlyList<RegisterActivityEntry> registerActivities => _captureWorkspace.Capture?.Raw.Activities ?? [];
+    private IReadOnlyDictionary<string, RawRecordRow> rawRowsById => _captureWorkspace.Capture?.Raw.RowsById ?? System.Collections.Frozen.FrozenDictionary<string, RawRecordRow>.Empty;
+    private IReadOnlyDictionary<string, DecodedFrameRow> decodedRowsBySourceId => _captureWorkspace.Replay?.RowsBySourceId ?? System.Collections.Frozen.FrozenDictionary<string, DecodedFrameRow>.Empty;
+    private IReadOnlyList<DecodedFrameRow> decodedRows => _captureWorkspace.Replay?.Rows ?? [];
+    private IReadOnlyList<DiagnosticRow> diagnosticRows => _captureWorkspace.Capture?.Diagnostics.Rows ?? [];
+    private IReadOnlyList<int> diagnosticLineNumbers => _captureWorkspace.Capture?.Diagnostics.LineNumbers ?? [];
+    private ReplayDecodeConfiguration? decodeConfiguration => _captureWorkspace.Replay?.Configuration;
+    private ReviewInspectorWorkspace? reviewWorkspace => _captureWorkspace.Capture?.Review;
 
     private readonly CaptureDecodeController captureDecodeController = new();
 
-    private long nextCaptureLoadGeneration;
-
-    private long activeCaptureLoadGeneration;
-
-    private long activeCaptureDecodeGeneration;
-
     private readonly EventSuppressionScope configuringEventVersion = new();
-
-    private string? pendingSourcePath;
-
-    private bool pendingSourceRequiresConfiguration;
 
     private readonly EventSuppressionScope configuringSourceChoice = new();
 
     private readonly EventSuppressionScope configuringRegisterProfile = new();
 
-    private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference;
+    private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference => _captureWorkspace.PendingConfiguration;
 
     private int targetI2cAddress = 0x01;
 
@@ -82,7 +66,18 @@ public partial class MainWindow : Window
 
     internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get; set; }
 
-    private async void LoadButton_OnClick(object? sender, RoutedEventArgs e)
+    private async void LoadButton_OnClick(object? sender, RoutedEventArgs e) =>
+        await _replayShell.ExecuteAsync(_replayShell.LoadCommand);
+
+    private ReplayShellViewModel CreateReplayShell() => new(_captureWorkspace, new ReplayShellSeams(
+        PickCaptureSourceAsync,
+        path => OpenCaptureAsync(path, promptForConfiguration: true),
+        () => DecodeSelectedAsync(),
+        CancelCaptureOperation,
+        () => operationInProgress,
+        () => outputExportJobs.IsActive));
+
+    private async Task<string?> PickCaptureSourceAsync()
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
@@ -94,13 +89,13 @@ public partial class MainWindow : Window
                 FilePickerFileTypes.All,
             ],
         });
-        var path = files.SingleOrDefault()?.TryGetLocalPath();
-        if (path is null)
-        {
-            return;
-        }
+        return files.SingleOrDefault()?.TryGetLocalPath();
+    }
 
-        await OpenCaptureAsync(path, promptForConfiguration: true);
+    private void CancelCaptureOperation()
+    {
+        operationCancellation?.Cancel();
+        captureDecodeController.CancelCurrent();
     }
 
     internal async Task OpenCaptureAsync(
@@ -109,10 +104,8 @@ public partial class MainWindow : Window
         bool promptForConfiguration = false)
     {
         HideRegisterProfileInference();
-        var loadGeneration = checked(++nextCaptureLoadGeneration);
-        activeCaptureLoadGeneration = loadGeneration;
+        var loadOperation = _captureWorkspace.BeginLoad();
         captureDecodeController.CancelCurrent();
-        activeCaptureDecodeGeneration = 0;
         ResetOutputPlanning();
         operationCancellation?.Cancel();
         operationCancellation?.Dispose();
@@ -129,7 +122,7 @@ public partial class MainWindow : Window
                 Dispatcher.UIThread.Post(() =>
                 {
                     if (cancellationToken.IsCancellationRequested ||
-                        !IsActiveCaptureLoad(loadGeneration, loadCancellation))
+                        !IsActiveCaptureLoad(loadOperation, loadCancellation))
                         return;
                     var count = item.RecordsRead > 0 ? $" · {item.RecordsRead:N0} records" : string.Empty;
                     SessionStatusText.Text = item.Phase + count;
@@ -151,28 +144,26 @@ public partial class MainWindow : Window
                 () => RegisterActivityProjector.Project(nextSession.Records, nextSession.RegisterAnnotations).ToArray(),
                 cancellationToken);
             var nextDiagnostics = SessionDiagnostics(nextSession);
-            var nextDiagnosticRows = nextDiagnostics
-                .Select(diagnostic => new DiagnosticRow(diagnostic))
-                .ToArray();
+            var nextCapture = new CaptureData(nextSession,
+                RawCaptureProjection.Create(nextSession, projectedActivities),
+                new CaptureDiagnostics(nextDiagnostics));
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (!IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            if (!IsActiveCaptureLoad(loadOperation, loadCancellation))
                 throw new OperationCanceledException(cancellationToken);
             ClearSession();
-            session = nextSession;
-            ApplyRawExplorerProjection(projectedActivities);
-            diagnosticRows = nextDiagnosticRows;
+            if (!_captureWorkspace.AdoptProbed(loadOperation, nextCapture))
+                throw new OperationCanceledException(cancellationToken);
+            RefreshRawExplorer();
             CreateReviewWorkspace(nextDiagnostics, []);
-            CaptureNameText.Text = Path.GetFileName(session.SourcePath).ToUpperInvariant();
-            SessionStatusText.Text = $"{session.Records.Count:N0} physical records indexed · {diagnosticRows.Length:N0} source diagnostics · semantic format required";
-            SourceAdapterText.Text = session.Probe.DisplayName;
-            Title = $"{ProductWindowTitle} — {session.Probe.DisplayName}";
+            CaptureNameText.Text = Path.GetFileName(nextSession.SourcePath).ToUpperInvariant();
+            SessionStatusText.Text = $"{nextSession.Records.Count:N0} physical records indexed · {diagnosticRows.Count:N0} source diagnostics · semantic format required";
+            SourceAdapterText.Text = nextSession.Probe.DisplayName;
+            Title = $"{ProductWindowTitle} — {nextSession.Probe.DisplayName}";
             SourceAdapterText.IsVisible = true;
             SourceAdapterComboBox.IsVisible = false;
-            pendingSourcePath = null;
-            pendingSourceRequiresConfiguration = false;
-            SourceConfidenceText.Text = $"{session.Probe.Confidence} confidence · {session.Probe.Reasons.FirstOrDefault()}";
-            SourceHashText.Text = $"SHA-256\n{session.SourceSha256}";
+            SourceConfidenceText.Text = $"{nextSession.Probe.Confidence} confidence · {nextSession.Probe.Reasons.FirstOrDefault()}";
+            SourceHashText.Text = $"SHA-256\n{nextSession.SourceSha256}";
             EventVersionComboBox.IsEnabled = true;
             RegisterProfileComboBox.IsEnabled = true;
             ExportReadableLogButton.IsEnabled = true;
@@ -182,16 +173,16 @@ public partial class MainWindow : Window
                 ConfigurationHintText.Text =
                     $"IC profile {uniqueProfile.IcFamily} inferred from verified Event Buffer address evidence; confirm Event Buffer Version to decode.";
                 SessionStatusText.Text =
-                    $"{session.Records.Count:N0} physical records indexed · IC {uniqueProfile.IcFamily} inferred · source bytes unchanged";
+                    $"{nextSession.Records.Count:N0} physical records indexed · IC {uniqueProfile.IcFamily} inferred · source bytes unchanged";
             }
             else
             {
                 ConfigurationHintText.Text = "Confirm the version to decode automatically; Event Buffer format is never inferred.";
             }
-            SetTimelineCounts(session.Records.Count, 0, diagnosticRows.Length);
+            SetTimelineCounts(nextSession.Records.Count, 0, diagnosticRows.Count);
             TimelineStatusText.Text = "Raw capture indexed · confirm Event Buffer Version to open Paint";
             WorkspaceTabs.SelectedIndex = 0;
-            if (allRawRows.Length > 0)
+            if (allRawRows.Count > 0)
             {
                 RawRecordsList.SelectedIndex = 0;
             }
@@ -201,15 +192,14 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            if (IsActiveCaptureLoad(loadOperation, loadCancellation))
                 SessionStatusText.Text = "Load cancelled; no partial session was committed";
         }
         catch (SourceSelectionRequiredException exception)
         {
-            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            if (IsActiveCaptureLoad(loadOperation, loadCancellation))
             {
-                pendingSourcePath = path;
-                pendingSourceRequiresConfiguration = promptForConfiguration;
+                _captureWorkspace.RequireSourceChoice(loadOperation, new PendingCaptureSource(path, promptForConfiguration));
                 using (configuringSourceChoice.Enter())
                 {
                     SourceAdapterComboBox.ItemsSource = exception.Candidates
@@ -227,7 +217,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            if (IsActiveCaptureLoad(loadOperation, loadCancellation))
             {
                 SessionStatusText.Text = $"Load failed · {exception.Message}";
                 ConfigurationHintText.Text = "Choose another file, inspect its schema, or select a supported adapter explicitly.";
@@ -235,9 +225,9 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (IsActiveCaptureLoad(loadGeneration, loadCancellation))
+            if (IsActiveCaptureLoad(loadOperation, loadCancellation))
             {
-                activeCaptureLoadGeneration = 0;
+                _captureWorkspace.Fail(loadOperation);
                 SetBusy(false, SessionStatusText.Text ?? "Ready");
             }
         }
@@ -306,7 +296,7 @@ public partial class MainWindow : Window
             Desay97ProfileComboBox.SelectedIndex = profileIndex;
         }
 
-        await DecodeSelectedAsync();
+        await _replayShell.ExecuteAsync(_replayShell.DecodeCommand);
     }
 
     private async Task DecodeSelectedAsync(
@@ -314,7 +304,7 @@ public partial class MainWindow : Window
         ReviewWorkspaceState? preservedWorkspaceStateOverride = null,
         TabItem? preservedWorkspaceTabOverride = null)
     {
-        if (session is null || operationInProgress)
+        if (_captureWorkspace.State is CaptureState.Empty || operationInProgress)
         {
             return;
         }
@@ -326,8 +316,9 @@ public partial class MainWindow : Window
             return;
         }
 
+        var loadedSession = _captureWorkspace.Capture!.Session;
         var isDesay97 = versionText.Equals("0x97", StringComparison.OrdinalIgnoreCase);
-        var registerProfile = NvtRegisterCatalog.FindProfile(session.RegisterProfile);
+        var registerProfile = NvtRegisterCatalog.FindProfile(loadedSession.RegisterProfile);
         Desay97Profile? desayProfile = null;
         if (isDesay97)
         {
@@ -365,11 +356,10 @@ public partial class MainWindow : Window
         operationCancellation = decodeCancellation;
         var cancellationToken = decodeCancellation.Token;
         SetBusy(true, $"Decoding {(isDesay97 ? "Desay" : "Common")} {versionText}");
-        long operationGeneration = 0;
+        PendingCaptureOperation.Decode? decodeOperation = null;
 
         try
         {
-            var loadedSession = session;
             var request = new PreparedCaptureDecodeRequest(
                 loadedSession,
                 new FormatDecodeRequest(
@@ -389,15 +379,14 @@ public partial class MainWindow : Window
                 });
             });
             var operation = captureDecodeController.StartPrepared(request, progress, cancellationToken);
-            operationGeneration = operation.Generation;
-            activeCaptureDecodeGeneration = operationGeneration;
+            decodeOperation = _captureWorkspace.BeginDecode(operation);
             var result = await operation.Completion;
             var presentation = await Task.Run(
                 () => BuildCaptureDecodePresentation(result, cancellationToken),
                 cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
-            if (activeCaptureDecodeGeneration != result.Generation ||
+            if (!_captureWorkspace.IsCurrent(decodeOperation) ||
                 !ReferenceEquals(operationCancellation, decodeCancellation) ||
                 !ReferenceEquals(captureDecodeController.LastSuccessfulResult, result) ||
                 !ReferenceEquals(session, loadedSession))
@@ -410,13 +399,8 @@ public partial class MainWindow : Window
             var preservedMarkers = preserveReview ? reviewWorkspace?.Markers.ToArray() ?? [] : [];
             var preservedReviewState = preserveReview ? reviewWorkspace?.ReviewSession.ExportState() ?? [] : [];
             ResetOutputPlanning();
-            session = result.Capture;
-            decodeConfiguration = nextConfiguration;
-            replaySession = presentation.Replay;
-            decodedRows = presentation.DecodedRows;
-            decodedRowsBySourceId = presentation.DecodedRowsBySourceId;
-            diagnosticRows = presentation.DiagnosticRows;
-            replayFrames = result.Workspace.Frames;
+            if (!_captureWorkspace.AdoptDecoded(decodeOperation, presentation.Projection))
+                throw new CaptureDecodeSupersededException(result.Generation);
             autoPauseIndex = result.Workspace.AutoPauseIndex;
             CreateReviewWorkspace(
                 diagnosticRows.Select(row => row.Diagnostic).ToArray(),
@@ -425,29 +409,29 @@ public partial class MainWindow : Window
                 preservedReviewState,
                 preserveReview ? preservedWorkspaceState : null);
             paintWorkspace = new ReplayPaintWorkspace(
-                replaySession,
+                presentation.Replay,
                 presentation.TrailHistory,
-                CreateInitialPaintSettings(presentation.Extent, preservedPaintSettings, replaySession.Count),
+                CreateInitialPaintSettings(presentation.Extent, preservedPaintSettings, presentation.Replay.Count),
                 reviewWorkspace?.ReviewSession.Diagnostics,
                 reviewWorkspace?.Markers);
 
             DecodedFramesList.ItemsSource = decodedRows;
-            SessionStatusText.Text = $"{result.Decode.DisplayIdentity} · I²C 0x{targetI2cAddress:X2} · {decodedRows.Length:N0} frames · {diagnosticRows.Length:N0} findings";
+            SessionStatusText.Text = $"{result.Decode.DisplayIdentity} · I²C 0x{targetI2cAddress:X2} · {decodedRows.Count:N0} frames · {diagnosticRows.Count:N0} findings";
             ConfigurationHintText.Text = $"{result.Decode.DisplayIdentity} confirmed · 7-bit I²C 0x{targetI2cAddress:X2} · decoded automatically · raw source remains unchanged";
-            SetTimelineCounts(session.Records.Count, decodedRows.Length, diagnosticRows.Length);
-            TimelineStatusText.Text = decodedRows.Length > 0
+            SetTimelineCounts(result.Capture.Records.Count, decodedRows.Count, diagnosticRows.Count);
+            TimelineStatusText.Text = decodedRows.Count > 0
                 ? "Logical replay ready · Space play/pause · ←/→ step · drag Loop handles"
                 : "No replayable event-buffer frames · inspect physical records and Review Queue";
             InitializeReplay();
             SaveReviewButton.IsEnabled = true;
             LoadReviewButton.IsEnabled = true;
             AnalysisTab.IsEnabled = true;
-            AnalysisSummaryText.Text = $"Ready · {decodedRows.Length:N0} frames · export the full replay or current In/Out range";
-            AddMarkerButton.IsEnabled = decodedRows.Length > 0;
-            if (decodedRows.Length > 0)
+            AnalysisSummaryText.Text = $"Ready · {decodedRows.Count:N0} frames · export the full replay or current In/Out range";
+            AddMarkerButton.IsEnabled = decodedRows.Count > 0;
+            if (decodedRows.Count > 0)
             {
                 var logicalIndex = preserveWorkspaceContext
-                    ? Math.Clamp(preservedWorkspaceState?.CurrentLogicalIndex ?? 0, 0, decodedRows.Length - 1)
+                    ? Math.Clamp(preservedWorkspaceState?.CurrentLogicalIndex ?? 0, 0, decodedRows.Count - 1)
                     : 0;
                 if (preserveWorkspaceContext && preservedWorkspaceTab?.IsEnabled == true)
                     WorkspaceTabs.SelectedItem = preservedWorkspaceTab;
@@ -472,12 +456,12 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            if (IsActiveCaptureDecode(operationGeneration, decodeCancellation))
+            if (IsActiveCaptureDecode(decodeOperation, decodeCancellation))
                 SessionStatusText.Text = "Decode cancelled; previous complete result was preserved";
         }
         catch (Exception exception) when (exception is InvalidDataException or ArgumentException or InvalidOperationException)
         {
-            if (IsActiveCaptureDecode(operationGeneration, decodeCancellation))
+            if (IsActiveCaptureDecode(decodeOperation, decodeCancellation))
             {
                 SessionStatusText.Text = $"Decode failed · {exception.Message}";
                 ConfigurationHintText.Text = "Raw records remain available; verify version/profile and try again.";
@@ -485,26 +469,22 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (IsActiveCaptureDecode(operationGeneration, decodeCancellation))
+            if (IsActiveCaptureDecode(decodeOperation, decodeCancellation))
             {
-                activeCaptureDecodeGeneration = 0;
+                if (decodeOperation is not null) _captureWorkspace.Fail(decodeOperation);
                 SetBusy(false, SessionStatusText.Text ?? "Ready");
             }
         }
     }
 
-    private bool IsActiveCaptureLoad(long generation, CancellationTokenSource cancellation) =>
-        activeCaptureLoadGeneration == generation && ReferenceEquals(operationCancellation, cancellation);
+    private bool IsActiveCaptureLoad(PendingCaptureOperation.Load pending, CancellationTokenSource cancellation) =>
+        _captureWorkspace.IsCurrent(pending) && ReferenceEquals(operationCancellation, cancellation);
 
-    private bool IsActiveCaptureDecode(long generation, CancellationTokenSource cancellation) =>
+    private bool IsActiveCaptureDecode(PendingCaptureOperation.Decode? pending, CancellationTokenSource cancellation) =>
         ReferenceEquals(operationCancellation, cancellation) &&
-        (generation == 0 || activeCaptureDecodeGeneration == generation);
+        (pending is null || _captureWorkspace.IsCurrent(pending));
 
-    private void CancelButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        operationCancellation?.Cancel();
-        captureDecodeController.CancelCurrent();
-    }
+    private void CancelButton_OnClick(object? sender, RoutedEventArgs e) => _replayShell.CancelCommand.Execute(null);
 
     private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -532,7 +512,7 @@ public partial class MainWindow : Window
         if (!configuringEventVersion.IsActive && session is not null && !isDesay97 &&
             comboBox is { SelectedIndex: >= 0, IsDropDownOpen: false } &&
             !SelectedDecodeConfigurationMatchesActive())
-            await DecodeSelectedAsync();
+            await _replayShell.ExecuteAsync(_replayShell.DecodeCommand);
     }
 
     private void Desay97ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -547,7 +527,7 @@ public partial class MainWindow : Window
                         versionItem.Content?.ToString() == "0x97";
         if (session is not null && !isDesay97 && EventVersionComboBox.SelectedIndex >= 0 &&
             !SelectedDecodeConfigurationMatchesActive())
-            await DecodeSelectedAsync();
+            await _replayShell.ExecuteAsync(_replayShell.DecodeCommand);
     }
 
     private async void Desay97ProfileComboBox_OnDropDownClosed(object? sender, EventArgs e)
@@ -557,17 +537,19 @@ public partial class MainWindow : Window
         if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0 &&
             NvtRegisterCatalog.FindProfile(session.RegisterProfile) is not null &&
             !SelectedDecodeConfigurationMatchesActive())
-            await DecodeSelectedAsync();
+            await _replayShell.ExecuteAsync(_replayShell.DecodeCommand);
         else if (session is not null && isDesay97 && Desay97ProfileComboBox.SelectedIndex >= 0)
             ConfigurationHintText.Text = $"Palm profile confirmed · {ActiveDecodeContext()} · select the IC profile to decode 0x97.";
     }
 
     private bool SelectedDecodeConfigurationMatchesActive()
     {
-        if (session is null || decodeConfiguration is null ||
+        if (_captureWorkspace.State is not CaptureState.Decoded active ||
             EventVersionComboBox.SelectedItem is not ComboBoxItem versionItem)
             return false;
 
+        var decodeConfiguration = active.Replay.Configuration;
+        var session = active.Capture.Session;
         var version = versionItem.Content?.ToString() ?? string.Empty;
         var palmProfile = version.Equals("0x97", StringComparison.OrdinalIgnoreCase)
             ? Desay97ProfileComboBox.SelectedItem is ComboBoxItem palmItem
@@ -647,10 +629,12 @@ public partial class MainWindow : Window
                 RegisterActivityProjector.Project(profiledSession.Records, profiledSession.RegisterAnnotations).ToArray());
             if (!IsCurrentReviewOperation(operationIdentity)) return;
 
-            session = profiledSession;
-            ApplyRawExplorerProjection(projected, selectedId);
-            var diagnostics = SessionDiagnostics(session);
-            diagnosticRows = diagnostics.Select(diagnostic => new DiagnosticRow(diagnostic)).ToArray();
+            var diagnostics = SessionDiagnostics(profiledSession);
+            CollapseExpandedRawRow();
+            _captureWorkspace.UpdateProfile(new CaptureData(profiledSession,
+                RawCaptureProjection.Create(profiledSession, projected),
+                new CaptureDiagnostics(diagnostics), reviewWorkspace));
+            RefreshRawExplorer(selectedId);
             CreateReviewWorkspace(diagnostics, workspaceState: preservedWorkspaceState);
             SynchronizeReviewWorkspaceConsumers();
             committed = true;
@@ -670,8 +654,7 @@ public partial class MainWindow : Window
         {
             var stillOwnsUi = committed
                 ? ReferenceEquals(session, profiledSession) &&
-                  activeCaptureLoadGeneration == operationIdentity.LoadGeneration &&
-                  activeCaptureDecodeGeneration == operationIdentity.DecodeGeneration
+                  ReferenceEquals(_captureWorkspace.Pending, operationIdentity.Pending)
                 : IsCurrentReviewOperation(operationIdentity);
             if (stillOwnsUi) SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
@@ -778,21 +761,6 @@ public partial class MainWindow : Window
 
     private static string FormatTargetI2cAddress(int address) => $"0x{address:X2}";
 
-    private void ApplyRawExplorerProjection(RegisterActivityEntry[] projected, string? preferredStableId = null)
-    {
-        CollapseExpandedRawRow();
-        registerActivities = projected;
-        var activityById = projected.ToDictionary(item => item.Record.StableId, StringComparer.Ordinal);
-        allRawRows = session?.Records
-            .Select(record => new RawRecordRow(
-                record,
-                activityById.GetValueOrDefault(record.StableId),
-                session.RegisterAnnotations.Find(record.StableId)))
-            .ToArray() ?? [];
-        rawRowsById = allRawRows.ToDictionary(row => row.Record.StableId, StringComparer.Ordinal);
-        RefreshRawExplorer(preferredStableId);
-    }
-
     private void RefreshRawExplorer(string? preferredStableId = null)
     {
         if (RawRecordsList is null || RegisterActivitySurface is null) return;
@@ -812,8 +780,8 @@ public partial class MainWindow : Window
         RawRecordsList.ItemsSource = visible;
         var visibleIds = visible.Select(row => row.Record.StableId).ToHashSet(StringComparer.Ordinal);
         var visibleActivities = registerActivities.Where(item => visibleIds.Contains(item.Record.StableId)).ToArray();
-        var minimum = allRawRows.Length == 0 ? 0 : allRawRows.Min(row => row.Record.Index);
-        var maximum = allRawRows.Length == 0 ? 1 : allRawRows.Max(row => row.Record.Index);
+        var minimum = allRawRows.Count == 0 ? 0 : allRawRows.Min(row => row.Record.Index);
+        var maximum = allRawRows.Count == 0 ? 1 : allRawRows.Max(row => row.Record.Index);
         RegisterActivitySurface.SetActivities(visibleActivities, minimum, maximum);
         RegisterActivitySurface.IsEnabled = visibleActivities.Length > 0;
         RegisterResultText.Text = $"{visible.Length:N0} records · {visibleActivities.Length:N0} register events" +
@@ -887,13 +855,13 @@ public partial class MainWindow : Window
 
     private async void SourceAdapterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (configuringSourceChoice.IsActive || pendingSourcePath is not { } path ||
+        if (configuringSourceChoice.IsActive || _captureWorkspace.PendingSource is not { } source ||
             SourceAdapterComboBox.SelectedItem is not SourceAdapterChoice choice)
             return;
         await OpenCaptureAsync(
-            path,
+            source.Path,
             choice.AdapterId,
-            promptForConfiguration: pendingSourceRequiresConfiguration);
+            promptForConfiguration: source.RequiresConfiguration);
     }
 
     private static ReplayDiagnostic[] SessionDiagnostics(CaptureSession capture) =>
@@ -909,23 +877,12 @@ public partial class MainWindow : Window
         HideRegisterProfileInference();
         StopPlayback();
         ResetOutputPlanning();
-        session = null;
-        replaySession = null;
-        replayFrames = null;
+        _captureWorkspace.Clear();
         paintWorkspace = null;
         autoPauseIndex = null;
-        allRawRows = [];
         CollapseExpandedRawRow();
-        registerActivities = [];
-        rawRowsById = [];
-        decodedRowsBySourceId = [];
-        decodedRows = [];
-        diagnosticRows = [];
-        diagnosticLineNumbers = [];
-        reviewWorkspace = null;
         reviewRows = [];
         ReplayTimelineSurface.SetMarkerFrames([]);
-        decodeConfiguration = null;
         pendingSidecar = null;
         playbackController.Clear();
         currentInspectorRecord = null;
@@ -1072,43 +1029,13 @@ public partial class MainWindow : Window
         CaptureDecodeResult result,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var rows = result.Decode switch
-        {
-            CommonFormatDecodeResult common => common.Report.Frames
-                .Select((frame, index) => DecodedFrameRow.FromCommon(index, frame))
-                .ToArray(),
-            Desay97FormatDecodeResult desay => desay.Report.Frames
-                .Select((frame, index) => DecodedFrameRow.FromDesay97(index, frame))
-                .ToArray(),
-            _ => throw new InvalidDataException(
-                $"Unsupported executable format result '{result.Decode.GetType().Name}'."),
-        };
-        cancellationToken.ThrowIfCancellationRequested();
-        var rowsBySourceId = rows
-            .SelectMany(row => row.PhysicalRecords.Append(row.Source).Select(source => (source.StableId, Row: row)))
-            .GroupBy(item => item.StableId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Last().Row, StringComparer.Ordinal);
-        var diagnostics = result.Decode.Diagnostics
-            .Select(diagnostic => new DiagnosticRow(diagnostic))
-            .ToArray();
-        var history = ReplayTrailHistory.Create(result.Workspace.Frames.Snapshots, cancellationToken);
-        var extent = new ReplayExtent(
-            result.Workspace.Extent.MaximumX,
-            result.Workspace.Extent.MaximumY);
-        cancellationToken.ThrowIfCancellationRequested();
-        return new CaptureDecodePresentation(
-            result.Decode.Replay,
-            rows,
-            rowsBySourceId,
-            diagnostics,
-            extent,
-            history);
+        return new CaptureDecodePresentation(DecodedCaptureProjection.Create(result, cancellationToken));
     }
 
     private void PresentCaptureDecodeProgress(CaptureDecodeProgress progress)
     {
-        if (progress.Generation != activeCaptureDecodeGeneration) return;
+        if (_captureWorkspace.Pending is not PendingCaptureOperation.Decode pending ||
+            progress.Generation != pending.Operation.Generation) return;
         var phase = progress.Phase switch
         {
             CaptureDecodePhase.SelectingFormat => "Selecting Event Buffer format",
@@ -1123,13 +1050,12 @@ public partial class MainWindow : Window
             : phase;
     }
 
-    private sealed record CaptureDecodePresentation(
-        ITouchReplaySession Replay,
-        DecodedFrameRow[] DecodedRows,
-        Dictionary<string, DecodedFrameRow> DecodedRowsBySourceId,
-        DiagnosticRow[] DiagnosticRows,
-        ReplayExtent Extent,
-        ReplayTrailHistory TrailHistory);
+    private sealed record CaptureDecodePresentation(DecodedCaptureProjection Projection)
+    {
+        public ITouchReplaySession Replay => Projection.Session;
+        public ReplayExtent Extent => Projection.Extent;
+        public ReplayTrailHistory TrailHistory => Projection.TrailHistory;
+    }
 
     private sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
     {

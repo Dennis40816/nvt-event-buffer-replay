@@ -1091,8 +1091,7 @@ public partial class MainWindow : Window
 
     private OutputOperationIdentity CaptureOutputOperation(AnalysisRange range) => new(
         CaptureOutputReportIdentity(range, OutputReplayIdentity()),
-        activeCaptureLoadGeneration,
-        activeCaptureDecodeGeneration);
+        _captureWorkspace.Pending);
 
     private bool IsCurrentOutputOperation(OutputOperationIdentity operation)
     {
@@ -1100,8 +1099,7 @@ public partial class MainWindow : Window
             return false;
         var current = CaptureOutputReportIdentity(operation.ReportIdentity.Range, OutputReplayIdentity());
         return operation.ReportIdentity.Matches(current) &&
-               operation.LoadGeneration == activeCaptureLoadGeneration &&
-               operation.DecodeGeneration == activeCaptureDecodeGeneration;
+               ReferenceEquals(operation.Pending, _captureWorkspace.Pending);
     }
 
     private void ThrowIfStaleOutputOperation(OutputOperationIdentity operation)
@@ -1474,7 +1472,6 @@ public partial class MainWindow : Window
 
     private sealed record OutputOperationIdentity(
         OutputReportIdentity ReportIdentity,
-        long LoadGeneration,
-        long DecodeGeneration);
+        PendingCaptureOperation? Pending);
 
 }

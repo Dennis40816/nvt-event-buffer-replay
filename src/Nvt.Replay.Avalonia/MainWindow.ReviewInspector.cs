@@ -30,7 +30,6 @@ public partial class MainWindow : Window
 {
     internal Action<string, int>? SourceLocationOpenActionForTesting { get; set; }
 
-    private ReviewInspectorWorkspace? reviewWorkspace;
     private ReviewGroupRow[] reviewRows = [];
     private PaintMarkerRow[] paintMarkerRows = [];
     private bool reviewRailCollapsed;
@@ -175,8 +174,7 @@ public partial class MainWindow : Window
             reviewWorkspace,
             decodeConfiguration,
             loadedSession.SourceSha256,
-            activeCaptureLoadGeneration,
-            activeCaptureDecodeGeneration);
+            _captureWorkspace.Pending);
     }
 
     private bool IsCurrentReviewOperation(ReviewOperationIdentity identity) =>
@@ -184,8 +182,7 @@ public partial class MainWindow : Window
         ReferenceEquals(reviewWorkspace, identity.Workspace) &&
         decodeConfiguration == identity.DecodeConfiguration &&
         string.Equals(session?.SourceSha256, identity.SourceSha256, StringComparison.OrdinalIgnoreCase) &&
-        activeCaptureLoadGeneration == identity.LoadGeneration &&
-        activeCaptureDecodeGeneration == identity.DecodeGeneration;
+        ReferenceEquals(_captureWorkspace.Pending, identity.Pending);
 
     private void RawRecordsList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -195,8 +192,7 @@ public partial class MainWindow : Window
             ShowRecord(row.Record, FindFrame(row.Record.StableId));
             if (!synchronizingSelection.IsActive && replaySession is not null)
             {
-                var logicalIndex = Array.FindIndex(decodedRows, item =>
-                    item.PhysicalRecords.Any(source => source.StableId == row.Record.StableId));
+                var logicalIndex = _captureWorkspace.FindLogicalIndex(row.Record.StableId);
                 if (logicalIndex >= 0)
                 {
                     SeekReplay(logicalIndex);
@@ -544,11 +540,7 @@ public partial class MainWindow : Window
         workspaceState ??= CaptureReviewWorkspaceState();
         var markers = replacementMarkers ?? reviewWorkspace?.Markers.ToArray() ?? [];
         var state = reviewState ?? reviewWorkspace?.ReviewSession.ExportState() ?? [];
-        diagnosticLineNumbers = diagnosticRows
-            .Select(row => row.Diagnostic.Location.LineNumber)
-            .OrderBy(line => line)
-            .ToArray();
-        reviewWorkspace = new ReviewInspectorWorkspace(
+        var nextReview = new ReviewInspectorWorkspace(
             frames ?? reviewWorkspace?.Frames ?? [],
             diagnostics,
             session?.RegisterAnnotations,
@@ -557,8 +549,9 @@ public partial class MainWindow : Window
             reviewOptions: workspaceState?.ReviewOptions ?? new ReviewSessionOptions(
                     SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail,
                     SettingsPage.PlaybackPreferences.PauseOnAlarmOrQaFail));
-        reviewWorkspace.ReplaceMarkersAndImportState(markers, state);
-        RestoreReviewWorkspaceState(reviewWorkspace, workspaceState);
+        nextReview.ReplaceMarkersAndImportState(markers, state);
+        RestoreReviewWorkspaceState(nextReview, workspaceState);
+        _captureWorkspace.SetReviewWorkspace(nextReview);
         RefreshReviewQueue();
     }
 
@@ -988,8 +981,7 @@ public partial class MainWindow : Window
         ReviewInspectorWorkspace? Workspace,
         ReplayDecodeConfiguration? DecodeConfiguration,
         string SourceSha256,
-        long LoadGeneration,
-        long DecodeGeneration);
+        PendingCaptureOperation? Pending);
 
     private bool ShouldPresentPlaybackDetails()
     {

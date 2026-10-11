@@ -40,48 +40,6 @@
       "removeBy": "2026-10-31"
     },
     {
-      "rule": "generationFields",
-      "project": "Nvt.Replay.Avalonia",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "line": 59,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:nextCaptureLoadGeneration",
-      "symbol": "Nvt.Replay.Avalonia.MainWindow.nextCaptureLoadGeneration",
-      "syntaxHash": "b4b8372b589223d0e55e5539f63cdc06f8ff6018e64347029d8a903cf059d7ab",
-      "count": 1,
-      "candidate": false,
-      "note": "Increment/adoption semantics require review.",
-      "owner": "NFU",
-      "removeBy": "2026-10-31"
-    },
-    {
-      "rule": "generationFields",
-      "project": "Nvt.Replay.Avalonia",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "line": 61,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:activeCaptureLoadGeneration",
-      "symbol": "Nvt.Replay.Avalonia.MainWindow.activeCaptureLoadGeneration",
-      "syntaxHash": "f607ed39ad940ca2c74de72bcbf33b9ea0f5344498edacb0e691a85f77458a65",
-      "count": 1,
-      "candidate": false,
-      "note": "Increment/adoption semantics require review.",
-      "owner": "NFU",
-      "removeBy": "2026-10-31"
-    },
-    {
-      "rule": "generationFields",
-      "project": "Nvt.Replay.Avalonia",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "line": 63,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:activeCaptureDecodeGeneration",
-      "symbol": "Nvt.Replay.Avalonia.MainWindow.activeCaptureDecodeGeneration",
-      "syntaxHash": "c9921cbc39d1298ea3c0081602ea57519b97b677fe9049db9a6ee29b5dbbd8ef",
-      "count": 1,
-      "candidate": false,
-      "note": "Increment/adoption semantics require review.",
-      "owner": "NFU",
-      "removeBy": "2026-10-31"
-    },
-    {
       "rule": "asyncVoid",
       "project": "Nvt.Replay.Avalonia",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
@@ -1396,9 +1354,9 @@
         "src/Nvt.Replay.Avalonia/MainWindow.Sidecar.cs": 29
       },
       "ceilings": {
-        "stateMembers": 69,
+        "stateMembers": 51,
         "partialFiles": 10,
-        "viewTypeLines": 5611
+        "viewTypeLines": 5528
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1414,7 +1372,7 @@
       "contentHash": "3d2042c37f3e6955ec7ce9b0870ea78c283f07dbd1499d7ec8aeabb1e267928c",
       "locationLines": {},
       "ceilings": {
-        "methodLines": 109
+        "methodLines": 106
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1430,7 +1388,7 @@
       "contentHash": "e50d6b3d51036dcb106fab7d444386737881407c229f035282614863e739b125",
       "locationLines": {},
       "ceilings": {
-        "fileLines": 1231
+        "fileLines": 1157
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1446,7 +1404,7 @@
       "contentHash": "a1e2e903fcbb267dfaf549968aa8e1d8ee17a92fdb00d7bf6948bf963a089a9f",
       "locationLines": {},
       "ceilings": {
-        "methodLines": 139
+        "methodLines": 134
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1462,7 +1420,7 @@
       "contentHash": "78a58ba93eaabff62bf78585301b89fa9c59f33f108d538a6af75e3ac53e0a51",
       "locationLines": {},
       "ceilings": {
-        "methodLines": 183
+        "methodLines": 177
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1478,7 +1436,7 @@
       "contentHash": "2fe95238cd5b564f1ff51e8fc3bd421f4954d641a5f8688ad4483adb4edb0082",
       "locationLines": {},
       "ceilings": {
-        "methodLines": 163
+        "methodLines": 152
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1494,7 +1452,7 @@
       "contentHash": "a69bd42d9bbe80c8ebe530e18fbb564c0077858cf8d541c849595468b61b48f3",
       "locationLines": {},
       "ceilings": {
-        "fileLines": 1480
+        "fileLines": 1477
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1526,7 +1484,7 @@
       "contentHash": "43457230c2dff46947d8dd4664ec93e627fe7835e1901fc7aa0b3e59c90d283a",
       "locationLines": {},
       "ceilings": {
-        "fileLines": 1023
+        "fileLines": 1015
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"
@@ -1542,7 +1500,7 @@
       "contentHash": "1058c24541e3efff4f7f13e1957ea58714fda756a56572e9b1d774b7f11d79a2",
       "locationLines": {},
       "ceilings": {
-        "methodLines": 88
+        "methodLines": 87
       },
       "owner": "NFU",
       "issue": "health-refactor/2026-10-31"

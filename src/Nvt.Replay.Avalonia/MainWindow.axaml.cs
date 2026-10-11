@@ -30,8 +30,15 @@ public partial class MainWindow : Window
 {
 
 
+    private void MainWindow_OnOpened(object? sender, EventArgs e)
+    {
+        ApplyResponsiveRails(Bounds.Width);
+        AttachComboBoxDismissHandlers();
+    }
+
     public MainWindow()
     {
+        _replayShell = CreateReplayShell();
         InitializeComponent();
         PaintModeComboBox.ItemsSource = new SelectOption[]
         {
@@ -131,11 +138,7 @@ public partial class MainWindow : Window
             handledEventsToo: true);
         PaintSurface.LegendCollapsedChanged += PaintSurface_OnLegendCollapsedChanged;
         RegisterActivitySurface.ActivitySelected += RegisterActivitySurface_OnActivitySelected;
-        Opened += (_, _) =>
-        {
-            ApplyResponsiveRails(Bounds.Width);
-            AttachComboBoxDismissHandlers();
-        };
+        Opened += MainWindow_OnOpened;
         SizeChanged += MainWindow_OnSizeChanged;
         if (Application.Current is { } application) application.ActualThemeVariantChanged += Application_OnActualThemeVariantChanged;
     }
