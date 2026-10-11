@@ -57,7 +57,8 @@ public sealed record ReplayEvidenceResolution(
     ReplayEvidenceReference Reference,
     string ResolvedPath,
     bool Exists,
-    bool HashMatches);
+    bool HashMatches,
+    string? NotVerifiedReason = null);
 
 public sealed record ReplaySidecarOpenResult(
     ReplaySidecarDocument Document,
@@ -122,7 +123,8 @@ public sealed class ReplaySidecarStore
         if (!hashMatches) warnings.Add("Capture SHA-256 does not match the sidecar; explicit operator confirmation is required.");
         if (!configurationMatches) warnings.Add("Decode configuration does not match the sidecar; explicit operator confirmation is required.");
         warnings.AddRange(evidence.Where(item => !item.Exists).Select(item => $"Evidence is missing: {item.Reference.Path}"));
-        warnings.AddRange(evidence.Where(item => item.Exists && !item.HashMatches).Select(item => $"Evidence SHA-256 mismatch: {item.Reference.Path}"));
+        warnings.AddRange(evidence.Where(item => item.Exists && item.NotVerifiedReason is not null).Select(item => $"Evidence not verified: {item.Reference.Path} ({item.NotVerifiedReason})"));
+        warnings.AddRange(evidence.Where(item => item.Exists && item.NotVerifiedReason is null && !item.HashMatches).Select(item => $"Evidence SHA-256 mismatch: {item.Reference.Path}"));
         return new ReplaySidecarOpenResult(document, hashMatches, configurationMatches, evidence, warnings);
     }
 
@@ -153,9 +155,24 @@ public sealed class ReplaySidecarStore
             cancellationToken.ThrowIfCancellationRequested();
             var resolved = Path.GetFullPath(reference.Path, directory);
             var exists = File.Exists(resolved);
-            var hashMatches = exists && (reference.Sha256 is null ||
-                string.Equals(reference.Sha256, await FileHasher.ComputeSha256Async(resolved, cancellationToken), StringComparison.OrdinalIgnoreCase));
-            result.Add(new ReplayEvidenceResolution(reference, resolved, exists, hashMatches));
+            var hashMatches = exists && reference.Sha256 is null;
+            string? notVerifiedReason = null;
+            if (exists && reference.Sha256 is not null)
+            {
+                try
+                {
+                    hashMatches = string.Equals(
+                        reference.Sha256,
+                        await FileHasher.ComputeSha256Async(resolved, cancellationToken),
+                        StringComparison.OrdinalIgnoreCase);
+                }
+                catch (FileNotHashableException exception)
+                {
+                    // An evidence file that is too large or still growing must not block the review from opening.
+                    notVerifiedReason = exception.Message;
+                }
+            }
+            result.Add(new ReplayEvidenceResolution(reference, resolved, exists, hashMatches, notVerifiedReason));
         }
         return result;
     }

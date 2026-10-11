@@ -43,7 +43,7 @@ public sealed class FileHasherTests
     {
         using var stream = new MemoryStream(new byte[Limit + 1]);
 
-        var exception = await Assert.ThrowsAsync<IOException>(() =>
+        var exception = await Assert.ThrowsAsync<FileNotHashableException>(() =>
             FileHasher.ComputeSha256Async(stream, Limit + 1, Limit, CancellationToken.None));
 
         Assert.Equal(0, stream.Position);
@@ -55,7 +55,7 @@ public sealed class FileHasherTests
     {
         using var stream = new MemoryStream(new byte[100]);
 
-        var exception = await Assert.ThrowsAsync<IOException>(() =>
+        var exception = await Assert.ThrowsAsync<FileNotHashableException>(() =>
             FileHasher.ComputeSha256Async(stream, 90, Limit, CancellationToken.None));
 
         Assert.Equal("The file changed while it was read. Copy the file and load the copy.", exception.Message);
@@ -66,10 +66,32 @@ public sealed class FileHasherTests
     {
         using var stream = new MemoryStream(new byte[80]);
 
-        var exception = await Assert.ThrowsAsync<IOException>(() =>
+        var exception = await Assert.ThrowsAsync<FileNotHashableException>(() =>
             FileHasher.ComputeSha256Async(stream, 90, Limit, CancellationToken.None));
 
         Assert.Equal("The file changed while it was read. Copy the file and load the copy.", exception.Message);
+    }
+
+    [Fact]
+    public async Task Refusal_message_names_the_file_when_a_name_is_given()
+    {
+        using var stream = new MemoryStream(new byte[100]);
+
+        var exception = await Assert.ThrowsAsync<FileNotHashableException>(() =>
+            FileHasher.ComputeSha256Async(stream, 90, Limit, CancellationToken.None, "kernel.log"));
+
+        Assert.StartsWith("kernel.log: ", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task One_byte_over_the_limit_does_not_read_as_equal_to_it()
+    {
+        using var stream = new MemoryStream();
+
+        var exception = await Assert.ThrowsAsync<FileNotHashableException>(() =>
+            FileHasher.ComputeSha256Async(stream, (2 * 1024 * 1024) + 1, 2 * 1024 * 1024, CancellationToken.None));
+
+        Assert.Equal("The file is 3 MiB. The maximum is 2 MiB.", exception.Message);
     }
 
     [Fact]
