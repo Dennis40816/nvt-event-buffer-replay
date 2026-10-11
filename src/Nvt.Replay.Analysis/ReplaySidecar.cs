@@ -154,15 +154,9 @@ public sealed class ReplaySidecarStore
             var resolved = Path.GetFullPath(reference.Path, directory);
             var exists = File.Exists(resolved);
             var hashMatches = exists && (reference.Sha256 is null ||
-                string.Equals(reference.Sha256, await ComputeSha256Async(resolved, cancellationToken), StringComparison.OrdinalIgnoreCase));
+                string.Equals(reference.Sha256, await FileHasher.ComputeSha256Async(resolved, cancellationToken), StringComparison.OrdinalIgnoreCase));
             result.Add(new ReplayEvidenceResolution(reference, resolved, exists, hashMatches));
         }
         return result;
-    }
-
-    private static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
-    {
-        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024, true);
-        return Convert.ToHexStringLower(await System.Security.Cryptography.SHA256.HashDataAsync(stream, cancellationToken));
     }
 }

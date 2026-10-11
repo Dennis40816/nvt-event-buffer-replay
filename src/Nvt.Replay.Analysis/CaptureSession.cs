@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Cryptography;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
 using Nvt.Replay.Formats.Desay97;
@@ -69,7 +68,7 @@ public sealed class CaptureSession
         var probe = selected.Probe;
 
         progress?.Report(new CaptureLoadProgress("Hashing source", 0));
-        var sourceHash = await ComputeSha256Async(fullPath, cancellationToken);
+        var sourceHash = await FileHasher.ComputeSha256Async(fullPath, cancellationToken);
         var records = new List<SourceRecord>();
         var sourceDiagnostics = new List<ReplayDiagnostic>();
         progress?.Report(new CaptureLoadProgress("Indexing records", 0));
@@ -280,19 +279,6 @@ public sealed class CaptureSession
             resolvedEventBufferBase,
             frames,
             diagnostics);
-    }
-
-    private static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
-    {
-        await using var stream = new FileStream(
-            path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite,
-            bufferSize: 64 * 1024,
-            useAsync: true);
-        var digest = await SHA256.HashDataAsync(stream, cancellationToken);
-        return Convert.ToHexStringLower(digest);
     }
 
     private static (ISourceAdapter Adapter, SourceProbeResult Probe) SelectAdapter(
