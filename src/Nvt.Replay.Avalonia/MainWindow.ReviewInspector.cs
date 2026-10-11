@@ -1,24 +1,17 @@
 using Avalonia.Input.Platform;
 using System.Globalization;
 using System.Diagnostics;
-using System.Text;
 using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
-using Nvt.Replay.Formats.Common;
-using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Rendering;
 using Nvt.Replay.Sources;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
-using Nvt.Replay.Avalonia.Views;
 
 namespace Nvt.Replay.Avalonia;
 
@@ -28,10 +21,8 @@ public partial class MainWindow : Window
 
     private ReviewGroupRow[] reviewRows = [];
     private PaintMarkerRow[] paintMarkerRows = [];
-    private bool reviewRailCollapsed;
-    private bool inspectorRailCollapsed;
-    private bool? reviewRailUserPreference;
-    private bool? inspectorRailUserPreference;
+    private RailState _reviewRail; // UI thread only.
+    private RailState _inspectorRail; // UI thread only.
     private SourceRecord? currentInspectorRecord;
     private RawRecordRow? expandedRawRow;
     private object? currentInspectorFrame;
@@ -51,14 +42,12 @@ public partial class MainWindow : Window
     internal ReviewInspectorWorkspace? ReviewWorkspace => reviewWorkspace;
     private void ReviewRailToggleButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        reviewRailUserPreference = !reviewRailCollapsed;
-        SetReviewRailCollapsed(reviewRailUserPreference.Value);
+        SetReviewRailCollapsed(_reviewRail.ToggleUserPreference());
     }
 
     private void InspectorRailToggleButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        inspectorRailUserPreference = !inspectorRailCollapsed;
-        SetInspectorRailCollapsed(inspectorRailUserPreference.Value);
+        SetInspectorRailCollapsed(_inspectorRail.ToggleUserPreference());
     }
 
     private void CopyInspectorButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("review.copy-inspector", _ => CopyInspectorAsync(sender, e), CancellationToken.None);
@@ -100,7 +89,7 @@ public partial class MainWindow : Window
 
     private void SetReviewRailCollapsed(bool collapsed)
     {
-        reviewRailCollapsed = collapsed;
+        _reviewRail.ApplyAutomaticCollapse(collapsed);
         WorkspaceShellGrid.ColumnDefinitions[0].Width = new GridLength(collapsed ? 0 : ExpandedReviewRailWidth);
         ReviewRailBorder.IsVisible = !collapsed;
         ReviewRailTitle.IsVisible = !collapsed;
@@ -132,8 +121,8 @@ public partial class MainWindow : Window
 
     private void SetInspectorRailCollapsed(bool collapsed)
     {
-        var wasCollapsed = inspectorRailCollapsed;
-        inspectorRailCollapsed = collapsed;
+        var wasCollapsed = _inspectorRail.Collapsed;
+        _inspectorRail.ApplyAutomaticCollapse(collapsed);
         var column = WorkspaceShellGrid.ColumnDefinitions[3];
         if (collapsed)
         {
@@ -661,7 +650,7 @@ public partial class MainWindow : Window
         PaintMarkerRailBorder.IsVisible =
             paintMarkerRows.Length > 0 &&
             PaintTab.IsSelected &&
-            reviewRailCollapsed &&
+            _reviewRail.Collapsed &&
             !SettingsPage.IsVisible;
     }
 
@@ -982,7 +971,7 @@ public partial class MainWindow : Window
 
     private bool ShouldPresentPlaybackDetails()
     {
-        if (!InspectorRailBorder.IsVisible || inspectorRailCollapsed) return false;
+        if (!InspectorRailBorder.IsVisible || _inspectorRail.Collapsed) return false;
         var now = Stopwatch.GetTimestamp();
         if (lastDetailPresentationTimestamp != 0 &&
             Stopwatch.GetElapsedTime(lastDetailPresentationTimestamp, now) < PlaybackDetailPresentationInterval)

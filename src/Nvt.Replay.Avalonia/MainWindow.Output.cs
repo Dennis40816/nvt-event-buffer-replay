@@ -14,7 +14,6 @@ using Nvt.Replay.Core;
 using Nvt.Replay.Rendering;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
-using Nvt.Replay.Avalonia.Views;
 
 namespace Nvt.Replay.Avalonia;
 
@@ -37,8 +36,7 @@ public partial class MainWindow : Window
     private int heatmapMinimumCount = 5;
     private double heatmapLabelThresholdRatio = 0.65;
     private string appliedHeatmapMode = "all";
-    private bool outputFullscreenActive;
-    private WindowState outputFullscreenPreviousWindowState = WindowState.Normal;
+    private WindowState? _outputFullscreenRestoreState; // UI thread only.
     private readonly EventSuppressionScope configuringOutputSettings = new();
     private readonly EventSuppressionScope configuringOutputRange = new();
     private bool outputRangeUserDefined;
@@ -1273,7 +1271,7 @@ public partial class MainWindow : Window
         var settings = CurrentReplayRenderSettings();
         var outputSettings = outputVideoPreviewPlan.Identity.Settings;
         OutputVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
-        if (outputFullscreenActive)
+        if (_outputFullscreenRestoreState.HasValue)
             OutputFullscreenVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
         outputVideoPreviewDirty = false;
         OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
@@ -1311,9 +1309,8 @@ public partial class MainWindow : Window
 
     private void EnterOutputFullscreen()
     {
-        if (outputVideoFrameCount == 0 || outputFullscreenActive) return;
-        outputFullscreenActive = true;
-        outputFullscreenPreviousWindowState = WindowState;
+        if (outputVideoFrameCount == 0 || _outputFullscreenRestoreState.HasValue) return;
+        _outputFullscreenRestoreState = WindowState;
         OutputFullscreenOverlay.IsVisible = true;
         WindowState = WindowState.FullScreen;
         ShowOutputVideoFrame(outputVideoFrameIndex);
@@ -1322,11 +1319,11 @@ public partial class MainWindow : Window
 
     private void ExitOutputFullscreen()
     {
-        if (!outputFullscreenActive) return;
-        outputFullscreenActive = false;
+        if (_outputFullscreenRestoreState is not { } previousWindowState) return;
+        _outputFullscreenRestoreState = null;
         OutputFullscreenOverlay.IsVisible = false;
         OutputFullscreenVideoPreview.Clear();
-        WindowState = outputFullscreenPreviousWindowState;
+        WindowState = previousWindowState;
     }
 
     private void OutputPreviewPlayPauseButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("output.preview-play-pause", _ => ToggleOutputPreviewPlaybackAsync(sender, e), CancellationToken.None);
@@ -1436,7 +1433,7 @@ public partial class MainWindow : Window
 
     private void RefreshCurrentOutputVideoFrame()
     {
-        var visible = outputFullscreenActive || outputWorkspaceActive && OutputVideoPanel.IsVisible;
+        var visible = _outputFullscreenRestoreState.HasValue || outputWorkspaceActive && OutputVideoPanel.IsVisible;
         if (!visible || !outputVideoPreviewDirty || outputVideoFrameCount == 0 || outputVideoPreviewPlan is null)
             return;
         ShowOutputVideoFrame(outputVideoFrameIndex);
