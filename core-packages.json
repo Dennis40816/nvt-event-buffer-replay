@@ -3,9 +3,9 @@
   "repository": "Dennis40816/nvt_fw_core",
   "packages": [
     {
-      "release": "core-v0.2.0",
-      "asset": "Nvt.Core.0.2.0.nupkg",
-      "sha256": "7d281f8fdc2ac8bfe2c43393c6c98485263a01c84db75e6d1dbcaaaa9bc6b22b"
+      "release": "core-v0.9.0",
+      "asset": "Nvt.Core.0.9.0.nupkg",
+      "sha256": "61c184e477f0e179edb2733d4c258cf81e8dd16a021b02e89cb7f45b2bd55384"
     }
   ]
 }
