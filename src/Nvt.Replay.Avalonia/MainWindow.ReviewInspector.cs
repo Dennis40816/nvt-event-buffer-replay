@@ -1,17 +1,13 @@
+using Avalonia.Input.Platform;
 using System.Globalization;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
@@ -65,7 +61,8 @@ public partial class MainWindow : Window
         SetInspectorRailCollapsed(inspectorRailUserPreference.Value);
     }
 
-    private async void CopyInspectorButton_OnClick(object? sender, RoutedEventArgs e)
+    private void CopyInspectorButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("review.copy-inspector", _ => CopyInspectorAsync(sender, e), CancellationToken.None);
+    private async Task CopyInspectorAsync(object? sender, RoutedEventArgs e)
     {
         SynchronizeVisibleDecodedInspector();
         if (currentInspectorPresentation is null || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
@@ -1011,5 +1008,4 @@ public partial class MainWindow : Window
         DiagnosticListBox.SelectedItem = row;
         DiagnosticListBox.ScrollIntoView(row);
     }
-
 }

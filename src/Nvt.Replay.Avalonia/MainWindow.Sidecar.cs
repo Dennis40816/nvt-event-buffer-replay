@@ -1,18 +1,12 @@
 using System.Globalization;
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using Avalonia.Styling;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
@@ -28,18 +22,17 @@ namespace Nvt.Replay.Avalonia;
 public partial class MainWindow : Window
 {
     private PendingReviewSidecar? pendingSidecar;
-    private async void AttachMarkerEvidenceButton_OnClick(object? sender, RoutedEventArgs e)
+    private void AttachMarkerEvidenceButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("review.attach-evidence", _ => AttachSelectedMarkerEvidenceAsync(PickMarkerEvidenceAsync, path => FileHasher.ComputeSha256Async(path, CancellationToken.None)), CancellationToken.None);
+
+    private async Task<string?> PickMarkerEvidenceAsync()
     {
-        await AttachSelectedMarkerEvidenceAsync(async () =>
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "Attach raw Kernel / FW log",
-                AllowMultiple = false,
-                FileTypeFilter = [new FilePickerFileType("Raw log evidence") { Patterns = ["*.log", "*.txt", "*.dmesg", "*.trace"] }, FilePickerFileTypes.All],
-            });
-            return files.SingleOrDefault()?.TryGetLocalPath();
-        }, path => FileHasher.ComputeSha256Async(path, CancellationToken.None));
+            Title = "Attach raw Kernel / FW log",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Raw log evidence") { Patterns = ["*.log", "*.txt", "*.dmesg", "*.trace"] }, FilePickerFileTypes.All],
+        });
+        return files.SingleOrDefault()?.TryGetLocalPath();
     }
 
     internal async Task AttachSelectedMarkerEvidenceAsync(
@@ -84,7 +77,8 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void SaveReviewButton_OnClick(object? sender, RoutedEventArgs e)
+    private void SaveReviewButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("review.save", _ => SaveReviewAsync(sender, e), CancellationToken.None);
+    private async Task SaveReviewAsync(object? sender, RoutedEventArgs e)
     {
         if (session is null || decodeConfiguration is null || reviewWorkspace is null) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -112,7 +106,7 @@ public partial class MainWindow : Window
                     ["pauseOnAllBreak"] = SettingsPage.PlaybackPreferences.PauseOnAllBreak,
                     ["compressIdle"] = CompressIdleCheckBox.IsChecked == true,
                 },
-                DateTimeOffset.UtcNow);
+                FailureReporter.TimeProvider.GetUtcNow());
             await new ReplaySidecarStore().SaveAsync(path, document);
             SessionStatusText.Text = $"Review saved atomically · {Path.GetFileName(path)}";
         }
@@ -122,19 +116,20 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void LoadReviewButton_OnClick(object? sender, RoutedEventArgs e)
+    private void LoadReviewButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("review.load", _ => LoadReviewSidecarAsync(PickReviewSidecarAsync, ReadReviewSidecarAsync), CancellationToken.None);
+
+    private static Task<ReplaySidecarOpenResult> ReadReviewSidecarAsync(string path, string sourceSha256, ReplayDecodeConfiguration configuration) =>
+        new ReplaySidecarStore().LoadAsync(path, sourceSha256, configuration);
+
+    private async Task<string?> PickReviewSidecarAsync()
     {
-        await LoadReviewSidecarAsync(async () =>
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "Open replay review",
-                AllowMultiple = false,
-                FileTypeFilter = [new FilePickerFileType("NVT replay review") { Patterns = ["*.nvtreplay.json"] }],
-            });
-            return files.SingleOrDefault()?.TryGetLocalPath();
-        }, (path, sourceSha256, configuration) =>
-            new ReplaySidecarStore().LoadAsync(path, sourceSha256, configuration));
+            Title = "Open replay review",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("NVT replay review") { Patterns = ["*.nvtreplay.json"] }],
+        });
+        return files.SingleOrDefault()?.TryGetLocalPath();
     }
 
     internal async Task LoadReviewSidecarAsync(
@@ -267,5 +262,4 @@ public partial class MainWindow : Window
     private sealed record PendingReviewSidecar(
         ReplaySidecarOpenResult Result,
         ReviewOperationIdentity OperationIdentity);
-
 }

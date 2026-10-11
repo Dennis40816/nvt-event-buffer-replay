@@ -1,25 +1,17 @@
-using System.Globalization;
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
+using System.Globalization;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
-using Nvt.Replay.Formats.Common;
-using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Rendering;
-using Nvt.Replay.Sources;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
 using Nvt.Replay.Avalonia.Views;
@@ -184,7 +176,8 @@ public partial class MainWindow : Window
             ExportReplayButton_OnClick(sender, e);
     }
 
-    private async void ExportPointPlotButton_OnClick(object? sender, RoutedEventArgs e)
+    private void ExportPointPlotButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("output.export-points", _ => ExportPointPlotAsync(sender, e), CancellationToken.None);
+    private async Task ExportPointPlotAsync(object? sender, RoutedEventArgs e)
     {
         if (session is null || replaySession is null || decodeConfiguration is null || replaySession.Count == 0) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -268,7 +261,8 @@ public partial class MainWindow : Window
             cancellationToken);
     }
 
-    private async void ExportHeatmapButton_OnClick(object? sender, RoutedEventArgs e)
+    private void ExportHeatmapButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("output.export-heatmap", _ => ExportHeatmapAsync(sender, e), CancellationToken.None);
+    private async Task ExportHeatmapAsync(object? sender, RoutedEventArgs e)
     {
         if (session is null || replaySession is null || decodeConfiguration is null || replaySession.Count == 0) return;
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -333,7 +327,8 @@ public partial class MainWindow : Window
             cancellationToken);
     }
 
-    private async void ExportAnalysisButton_OnClick(object? sender, RoutedEventArgs e)
+    private void ExportAnalysisButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("output.export-analysis", _ => ExportAnalysisAsync(sender, e), CancellationToken.None);
+    private async Task ExportAnalysisAsync(object? sender, RoutedEventArgs e)
     {
         if (session is null || replaySession is null || decodeConfiguration is null || reviewWorkspace is null || replaySession.Count == 0) return;
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -386,11 +381,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void ExportReplayButton_OnClick(object? sender, RoutedEventArgs e) =>
-        await BeginReplayExportAsync(longExportConfirmed: false);
+    private void ExportReplayButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("output.export-replay", _ => BeginReplayExportAsync(longExportConfirmed: false), CancellationToken.None);
 
-    private async void OutputExportContinueButton_OnClick(object? sender, RoutedEventArgs e) =>
-        await BeginReplayExportAsync(longExportConfirmed: true);
+    private void OutputExportContinueButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("output.export-continue", _ => BeginReplayExportAsync(longExportConfirmed: true), CancellationToken.None);
 
     private void OutputExportDismissButton_OnClick(object? sender, RoutedEventArgs e)
     {
@@ -1336,7 +1329,8 @@ public partial class MainWindow : Window
         WindowState = outputFullscreenPreviousWindowState;
     }
 
-    private async void OutputPreviewPlayPauseButton_OnClick(object? sender, RoutedEventArgs e)
+    private void OutputPreviewPlayPauseButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("output.preview-play-pause", _ => ToggleOutputPreviewPlaybackAsync(sender, e), CancellationToken.None);
+    private async Task ToggleOutputPreviewPlaybackAsync(object? sender, RoutedEventArgs e)
     {
         if (outputVideoFrameCount == 0) return;
         if (outputVideoPlaybackCancellation is not null)
@@ -1355,10 +1349,10 @@ public partial class MainWindow : Window
                     ShowOutputVideoFrame(0);
 
                 var firstOutputFrame = outputVideoFrameIndex;
-                var playbackStarted = Stopwatch.GetTimestamp();
+                var playbackStarted = FailureReporter.TimeProvider.GetTimestamp();
                 while (outputVideoFrameIndex < outputVideoFrameCount - 1)
                 {
-                    var elapsed = Stopwatch.GetElapsedTime(playbackStarted).TotalSeconds;
+                    var elapsed = FailureReporter.TimeProvider.GetElapsedTime(playbackStarted).TotalSeconds;
                     var targetFrame = Math.Min(
                         outputVideoFrameCount - 1,
                         firstOutputFrame + (int)Math.Floor(elapsed * outputVideoFrameRate));
@@ -1368,11 +1362,11 @@ public partial class MainWindow : Window
 
                     var nextFrameAt = (targetFrame - firstOutputFrame + 1d) / outputVideoFrameRate;
                     var delay = Math.Max(1, (int)Math.Round((nextFrameAt - elapsed) * 1000));
-                    await Task.Delay(delay, cancellation.Token);
+                    await Task.Delay(TimeSpan.FromMilliseconds(delay), FailureReporter.TimeProvider, cancellation.Token);
                 }
 
                 if (OutputPreviewRepeatToggleButton.IsChecked != true) break;
-                await Task.Delay(Math.Max(1, 1000 / outputVideoFrameRate), cancellation.Token);
+                await Task.Delay(TimeSpan.FromMilliseconds(Math.Max(1, 1000 / outputVideoFrameRate)), FailureReporter.TimeProvider, cancellation.Token);
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -1473,5 +1467,4 @@ public partial class MainWindow : Window
     private sealed record OutputOperationIdentity(
         OutputReportIdentity ReportIdentity,
         PendingCaptureOperation? Pending);
-
 }

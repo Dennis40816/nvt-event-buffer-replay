@@ -1,19 +1,11 @@
-using System.Globalization;
-using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
+using System.Globalization;
 using Avalonia;
-using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
-using Avalonia.Styling;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Core;
 using Nvt.Replay.Formats.Common;
@@ -29,12 +21,10 @@ namespace Nvt.Replay.Avalonia;
 public partial class MainWindow : Window
 {
     private const string ProductWindowTitle = "NVT Event Buffer Replay";
-
     private CancellationTokenSource? operationCancellation;
-
     private readonly CaptureWorkspaceViewModel _captureWorkspace = new();
     private readonly ReplayShellViewModel _replayShell;
-
+    internal UiFailureReporter FailureReporter { get; } // UI thread only; shares the window lifetime.
     private CaptureSession? session => _captureWorkspace.Capture?.Session;
     private ITouchReplaySession? replaySession => _captureWorkspace.Replay?.Session;
     private ReplayFrameCache? replayFrames => _captureWorkspace.Replay?.Frames;
@@ -47,35 +37,30 @@ public partial class MainWindow : Window
     private IReadOnlyList<int> diagnosticLineNumbers => _captureWorkspace.Capture?.Diagnostics.LineNumbers ?? [];
     private ReplayDecodeConfiguration? decodeConfiguration => _captureWorkspace.Replay?.Configuration;
     private ReviewInspectorWorkspace? reviewWorkspace => _captureWorkspace.Capture?.Review;
-
     private readonly CaptureDecodeController captureDecodeController = new();
-
     private readonly EventSuppressionScope configuringEventVersion = new();
-
     private readonly EventSuppressionScope configuringSourceChoice = new();
-
     private readonly EventSuppressionScope configuringRegisterProfile = new();
-
     private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference => _captureWorkspace.PendingConfiguration;
-
     private int targetI2cAddress = 0x01;
-
     private bool operationInProgress;
-
     internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get; set; }
-
     internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get; set; }
 
-    private async void LoadButton_OnClick(object? sender, RoutedEventArgs e) =>
-        await _replayShell.ExecuteAsync(_replayShell.LoadCommand);
+    private void LoadButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("capture.load", _ => _replayShell.ExecuteAsync(_replayShell.LoadCommand), CancellationToken.None);
 
-    private ReplayShellViewModel CreateReplayShell() => new(_captureWorkspace, new ReplayShellSeams(
-        PickCaptureSourceAsync,
-        path => OpenCaptureAsync(path, promptForConfiguration: true),
-        () => DecodeSelectedAsync(),
-        CancelCaptureOperation,
-        () => operationInProgress,
-        () => outputExportJobs.IsActive));
+    private (UiFailureReporter Reporter, ReplayShellViewModel Shell) CreateUiServices()
+    {
+        var reporter = new UiFailureReporter(new(TimeProvider.System,
+            (operation, status) => { if (UiFailureReporter.OwnsBusy(operation)) SetBusy(false, status); else SessionStatusText.Text = status; }, UiFailureReporter.TraceFailure, StopOutputVideoPreviewPlayback, UpdateCaptureSetupValidation));
+        return (reporter, new ReplayShellViewModel(_captureWorkspace, new ReplayShellSeams(
+            PickCaptureSourceAsync,
+            path => OpenCaptureAsync(path, promptForConfiguration: true),
+            () => DecodeSelectedAsync(),
+            CancelCaptureOperation,
+            () => operationInProgress,
+            () => outputExportJobs.IsActive), reporter.Runner));
+    }
 
     private async Task<string?> PickCaptureSourceAsync()
     {
@@ -486,7 +471,8 @@ public partial class MainWindow : Window
 
     private void CancelButton_OnClick(object? sender, RoutedEventArgs e) => _replayShell.CancelCommand.Execute(null);
 
-    private async void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void EventVersionComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) => FailureReporter.Runner.Run("capture.version-selection", _ => EventVersionSelectionChangedAsync(sender, e), CancellationToken.None);
+    private async Task EventVersionSelectionChangedAsync(object? sender, SelectionChangedEventArgs e)
     {
         var comboBox = sender as ComboBox;
         var isDesay97 = comboBox?.SelectedItem is ComboBoxItem item &&
@@ -521,7 +507,8 @@ public partial class MainWindow : Window
             ConfigurationHintText.Text = $"Palm profile selected · {ActiveDecodeContext()} · close the menu to decode.";
     }
 
-    private async void EventVersionComboBox_OnDropDownClosed(object? sender, EventArgs e)
+    private void EventVersionComboBox_OnDropDownClosed(object? sender, EventArgs e) => FailureReporter.Runner.Run("capture.version-confirm", _ => ConfirmEventVersionAsync(sender, e), CancellationToken.None);
+    private async Task ConfirmEventVersionAsync(object? sender, EventArgs e)
     {
         var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
                         versionItem.Content?.ToString() == "0x97";
@@ -530,7 +517,8 @@ public partial class MainWindow : Window
             await _replayShell.ExecuteAsync(_replayShell.DecodeCommand);
     }
 
-    private async void Desay97ProfileComboBox_OnDropDownClosed(object? sender, EventArgs e)
+    private void Desay97ProfileComboBox_OnDropDownClosed(object? sender, EventArgs e) => FailureReporter.Runner.Run("capture.palm-confirm", _ => ConfirmPalmProfileAsync(sender, e), CancellationToken.None);
+    private async Task ConfirmPalmProfileAsync(object? sender, EventArgs e)
     {
         var isDesay97 = EventVersionComboBox.SelectedItem is ComboBoxItem versionItem &&
                         versionItem.Content?.ToString() == "0x97";
@@ -575,7 +563,8 @@ public partial class MainWindow : Window
         return $"active replay: {format} · I²C 0x{decodeConfiguration.TargetI2cAddress:X2}";
     }
 
-    private async void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void RegisterProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) => FailureReporter.Runner.Run("capture.register-profile", _ => RegisterProfileSelectionChangedAsync(sender, e), CancellationToken.None);
+    private async Task RegisterProfileSelectionChangedAsync(object? sender, SelectionChangedEventArgs e)
     {
         if (configuringRegisterProfile.IsActive || session is null ||
             RegisterProfileComboBox.SelectedItem is not RegisterProfileChoice choice)
@@ -685,10 +674,10 @@ public partial class MainWindow : Window
 
     private void RegisterSearchTextBox_OnTextChanged(object? sender, TextChangedEventArgs e) => RefreshRawExplorer();
 
-    private async void TargetI2cAddressTextBox_OnLostFocus(object? sender, RoutedEventArgs e) =>
-        await CommitTargetI2cAddressAsync();
+    private void TargetI2cAddressTextBox_OnLostFocus(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("capture.target-address-focus", _ => CommitTargetI2cAddressAsync(), CancellationToken.None);
 
-    private async void TargetI2cAddressTextBox_OnKeyDown(object? sender, KeyEventArgs e)
+    private void TargetI2cAddressTextBox_OnKeyDown(object? sender, KeyEventArgs e) => FailureReporter.Runner.Run("capture.target-address-key", _ => CommitTargetI2cAddressKeyAsync(sender, e), CancellationToken.None);
+    private async Task CommitTargetI2cAddressKeyAsync(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {
@@ -813,7 +802,8 @@ public partial class MainWindow : Window
         RawRecordsList.ScrollIntoView(row);
     }
 
-    private async void ExportReadableLogButton_OnClick(object? sender, RoutedEventArgs e)
+    private void ExportReadableLogButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("capture.export-readable-log", _ => ExportReadableLogAsync(sender, e), CancellationToken.None);
+    private async Task ExportReadableLogAsync(object? sender, RoutedEventArgs e)
     {
         if (session is null) return;
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -853,7 +843,8 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void SourceAdapterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void SourceAdapterComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) => FailureReporter.Runner.Run("capture.source-adapter", _ => SelectSourceAdapterAsync(sender, e), CancellationToken.None);
+    private async Task SelectSourceAdapterAsync(object? sender, SelectionChangedEventArgs e)
     {
         if (configuringSourceChoice.IsActive || _captureWorkspace.PendingSource is not { } source ||
             SourceAdapterComboBox.SelectedItem is not SourceAdapterChoice choice)

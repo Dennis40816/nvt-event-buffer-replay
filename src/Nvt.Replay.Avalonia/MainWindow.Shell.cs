@@ -1,15 +1,11 @@
 using System.Globalization;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -141,7 +137,8 @@ public partial class MainWindow : Window
         if (Application.Current is { } application) application.RequestedThemeVariant = variant;
     }
 
-    private async void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) => FailureReporter.Runner.Run("workspace.selection", _ => SelectWorkspaceAsync(sender, e), CancellationToken.None);
+    private async Task SelectWorkspaceAsync(object? sender, SelectionChangedEventArgs e)
     {
         if (AnalysisTab is null) return;
         var outputSelected = ReferenceEquals(WorkspaceTabs.SelectedItem, AnalysisTab);
@@ -179,7 +176,7 @@ public partial class MainWindow : Window
         RefreshPaintMarkerRailVisibility();
     }
 
-    private void SetBusy(bool busy, string status)
+    internal void SetBusy(bool busy, string status)
     {
         operationInProgress = busy;
         _replayShell.RefreshAvailability();
