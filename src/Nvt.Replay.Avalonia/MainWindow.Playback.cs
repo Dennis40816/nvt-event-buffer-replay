@@ -3,10 +3,10 @@ using System.Diagnostics;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Styling;
 using Avalonia.Threading;
 using Nvt.Replay.Analysis;
 using Nvt.Replay.Avalonia.Controls;
+using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Views;
 
 namespace Nvt.Replay.Avalonia;
@@ -35,9 +35,7 @@ public partial class MainWindow : Window
 
     private readonly EventSuppressionScope synchronizingLoopControls = new();
 
-    private bool continuousTimelineSeekScheduled;
-
-    private int? pendingContinuousTimelineSeek;
+    private readonly SeekCoalescer _continuousSeek = new();
 
     private void SetTimelineCounts(int physical, int logical, int evidence)
     {
@@ -349,23 +347,19 @@ public partial class MainWindow : Window
 
         if (e.IsContinuous)
         {
-            pendingContinuousTimelineSeek = e.LogicalIndex;
-            if (continuousTimelineSeekScheduled) return;
-            continuousTimelineSeekScheduled = true;
+            if (!_continuousSeek.Request(e.LogicalIndex)) return;
             Dispatcher.UIThread.Post(ProcessPendingContinuousTimelineSeek, DispatcherPriority.Render);
             return;
         }
 
-        pendingContinuousTimelineSeek = null;
+        _continuousSeek.Cancel();
         StopPlayback();
         SeekReplay(e.LogicalIndex);
     }
 
     private void ProcessPendingContinuousTimelineSeek()
     {
-        continuousTimelineSeekScheduled = false;
-        if (pendingContinuousTimelineSeek is not { } logicalIndex || replaySession is null) return;
-        pendingContinuousTimelineSeek = null;
+        if (_continuousSeek.Drain(replaySession is not null) is not { } logicalIndex) return;
         StopPlayback();
         SeekReplay(logicalIndex, synchronizeLists: false);
     }
