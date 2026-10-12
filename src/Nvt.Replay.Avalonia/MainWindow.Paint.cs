@@ -4,17 +4,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Platform.Storage;
-using Avalonia.Threading;
 using Nvt.Replay.Analysis;
-using Nvt.Replay.Core;
-using Nvt.Replay.Formats.Common;
-using Nvt.Replay.Formats.Desay97;
 using Nvt.Replay.Rendering;
-using Nvt.Replay.Sources;
 using Nvt.Replay.Avalonia.ViewModels;
-using Nvt.Replay.Avalonia.Controls;
-using Nvt.Replay.Avalonia.Views;
 
 namespace Nvt.Replay.Avalonia;
 
@@ -105,8 +97,8 @@ public partial class MainWindow : Window
             UpdatePaintZoomText();
         }
         if (update.RequiresSceneRebuild) RenderCurrentPaintScene();
-        if (update.RequiresInspectorRefresh && currentInspectorRecord is not null)
-            ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
+        if (update.RequiresInspectorRefresh && _inspectorSelection is { } selection)
+            ShowRecord(selection.Record, selection.Frame, selection.Snapshot);
         InvalidateCurrentOutputVideoFrame();
         return update;
     }

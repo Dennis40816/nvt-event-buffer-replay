@@ -1,6 +1,5 @@
 using System.Text;
 using System.Globalization;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -14,7 +13,6 @@ using Nvt.Replay.Rendering;
 using Nvt.Replay.Sources;
 using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
-using Nvt.Replay.Avalonia.Views;
 
 namespace Nvt.Replay.Avalonia;
 
@@ -876,10 +874,7 @@ public partial class MainWindow : Window
         ReplayTimelineSurface.SetMarkerFrames([]);
         pendingSidecar = null;
         playbackController.Clear();
-        currentInspectorRecord = null;
-        currentInspectorFrame = null;
-        currentInspectorSnapshot = null;
-        currentInspectorPresentation = null;
+        _inspectorSelection = null;
         SourceLineText.Text = "-";
         SourceLineButton.IsEnabled = false;
         SourceOffsetText.Text = "-";

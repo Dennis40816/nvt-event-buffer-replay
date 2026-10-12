@@ -1,26 +1,11 @@
 using System.Globalization;
 using System.Diagnostics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Nvt.Replay.Analysis;
-using Nvt.Replay.Core;
-using Nvt.Replay.Formats.Common;
-using Nvt.Replay.Formats.Desay97;
-using Nvt.Replay.Rendering;
-using Nvt.Replay.Sources;
-using Nvt.Replay.Avalonia.ViewModels;
 using Nvt.Replay.Avalonia.Controls;
 using Nvt.Replay.Avalonia.Views;
 
@@ -414,8 +399,8 @@ public partial class MainWindow : Window
         {
             ReplayClockText.Text = FormatClock(SelectedTime(replaySession.Timeline[currentLogicalIndex]));
             ReplayEndClockText.Text = FormatClock(SelectedEndTime());
-            if (currentInspectorRecord is not null)
-                ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
+            if (_inspectorSelection is { } selection)
+                ShowRecord(selection.Record, selection.Frame, selection.Snapshot);
         }
     }
 
