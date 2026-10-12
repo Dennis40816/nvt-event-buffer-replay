@@ -3,3 +3,4 @@
 /eng/core-health/** text eol=lf
 /eng/core-health.lock.json text eol=lf
 /tools/repo-checks/schema.json text eol=lf
+/tools/repo-checks/repo-health.ps1 text eol=lf
