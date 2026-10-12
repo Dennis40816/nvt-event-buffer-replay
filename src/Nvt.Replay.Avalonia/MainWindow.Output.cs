@@ -19,17 +19,15 @@ namespace Nvt.Replay.Avalonia;
 
 public partial class MainWindow : Window
 {
-    private CancellationTokenSource? outputPreviewCancellation;
-    private CancellationTokenSource? outputVideoPlaybackCancellation;
+    private readonly CancellationSlot _outputPreviewCancellation = new();
+    private readonly CancellationSlot _outputVideoPlaybackCancellation = new();
     private readonly ReplayOutputWorkspace outputWorkspace = new();
     private ReplayOutputPlanService outputPlanService = new();
     private readonly ExportJobService outputExportJobs = new();
     private readonly OutputPreviewState _outputPreview = new();
     private OutputReportService outputReportService = new();
     private CaptureAnalysisReport? currentOutputReport;
-    private int heatmapMinimumCount = 5;
-    private double heatmapLabelThresholdRatio = 0.65;
-    private string appliedHeatmapMode = "all";
+    private HeatmapSettings _heatmap = HeatmapSettings.Default;
     private WindowState? _outputFullscreenRestoreState; // UI thread only.
     private readonly EventSuppressionScope configuringOutputSettings = new();
     private readonly EventSuppressionScope configuringOutputRange = new();
@@ -142,13 +140,11 @@ public partial class MainWindow : Window
         }
         var selectedMode = SelectedHeatmapMode();
         var nextLabelRatio = labelPercent / 100d;
-        if (minimumCount == heatmapMinimumCount &&
-            Math.Abs(nextLabelRatio - heatmapLabelThresholdRatio) < 0.0001 &&
-            string.Equals(selectedMode, appliedHeatmapMode, StringComparison.Ordinal))
+        if (minimumCount == _heatmap.MinimumCount &&
+            Math.Abs(nextLabelRatio - _heatmap.LabelThresholdRatio) < 0.0001 &&
+            string.Equals(selectedMode, _heatmap.Mode, StringComparison.Ordinal))
             return;
-        heatmapMinimumCount = minimumCount;
-        heatmapLabelThresholdRatio = nextLabelRatio;
-        appliedHeatmapMode = selectedMode;
+        _heatmap = new HeatmapSettings(minimumCount, nextLabelRatio, selectedMode);
         RefreshHeatmapPresentation();
     }
 
@@ -281,7 +277,7 @@ public partial class MainWindow : Window
             await WriteCurrentHeatmapPreviewAsync(path, cancellationToken);
             ThrowIfStaleOutputOperation(operation);
             SetActualOutputSize(path);
-            var mode = SelectedHeatmapMode() == "repeated" ? $"repeated N≥{heatmapMinimumCount:N0}" : "all recorded points";
+            var mode = SelectedHeatmapMode() == "repeated" ? $"repeated N≥{_heatmap.MinimumCount:N0}" : "all recorded points";
             AnalysisOutputText.Text = $"Heatmap PNG · {path}\n{AnalysisHeatmapPreview.VisibleSampleCount:N0} visible samples · {mode} · range {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0}";
             SessionStatusText.Text = "Heatmap PNG exported";
         }
@@ -398,8 +394,8 @@ public partial class MainWindow : Window
         try
         {
             encoderProbe = FfmpegProbeForTesting is { } probe
-                ? await probe(outputPreviewCancellation?.Token ?? CancellationToken.None)
-                : await FfmpegRuntime.ProbeAsync(cancellationToken: outputPreviewCancellation?.Token ?? CancellationToken.None);
+                ? await probe(_outputPreviewCancellation.Current?.Token ?? CancellationToken.None)
+                : await FfmpegRuntime.ProbeAsync(cancellationToken: _outputPreviewCancellation.Current?.Token ?? CancellationToken.None);
         }
         catch (OperationCanceledException)
         {
@@ -425,7 +421,7 @@ public partial class MainWindow : Window
                 replaySession,
                 OutputReplayIdentity(),
                 outputWorkspace.Settings,
-                outputPreviewCancellation?.Token ?? CancellationToken.None);
+                _outputPreviewCancellation.Current?.Token ?? CancellationToken.None);
         }
         catch (OperationCanceledException)
         {
@@ -1102,10 +1098,7 @@ public partial class MainWindow : Window
             return;
 
         StopOutputVideoPreviewPlayback();
-        outputPreviewCancellation?.Cancel();
-        outputPreviewCancellation?.Dispose();
-        outputPreviewCancellation = new CancellationTokenSource();
-        var cancellationToken = outputPreviewCancellation.Token;
+        var cancellationToken = _outputPreviewCancellation.Begin().Token;
         var generation = _outputPreview.BeginRequest();
         var range = SelectedOutputRange();
         outputWorkspace.Update(outputWorkspace.Settings with { Range = range });
@@ -1196,8 +1189,8 @@ public partial class MainWindow : Window
         }
 
         var repeated = SelectedHeatmapMode() == "repeated";
-        var minimum = repeated ? heatmapMinimumCount : 1;
-        AnalysisHeatmapPreview.Show(report.Hotspot, minimum, heatmapLabelThresholdRatio);
+        var minimum = repeated ? _heatmap.MinimumCount : 1;
+        AnalysisHeatmapPreview.Show(report.Hotspot, minimum, _heatmap.LabelThresholdRatio);
         var hiddenSamples = Math.Max(0, report.Hotspot.SampleCount - AnalysisHeatmapPreview.VisibleSampleCount);
         OutputHotspotText.Text = repeated
             ? $"N≥{minimum:N0} · {AnalysisHeatmapPreview.VisibleSampleCount:N0}/{report.Hotspot.SampleCount:N0} samples · peak {AnalysisHeatmapPreview.PeakCount:N0}"
@@ -1317,13 +1310,12 @@ public partial class MainWindow : Window
     private async Task ToggleOutputPreviewPlaybackAsync(object? sender, RoutedEventArgs e)
     {
         if (outputVideoFrameCount == 0) return;
-        if (outputVideoPlaybackCancellation is not null)
+        if (_outputVideoPlaybackCancellation.IsActive)
         {
             StopOutputVideoPreviewPlayback();
             return;
         }
-        var cancellation = new CancellationTokenSource();
-        outputVideoPlaybackCancellation = cancellation;
+        var cancellation = _outputVideoPlaybackCancellation.Begin();
         SetOutputVideoPlaybackVisualState(true);
         try
         {
@@ -1358,10 +1350,8 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (ReferenceEquals(outputVideoPlaybackCancellation, cancellation))
+            if (_outputVideoPlaybackCancellation.ReleaseIfCurrent(cancellation))
             {
-                outputVideoPlaybackCancellation = null;
-                cancellation.Dispose();
                 SetOutputVideoPlaybackVisualState(false);
             }
         }
@@ -1369,8 +1359,7 @@ public partial class MainWindow : Window
 
     private void StopOutputVideoPreviewPlayback()
     {
-        var cancellation = outputVideoPlaybackCancellation;
-        outputVideoPlaybackCancellation = null;
+        var cancellation = _outputVideoPlaybackCancellation.Take();
         cancellation?.Cancel();
         cancellation?.Dispose();
         if (OutputPreviewPlayPauseButton is not null)
@@ -1426,9 +1415,7 @@ public partial class MainWindow : Window
     private void ResetOutputPlanning()
     {
         _outputPreview.AdvanceGeneration();
-        outputPreviewCancellation?.Cancel();
-        outputPreviewCancellation?.Dispose();
-        outputPreviewCancellation = null;
+        _outputPreviewCancellation.CancelAndClear();
         outputPlanService.Invalidate();
         outputReportService.Reset();
         _outputPreview.ResetRequest();

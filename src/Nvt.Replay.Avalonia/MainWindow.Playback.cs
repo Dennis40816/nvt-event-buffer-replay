@@ -13,7 +13,7 @@ namespace Nvt.Replay.Avalonia;
 
 public partial class MainWindow : Window
 {
-    private CancellationTokenSource? playbackCancellation;
+    private readonly CancellationSlot _playbackCancellation = new();
 
     private readonly ReplayPlaybackController playbackController = new();
 
@@ -168,7 +168,7 @@ public partial class MainWindow : Window
 
     private void PlayPauseButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (playbackCancellation is not null)
+        if (_playbackCancellation.IsActive)
         {
             StopPlayback();
             return;
@@ -184,7 +184,7 @@ public partial class MainWindow : Window
         }
         SeekReplay(start.LogicalIndex);
         var cancellation = new CancellationTokenSource();
-        playbackCancellation = cancellation;
+        _playbackCancellation.Assign(cancellation);
         SetPlaybackVisualState(playing: true);
         UpdatePlaybackStatus();
         _ = RunPlaybackAsync(cancellation.Token, start.Generation);
@@ -299,12 +299,12 @@ public partial class MainWindow : Window
 
     private void RestartPlaybackTimingIfActive(ReplayPlaybackConfigurationChange change)
     {
-        var previous = playbackCancellation;
+        var previous = _playbackCancellation.Current;
         if (!change.RestartRequired || previous is null || replaySession is null || replaySession.Count == 0)
             return;
 
         var replacement = new CancellationTokenSource();
-        playbackCancellation = replacement;
+        _playbackCancellation.Assign(replacement);
         previous.Cancel();
         previous.Dispose();
         UpdatePlaybackStatus();
@@ -313,8 +313,7 @@ public partial class MainWindow : Window
 
     private void StopPlayback(string? status = null)
     {
-        var cancellation = playbackCancellation;
-        playbackCancellation = null;
+        var cancellation = _playbackCancellation.Take();
         playbackController.Pause();
         cancellation?.Cancel();
         cancellation?.Dispose();

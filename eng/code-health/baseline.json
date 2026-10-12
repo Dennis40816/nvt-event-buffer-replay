@@ -86,8 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5483,
-        "stateMembers": 34,
+        "viewTypeLines": 5469,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -181,7 +180,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1450
+        "fileLines": 1437
       },
       "owner": "NFU",
       "locations": [
@@ -1423,16 +1422,6 @@
       "member": "MSBuild",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "WarningsNotAsErrors:RS0030"
-    },
-    {
-      "syntaxHash": "730f5cf58209220c8bb07a0c13ba2ba6977761bc420cc4aca8f73a41274ed392",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Nvt.Replay.Avalonia.csproj",
-      "rule": "suppressions",
-      "count": 1,
-      "member": "MSBuild",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WarningsNotAsErrors:VSTHRD103"
     },
     {
       "syntaxHash": "21d60f5d4640af5589e86844beacb5459e67dd63ad152a84c7d1649bffaefbba",
@@ -18065,16 +18054,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "a73e0e367bbcaece1cd7b67c64b06951eca71123f4a847c8660208c69d036c98",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:appliedHeatmapMode",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "bf454d7f3bffe631790d088d0cf0c3bb1e0e442b72ba35af1764efbd2c59c417",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
@@ -18215,26 +18194,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "ea3a536e36444a5c35159c9e96743952d05eb6abfb247ca696ae7bcc5e4b52b2",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:heatmapLabelThresholdRatio",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "95fc950a7609cde4ae7ba30df2d7cf7d9cfa3888991a2ed563302e9b5d6baa64",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:heatmapMinimumCount",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "907a7a11d9a2dc0f26f36e699e2a7cfd0550ff22faca3f7ea6050f7d9abd80b3",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
@@ -18275,16 +18234,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "ec72ec963abd37f991d0c8036467e2b65bf5df4af877dee5a8a019b536ad6ade",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputPreviewCancellation",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "119d860ce570d46acf61d67e54740e028f3a1c4649410dc1a4002f726a912308",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
@@ -18301,16 +18250,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputReportService",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "0a17af5158fdba169fc7195203a39b3c0c88b73a9f369639faee8b9529e50cbb",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputVideoPlaybackCancellation",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
@@ -18361,16 +18300,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.fields:pendingSidecar",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "e1d8b45b8d6742d36aaad6d969deb38e4d9eb3d737d6031141b79c20419452e0",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:playbackCancellation",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
@@ -22012,26 +21941,6 @@
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Output_report_is_single_flight_across_preview_heatmap_package_and_caller_cancellation()",
       "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "670b5afe4545c164f6e72f80981bff7509d8ef305f29c8a048a37a5c62227db9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputPreviewAsync()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "670b5afe4545c164f6e72f80981bff7509d8ef305f29c8a048a37a5c62227db9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.SelectWorkspaceAsync(object?,SelectionChangedEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
       "symbol": "VSTHRD103"
     },
     {

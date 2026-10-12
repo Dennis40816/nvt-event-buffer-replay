@@ -23,7 +23,7 @@
     <HealthBaselineWarningIds>EnableGenerateDocumentationFile;RS0030</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Avalonia'">
-    <HealthBaselineWarningIds>CA1001;CA1031;CA1068;CA1305;CA1307;CA1822;CA1826;CA1859;CA2000;CA2016;CS1591;IDE0005;IDE0051;IDE0059;IDE0060;IDE0330;IDE1006;RS0030;VSTHRD103</HealthBaselineWarningIds>
+    <HealthBaselineWarningIds>CA1001;CA1031;CA1068;CA1305;CA1307;CA1822;CA1826;CA1859;CA2000;CA2016;CS1591;IDE0005;IDE0051;IDE0059;IDE0060;IDE0330;IDE1006;RS0030</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Avalonia.Tests'">
     <HealthBaselineWarningIds>CA1307;CA1861;CA2000;CA2016;EnableGenerateDocumentationFile;IDE1006;RS0030;VSTHRD003;VSTHRD103</HealthBaselineWarningIds>
