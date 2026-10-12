@@ -42,21 +42,46 @@ jobs:
         timeout-minutes: 5
         run: dotnet restore Nvt.EventBufferReplay.sln --locked-mode
 
-      - name: Verify repository health
+      - name: Read the Core pin
+        id: pin
+        shell: pwsh
+        run: |
+          $lock = Get-Content -Raw -LiteralPath eng/core-health.lock.json | ConvertFrom-Json
+          if ($lock.coreCommit -cnotmatch '^[0-9a-f]{40}\z') { throw 'eng/core-health.lock.json: coreCommit is not a 40-character lowercase SHA.' }
+          "commit=$($lock.coreCommit)" >> $env:GITHUB_OUTPUT
+
+      - name: Check out Core at the pin
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: Dennis40816/nvt_fw_core
+          ref: ${{ steps.pin.outputs.commit }}
+          path: .core
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Compare ledgers and the Core bundle with the base, not with HEAD, so a change cannot edit a ledger
+      # and the debt it hides in the same commit (repo-health.md: application CI must pass -BaseRef).
+      # -CoreRoot makes the checker prove that the six bundle copies equal the blobs at the pinned Core commit.
+      # The checker itself is the application copy under tools/repo-checks. Its identity is checked once the
+      # lock has a repo-health.ps1 entry, which the pin synchronization adds.
+      - name: Verify repository health (pull request)
+        if: github.event_name == 'pull_request'
         shell: pwsh
         env:
-          PULL_REQUEST_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
-          PUSH_BEFORE: ${{ github.event_name == 'push' && github.event.before || '' }}
+          BASE_REF: ${{ github.base_ref }}
+        run: ./tools/repo-checks/repo-health.ps1 -Mode Verify -Repo nfu -Root . -Solution Nvt.EventBufferReplay.sln -BaseRef "origin/$env:BASE_REF" -CoreRoot ./.core
+
+      - name: Verify repository health (push)
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
         run: |
-          # Compare ledgers and the Core bundle with the base, not with HEAD, so a change cannot edit a ledger
-          # and the debt it hides in the same commit (repo-health.md: application CI must pass -BaseRef).
-          $baseRef = $env:PULL_REQUEST_BASE
-          if (-not $baseRef -and $env:PUSH_BEFORE -match '[1-9a-f]') {
+          $arguments = @{ Mode = 'Verify'; Repo = 'nfu'; Root = '.'; Solution = 'Nvt.EventBufferReplay.sln'; CoreRoot = './.core' }
+          if ($env:PUSH_BEFORE -and $env:PUSH_BEFORE -notmatch '^0+$') {
             git cat-file -e "$($env:PUSH_BEFORE)^{commit}" 2>$null
-            if ($LASTEXITCODE -eq 0) { $baseRef = $env:PUSH_BEFORE }
+            if ($LASTEXITCODE -eq 0) { $arguments.BaseRef = $env:PUSH_BEFORE }
           }
-          $arguments = @{ Mode = 'Verify'; Repo = 'nfu'; Root = '.'; Solution = 'Nvt.EventBufferReplay.sln' }
-          if ($baseRef) { $arguments.BaseRef = $baseRef }
           ./tools/repo-checks/repo-health.ps1 @arguments
 
   build-and-test:

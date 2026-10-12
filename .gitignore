@@ -21,3 +21,5 @@ captures/**/*
 *.nvtreplay.json
 !golden/README.md
 !captures/README.md
+# Core checkout used by the health job.
+/.core/
