@@ -163,9 +163,10 @@ public partial class MainWindow : Window
         RefreshPaintMarkerRailVisibility();
     }
 
+    private OperationOwner.Lease? operationCancellation => _operation.Current;
+
     internal void SetBusy(bool busy, string status)
     {
-        operationInProgress = busy;
         _replayShell.RefreshAvailability();
         LoadingProgress.IsVisible = busy;
         LoadButton.IsVisible = !busy;
@@ -352,6 +353,7 @@ public partial class MainWindow : Window
                visual.FindAncestorOfType<Slider>() is not null;
     }
 
+    /// <inheritdoc />
     protected override void OnClosed(EventArgs e)
     {
         if (_captureWorkspace.Pending is { } pending) _captureWorkspace.Fail(pending);
@@ -361,10 +363,8 @@ public partial class MainWindow : Window
         ResetOutputPlanning();
         outputPlanService.Dispose();
         outputReportService.Dispose();
-        var activeOperationCancellation = operationCancellation;
-        operationCancellation = null;
-        activeOperationCancellation?.Cancel();
-        activeOperationCancellation?.Dispose();
+        _operation.CancelCurrent();
+        _operation.Dispose();
         captureDecodeController.Dispose();
         outputExportJobs.Cancel();
         if (Application.Current is { } application) application.ActualThemeVariantChanged -= Application_OnActualThemeVariantChanged;

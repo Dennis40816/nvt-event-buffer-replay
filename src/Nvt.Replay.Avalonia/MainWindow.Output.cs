@@ -182,14 +182,12 @@ public partial class MainWindow : Window
         var path = file?.TryGetLocalPath();
         if (path is null) return;
 
-        operationCancellation?.Cancel();
-        operationCancellation?.Dispose();
-        operationCancellation = new CancellationTokenSource();
-        var cancellationToken = operationCancellation.Token;
-        var operation = CaptureOutputOperation(SelectedOutputRange());
-        SetBusy(true, "Rendering reported point PNG");
+        var lease = _operation.Begin();
+        var cancellationToken = lease.Token;
         try
         {
+            var operation = CaptureOutputOperation(SelectedOutputRange());
+            SetBusy(true, "Rendering reported point PNG");
             var reportSnapshot = await GetOutputReportAsync(operation.ReportIdentity, cancellationToken);
             ThrowIfStaleOutputOperation(operation);
             currentOutputReport = reportSnapshot.Report;
@@ -204,15 +202,17 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SessionStatusText.Text = "Point plot export cancelled; no partial output was kept";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = "Point plot export cancelled; no partial output was kept";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         {
-            SessionStatusText.Text = $"Point plot export failed · {exception.Message}";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = $"Point plot export failed · {exception.Message}";
         }
         finally
         {
-            SetBusy(false, SessionStatusText.Text ?? "Ready");
+            if (_operation.Release(lease)) SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
     }
 
@@ -267,14 +267,12 @@ public partial class MainWindow : Window
         var path = file?.TryGetLocalPath();
         if (path is null) return;
 
-        operationCancellation?.Cancel();
-        operationCancellation?.Dispose();
-        operationCancellation = new CancellationTokenSource();
-        var cancellationToken = operationCancellation.Token;
-        var operation = CaptureOutputOperation(SelectedOutputRange());
-        SetBusy(true, "Rendering heatmap PNG");
+        var lease = _operation.Begin();
+        var cancellationToken = lease.Token;
         try
         {
+            var operation = CaptureOutputOperation(SelectedOutputRange());
+            SetBusy(true, "Rendering heatmap PNG");
             var reportSnapshot = await GetOutputReportAsync(operation.ReportIdentity, cancellationToken);
             ThrowIfStaleOutputOperation(operation);
             var report = reportSnapshot.Report;
@@ -289,15 +287,17 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SessionStatusText.Text = "Heatmap export cancelled; no partial output was kept";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = "Heatmap export cancelled; no partial output was kept";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         {
-            SessionStatusText.Text = $"Heatmap export failed · {exception.Message}";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = $"Heatmap export failed · {exception.Message}";
         }
         finally
         {
-            SetBusy(false, SessionStatusText.Text ?? "Ready");
+            if (_operation.Release(lease)) SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
     }
 
@@ -331,14 +331,12 @@ public partial class MainWindow : Window
         var directory = folders.SingleOrDefault()?.TryGetLocalPath();
         if (directory is null) return;
 
-        operationCancellation?.Cancel();
-        operationCancellation?.Dispose();
-        operationCancellation = new CancellationTokenSource();
-        var cancellationToken = operationCancellation.Token;
-        var operation = CaptureOutputOperation(SelectedOutputRange());
-        SetBusy(true, "Analyzing selected replay range");
+        var lease = _operation.Begin();
+        var cancellationToken = lease.Token;
         try
         {
+            var operation = CaptureOutputOperation(SelectedOutputRange());
+            SetBusy(true, "Analyzing selected replay range");
             var reportSnapshot = await GetOutputReportAsync(operation.ReportIdentity, cancellationToken);
             ThrowIfStaleOutputOperation(operation);
             var report = reportSnapshot.Report;
@@ -361,15 +359,17 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SessionStatusText.Text = "Analysis cancelled; prior complete output was preserved";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = "Analysis cancelled; prior complete output was preserved";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
-            SessionStatusText.Text = $"Analysis export failed · {exception.Message}";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = $"Analysis export failed · {exception.Message}";
         }
         finally
         {
-            SetBusy(false, SessionStatusText.Text ?? "Ready");
+            if (_operation.Release(lease)) SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
     }
 
@@ -603,7 +603,7 @@ public partial class MainWindow : Window
         if (snapshot.JobId != authoritative.JobId) return;
         snapshot = authoritative;
         var exporting = snapshot.IsActive;
-        LoadButton.IsEnabled = !exporting && !operationInProgress;
+        LoadButton.IsEnabled = !exporting && !_operation.Active;
         OutputExportActivityPanel.IsVisible = exporting;
         ExportSelectedOutputButton.IsVisible = !exporting;
         OutputExportCancelButton.IsEnabled = snapshot.Status == ExportJobStatus.Running;
@@ -630,7 +630,7 @@ public partial class MainWindow : Window
                            replaySession is not null &&
                            MatchingOutputVideoPreviewPlan(outputWorkspace.Settings, OutputReplayIdentityOrEmpty()) is not null;
         ExportSelectedOutputButton.IsEnabled =
-            !operationInProgress && replaySession is { Count: > 0 } &&
+            !_operation.Active && replaySession is { Count: > 0 } &&
             (!mp4Selected || !outputExportJobs.IsActive && previewReady);
     }
 

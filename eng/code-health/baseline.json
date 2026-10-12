@@ -87,7 +87,7 @@
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
         "viewTypeLines": 5489,
-        "stateMembers": 38,
+        "stateMembers": 36,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -139,7 +139,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 134
+        "methodLines": 131
       },
       "owner": "NFU",
       "locations": [
@@ -153,7 +153,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 177
+        "methodLines": 174
       },
       "owner": "NFU",
       "locations": [
@@ -10125,16 +10125,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "45d0fc7a2bf5b8f72d241d353c6de358ddb15a557ed71c41f0a2316a187cc6c0",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.OnClosed(EventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "d2845f1db49c9a646541f3f2b330675af3c1e595622f67d8f67133498c65d500",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
@@ -18265,26 +18255,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "a1d4f333c4ea81d057ac0b81f293dc89b9f7132a8e690863a694a71b8c971f38",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:operationCancellation",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "31cc805aed6ee8a683e62bf4477c00dfdd2826310f707eaf3304767673c597a8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:operationInProgress",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "2152532313769faf4f3f7b3c4c5a22744df5b6b1fd160e5869ad5896fff466f8",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
@@ -22062,66 +22032,6 @@
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Output_report_is_single_flight_across_preview_heatmap_package_and_caller_cancellation()",
       "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "5d2c93d815a0562dacd5fd687d6bdda8bd9de3747b012399408703e7401e819a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.DecodeSelectedAsync(bool,ReviewWorkspaceState?,TabItem?)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "5d2c93d815a0562dacd5fd687d6bdda8bd9de3747b012399408703e7401e819a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.ExportAnalysisAsync(object?,RoutedEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "5d2c93d815a0562dacd5fd687d6bdda8bd9de3747b012399408703e7401e819a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.ExportHeatmapAsync(object?,RoutedEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "5d2c93d815a0562dacd5fd687d6bdda8bd9de3747b012399408703e7401e819a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.ExportPointPlotAsync(object?,RoutedEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "5d2c93d815a0562dacd5fd687d6bdda8bd9de3747b012399408703e7401e819a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.ExportReadableLogAsync(object?,RoutedEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "VSTHRD103"
-    },
-    {
-      "syntaxHash": "5d2c93d815a0562dacd5fd687d6bdda8bd9de3747b012399408703e7401e819a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "VSTHRD103",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.OpenCaptureAsync(string,string?,bool)",
-      "project": "Nvt.Replay.Avalonia",
       "symbol": "VSTHRD103"
     },
     {
