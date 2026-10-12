@@ -72,6 +72,10 @@
             "schema.json": {
               "type": "string",
               "pattern": "^[0-9a-f]{64}$"
+            },
+            "repo-health.ps1": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
             }
           }
         }
@@ -260,8 +264,7 @@
         "symbol",
         "syntaxHash",
         "count",
-        "owner",
-        "removeBy"
+        "owner"
       ],
       "properties": {
         "rule": {
