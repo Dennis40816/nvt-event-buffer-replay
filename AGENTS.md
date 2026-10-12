@@ -81,6 +81,22 @@ New C# code and tests follow Core's docs/core/conventions.md and docs/core/testi
 Core main: [conventions](https://github.com/Dennis40816/nvt_fw_core/blob/main/docs/core/conventions.md) and [testing](https://github.com/Dennis40816/nvt_fw_core/blob/main/docs/core/testing.md).
 Existing debt is recorded in [the health baseline](eng/code-health/baseline.json).
 
+## Debt ledgers
+
+`eng/code-health/baseline.json` and `eng/code-health/test-debt.json` hold the existing debt. They only go down.
+The operating guide is Core's
+[`ledger-operation.md`](https://github.com/Dennis40816/nvt_fw_core/blob/main/tools/repo-checks/ledger-operation.md).
+
+- Lower, never raise. A fix lowers the ledger in the same change (`repo-health.ps1 -Mode LowerBaseline`).
+  Do not add `removeBy` to a finding.
+- A finding is identified by rule, project, member, symbol and a token hash, not by file or line. Renaming a
+  member, moving it to another type, or reshaping the flagged statement makes one finding disappear and one new
+  finding appear, and the new one fails. Editing a file that holds debt can change its fingerprints, so clear
+  that file's old findings in the same change.
+- Run `./scripts/verify.ps1` locally before every push. It runs the same health Verify as CI. The finding
+  text comes from the compiler, so run it with an English UI language (`DOTNET_CLI_UI_LANGUAGE=en`,
+  `VSLANG=1033`); another language changes fingerprints.
+
 ## Commands
 
 `./scripts/verify.ps1` is the shared local, preview and release-candidate
