@@ -151,7 +151,7 @@ public partial class MainWindow : Window
                 ExitOutputFullscreen();
                 StopOutputVideoPreviewPlayback();
                 outputPreviewCancellation?.Cancel();
-                if (outputPreviewPlanPending) outputPlanService.Invalidate();
+                if (_outputPreview.PlanPending) outputPlanService.Invalidate();
                 outputReportService.CancelActive();
             }
             SetOutputWorkspaceChrome(false, paintSelected && !SettingsPage.IsVisible);
@@ -274,28 +274,28 @@ public partial class MainWindow : Window
                 return true;
             case ReplayShortcutAction.PreviousFrame when outputWorkspaceActive && outputVideoFrameCount > 0:
                 StopOutputVideoPreviewPlayback();
-                ShowOutputVideoFrame(outputVideoFrameIndex - 1);
+                ShowOutputVideoFrame(_outputPreview.FrameIndex - 1);
                 return true;
             case ReplayShortcutAction.PreviousFrame when PreviousFrameButton.IsEnabled:
                 PreviousFrameButton_OnClick(this, new RoutedEventArgs());
                 return true;
             case ReplayShortcutAction.NextFrame when outputWorkspaceActive && outputVideoFrameCount > 0:
                 StopOutputVideoPreviewPlayback();
-                ShowOutputVideoFrame(outputVideoFrameIndex + 1);
+                ShowOutputVideoFrame(_outputPreview.FrameIndex + 1);
                 return true;
             case ReplayShortcutAction.NextFrame when NextFrameButton.IsEnabled:
                 NextFrameButton_OnClick(this, new RoutedEventArgs());
                 return true;
             case ReplayShortcutAction.JumpBackTenFrames when outputWorkspaceActive && outputVideoFrameCount > 0:
                 StopOutputVideoPreviewPlayback();
-                ShowOutputVideoFrame(outputVideoFrameIndex - 10);
+                ShowOutputVideoFrame(_outputPreview.FrameIndex - 10);
                 return true;
             case ReplayShortcutAction.JumpBackTenFrames when replaySession is { Count: > 0 }:
                 JumpFrames(-10);
                 return true;
             case ReplayShortcutAction.JumpForwardTenFrames when outputWorkspaceActive && outputVideoFrameCount > 0:
                 StopOutputVideoPreviewPlayback();
-                ShowOutputVideoFrame(outputVideoFrameIndex + 10);
+                ShowOutputVideoFrame(_outputPreview.FrameIndex + 10);
                 return true;
             case ReplayShortcutAction.JumpForwardTenFrames when replaySession is { Count: > 0 }:
                 JumpFrames(10);

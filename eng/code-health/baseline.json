@@ -86,8 +86,8 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5514,
-        "stateMembers": 48,
+        "viewTypeLines": 5497,
+        "stateMembers": 41,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -181,7 +181,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1467
+        "fileLines": 1450
       },
       "owner": "NFU",
       "locations": [
@@ -195,7 +195,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 143
+        "methodLines": 142
       },
       "owner": "NFU",
       "locations": [
@@ -523,16 +523,6 @@
       "member": "Nvt.Replay.Analysis.CaptureDecodeController.fields:nextGeneration",
       "project": "Nvt.Replay.Analysis",
       "symbol": "Nvt.Replay.Analysis.CaptureDecodeController.nextGeneration"
-    },
-    {
-      "syntaxHash": "69c526b7139683881f3f754ba4b794bdd14ababbc39769f552635ad3aca0681a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "generationFields",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputPreviewGeneration",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "Nvt.Replay.Avalonia.MainWindow.outputPreviewGeneration"
     },
     {
       "syntaxHash": "8711ad272d57772d83789313f284ed3e76083f1fc4cfd3a515cb8847229b6c47",
@@ -16325,276 +16315,6 @@
       "symbol": "WHITESPACE"
     },
     {
-      "syntaxHash": "076f9d984b3098f63e0b6b76b49c4e311088bf3def40517badb4d407ea5fc417",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "0e07463393edc80a3adc120ddc0aa950fcd660aff722cc80856d5974c724f738",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "16009389306ecdeb673600fb4764f8cd27b041a3355927fc6839d26dfa057447",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "1b157f1e56309f469467c182fc0219f27944bf7e4d5f79af9409e08577f8fe70",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "25c842da2807928de499b5cec567bb27bd790d6f71c79a9ad23a51b8ed09e27d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "2afcb5b27c288883eede07190ee973cbbd733d42030efa0e4bec3298824581ca",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 8,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "3bc59c74d33e98c391403d44275e7f08758134809045d8d92449636072bd5efc",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "3c4df605232f244ff159f27d844833e433cc2edc8df2d4d6ed4d97b65dfc709e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "40307e4096720a7dea6d568d6780b8e3399383b0b5556de9ff7019facf7b49b1",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 5,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "4cfc0843a6817a2fb882a2faf06544990fea160dda97e7c223309b2bb022eb67",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "4d0ea307789b4873b26b52d7f9ca45689317064837a8692650d584c3f7e163de",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 3,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "5032d9d8c6c616eef43237506fd4077a641de3bb633bb6f68a8c9e5ec66fc222",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "517cb71ba6acae541a4102e778a7878c2e4670f251eb012314fd02725ab72dd6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 3,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "6049fbaa5c122e697bd6386422004578d925dcb46593e849a913c3990f0a1ef0",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "611442d55a6867bbbe6d0aa040f48b428ef4c48aba370c210f6d68d712b2c6b7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "78ef31ba60f419c74e1524ddcb7b3a4ad490e6e7ff44b65106f0b33b05a57bcd",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 3,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "8540f4f4b33b615975456ea80f3d988171752662bc1a84ab96ed879f93acc337",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 2,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "a82618c1416eb9b7abdddb475266be3de5c8f2eaa88c80b3882043753480254e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "afe1836b48937298445451c2f49aa686020cf7bc7c0cfba2095b4f8e8d0dc928",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "be307395462cd390e8307e5cbff9d6c0cd5441b91d7a48ed87cc3dd818d256ca",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "be7086504db98a088f12d87265926d972b5aa26ecf6078810b984d566dbf6cc0",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "c14fdf05384fe9b18560d46fe7d8c16658218142831ce2d8d37fda2ab39ca1b2",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "c2f628aaaa9409163db8dcaf81f446e725fa0385d1f1d00bbfcb0a8085cfc91c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "cd4007a983a6dcaeeddd8d3f652d02e3be70a9dcd9861c934f32ad28fa9a9e62",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "cdf6dc4320391059ea8b0c883aeff46a886046919c41b3020e1c64eee8c95aa5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "d3bb12dc024358e1c462a08e7126b551f8c2112746bcebd9934f5bb9efe7739a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 4,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
-      "syntaxHash": "ecba03f3227f87f02600ba2cd5a47a4db95688498b044467f05ecfee0989bcf6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "FORMAT:WHITESPACE",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.RefreshOutputInfo()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "WHITESPACE"
-    },
-    {
       "syntaxHash": "9506c26c6be1ed680d21477b0c21fb238e40d38aac2c26e546fc8e5423fdc2b1",
       "owner": "NFU",
       "path": "tests/Nvt.Replay.Tests/NvtRegisterProfileSchemaTests.cs",
@@ -18675,36 +18395,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "fce9d7e5f61f7f5971d8d86d3276131e10401f923839d32c1391d3bee1e721e7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputPreviewGeneration",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "e254dedd7c66951a188233e971efa1f6a73e1dd3f8ba7a6d70fc684077d6777a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputPreviewPlanError",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "7acdfdfbac015e7bd2c698a33afbbc32df14b0111de79e03af6028fa08427f6b",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputPreviewPlanPending",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "119d860ce570d46acf61d67e54740e028f3a1c4649410dc1a4002f726a912308",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
@@ -18725,52 +18415,12 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "9cf65204bdad339118e90f4b80893ad435630de3a80f93983a359f72b78157ed",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputVideoFrameIndex",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "0a17af5158fdba169fc7195203a39b3c0c88b73a9f369639faee8b9529e50cbb",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputVideoPlaybackCancellation",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "5cdebca2ef67a49fe84fb782868650a6ae533352f3714e6e6d72fa8b68fad294",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputVideoPreviewDirty",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "4447d789b2b6ae964c1e8a9755d7b312f4aeb9ccc8f3387ac73b2a07edfa36cf",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputVideoPreviewPlan",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "316b15a3e532b75ae214b3a6e070c0ffc92e30ff3d6d909a7abd0799906c9ee3",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputVideoPreviewReplay",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },

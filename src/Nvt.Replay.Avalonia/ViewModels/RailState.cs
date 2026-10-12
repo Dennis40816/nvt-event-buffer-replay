@@ -22,7 +22,7 @@ internal struct RailState
         return collapsed;
     }
 
-    internal void ApplyAutomaticCollapse(bool collapsed) => Collapsed = collapsed;
+    internal void SetCollapsed(bool collapsed) => Collapsed = collapsed;
 
     internal readonly bool ResolveDefault(bool fallback) => UserPreference ?? fallback;
 }
