@@ -40,7 +40,14 @@
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers"
                       PrivateAssets="all"
                       IncludeAssets="runtime;build;native;contentfiles;analyzers;buildtransitive" />
-    <AdditionalFiles Include="$(MSBuildProjectDirectory)/PublicAPI.Shipped.txt" />
-    <AdditionalFiles Include="$(MSBuildProjectDirectory)/PublicAPI.Unshipped.txt" />
   </ItemGroup>
+
+  <!-- The package adds both API files as AdditionalFiles when they exist. A second Include makes Roslyn warn
+       about a duplicate source file when dotnet format loads the workspace. This target keeps a missing file an error. -->
+  <Target Name="HealthRequirePublicApiFiles" BeforeTargets="CoreCompile" Condition="'$(HealthPublicApi)' == 'true'">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/PublicAPI.Shipped.txt')"
+           Text="HealthPublicApi requires PublicAPI.Shipped.txt next to the project file." />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/PublicAPI.Unshipped.txt')"
+           Text="HealthPublicApi requires PublicAPI.Unshipped.txt next to the project file." />
+  </Target>
 </Project>

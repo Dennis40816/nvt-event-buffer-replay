@@ -19,7 +19,8 @@ Build outputs (bin, obj, artifacts, .git) are excluded; generated filename suffi
 are NOT excluded. State includes init and positional-record properties; observable
 backing fields are counted once, partial properties by symbol once.
 H03 validates schema, evaluated project coverage, build/SARIF/format and provenance.
-Measure is syntax-only. Verify, LowerBaseline and Enroll require a solution.
+Measure is syntax-only. Verify, LowerBaseline, Adopt and Enroll require a solution.
+Adopt registers debt that a rule change reveals, when the whole change is synchronization-only (see repo-health.md).
 Test-duplication rules (timeWaitsInTests, elapsedAssertionsInTests, tempPathInTests,
 sourceTextReadsInTests, headlessSessionSetups, childProcessInTests, sameNameFakes) have their own
 ledger, eng/code-health/test-debt.json. EnrollTestDebt (syntax only) creates it once; after that
@@ -55,6 +56,10 @@ $env:PreferredUILang = 'en-US'
 $env:MSBUILDDISABLENODEREUSE = '1'
 $script:MsbuildLimits = @('-m:4', '-nodeReuse:false')
 $script:Version = 'roslyn-physical-v1'
+# The merge-base commit that the ledger is compared with. Empty until Verify, LowerBaseline or Adopt sets it.
+$script:AllowedCommit = ''
+# True when every changed path is a synchronization path (see Test-SynchronizationPath). Set after the changed paths are known.
+$script:SynchronizationOnly = $false
 $script:Limits = @{ fileLines = 800; methodLines = 80; partialFiles = 8; stateMembers = 30; axamlCodeBehindLines = 150; viewTypeLines = 800 }
 # Test-duplication rules keep their own ledger (eng/code-health/test-debt.json), apart from the main baseline.
 $script:TestRules = @('timeWaitsInTests', 'elapsedAssertionsInTests', 'tempPathInTests', 'sourceTextReadsInTests', 'headlessSessionSetups', 'childProcessInTests', 'sameNameFakes')
@@ -204,6 +209,66 @@ function Write-Failure([string]$Code, $Entity, [string]$Metric, $Old, $New, [str
     Write-Output "Contributing change: ${contributor}:${contributingLine}."
     $script:Failures++
 }
+function Get-GeneratedBlockRest([string]$Text) {
+    # The text outside the generated warning-ID block, or $null when the file does not hold exactly one block whose
+    # inside is what Write-LedgerWarningIds writes: per-project groups that set HealthBaselineWarningIds and nothing else.
+    $normal = $Text -replace "`r`n", "`n"
+    $begin = '  <!-- BEGIN GENERATED HEALTH WARNING IDS -->'
+    $end = '  <!-- END GENERATED HEALTH WARNING IDS -->'
+    $shape = '(?s)\A(?<before>.*?)' + [regex]::Escape($begin) + "`n(?<inner>.*?)" + [regex]::Escape($end) + '(?<after>.*)\z'
+    $m = [regex]::Match($normal, $shape)
+    if (-not $m.Success) { return $null }
+    $before = $m.Groups['before'].Value
+    $after = $m.Groups['after'].Value
+    if (($before + $after + $m.Groups['inner'].Value) -cmatch 'GENERATED HEALTH WARNING IDS') { return $null }
+    $group = '(  <PropertyGroup Condition="\x27\$\(MSBuildProjectName\)\x27 == \x27[A-Za-z0-9_.\-]+\x27">\n    <HealthBaselineWarningIds>[A-Za-z0-9;]+</HealthBaselineWarningIds>\n  </PropertyGroup>\n)*'
+    if ($m.Groups['inner'].Value -cnotmatch ('\A' + $group + '\z')) { return $null }
+    # The two sides stay apart, so moving the block to another position in the file is a difference.
+    return ($before.TrimEnd() + "`n<<generated block>>`n" + $after.TrimEnd())
+}
+function Test-OrdinalEqual([string]$Left, [string]$Right) {
+    # -ceq compares with the current culture, which ignores some characters (a NUL, a soft hyphen, a zero-width space).
+    # A path or a file text that a decision rests on is compared ordinally.
+    return [string]::Equals($Left, $Right, [StringComparison]::Ordinal)
+}
+function Test-OrdinalIn([string]$Value, [string[]]$List) {
+    return ([Array]::IndexOf($List, $Value) -ge 0)
+}
+function Test-GeneratedBlockOnly([string]$Path) {
+    # projects.props is imported by every project. Only the content of its generated warning-ID block may differ from the base.
+    if (-not $script:AllowedCommit) { return $false }
+    & git -C $Root cat-file -e "$($script:AllowedCommit):$Path" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    $nowPath = Join-Path $Root $Path
+    if (-not (Test-Path -LiteralPath $nowPath -PathType Leaf)) { return $false }
+    $baseRest = Get-GeneratedBlockRest ((& git -C $Root show "$($script:AllowedCommit):$Path") -join "`n")
+    $nowRest = Get-GeneratedBlockRest ([IO.File]::ReadAllText($nowPath))
+    return ($null -ne $baseRest -and $null -ne $nowRest -and (Test-OrdinalEqual $baseRest $nowRest))
+}
+function Test-SynchronizationPath([string]$Path) {
+    # A path that cannot change what the checker measures: the bundle copies and their lock, the ledgers, the checker
+    # and its tests and documents. Everything else (C#, AXAML, project, props and targets files, and any file that a
+    # project globs) can, so a change that touches it is not a synchronization.
+    if ($Path -match '[\r\n]') { return $false }
+    if (Test-OrdinalIn $Path @('eng/core-health.lock.json', 'eng/code-health/baseline.json', 'eng/code-health/test-debt.json')) { return $true }
+    if (Test-OrdinalEqual $Path 'eng/code-health/projects.props') { return (Test-GeneratedBlockOnly $Path) }
+    if ($Path -clike '*.md') { return $true }
+    if ($Path -clike 'tests/repo-checks/*.py') { return $true }
+    if (-not ($Path -clike 'eng/core-health/*' -or $Path -clike 'tools/repo-checks/*')) { return $false }
+    # Inside the bundle directories only the bundle files and the checker's own script, ban-list and Python files are
+    # allowed. A list of known names and extensions fails closed: a nested global.json, nuget.config, lock file or
+    # analyzer settings file is refused. The lock hash and the Core comparison guard the bundle files' bytes.
+    $bundleFiles = @(
+        'eng/core-health/Directory.Build.props', 'eng/core-health/.editorconfig', 'eng/core-health/schema.json',
+        'tools/repo-checks/csharp/Directory.Build.props', 'tools/repo-checks/csharp/.editorconfig', 'tools/repo-checks/csharp/schema.json',
+        'tools/repo-checks/csharp/bundle-manifest.json', 'tools/repo-checks/doc-sync.core.json')
+    if (Test-OrdinalIn $Path $bundleFiles) { return $true }
+    return (Test-OrdinalIn ([IO.Path]::GetExtension($Path)) @('.ps1', '.py', '.txt'))
+}
+function Get-NonSynchronizationPaths {
+    # A path that git printed with other text glued to it matches nothing, so the check fails closed.
+    return @($script:ChangedPaths | Where-Object { -not (Test-SynchronizationPath $_) })
+}
 function Compare-Debt($Allowed, $Current, [string]$ValueField, [bool]$RequireLower) {
     foreach ($metric in $(if ($ValueField -eq 'ceilings') { $script:Limits.Keys } else { @() })) {
         # Compare effective limits: omitting an optional limit restores its default, which can raise it.
@@ -223,6 +288,9 @@ function Compare-Debt($Allowed, $Current, [string]$ValueField, [bool]$RequireLow
             $value = $e[$ValueField][$metric]
             # Compare excess, so compliant new entities do not consume debt.
             if ([Math]::Max(0, $value - $limit) -gt [Math]::Max(0, $old - $limit)) {
+                # In a synchronization-only change no source, project or props file differs from the base, so an excess
+                # that the base ledger lacks was revealed by the checker (see Adopt). Verify compares it with the measurement next.
+                if ($ValueField -eq 'ceilings' -and $script:SynchronizationOnly -and $old -eq $limit) { continue }
                 Write-Failure 'HC_STATE' $e $metric $old $value 'New/growing excess or raised ceiling is forbidden.'
             }
         }
@@ -234,7 +302,11 @@ function Compare-Debt($Allowed, $Current, [string]$ValueField, [bool]$RequireLow
     foreach ($f in $Current.findings) {
         $key = Finding-Key $f
         $old = if ($oldFindings.ContainsKey($key)) { $oldFindings[$key].count } else { 0 }
-        if ($f.count -gt $old) { Write-Failure 'HC_DIAGNOSTIC' $f $f.rule $old $f.count 'New fingerprint; deleting another finding cannot offset it.' }
+        if ($f.count -gt $old) {
+            # The evaluated project settings (member MSBuild) are never registered this way.
+            if ($ValueField -eq 'ceilings' -and $script:SynchronizationOnly -and $old -eq 0 -and $f.member -cne 'MSBuild') { continue }
+            Write-Failure 'HC_DIAGNOSTIC' $f $f.rule $old $f.count 'New fingerprint; deleting another finding cannot offset it.'
+        }
     }
     if ($RequireLower) {
         foreach ($old in $Allowed.entities) {
@@ -256,11 +328,7 @@ function Read-HealthDocument([string]$Text, [string]$Definition) {
     $schemaPath = Join-Path $PSScriptRoot 'csharp/schema.json'
     if (-not (Test-Path -LiteralPath $schemaPath)) { $schemaPath = Join-Path $PSScriptRoot 'schema.json' }
     $schema = ConvertFrom-Json -AsHashtable ([IO.File]::ReadAllText($schemaPath))
-    # removeBy is optional since the owner decision of 2026-10-11. schema.json is a distributed bundle file with a pinned
-    # hash, so it keeps removeBy in the required list. The checker takes it out of that list in memory, until a pin
-    # synchronization changes the file.
-    $findingDefinition = $schema.'$defs'.'baseline-finding'
-    $findingDefinition.required = @($findingDefinition.required | Where-Object { $_ -cne 'removeBy' })
+    # removeBy is optional since the owner decision of 2026-10-11: schema.json does not list it as required.
     $validation = @{ '$schema' = $schema.'$schema'; '$defs' = $schema.'$defs'; '$ref' = "#/`$defs/$Definition" }
     if (-not (Test-Json -Json $Text -Schema ($validation | ConvertTo-Json -Depth 100) -ErrorAction SilentlyContinue)) { throw "Invalid $Definition document (schema)" }
     return (ConvertFrom-Json -AsHashtable -Depth 100 $Text)
@@ -347,44 +415,104 @@ function Test-EditorOverrides([string]$Common, [string]$Editor, [string]$Path) {
         if ($value -cne $expected -and -not $stronger) { throw "HC_DRIFT ${Path}:$lineNumber weaker protected override $key=$value (required $expected)" }
     }
 }
+function Test-GitAncestor([string]$Ancestor, [string]$Descendant, [string]$Repository = $Root) {
+    # Exit 0 is "is an ancestor" and 1 is "is not". 128 with "Not a valid commit name" is an unknown commit.
+    # Any other result (a path that is not a repository, a corrupt repository, another code) is a tool error.
+    # LC_ALL=C keeps git's message in English for this call, so the match below does not depend on the host language.
+    $previousLocale = $env:LC_ALL
+    $env:LC_ALL = 'C'
+    try {
+        $output = @(& git -C $Repository merge-base --is-ancestor $Ancestor $Descendant 2>&1)
+        $code = $LASTEXITCODE
+    }
+    finally { $env:LC_ALL = $previousLocale }
+    $unknownCommit = ($code -eq 128 -and (($output -join ' ') -match 'Not a valid (commit|object) name'))
+    if ($code -notin @(0, 1) -and -not $unknownCommit) { throw "git merge-base exited $code`: $($output -join ' ')" }
+    return ($code -eq 0)
+}
 function Test-BundleDrift {
     $lockPath = Join-Path $Root 'eng/core-health.lock.json'
     $lock = Read-HealthDocument ([IO.File]::ReadAllText($lockPath)) 'core-health.lock'
-    # A PR cannot replace the trusted pin. Pin updates require a separate synchronization change.
+    $isCore = ($Repo -eq 'core')
+    if ($isCore -and -not $lock.files.ContainsKey('repo-health.ps1')) { throw 'Core lock must include repo-health.ps1' }
+    $trusted = $null
+    # An application's pull request cannot replace the trusted pin, unless -CoreRoot proves the new pin (see below).
+    # Core is the source of the bundle, so its pull request may change a bundle file and may move its own pin (see below).
     if ($BaseRef) {
         $base = Invoke-Checked 'git' @('merge-base', 'HEAD', $BaseRef)
         $trusted = Read-HealthDocument (Invoke-Checked 'git' @('show', "${base}:eng/core-health.lock.json")) 'core-health.lock'
-        if ($lock.coreCommit -cne $trusted.coreCommit) { throw 'HC_DRIFT eng/core-health.lock.json:1 pin differs from base; integrate the reviewed synchronization separately' }
-        if (-not ($CoreRoot -or $Repo -eq 'core')) {
+        if (-not $isCore -and -not $CoreRoot -and $lock.coreCommit -cne $trusted.coreCommit) { throw 'HC_DRIFT eng/core-health.lock.json:1 pin differs from base; integrate the reviewed synchronization separately' }
+        if (-not ($CoreRoot -or $isCore)) {
             # Lock-only mode has no canonical Core objects, so the trusted lock is the reference for the hashes.
             foreach ($name in $lock.files.Keys) { if ($lock.files[$name] -cne $trusted.files[$name]) { throw "HC_DRIFT eng/core-health.lock.json:1 hash of $name differs from base; integrate the reviewed synchronization separately" } }
         }
     }
     elseif ($Mode -ne 'Enroll') {
         $trusted = Read-HealthDocument (Invoke-Checked 'git' @('show', 'HEAD:eng/core-health.lock.json')) 'core-health.lock'
-        if ($lock.coreCommit -cne $trusted.coreCommit) { throw 'HC_DRIFT eng/core-health.lock.json:1 pin differs from committed pin' }
+        if (-not $isCore -and -not $CoreRoot -and $lock.coreCommit -cne $trusted.coreCommit) { throw 'HC_DRIFT eng/core-health.lock.json:1 pin differs from committed pin' }
+    }
+    # An old lock may lack the checker entry, but a lock that has it keeps it: dropping it would skip the check.
+    if (-not $isCore -and $null -ne $trusted -and $trusted.files.ContainsKey('repo-health.ps1') -and -not $lock.files.ContainsKey('repo-health.ps1')) {
+        throw 'HC_DRIFT eng/core-health.lock.json:1 the repo-health.ps1 entry was removed from the lock; integrate the reviewed synchronization separately'
+    }
+    # Core may leave the pin behind its tree, because a bundle change cannot name its own commit. The pin is always a
+    # commit of this history (a full clone is required). A moved pin is not older than the pin it replaces, and its
+    # canonical files are the files of this tree. -CoreRoot is for applications; Core ignores it.
+    $pinMoved = ($isCore -and $null -ne $trusted -and $lock.coreCommit -cne $trusted.coreCommit)
+    if ($isCore) {
+        if (-not (Test-GitAncestor $lock.coreCommit 'HEAD')) { throw 'HC_DRIFT eng/core-health.lock.json:1 the pin is not a commit of this history (a full clone is required: fetch-depth 0)' }
+        if ($pinMoved -and -not (Test-GitAncestor $trusted.coreCommit $lock.coreCommit)) { throw 'HC_DRIFT eng/core-health.lock.json:1 the pin is older than the pin it replaces' }
+    }
+    # An application may move its pin when the approved Core checkout (-CoreRoot) proves the new pin: the new pin is a
+    # commit of that checkout and descends from the pin it replaces. The blob check below then proves that the six
+    # copies are the files of that commit.
+    if (-not $isCore -and $CoreRoot -and $null -ne $trusted -and $lock.coreCommit -cne $trusted.coreCommit) {
+        $coreFull = [IO.Path]::GetFullPath($CoreRoot)
+        if (-not (Test-GitAncestor $lock.coreCommit 'HEAD' $coreFull)) { throw 'HC_DRIFT eng/core-health.lock.json:1 the pin is not a commit of the Core checkout (a full clone of Core is required)' }
+        if (-not (Test-GitAncestor $trusted.coreCommit $lock.coreCommit $coreFull)) { throw 'HC_DRIFT eng/core-health.lock.json:1 the pin does not descend from the pin it replaces' }
     }
     $canonicalRoot = if ($CoreRoot) { [IO.Path]::GetFullPath($CoreRoot) } else { $Root }
     foreach ($name in $lock.files.Keys) {
-        $path = Join-Path $Root "eng/core-health/$name"
+        $isChecker = ($name -ceq 'repo-health.ps1')
+        $canonicalPath = if ($isChecker) { 'tools/repo-checks/repo-health.ps1' } else { "tools/repo-checks/csharp/$name" }
+        $path = if ($isChecker) {
+            if ($isCore) { Join-Path $Root $canonicalPath } else { $PSCommandPath }
+        } else { Join-Path $Root "eng/core-health/$name" }
+        if ($isChecker -and (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf))) { throw "Missing repo-health.ps1 script path: $path" }
         $bytes = [IO.File]::ReadAllBytes($path)
-        if ($bytes -contains 13 -or ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191)) { throw "HC_DRIFT $path`:1 LF/UTF-8 required" }
-        $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
-        if ($hash -cne $lock.files[$name]) { throw "HC_DRIFT $path`:1 SHA-256 differs from lock" }
-        # Without -CoreRoot an application has no canonical Core objects. Only Core itself compares with its own tree.
-        if (-not ($CoreRoot -or $Repo -eq 'core')) { continue }
-        # Git blob identity is computed over raw bytes, without autocrlf filters.
-        $canonical = (Invoke-Checked 'git' @('-C', $canonicalRoot, 'rev-parse', "$($lock.coreCommit):tools/repo-checks/csharp/$name")).Trim()
-        $local = (Invoke-Checked 'git' @('hash-object', '--no-filters', $path)).Trim()
-        if ($canonical -cne $local) { throw "HC_DRIFT $path`:1 differs from approved Core revision" }
-        if ($Repo -eq 'core') {
-            $working = (Invoke-Checked 'git' @('hash-object', '--no-filters', (Join-Path $Root "tools/repo-checks/csharp/$name"))).Trim()
-            if ($working -cne $canonical) { throw "HC_DRIFT tools/repo-checks/csharp/$name`:1 canonical tree differs from pin" }
+        if ($bytes -contains 13 -or ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191)) {
+            if ($isChecker) { throw 'repo-health.ps1 must use LF line endings and UTF-8 without a BOM.' }
+            throw "HC_DRIFT $path`:1 LF/UTF-8 required"
         }
+        $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
+        $driftPath = if ($isChecker) { 'eng/core-health.lock.json' } else { $path }
+        if ($hash -cne $lock.files[$name]) { throw "HC_DRIFT $driftPath`:1 $name SHA-256 differs from lock" }
+        if ($isChecker -and $isCore) {
+            # Core compares the tree script with the lock. The script that runs must be the same bytes.
+            if (-not $PSCommandPath) { throw 'repo-health.ps1 must run from its script file' }
+            $runningHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([IO.File]::ReadAllBytes($PSCommandPath))).ToLowerInvariant()
+            if ($runningHash -cne $hash) { throw "HC_DRIFT $PSCommandPath`:1 the running repo-health.ps1 differs from $canonicalPath of this tree" }
+        }
+        # Git blob identity is computed over raw bytes, without autocrlf filters.
+        $local = (Invoke-Checked 'git' @('hash-object', '--no-filters', $path)).Trim()
+        if ($isCore) {
+            # Core is the source of the bundle: the copy, the canonical file and the lock are the same bytes.
+            $working = if ($isChecker) { $local } else { (Invoke-Checked 'git' @('hash-object', '--no-filters', (Join-Path $Root $canonicalPath))).Trim() }
+            if ($working -cne $local) { throw "HC_DRIFT $path`:1 differs from the canonical file ($canonicalPath)" }
+            if ($pinMoved) {
+                $pinned = (Invoke-Checked 'git' @('-C', $Root, 'rev-parse', "$($lock.coreCommit):$canonicalPath")).Trim()
+                if ($pinned -cne $working) { throw "HC_DRIFT eng/core-health.lock.json:1 the pin moved to a commit whose $name differs from this tree" }
+            }
+            continue
+        }
+        # Without -CoreRoot an application has no canonical Core objects.
+        if (-not $CoreRoot) { continue }
+        $canonical = (Invoke-Checked 'git' @('-C', $canonicalRoot, 'rev-parse', "$($lock.coreCommit):$canonicalPath")).Trim()
+        if ($canonical -cne $local) { throw "HC_DRIFT $path`:1 $name differs from approved Core revision" }
     }
     $common = [IO.File]::ReadAllText((Join-Path $Root 'eng/core-health/.editorconfig'))
     Test-ManagedBlock $common (Read-EditorText (Join-Path $Root '.editorconfig'))
-    # Only Core compares tools/repo-checks/csharp/.editorconfig with the pin, so only Core may skip it here.
+    # tools/repo-checks/csharp/.editorconfig is the canonical file that Core compares with its copy, so only Core skips it here.
     $exempt = @('eng/core-health/.editorconfig')
     if ($Repo -eq 'core') { $exempt += 'tools/repo-checks/csharp/.editorconfig' }
     foreach ($path in @(Get-HealthFiles | Where-Object { $_.EndsWith('/.editorconfig', [StringComparison]::OrdinalIgnoreCase) -and $_ -cnotin $exempt })) {
@@ -570,7 +698,7 @@ function Test-FormatExit([int]$ExitCode, $Findings, $Baseline) {
     }
 }
 function Initialize-Enforcement($Baseline) {
-    if (-not $Solution -or -not (Test-Path -LiteralPath (Join-Path $Root $Solution) -PathType Leaf)) { throw 'Solution is required for Enroll/Verify/LowerBaseline' }
+    if (-not $Solution -or -not (Test-Path -LiteralPath (Join-Path $Root $Solution) -PathType Leaf)) { throw 'Solution is required for Enroll/Verify/LowerBaseline/Adopt' }
     Test-BundleDrift
     $script:Seams = Read-HealthDocument ([IO.File]::ReadAllText((Join-Path $Root 'eng/code-health/seam-owners.json'))) 'seam-owners'
     $script:HealthProjects = Get-ProjectCoverage $Baseline
@@ -633,6 +761,44 @@ function Get-EnrollOwner {
     if ($Owner.Trim()) { return $Owner.Trim() }
     if ($Repo -ceq 'core') { return 'NVT CORE' }
     return $Repo.ToUpperInvariant()
+}
+function Add-AdoptedDebt($Baseline, $Measurement) {
+    # Registers debt that a rule change reveals: the measured value is above its limit and the ledger has no ceiling for
+    # it. The caller has checked that the change is synchronization-only, so no source file differs from the base.
+    $adoptOwner = Get-EnrollOwner
+    $entities = 0
+    $findings = 0
+    $messages = [Collections.Generic.List[string]]::new()
+    $ledgerFindings = [Collections.Generic.Dictionary[string,hashtable]]::new([StringComparer]::Ordinal)
+    foreach ($f in $Baseline.findings) { $ledgerFindings[(Finding-Key $f)] = $f }
+    $entityMatches = Match-Entities $Baseline.entities $Measurement.entities
+    for ($i = 0; $i -lt $Measurement.entities.Count; $i++) {
+        $m = $Measurement.entities[$i]
+        $over = @{}
+        foreach ($metric in $m.values.Keys) {
+            if ($m.values[$metric] -le (Get-Limit $Baseline $metric)) { continue }
+            if ($entityMatches.ContainsKey($i) -and $Baseline.entities[$entityMatches[$i]].ceilings.Contains($metric)) { continue }
+            $over[$metric] = $m.values[$metric]
+        }
+        if ($over.Count -eq 0) { continue }
+        if ($entityMatches.ContainsKey($i)) { foreach ($metric in $over.Keys) { $Baseline.entities[$entityMatches[$i]].ceilings[$metric] = $over[$metric] } }
+        else { $Baseline.entities += [ordered]@{ project = $m.project; kind = $m.kind; symbol = $m.symbol; locations = @($m.locations); contentHash = $m.contentHash; ceilings = $over; owner = $adoptOwner; issue = 'health-refactor/adopted' } }
+        $entities++
+        $messages.Add("HC_STATE $($m.locations[0]):1 Adopt registered $(($over.Keys | Sort-Object | ForEach-Object { "$_ $($over[$_])" }) -join ', '); entity $($m.project):$($m.symbol)")
+    }
+    foreach ($f in $Measurement.findings) {
+        $key = Finding-Key $f
+        # A fingerprint that the ledger already has keeps its count: Adopt never raises an existing one.
+        if ($ledgerFindings.ContainsKey($key) -or $f.member -ceq 'MSBuild') { continue }
+        $entry = [ordered]@{}
+        foreach ($field in @('rule', 'project', 'path', 'member', 'symbol', 'syntaxHash', 'count')) { $entry[$field] = $f[$field] }
+        $entry['owner'] = $adoptOwner
+        $Baseline.findings += $entry
+        $ledgerFindings[$key] = $entry
+        $findings++
+        $messages.Add("HC_DIAGNOSTIC $($f.path):1 Adopt registered $($f.rule) $($f.count); $($f.member)")
+    }
+    return @{ entities = $entities; findings = $findings; messages = $messages }
 }
 function Enroll-Baseline($Measurement, [string]$Path) {
     $enrollOwner = Get-EnrollOwner
@@ -1387,7 +1553,8 @@ $script:HealthProjects = @()
 $script:FormatRuns = @()
 $exitCode = 2
 try {
-    if ($Mode -notin @('Measure', 'Verify', 'LowerBaseline', 'Enroll', 'EnrollTestDebt') -or $Repo -notin @('core', 'nfc', 'nfh', 'nfu')) { throw 'Invalid Mode or Repo' }
+    if ($Mode -notin @('Measure', 'Verify', 'LowerBaseline', 'Adopt', 'Enroll', 'EnrollTestDebt') -or $Repo -notin @('core', 'nfc', 'nfh', 'nfu')) { throw 'Invalid Mode or Repo' }
+    if ($Mode -eq 'Adopt' -and -not $BaseRef.Trim()) { throw 'Adopt requires -BaseRef: debt is registered only when the whole change is synchronization-only' }
     $Root = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($Root))
     if (-not (Test-Path -LiteralPath $Root -PathType Container)) { throw "Missing root $Root" }
     Push-Location -LiteralPath $Root
@@ -1418,9 +1585,20 @@ try {
             if (-not $baselineFull.StartsWith($script:GitRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'BaselinePath must be within the Git repository' }
             $baselineGit = [IO.Path]::GetRelativePath($script:GitRoot, $baselineFull).Replace('\','/')
             $allowedCommit = if ($BaseRef.Trim()) { Invoke-Checked 'git' @('-C', $script:GitRoot, 'merge-base', 'HEAD', $BaseRef) } else { $script:Snapshot }
+            $script:AllowedCommit = $allowedCommit
             $allowed = Read-Baseline (Invoke-Checked 'git' @('-C', $script:GitRoot, 'show', "${allowedCommit}:$baselineGit")) "${allowedCommit}:$baselineGit"
             $baseline = Read-Baseline ([IO.File]::ReadAllText($baselineFull)) $BaselinePath
-            $script:ChangedPaths = @((Invoke-Checked 'git' @('-C', $Root, 'diff', '--name-only', '--relative', $allowedCommit, '--')) -split '\r?\n')
+            # NUL separated and unquoted: a quoted or escaped name would never match a path, and the file would count as unchanged.
+            # Standard output only: a warning that git prints on standard error must not become part of a path.
+            # PowerShell splits the output at line breaks, so the pieces are joined with LF again: a path that holds a line
+            # break keeps it, and Test-SynchronizationPath refuses it. No --relative: a path outside -Root must be seen too.
+            $changedOutput = & git -C $Root -c core.quotepath=false diff --name-only -z --no-renames $allowedCommit -- 2>$null
+            if ($LASTEXITCODE -ne 0) { throw "git diff exited $LASTEXITCODE" }
+            $script:ChangedPaths = @((@($changedOutput) -join "`n") -split "`0" | Where-Object { $_ })
+            $nonSynchronization = @(Get-NonSynchronizationPaths)
+            # Changed paths and the checker's relative paths agree only when -Root is the repository root.
+            $rootIsRepository = [string]::Equals([IO.Path]::GetFullPath($Root).TrimEnd('\', '/'), $script:GitRoot.TrimEnd('\', '/'), [StringComparison]::OrdinalIgnoreCase)
+            $script:SynchronizationOnly = ($rootIsRepository -and $nonSynchronization.Count -eq 0)
             Compare-Debt $allowed $baseline 'ceilings' $false
             $testDebtFull = [IO.Path]::GetFullPath((Join-Path $Root $TestDebtPath))
             if (-not $testDebtFull.StartsWith($script:GitRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'TestDebtPath must be within the Git repository' }
@@ -1459,6 +1637,18 @@ try {
             $exitCode = 0
         }
         else {
+            $adopted = $null
+            if ($Mode -eq 'Adopt') {
+                if (-not $rootIsRepository) {
+                    Write-Output "HC_STATE ${BaselinePath}:1 Adopt refused: -Root is not the repository root, so a change outside it would not be seen."
+                    $script:Failures++
+                }
+                elseif (-not $script:SynchronizationOnly) {
+                    Write-Output "HC_STATE $($nonSynchronization[0]):1 Adopt refused: this change touches $($nonSynchronization.Count) path(s) that are not synchronization files; the first is shown. Adopt registers revealed debt only when no source, project or props file differs from the base."
+                    $script:Failures++
+                }
+                elseif ($script:Failures -eq 0) { $adopted = Add-AdoptedDebt $baseline $measurement }
+            }
             Compare-Debt $baseline $measurement 'values' ($Mode -eq 'Verify')
             Compare-TestDebtMeasurement $testDebt $measurement ($Mode -eq 'Verify')
             if ($script:Failures -gt 0) { $exitCode = 1 }
@@ -1482,6 +1672,17 @@ try {
                 Write-LedgerWarningIds $baseline
                 Lower-TestDebt $testDebt $measurement $testDebtFull
                 Write-Output 'HC_STATE baseline:1 LowerBaseline passed; only existing debt was deleted or lowered.'
+                $exitCode = 0
+            }
+            elseif ($Mode -eq 'Adopt') {
+                foreach ($line in $adopted.messages) { Write-Output $line }
+                if ($adopted.entities -or $adopted.findings) {
+                    $json = ConvertTo-Json -InputObject $baseline -Depth 100
+                    [void](Read-Baseline $json $BaselinePath)
+                    [IO.File]::WriteAllText($baselineFull, $json + [Environment]::NewLine)
+                    Write-LedgerWarningIds $baseline
+                }
+                Write-Output "HC_STATE baseline:1 Adopt passed; $($adopted.entities) entities and $($adopted.findings) finding fingerprints registered. Run Verify next."
                 $exitCode = 0
             }
             else { Write-Output 'HC_STATE syntax:1 Verify passed (syntax, build, SARIF, format, provenance and evaluated project coverage).'; $exitCode = 0 }
