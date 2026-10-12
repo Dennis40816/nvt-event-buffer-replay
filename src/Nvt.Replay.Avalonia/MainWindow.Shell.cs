@@ -150,7 +150,7 @@ public partial class MainWindow : Window
             {
                 ExitOutputFullscreen();
                 StopOutputVideoPreviewPlayback();
-                outputPreviewCancellation?.Cancel();
+                _outputPreviewCancellation.CancelCurrent();
                 if (_outputPreview.PlanPending) outputPlanService.Invalidate();
                 outputReportService.CancelActive();
             }
