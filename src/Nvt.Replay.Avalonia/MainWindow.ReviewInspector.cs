@@ -23,11 +23,8 @@ public partial class MainWindow : Window
     private PaintMarkerRow[] paintMarkerRows = [];
     private RailState _reviewRail; // UI thread only.
     private RailState _inspectorRail; // UI thread only.
-    private SourceRecord? currentInspectorRecord;
+    private InspectorSelection? _inspectorSelection; // UI thread only.
     private RawRecordRow? expandedRawRow;
-    private object? currentInspectorFrame;
-    private ITouchReplaySnapshot? currentInspectorSnapshot;
-    private InspectorFramePresentation? currentInspectorPresentation;
     private readonly EventSuppressionScope synchronizingReviewSelection = new();
     private readonly EventSuppressionScope synchronizingPaintMarkerSelection = new();
     private double expandedInspectorRailWidth = 286;
@@ -54,10 +51,10 @@ public partial class MainWindow : Window
     private async Task CopyInspectorAsync(object? sender, RoutedEventArgs e)
     {
         SynchronizeVisibleDecodedInspector();
-        if (currentInspectorPresentation is null || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+        if (_inspectorSelection is not { } selection || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
             return;
-        await clipboard.SetTextAsync(InspectorPresentationBuilder.BuildCopyText(currentInspectorPresentation));
-        SessionStatusText.Text = $"Copied frame {currentInspectorPresentation.LogicalLabel} summary";
+        await clipboard.SetTextAsync(InspectorPresentationBuilder.BuildCopyText(selection.Presentation));
+        SessionStatusText.Text = $"Copied frame {_inspectorSelection.Presentation.LogicalLabel} summary";
     }
 
     private void PreviousFindingButton_OnClick(object? sender, RoutedEventArgs e) => NavigateFinding(-1);
@@ -222,7 +219,7 @@ public partial class MainWindow : Window
 
     private void SourceLineButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (currentInspectorRecord is { } record) OpenSourceLocation(record);
+        if (_inspectorSelection is { } selection) OpenSourceLocation(selection.Record);
         e.Handled = true;
     }
 
@@ -590,8 +587,8 @@ public partial class MainWindow : Window
         RefreshOutputPreviewIfVisible();
         if (reviewWorkspace?.CurrentSnapshot is { } snapshot)
             ShowRecord(snapshot.PrimarySource, snapshot.DecodedFrame, snapshot);
-        else if (currentInspectorRecord is not null)
-            ShowRecord(currentInspectorRecord, currentInspectorFrame, currentInspectorSnapshot);
+        else if (_inspectorSelection is { } selection)
+            ShowRecord(selection.Record, selection.Frame, selection.Snapshot);
     }
 
     private void RefreshReviewQueue()
@@ -741,10 +738,7 @@ public partial class MainWindow : Window
     private void ShowRecord(SourceRecord record, object? frame, ITouchReplaySnapshot? snapshot = null)
     {
         var registerAnnotation = session?.RegisterAnnotations.Find(record.StableId);
-        currentInspectorRecord = record;
-        currentInspectorFrame = frame;
-        currentInspectorSnapshot = snapshot;
-        currentInspectorPresentation = snapshot is not null &&
+        var presentation = snapshot is not null &&
             reviewWorkspace?.CurrentSnapshot?.LogicalIndex == snapshot.LogicalIndex
                 ? reviewWorkspace.CurrentPresentation
                 : InspectorPresentationBuilder.Build(
@@ -754,7 +748,7 @@ public partial class MainWindow : Window
                     replaySession?.Count ?? 0,
                     CurrentPaintMode,
                     registerAnnotation);
-        currentInspectorPresentation ??= InspectorPresentationBuilder.Build(
+        presentation ??= InspectorPresentationBuilder.Build(
             record,
             frame,
             snapshot,
@@ -762,15 +756,16 @@ public partial class MainWindow : Window
             CurrentPaintMode,
             registerAnnotation);
         if (snapshot is not null)
-            currentInspectorPresentation = currentInspectorPresentation with
+            presentation = presentation with
             {
                 TimestampLabel = FormatClock(SelectedTime(snapshot.Timeline)),
             };
-        ApplyInspectorPresentation(currentInspectorPresentation, frame is null && registerAnnotation is not null);
+        _inspectorSelection = new InspectorSelection(record, frame, snapshot, presentation);
+        ApplyInspectorPresentation(presentation, frame is null && registerAnnotation is not null);
 
         var frameAlerts = reviewWorkspace?.ReviewSession.FrameAlerts(record.StableId, record.Location.LineNumber) ?? [];
-        var crcFailed = currentInspectorPresentation.CrcFailed;
-        var asilAlarm = currentInspectorPresentation.AsilAlarm;
+        var crcFailed = _inspectorSelection.Presentation.CrcFailed;
+        var asilAlarm = _inspectorSelection.Presentation.AsilAlarm;
         InspectorAlertBorder.IsVisible = frameAlerts.Count > 0 || crcFailed || asilAlarm;
         InspectorAlertText.Text = frameAlerts.Count > 0
             ? string.Join(" · ", frameAlerts.Select(item => EngineeringDisplayText.AddBreakOpportunities(item.Code)))
@@ -792,20 +787,20 @@ public partial class MainWindow : Window
         RawLayoutSummaryText.Text = rawLayout.Summary;
         RawByteSectionsItemsControl.ItemsSource = rawLayout.Sections;
         RawBytesText.Text = FormatBytes(record.Data);
-        ProtocolFieldsItemsControl.ItemsSource = currentInspectorPresentation.ProtocolRows;
+        ProtocolFieldsItemsControl.ItemsSource = _inspectorSelection.Presentation.ProtocolRows;
     }
 
     private void SynchronizeVisibleDecodedInspector()
     {
-        if (currentInspectorSnapshot is null || reviewWorkspace?.CurrentSnapshot is not { } snapshot ||
-            currentInspectorSnapshot.LogicalIndex == snapshot.LogicalIndex)
+        if (_inspectorSelection?.Snapshot is not { } selectedSnapshot || reviewWorkspace?.CurrentSnapshot is not { } snapshot ||
+            selectedSnapshot.LogicalIndex == snapshot.LogicalIndex)
             return;
         ShowRecord(snapshot.PrimarySource, snapshot.DecodedFrame, snapshot);
     }
 
     private void ApplyInspectorPresentation(InspectorFramePresentation presentation, bool registerActivity)
     {
-        var selectedId = currentInspectorSnapshot is not null
+        var selectedId = _inspectorSelection?.Snapshot is not null
             ? reviewWorkspace?.SelectedContactId
             : (InspectorContactsList.SelectedItem as InspectorContactRow)?.Id;
         InspectorTitleText.Text = registerActivity ? "Register" : "Frame";
