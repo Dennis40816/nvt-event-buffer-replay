@@ -44,7 +44,20 @@ jobs:
 
       - name: Verify repository health
         shell: pwsh
-        run: ./tools/repo-checks/repo-health.ps1 -Mode Verify -Repo nfu -Root . -Solution Nvt.EventBufferReplay.sln
+        env:
+          PULL_REQUEST_BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+          PUSH_BEFORE: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: |
+          # Compare ledgers and the Core bundle with the base, not with HEAD, so a change cannot edit a ledger
+          # and the debt it hides in the same commit (repo-health.md: application CI must pass -BaseRef).
+          $baseRef = $env:PULL_REQUEST_BASE
+          if (-not $baseRef -and $env:PUSH_BEFORE -match '[1-9a-f]') {
+            git cat-file -e "$($env:PUSH_BEFORE)^{commit}" 2>$null
+            if ($LASTEXITCODE -eq 0) { $baseRef = $env:PUSH_BEFORE }
+          }
+          $arguments = @{ Mode = 'Verify'; Repo = 'nfu'; Root = '.'; Solution = 'Nvt.EventBufferReplay.sln' }
+          if ($baseRef) { $arguments.BaseRef = $baseRef }
+          ./tools/repo-checks/repo-health.ps1 @arguments
 
   build-and-test:
     runs-on: windows-latest
