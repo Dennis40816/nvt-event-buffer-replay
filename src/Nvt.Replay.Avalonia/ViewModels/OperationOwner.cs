@@ -14,10 +14,12 @@ internal sealed class OperationOwner : IDisposable
 
     internal Lease Begin()
     {
-        CancelCurrent();
-        Dispose();
-        _current = new Lease(checked(++_nextId));
-        return _current;
+        var previous = _current;
+        var next = new Lease(checked(++_nextId));
+        _current = next;
+        try { previous?.Cancel(); }
+        finally { previous?.Dispose(); }
+        return next;
     }
 
     internal bool IsCurrent(Lease lease) =>

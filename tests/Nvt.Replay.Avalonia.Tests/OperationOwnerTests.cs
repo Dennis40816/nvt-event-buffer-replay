@@ -23,6 +23,27 @@ public sealed class OperationOwnerTests
     }
 
     [Fact]
+    public void CancellationCallbackSeesNewLeaseAsCurrent()
+    {
+        using var owner = new OperationOwner();
+        var previous = owner.Begin();
+        var oldWasCurrent = true;
+        var oldReleased = true;
+        using var registration = previous.Token.Register(() =>
+        {
+            oldWasCurrent = owner.IsCurrent(previous);
+            oldReleased = owner.Release(previous);
+        });
+
+        var current = owner.Begin();
+
+        Assert.False(oldWasCurrent);
+        Assert.False(oldReleased);
+        Assert.True(owner.IsCurrent(current));
+        Assert.False(current.Token.IsCancellationRequested);
+    }
+
+    [Fact]
     public void StaleReleaseLeavesCurrentLeaseActive()
     {
         using var owner = new OperationOwner();

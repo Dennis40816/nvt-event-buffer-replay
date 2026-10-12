@@ -337,8 +337,8 @@ public partial class MainWindow : Window
         var preservedWorkspaceTab = preservedWorkspaceTabOverride ?? WorkspaceTabs.SelectedItem as TabItem;
         var preservedPaintSettings = paintWorkspace?.Settings;
 
-        var decodeCancellation = _operation.Begin();
         ResetOutputPlanning();
+        var decodeCancellation = _operation.Begin();
         var cancellationToken = decodeCancellation.Token;
         SetBusy(true, $"Decoding {(isDesay97 ? "Desay" : "Common")} {versionText}");
         PendingCaptureOperation.Decode? decodeOperation = null;

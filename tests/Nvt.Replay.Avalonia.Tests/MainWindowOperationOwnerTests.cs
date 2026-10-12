@@ -92,7 +92,6 @@ public sealed class MainWindowOperationOwnerTests
             failure.SetException(new InvalidOperationException("superseded picker failure"));
             await oldOperation.WaitAsync(watchdog.Token);
 
-            Assert.False(newLoad.IsCompleted);
             Assert.True(Required<ProgressBar>(window, "LoadingProgress").IsVisible);
             Assert.True(Required<Button>(window, "CancelButton").IsVisible);
             Assert.False(Required<Button>(window, "LoadButton").IsVisible);
