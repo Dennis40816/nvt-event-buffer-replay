@@ -24,13 +24,7 @@ public partial class MainWindow : Window
     private readonly ReplayOutputWorkspace outputWorkspace = new();
     private ReplayOutputPlanService outputPlanService = new();
     private readonly ExportJobService outputExportJobs = new();
-    private ReplayOutputPreviewPlan? outputVideoPreviewPlan;
-    private ITouchReplaySession? outputVideoPreviewReplay;
-    private int outputVideoFrameIndex;
-    private bool outputVideoPreviewDirty;
-    private long outputPreviewGeneration;
-    private bool outputPreviewPlanPending;
-    private string? outputPreviewPlanError;
+    private readonly OutputPreviewState _outputPreview = new();
     private OutputReportService outputReportService = new();
     private CaptureAnalysisReport? currentOutputReport;
     private int heatmapMinimumCount = 5;
@@ -43,12 +37,12 @@ public partial class MainWindow : Window
     private bool outputEncoderWarning;
     internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
     internal long OutputSettingsRevision => outputWorkspace.Revision;
-    internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => outputVideoPreviewPlan?.Identity;
-    internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => outputVideoPreviewPlan?.FramePlan;
+    internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => _outputPreview.Plan?.Identity;
+    internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => _outputPreview.Plan?.FramePlan;
     internal int OutputPreviewPlanBuildCount => outputPlanService.BuildCount;
     internal int OutputReportBuildCount => outputReportService.BuildCount;
     internal int OutputVideoRenderCount => OutputVideoPreview.RgbRenderCount;
-    internal bool OutputVideoPreviewDirty => outputVideoPreviewDirty;
+    internal bool OutputVideoPreviewDirty => _outputPreview.Dirty;
     internal CaptureAnalysisReport? CurrentOutputReport => currentOutputReport;
     internal Action<string>? OutputFolderRevealActionForTesting { get; set; }
     internal Func<CancellationToken, Task<FfmpegProbeResult>>? FfmpegProbeForTesting { get; set; }
@@ -71,8 +65,8 @@ public partial class MainWindow : Window
         outputReportService = replacement;
         currentOutputReport = null;
     }
-    private int outputVideoFrameCount => outputVideoPreviewPlan?.Estimate.OutputFrameCount ?? 0;
-    private int outputVideoFrameRate => outputVideoPreviewPlan?.Identity.Settings.FrameRate ?? outputWorkspace.Settings.FrameRate;
+    private int outputVideoFrameCount => _outputPreview.Plan?.Estimate.OutputFrameCount ?? 0;
+    private int outputVideoFrameRate => _outputPreview.Plan?.Identity.Settings.FrameRate ?? outputWorkspace.Settings.FrameRate;
     private void OutputContentComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (OutputContentComboBox?.SelectedItem is not SelectOption option ||
@@ -425,8 +419,7 @@ public partial class MainWindow : Window
         ReplayOutputPreviewPlan preview;
         try
         {
-            outputPreviewPlanPending = true;
-            outputPreviewPlanError = null;
+            _outputPreview.SetRequestPending(true);
             UpdateOutputExportButtonAvailability();
             preview = await outputPlanService.GetPreviewAsync(
                 replaySession,
@@ -441,7 +434,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
-            outputPreviewPlanError = exception.Message;
+            _outputPreview.FailRequest(exception.Message);
             AnalysisSummaryText.Text = "Output preview unavailable";
             OutputHotspotText.Text = exception.Message;
             SessionStatusText.Text = $"MP4 export unavailable · {exception.Message}";
@@ -450,7 +443,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            outputPreviewPlanPending = false;
+            _outputPreview.CompleteRequest();
             UpdateOutputExportButtonAvailability();
         }
         if (preview.Identity.Settings != outputWorkspace.Settings)
@@ -459,8 +452,8 @@ public partial class MainWindow : Window
             RefreshOutputPreviewIfVisible();
             return;
         }
-        if (!ReferenceEquals(outputVideoPreviewPlan?.FramePlan, preview.FramePlan) ||
-            outputVideoPreviewPlan.Identity != preview.Identity)
+        if (!ReferenceEquals(_outputPreview.Plan?.FramePlan, preview.FramePlan) ||
+            _outputPreview.Plan.Identity != preview.Identity)
             PrepareOutputVideoPreview(preview, PreviewClockName(preview.Identity.Settings), $"{preview.Identity.Settings.Speed:0.##}×");
         var estimate = preview.Estimate;
         var settings = preview.Identity.Settings;
@@ -633,7 +626,7 @@ public partial class MainWindow : Window
     {
         if (ExportSelectedOutputButton is null) return;
         var mp4Selected = (OutputContentComboBox.SelectedItem as SelectOption)?.Value == "mp4";
-        var previewReady = !outputPreviewPlanPending && outputPreviewPlanError is null &&
+        var previewReady = !_outputPreview.PlanPending && _outputPreview.PlanError is null &&
                            replaySession is not null &&
                            MatchingOutputVideoPreviewPlan(outputWorkspace.Settings, OutputReplayIdentityOrEmpty()) is not null;
         ExportSelectedOutputButton.IsEnabled =
@@ -875,57 +868,57 @@ public partial class MainWindow : Window
         switch (selectedType)
         {
             case "heatmap":
-            {
-                var width = Math.Max(640, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Width));
-                var height = Math.Max(360, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Height));
-                var samples = currentOutputReport?.Hotspot.SampleCount ?? 0;
-                OutputInfoFormatText.Text = "PNG · heatmap";
-                OutputInfoResolutionText.Text = $"Preview · {width} × {height}";
-                OutputInfoSizeText.Text = FormatEstimatedRange(
-                    EstimateRasterBytes(width, height, 0.12),
-                    EstimateRasterBytes(width, height, 0.9));
-                OutputInfoDetailText.Text = $"{samples:N0} samples · {rangeText}";
-                break;
-            }
+                {
+                    var width = Math.Max(640, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Width));
+                    var height = Math.Max(360, (int)Math.Ceiling(AnalysisHeatmapPreview.Bounds.Height));
+                    var samples = currentOutputReport?.Hotspot.SampleCount ?? 0;
+                    OutputInfoFormatText.Text = "PNG · heatmap";
+                    OutputInfoResolutionText.Text = $"Preview · {width} × {height}";
+                    OutputInfoSizeText.Text = FormatEstimatedRange(
+                        EstimateRasterBytes(width, height, 0.12),
+                        EstimateRasterBytes(width, height, 0.9));
+                    OutputInfoDetailText.Text = $"{samples:N0} samples · {rangeText}";
+                    break;
+                }
             case "points":
-            {
-                var samples = AnalysisPointPlotPreview?.PointCount ?? 0;
-                OutputInfoFormatText.Text = "PNG · reported points";
-                OutputInfoResolutionText.Text = $"Paint · {settings.Width} × {settings.Height}";
-                OutputInfoSizeText.Text = FormatEstimatedRange(
-                    EstimateRasterBytes(settings.Width, settings.Height, 0.04),
-                    EstimateRasterBytes(settings.Width, settings.Height, 0.55));
-                OutputInfoDetailText.Text = $"{samples:N0} points · {rangeText}";
-                break;
-            }
+                {
+                    var samples = AnalysisPointPlotPreview?.PointCount ?? 0;
+                    OutputInfoFormatText.Text = "PNG · reported points";
+                    OutputInfoResolutionText.Text = $"Paint · {settings.Width} × {settings.Height}";
+                    OutputInfoSizeText.Text = FormatEstimatedRange(
+                        EstimateRasterBytes(settings.Width, settings.Height, 0.04),
+                        EstimateRasterBytes(settings.Width, settings.Height, 0.55));
+                    OutputInfoDetailText.Text = $"{samples:N0} points · {rangeText}";
+                    break;
+                }
             case "package":
-            {
-                var events = currentOutputReport?.Events.Count ?? 0;
-                var records = session?.Records.Count ?? 0;
-                var diagnostics = currentOutputReport?.DiagnosticAggregates.Count ?? 0;
-                var centralEstimate = 24_000L + events * 720L + records * 132L + diagnostics * 1_600L;
-                OutputInfoFormatText.Text = "ZIP-ready · 9 files";
-                OutputInfoResolutionText.Text = $"Paint metadata · {settings.Width} × {settings.Height}";
-                OutputInfoSizeText.Text = FormatEstimatedRange(
-                    Math.Max(8_192, (long)(centralEstimate * 0.7)),
-                    Math.Max(16_384, (long)(centralEstimate * 1.35)));
-                OutputInfoDetailText.Text = $"{events:N0} events · {records:N0} records · {rangeText}";
-                break;
-            }
+                {
+                    var events = currentOutputReport?.Events.Count ?? 0;
+                    var records = session?.Records.Count ?? 0;
+                    var diagnostics = currentOutputReport?.DiagnosticAggregates.Count ?? 0;
+                    var centralEstimate = 24_000L + events * 720L + records * 132L + diagnostics * 1_600L;
+                    OutputInfoFormatText.Text = "ZIP-ready · 9 files";
+                    OutputInfoResolutionText.Text = $"Paint metadata · {settings.Width} × {settings.Height}";
+                    OutputInfoSizeText.Text = FormatEstimatedRange(
+                        Math.Max(8_192, (long)(centralEstimate * 0.7)),
+                        Math.Max(16_384, (long)(centralEstimate * 1.35)));
+                    OutputInfoDetailText.Text = $"{events:N0} events · {records:N0} records · {rangeText}";
+                    break;
+                }
             default:
-            {
-                var frameCount = outputVideoPreviewPlan?.Estimate.OutputFrameCount ?? 0;
-                var duration = outputVideoPreviewPlan?.Estimate.Duration ?? TimeSpan.Zero;
-                OutputInfoFormatText.Text = "MP4 · H.264";
-                OutputInfoSizeText.Text = frameCount > 0
-                    ? FormatEstimatedRange(
-                        EstimateVideoBytes(settings.Width, settings.Height, frameCount, 0.01),
-                        EstimateVideoBytes(settings.Width, settings.Height, frameCount, 0.05))
-                    : outputPreviewPlanPending ? "Calculating…" : "Waiting for preview";
-                OutputInfoDetailText.Text =
-                    $"{settings.FrameRate} FPS · {frameCount:N0} frames · {FormatClock(duration)} · {rangeText}";
-                break;
-            }
+                {
+                    var frameCount = _outputPreview.Plan?.Estimate.OutputFrameCount ?? 0;
+                    var duration = _outputPreview.Plan?.Estimate.Duration ?? TimeSpan.Zero;
+                    OutputInfoFormatText.Text = "MP4 · H.264";
+                    OutputInfoSizeText.Text = frameCount > 0
+                        ? FormatEstimatedRange(
+                            EstimateVideoBytes(settings.Width, settings.Height, frameCount, 0.01),
+                            EstimateVideoBytes(settings.Width, settings.Height, frameCount, 0.05))
+                        : _outputPreview.PlanPending ? "Calculating…" : "Waiting for preview";
+                    OutputInfoDetailText.Text =
+                        $"{settings.FrameRate} FPS · {frameCount:N0} frames · {FormatClock(duration)} · {rangeText}";
+                    break;
+                }
         }
         OutputInfoSizeLabelText.Text = "Estimated size";
     }
@@ -1000,8 +993,8 @@ public partial class MainWindow : Window
         ReplayOutputSettings settings,
         string replayIdentity) =>
         replaySession is not null &&
-        outputVideoPreviewPlan is { } current &&
-        ReferenceEquals(outputVideoPreviewReplay, replaySession) &&
+        _outputPreview.Plan is { } current &&
+        ReferenceEquals(_outputPreview.Replay, replaySession) &&
         current.Identity.ReplayIdentity == replayIdentity &&
         current.Identity.ReplayFrameCount == replaySession.Count &&
         current.Identity.ReplayFrameInterval == replaySession.FrameInterval &&
@@ -1113,15 +1106,14 @@ public partial class MainWindow : Window
         outputPreviewCancellation?.Dispose();
         outputPreviewCancellation = new CancellationTokenSource();
         var cancellationToken = outputPreviewCancellation.Token;
-        var generation = checked(++outputPreviewGeneration);
+        var generation = _outputPreview.BeginRequest();
         var range = SelectedOutputRange();
         outputWorkspace.Update(outputWorkspace.Settings with { Range = range });
         var settings = outputWorkspace.Settings;
         var replayIdentity = OutputReplayIdentity();
         AnalysisSummaryText.Text = $"Preparing frames {range.StartLogicalIndex + 1:N0}-{range.EndLogicalIndex + 1:N0}...";
         OutputHotspotText.Text = "Analyzing coordinates";
-        outputPreviewPlanPending = settings.ContentType == ReplayOutputContentType.Mp4Video;
-        outputPreviewPlanError = null;
+        _outputPreview.SetRequestPending(settings.ContentType == ReplayOutputContentType.Mp4Video);
         UpdateOutputExportButtonAvailability();
         try
         {
@@ -1134,11 +1126,11 @@ public partial class MainWindow : Window
                     settings,
                     cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (generation != outputPreviewGeneration || settings != outputWorkspace.Settings) return;
+                if (generation != _outputPreview.Generation || settings != outputWorkspace.Settings) return;
             }
             var reportSnapshot = await GetOutputReportAsync(range, replayIdentity, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            if (generation != outputPreviewGeneration || settings != outputWorkspace.Settings) return;
+            if (generation != _outputPreview.Generation || settings != outputWorkspace.Settings) return;
             ApplyOutputPreview(reportSnapshot.Report, preview);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -1146,9 +1138,9 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
         {
-            if (generation != outputPreviewGeneration) return;
+            if (generation != _outputPreview.Generation) return;
             currentOutputReport = null;
-            outputPreviewPlanError = exception.Message;
+            _outputPreview.FailRequest(exception.Message);
             AnalysisSummaryText.Text = "Output preview unavailable";
             OutputHotspotText.Text = exception.Message;
             AnalysisHeatmapPreview.Show(null);
@@ -1157,9 +1149,9 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (generation == outputPreviewGeneration)
+            if (generation == _outputPreview.Generation)
             {
-                outputPreviewPlanPending = false;
+                _outputPreview.CompleteRequest();
                 UpdateOutputExportButtonAvailability();
             }
         }
@@ -1239,12 +1231,7 @@ public partial class MainWindow : Window
     private void PrepareOutputVideoPreview(ReplayOutputPreviewPlan preview, string clockName, string speed)
     {
         if (replaySession is null) return;
-        var framePlanChanged = !ReferenceEquals(outputVideoPreviewPlan?.FramePlan, preview.FramePlan);
-        outputVideoPreviewPlan = preview;
-        outputVideoPreviewReplay = replaySession;
-        outputVideoFrameIndex = framePlanChanged
-            ? 0
-            : Math.Clamp(outputVideoFrameIndex, 0, Math.Max(0, preview.Estimate.OutputFrameCount - 1));
+        _outputPreview.InstallPlan(preview, replaySession);
         var settings = preview.Identity.Settings;
         var duration = preview.Estimate.Duration;
         OutputClockText.Text = $"{FormatClock(duration)}\n{outputVideoFrameCount:N0} frames at {settings.FrameRate} FPS";
@@ -1255,33 +1242,33 @@ public partial class MainWindow : Window
         OutputPreviewPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputFullscreenPlayPauseButton.IsEnabled = outputVideoFrameCount > 0;
         OutputPreviewFullscreenButton.IsEnabled = outputVideoFrameCount > 0;
-        outputVideoPreviewDirty = true;
-        ShowOutputVideoFrame(outputVideoFrameIndex);
+        _outputPreview.MarkDirty();
+        ShowOutputVideoFrame(_outputPreview.FrameIndex);
         OutputConfigurationText.Text += $"\nvideo    {clockName} / {settings.FrameRate} FPS / {speed}";
         RefreshOutputInfo();
     }
 
     private void ShowOutputVideoFrame(int outputFrameIndex)
     {
-        if (replaySession is null || outputVideoFrameCount == 0 || outputVideoPreviewPlan is null ||
-            !ReferenceEquals(outputVideoPreviewReplay, replaySession)) return;
-        outputVideoFrameIndex = Math.Clamp(outputFrameIndex, 0, outputVideoFrameCount - 1);
-        var logicalIndex = ReplayFramePlan.LogicalIndexAt(outputVideoPreviewPlan.Entries, outputVideoFrameIndex);
+        if (replaySession is null || outputVideoFrameCount == 0 || _outputPreview.Plan is null ||
+            !ReferenceEquals(_outputPreview.Replay, replaySession)) return;
+        _outputPreview.FrameIndex = Math.Clamp(outputFrameIndex, 0, outputVideoFrameCount - 1);
+        var logicalIndex = ReplayFramePlan.LogicalIndexAt(_outputPreview.Plan.Entries, _outputPreview.FrameIndex);
         var scene = CreateReplayScene(logicalIndex);
         var settings = CurrentReplayRenderSettings();
-        var outputSettings = outputVideoPreviewPlan.Identity.Settings;
+        var outputSettings = _outputPreview.Plan.Identity.Settings;
         OutputVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
         if (_outputFullscreenRestoreState.HasValue)
             OutputFullscreenVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
-        outputVideoPreviewDirty = false;
-        OutputVideoTimeline.SetPosition(outputVideoFrameIndex);
-        OutputFullscreenTimeline.SetPosition(outputVideoFrameIndex);
-        var currentTime = TimeSpan.FromSeconds(outputVideoFrameIndex / (double)outputSettings.FrameRate);
-        var duration = outputVideoPreviewPlan.Estimate.Duration;
+        _outputPreview.MarkRendered();
+        OutputVideoTimeline.SetPosition(_outputPreview.FrameIndex);
+        OutputFullscreenTimeline.SetPosition(_outputPreview.FrameIndex);
+        var currentTime = TimeSpan.FromSeconds(_outputPreview.FrameIndex / (double)outputSettings.FrameRate);
+        var duration = _outputPreview.Plan.Estimate.Duration;
         OutputPreviewClockText.Text = $"{FormatClock(currentTime)} / {FormatClock(duration)}";
-        OutputPreviewFrameText.Text = $"output {outputVideoFrameIndex + 1:N0}/{outputVideoFrameCount:N0}  source {logicalIndex + 1:N0}/{replaySession.Count:N0}";
+        OutputPreviewFrameText.Text = $"output {_outputPreview.FrameIndex + 1:N0}/{outputVideoFrameCount:N0}  source {logicalIndex + 1:N0}/{replaySession.Count:N0}";
         OutputFullscreenClockText.Text = OutputPreviewClockText.Text;
-        OutputFullscreenFrameText.Text = $"{outputVideoFrameIndex + 1:N0} / {outputVideoFrameCount:N0}";
+        OutputFullscreenFrameText.Text = $"{_outputPreview.FrameIndex + 1:N0} / {outputVideoFrameCount:N0}";
     }
 
     private void OutputVideoTimeline_OnSeekRequested(object? sender, OutputVideoSeekEventArgs e)
@@ -1313,7 +1300,7 @@ public partial class MainWindow : Window
         _outputFullscreenRestoreState = WindowState;
         OutputFullscreenOverlay.IsVisible = true;
         WindowState = WindowState.FullScreen;
-        ShowOutputVideoFrame(outputVideoFrameIndex);
+        ShowOutputVideoFrame(_outputPreview.FrameIndex);
         OutputFullscreenOverlay.Focus();
     }
 
@@ -1342,18 +1329,18 @@ public partial class MainWindow : Window
         {
             while (!cancellation.IsCancellationRequested)
             {
-                if (outputVideoFrameIndex >= outputVideoFrameCount - 1)
+                if (_outputPreview.FrameIndex >= outputVideoFrameCount - 1)
                     ShowOutputVideoFrame(0);
 
-                var firstOutputFrame = outputVideoFrameIndex;
+                var firstOutputFrame = _outputPreview.FrameIndex;
                 var playbackStarted = FailureReporter.TimeProvider.GetTimestamp();
-                while (outputVideoFrameIndex < outputVideoFrameCount - 1)
+                while (_outputPreview.FrameIndex < outputVideoFrameCount - 1)
                 {
                     var elapsed = FailureReporter.TimeProvider.GetElapsedTime(playbackStarted).TotalSeconds;
                     var targetFrame = Math.Min(
                         outputVideoFrameCount - 1,
                         firstOutputFrame + (int)Math.Floor(elapsed * outputVideoFrameRate));
-                    if (targetFrame > outputVideoFrameIndex)
+                    if (targetFrame > _outputPreview.FrameIndex)
                         ShowOutputVideoFrame(targetFrame);
                     if (targetFrame >= outputVideoFrameCount - 1) break;
 
@@ -1404,11 +1391,8 @@ public partial class MainWindow : Window
     {
         ExitOutputFullscreen();
         StopOutputVideoPreviewPlayback();
-        outputVideoPreviewPlan = null;
-        outputVideoPreviewReplay = null;
-        outputVideoFrameIndex = 0;
-        outputVideoPreviewDirty = false;
-        OutputVideoBadgeText.Text = outputPreviewPlanError ?? "Preview unavailable";
+        _outputPreview.ClearPlan();
+        OutputVideoBadgeText.Text = _outputPreview.PlanError ?? "Preview unavailable";
         OutputClockText.Text = "-";
         OutputVideoPreview.Clear();
         OutputFullscreenVideoPreview.Clear();
@@ -1427,28 +1411,27 @@ public partial class MainWindow : Window
 
     private void InvalidateCurrentOutputVideoFrame()
     {
-        outputVideoPreviewDirty = true;
+        _outputPreview.MarkDirty();
         RefreshCurrentOutputVideoFrame();
     }
 
     private void RefreshCurrentOutputVideoFrame()
     {
         var visible = _outputFullscreenRestoreState.HasValue || outputWorkspaceActive && OutputVideoPanel.IsVisible;
-        if (!visible || !outputVideoPreviewDirty || outputVideoFrameCount == 0 || outputVideoPreviewPlan is null)
+        if (!visible || !_outputPreview.Dirty || outputVideoFrameCount == 0 || _outputPreview.Plan is null)
             return;
-        ShowOutputVideoFrame(outputVideoFrameIndex);
+        ShowOutputVideoFrame(_outputPreview.FrameIndex);
     }
 
     private void ResetOutputPlanning()
     {
-        checked { outputPreviewGeneration++; }
+        _outputPreview.AdvanceGeneration();
         outputPreviewCancellation?.Cancel();
         outputPreviewCancellation?.Dispose();
         outputPreviewCancellation = null;
         outputPlanService.Invalidate();
         outputReportService.Reset();
-        outputPreviewPlanPending = false;
-        outputPreviewPlanError = null;
+        _outputPreview.ResetRequest();
         currentOutputReport = null;
         AnalysisHeatmapPreview.Show(null);
         AnalysisPointPlotPreview.Show(null, outputWorkspace.Settings.Width, outputWorkspace.Settings.Height);
