@@ -19,7 +19,7 @@ namespace Nvt.Replay.Avalonia;
 public partial class MainWindow : Window
 {
     private const string ProductWindowTitle = "NVT Event Buffer Replay";
-    private CancellationTokenSource? operationCancellation;
+    private readonly OperationOwner _operation = new(); // UI thread only.
     private readonly CaptureWorkspaceViewModel _captureWorkspace = new();
     private readonly ReplayShellViewModel _replayShell;
     internal UiFailureReporter FailureReporter { get; } // UI thread only; shares the window lifetime.
@@ -41,7 +41,6 @@ public partial class MainWindow : Window
     private readonly EventSuppressionScope configuringRegisterProfile = new();
     private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference => _captureWorkspace.PendingConfiguration;
     private int targetI2cAddress = 0x01;
-    private bool operationInProgress;
     internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get; set; }
     internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get; set; }
 
@@ -50,13 +49,22 @@ public partial class MainWindow : Window
     private (UiFailureReporter Reporter, ReplayShellViewModel Shell) CreateUiServices()
     {
         var reporter = new UiFailureReporter(new(TimeProvider.System,
-            (operation, status) => { if (UiFailureReporter.OwnsBusy(operation)) SetBusy(false, status); else SessionStatusText.Text = status; }, UiFailureReporter.TraceFailure, StopOutputVideoPreviewPlayback, UpdateCaptureSetupValidation));
+            (operation, status) =>
+            {
+                if (UiFailureReporter.OwnsBusy(operation))
+                {
+                    // Lease operations release in finally before the runner reports failure.
+                    // An active lease belongs to another operation and must keep its UI.
+                    if (!_operation.Active) SetBusy(false, status);
+                }
+                else SessionStatusText.Text = status;
+            }, UiFailureReporter.TraceFailure, StopOutputVideoPreviewPlayback, UpdateCaptureSetupValidation));
         return (reporter, new ReplayShellViewModel(_captureWorkspace, new ReplayShellSeams(
             PickCaptureSourceAsync,
             path => OpenCaptureAsync(path, promptForConfiguration: true),
             () => DecodeSelectedAsync(),
             CancelCaptureOperation,
-            () => operationInProgress,
+            () => _operation.Active,
             () => outputExportJobs.IsActive), reporter.Runner));
     }
 
@@ -77,7 +85,7 @@ public partial class MainWindow : Window
 
     private void CancelCaptureOperation()
     {
-        operationCancellation?.Cancel();
+        _operation.CancelCurrent();
         captureDecodeController.CancelCurrent();
     }
 
@@ -90,10 +98,7 @@ public partial class MainWindow : Window
         var loadOperation = _captureWorkspace.BeginLoad();
         captureDecodeController.CancelCurrent();
         ResetOutputPlanning();
-        operationCancellation?.Cancel();
-        operationCancellation?.Dispose();
-        var loadCancellation = new CancellationTokenSource();
-        operationCancellation = loadCancellation;
+        var loadCancellation = _operation.Begin();
         var cancellationToken = loadCancellation.Token;
         SetBusy(true, "Opening capture");
 
@@ -208,7 +213,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (IsActiveCaptureLoad(loadOperation, loadCancellation))
+            if (_operation.Release(loadCancellation))
             {
                 _captureWorkspace.Fail(loadOperation);
                 SetBusy(false, SessionStatusText.Text ?? "Ready");
@@ -287,7 +292,7 @@ public partial class MainWindow : Window
         ReviewWorkspaceState? preservedWorkspaceStateOverride = null,
         TabItem? preservedWorkspaceTabOverride = null)
     {
-        if (_captureWorkspace.State is CaptureState.Empty || operationInProgress)
+        if (_captureWorkspace.State is CaptureState.Empty || _operation.Active)
         {
             return;
         }
@@ -332,11 +337,8 @@ public partial class MainWindow : Window
         var preservedWorkspaceTab = preservedWorkspaceTabOverride ?? WorkspaceTabs.SelectedItem as TabItem;
         var preservedPaintSettings = paintWorkspace?.Settings;
 
-        operationCancellation?.Cancel();
-        operationCancellation?.Dispose();
         ResetOutputPlanning();
-        var decodeCancellation = new CancellationTokenSource();
-        operationCancellation = decodeCancellation;
+        var decodeCancellation = _operation.Begin();
         var cancellationToken = decodeCancellation.Token;
         SetBusy(true, $"Decoding {(isDesay97 ? "Desay" : "Common")} {versionText}");
         PendingCaptureOperation.Decode? decodeOperation = null;
@@ -370,7 +372,7 @@ public partial class MainWindow : Window
 
             cancellationToken.ThrowIfCancellationRequested();
             if (!_captureWorkspace.IsCurrent(decodeOperation) ||
-                !ReferenceEquals(operationCancellation, decodeCancellation) ||
+                !_operation.IsCurrent(decodeCancellation) ||
                 !ReferenceEquals(captureDecodeController.LastSuccessfulResult, result) ||
                 !ReferenceEquals(session, loadedSession))
                 throw new CaptureDecodeSupersededException(result.Generation);
@@ -452,7 +454,7 @@ public partial class MainWindow : Window
         }
         finally
         {
-            if (IsActiveCaptureDecode(decodeOperation, decodeCancellation))
+            if (_operation.Release(decodeCancellation))
             {
                 if (decodeOperation is not null) _captureWorkspace.Fail(decodeOperation);
                 SetBusy(false, SessionStatusText.Text ?? "Ready");
@@ -460,11 +462,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private bool IsActiveCaptureLoad(PendingCaptureOperation.Load pending, CancellationTokenSource cancellation) =>
-        _captureWorkspace.IsCurrent(pending) && ReferenceEquals(operationCancellation, cancellation);
+    private bool IsActiveCaptureLoad(PendingCaptureOperation.Load pending, OperationOwner.Lease lease) =>
+        _captureWorkspace.IsCurrent(pending) && _operation.IsCurrent(lease);
 
-    private bool IsActiveCaptureDecode(PendingCaptureOperation.Decode? pending, CancellationTokenSource cancellation) =>
-        ReferenceEquals(operationCancellation, cancellation) &&
+    private bool IsActiveCaptureDecode(PendingCaptureOperation.Decode? pending, OperationOwner.Lease lease) =>
+        _operation.IsCurrent(lease) &&
         (pending is null || _captureWorkspace.IsCurrent(pending));
 
     private void CancelButton_OnClick(object? sender, RoutedEventArgs e) => _replayShell.CancelCommand.Execute(null);
@@ -608,13 +610,14 @@ public partial class MainWindow : Window
         var preservedWorkspaceTab = WorkspaceTabs.SelectedItem as TabItem;
         CaptureSession? profiledSession = null;
         var committed = false;
+        var lease = _operation.Begin();
         SetBusy(true, choice.IcFamily is null ? "Removing IC register profile" : $"Applying IC profile {choice.IcFamily}");
         try
         {
             profiledSession = await Task.Run(() => loadedSession.WithRegisterProfile(choice.IcFamily));
             var projected = await Task.Run(() =>
                 RegisterActivityProjector.Project(profiledSession.Records, profiledSession.RegisterAnnotations).ToArray());
-            if (!IsCurrentReviewOperation(operationIdentity)) return;
+            if (!_operation.IsCurrent(lease) || !IsCurrentReviewOperation(operationIdentity)) return;
 
             var diagnostics = SessionDiagnostics(profiledSession);
             CollapseExpandedRawRow();
@@ -635,15 +638,12 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidDataException)
         {
-            SessionStatusText.Text = $"Register profile failed · {exception.Message}";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = $"Register profile failed · {exception.Message}";
         }
         finally
         {
-            var stillOwnsUi = committed
-                ? ReferenceEquals(session, profiledSession) &&
-                  ReferenceEquals(_captureWorkspace.Pending, operationIdentity.Pending)
-                : IsCurrentReviewOperation(operationIdentity);
-            if (stillOwnsUi) SetBusy(false, SessionStatusText.Text ?? "Ready");
+            if (_operation.Release(lease)) SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
 
         if (!committed) return;
@@ -812,10 +812,8 @@ public partial class MainWindow : Window
         var directory = folders.SingleOrDefault()?.TryGetLocalPath();
         if (directory is null) return;
 
-        operationCancellation?.Cancel();
-        operationCancellation?.Dispose();
-        operationCancellation = new CancellationTokenSource();
-        var cancellationToken = operationCancellation.Token;
+        var lease = _operation.Begin();
+        var cancellationToken = lease.Token;
         SetBusy(true, "Exporting readable communication log");
         try
         {
@@ -829,15 +827,17 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SessionStatusText.Text = "Readable log export cancelled; prior complete output was preserved";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = "Readable log export cancelled; prior complete output was preserved";
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            SessionStatusText.Text = $"Readable log export failed · {exception.Message}";
+            if (_operation.IsCurrent(lease))
+                SessionStatusText.Text = $"Readable log export failed · {exception.Message}";
         }
         finally
         {
-            SetBusy(false, SessionStatusText.Text ?? "Ready");
+            if (_operation.Release(lease)) SetBusy(false, SessionStatusText.Text ?? "Ready");
         }
     }
 
