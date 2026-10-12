@@ -89,7 +89,7 @@ public partial class MainWindow : Window
 
     private void SetReviewRailCollapsed(bool collapsed)
     {
-        _reviewRail.ApplyAutomaticCollapse(collapsed);
+        _reviewRail.SetCollapsed(collapsed);
         WorkspaceShellGrid.ColumnDefinitions[0].Width = new GridLength(collapsed ? 0 : ExpandedReviewRailWidth);
         ReviewRailBorder.IsVisible = !collapsed;
         ReviewRailTitle.IsVisible = !collapsed;
@@ -122,7 +122,7 @@ public partial class MainWindow : Window
     private void SetInspectorRailCollapsed(bool collapsed)
     {
         var wasCollapsed = _inspectorRail.Collapsed;
-        _inspectorRail.ApplyAutomaticCollapse(collapsed);
+        _inspectorRail.SetCollapsed(collapsed);
         var column = WorkspaceShellGrid.ColumnDefinitions[3];
         if (collapsed)
         {

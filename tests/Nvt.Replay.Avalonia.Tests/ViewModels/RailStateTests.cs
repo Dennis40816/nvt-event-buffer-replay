@@ -45,7 +45,7 @@ public sealed class RailStateTests
     {
         var state = new RailState(!collapsed, userPreference);
 
-        state.ApplyAutomaticCollapse(collapsed);
+        state.SetCollapsed(collapsed);
 
         Assert.Equal(collapsed, state.Collapsed);
         Assert.Equal(userPreference, state.UserPreference);
