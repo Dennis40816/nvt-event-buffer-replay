@@ -270,10 +270,11 @@ def agent_gated_result(policy: dict, base_ref: str, pull: dict,
             if (status != "added" and tests_non_added is not None
                     and anchored_match(path, tests_non_added)):
                 return False, f"{status} file under tests: {path}"
-        if name == "eng/file-size-baseline.json" and "eng/file-size-baseline.json" in ledgers:
+        if "eng/file-size-baseline.json" in paths and "eng/file-size-baseline.json" in ledgers:
             require(reader is not None and base_sha is not None and head_sha is not None,
                     "tier B needs the base and head to read the size ledger")
-            ok, reason = file_size_baseline_only_shrinks(reader, base_sha, head_sha, name)
+            ok, reason = file_size_baseline_only_shrinks(
+                reader, base_sha, head_sha, "eng/file-size-baseline.json")
             if not ok:
                 return False, reason
         if name not in ledgers:

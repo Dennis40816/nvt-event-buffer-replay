@@ -633,7 +633,8 @@ class ApprovalCheckTests(unittest.TestCase):
         self.assertIn("tools/repo-checks/**", POLICY["owner_gated_patterns"])
         self.assertEqual(agent["extra_denied_paths"], [
             "*.user", "*.proj", "*.projitems", "*.fsproj", "*.vbproj",
-            "*.shproj"])
+            "*.shproj", "xunit.runner.json", "testconfig.json",
+            "*.runsettings", "*.testsettings"])
         self.assertEqual(POLICY["owner_gated_base_branch"], "main")
         self.assertEqual(POLICY["required_check"], "build-and-test")
         self.assertEqual(POLICY["approval_status_context"],
@@ -863,6 +864,40 @@ class ApprovalCheckTests(unittest.TestCase):
                      self.changed("eng/file-size-baseline.json")])
         self.size_ledger({"src/A.cs": 900}, {"src/A.cs": 900, "src/C.cs": 810})
         self.assert_owner_gated("adds an entry for src/C.cs")
+
+    def test_tier_b_denies_test_runner_configuration(self):
+        for path in ("tests/A.Tests/xunit.runner.json",
+                     "tests/A.Tests/testconfig.json",
+                     "tests/A.Tests/ci.runsettings",
+                     "tests/A.Tests/old.testsettings"):
+            with self.subTest(path=path):
+                self.tier_b([self.changed("src/View.cs"),
+                             self.changed(path, status="added")])
+                self.assert_owner_gated("denied path")
+
+    def test_tier_b_size_ledger_values_must_be_whole_numbers(self):
+        self.tier_b([self.changed("eng/file-size-baseline.json")])
+        self.size_ledger({"src/A.cs": 900}, {"src/A.cs": True})
+        with self.assertRaises(approval.InputError):
+            approval.evaluate(self.reader, POLICY, None)
+
+    def test_tier_b_size_ledger_renamed_away_is_owner_gated(self):
+        self.tier_b([self.changed(
+            "src/ledger.json", status="renamed",
+            previous_filename="eng/file-size-baseline.json")])
+        self.size_ledger({"src/A.cs": 900}, None)
+        self.assert_owner_gated()
+
+    def test_tier_b_older_record_tier_line_does_not_count(self):
+        self.reader.payloads["reviews-1"][0]["body"] += "\nApproval tier: B"
+        newer = review(150, user={"login": "nfc-agent-dennis40816[bot]",
+                                  "id": 334370883}, state="COMMENTED",
+                       commit=HEAD,
+                       body=f"Review record: {HEAD} accept\nFindings: none.")
+        newer["submitted_at"] = "2026-10-01T13:00:00Z"
+        self.reader.payloads["reviews-1"].append(newer)
+        self.tier_b([self.changed("src/View.cs")], record_tier=False)
+        self.assert_owner_gated("no 'Approval tier: B' line")
 
     def test_tier_b_size_ledger_cannot_be_added_or_removed(self):
         self.tier_b([self.changed("eng/file-size-baseline.json", status="added")])

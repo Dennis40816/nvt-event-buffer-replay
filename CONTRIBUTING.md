@@ -106,7 +106,8 @@ owner-gated, and the gate line in the check says why tier B was not granted.
   depth and even inside `src/**`. A nested `AGENTS.md`, `.claude/**`,
   `.gitattributes`, `*.csproj` or `*.props` keeps the gate. Also denied are
   the MSBuild files `*.user`, `*.proj`, `*.projitems`, `*.fsproj`, `*.vbproj`
-  and `*.shproj`.
+  and `*.shproj`, and the test runner files `xunit.runner.json`,
+  `testconfig.json`, `*.runsettings` and `*.testsettings`.
 - Files under `tests/**` are new. Any other status is owner-gated.
 - Added plus deleted lines, not counting the four ledger files, are at most
   600.

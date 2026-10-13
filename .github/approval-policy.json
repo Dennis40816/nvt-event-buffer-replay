@@ -28,7 +28,8 @@
       "eng/architecture/command-entries.json"
     ],
     "extra_denied_paths": [
-      "*.user", "*.proj", "*.projitems", "*.fsproj", "*.vbproj", "*.shproj"
+      "*.user", "*.proj", "*.projitems", "*.fsproj", "*.vbproj", "*.shproj",
+      "xunit.runner.json", "testconfig.json", "*.runsettings", "*.testsettings"
     ],
     "released_patterns": ["src/**"]
   },
