@@ -7,6 +7,7 @@ using Avalonia.Rendering;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
+/// <summary>Draws the replay timeline with its playhead, progress tracks, loop range and markers, and handles seek input.</summary>
 public sealed class ReplayTimelineSurface : Control, ICustomHitTest
 {
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
@@ -31,16 +32,16 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(ActiveMarkerBrush));
 
     private const double TrackInset = 5;
-    private int maximum = 1;
-    private int value;
-    private double physicalFraction;
-    private double evidenceFraction;
-    private int? loopStart;
-    private int? loopEnd;
-    private bool loopEnabled;
-    private int[] markerFrames = [];
-    private int? hoverFrame;
-    private DragTarget dragTarget;
+    private int _maximum = 1;
+    private int _value;
+    private double _physicalFraction;
+    private double _evidenceFraction;
+    private int? _loopStart;
+    private int? _loopEnd;
+    private bool _loopEnabled;
+    private int[] _markerFrames = [];
+    private int? _hoverFrame;
+    private DragTarget _dragTarget;
 
     public event EventHandler<ReplayTimelineSeekEventArgs>? SeekRequested;
     public event EventHandler<ReplayTimelineLoopEventArgs>? LoopRangeChanged;
@@ -62,87 +63,94 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     public IBrush? MarkerBrush { get => GetValue(MarkerBrushProperty); set => SetValue(MarkerBrushProperty, value); }
     public IBrush? ActiveMarkerBrush { get => GetValue(ActiveMarkerBrushProperty); set => SetValue(ActiveMarkerBrushProperty, value); }
     public bool Compact { get; set; } = true;
-    internal IReadOnlyList<int> MarkerFrames => markerFrames;
+    internal IReadOnlyList<int> MarkerFrames => _markerFrames;
 
     bool ICustomHitTest.HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
 
+    /// <summary>Sets the last logical index of the timeline and clamps the playhead and marker frames to it.</summary>
     public void SetMaximum(int value)
     {
-        maximum = Math.Max(1, value);
-        this.value = Math.Clamp(this.value, 0, maximum);
-        markerFrames = markerFrames.Select(frame => Math.Clamp(frame, 0, maximum)).Distinct().Order().ToArray();
+        _maximum = Math.Max(1, value);
+        _value = Math.Clamp(_value, 0, _maximum);
+        _markerFrames = _markerFrames.Select(frame => Math.Clamp(frame, 0, _maximum)).Distinct().Order().ToArray();
         InvalidateVisual();
     }
 
+    /// <summary>Sets the playhead to a logical index, clamped to the timeline maximum.</summary>
     public void SetPosition(int logicalIndex)
     {
-        value = Math.Clamp(logicalIndex, 0, maximum);
+        _value = Math.Clamp(logicalIndex, 0, _maximum);
         InvalidateVisual();
     }
 
+    /// <summary>Sets the physical and evidence progress fractions, clamped to 0 through 1.</summary>
     public void SetSupportingProgress(double physical, double evidence)
     {
-        physicalFraction = Math.Clamp(physical, 0, 1);
-        evidenceFraction = Math.Clamp(evidence, 0, 1);
+        _physicalFraction = Math.Clamp(physical, 0, 1);
+        _evidenceFraction = Math.Clamp(evidence, 0, 1);
         InvalidateVisual();
     }
 
+    /// <summary>Sets the playhead and the physical and evidence progress fractions in one step.</summary>
     public void SetFrameState(int logicalIndex, double physical, double evidence)
     {
-        value = Math.Clamp(logicalIndex, 0, maximum);
-        physicalFraction = Math.Clamp(physical, 0, 1);
-        evidenceFraction = Math.Clamp(evidence, 0, 1);
+        _value = Math.Clamp(logicalIndex, 0, _maximum);
+        _physicalFraction = Math.Clamp(physical, 0, 1);
+        _evidenceFraction = Math.Clamp(evidence, 0, 1);
         InvalidateVisual();
     }
 
+    /// <summary>Sets the loop range and whether it is enabled; the bounds are clamped to the timeline.</summary>
     public void SetLoopRange(int? start, int? end, bool enabled)
     {
-        loopStart = start is null ? null : Math.Clamp(start.Value, 0, maximum);
-        loopEnd = end is null ? null : Math.Clamp(end.Value, 0, maximum);
-        loopEnabled = enabled && loopStart is not null && loopEnd is not null;
+        _loopStart = start is null ? null : Math.Clamp(start.Value, 0, _maximum);
+        _loopEnd = end is null ? null : Math.Clamp(end.Value, 0, _maximum);
+        _loopEnabled = enabled && _loopStart is not null && _loopEnd is not null;
         InvalidateVisual();
     }
 
+    /// <summary>Replaces the marker frames with the distinct, ordered and clamped values of the given frames.</summary>
     public void SetMarkerFrames(IEnumerable<int> frames)
     {
         ArgumentNullException.ThrowIfNull(frames);
-        markerFrames = frames
-            .Select(frame => Math.Clamp(frame, 0, maximum))
+        _markerFrames = frames
+            .Select(frame => Math.Clamp(frame, 0, _maximum))
             .Distinct()
             .Order()
             .ToArray();
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     public override void Render(DrawingContext context)
     {
         base.Render(context);
         if (Bounds.Width <= TrackInset * 2 || Bounds.Height <= 1) return;
 
         var logicalY = Bounds.Height * 0.5;
-        var trackThickness = IsPointerOver || dragTarget != DragTarget.None ? 2.5 : 1;
+        var trackThickness = IsPointerOver || _dragTarget != DragTarget.None ? 2.5 : 1;
         var trackBrush = IsPointerOver ? HoverTrackBrush : TrackBrush;
         var left = TrackInset;
         var right = Bounds.Width - TrackInset;
 
         if (!Compact)
         {
-            DrawTrack(context, Bounds.Height * 0.125, physicalFraction, PhysicalBrush, trackBrush, trackThickness);
-            DrawTrack(context, Bounds.Height * 0.875, evidenceFraction, EvidenceBrush, trackBrush, trackThickness);
+            DrawTrack(context, Bounds.Height * 0.125, _physicalFraction, PhysicalBrush, trackBrush, trackThickness);
+            DrawTrack(context, Bounds.Height * 0.875, _evidenceFraction, EvidenceBrush, trackBrush, trackThickness);
         }
-        DrawTrack(context, logicalY, maximum == 0 ? 0 : value / (double)maximum, LogicalBrush, trackBrush, trackThickness);
+        DrawTrack(context, logicalY, _maximum == 0 ? 0 : _value / (double)_maximum, LogicalBrush, trackBrush, trackThickness);
 
-        if (loopStart is { } start && loopEnd is { } end)
+        if (_loopStart is { } start && _loopEnd is { } end)
         {
             var startX = PositionFor(start);
             var endX = PositionFor(end);
             if (endX < startX) (startX, endX) = (endX, startX);
-            if (loopEnabled)
+            if (_loopEnabled)
             {
                 var selection = new Rect(startX, logicalY - 8, Math.Max(1, endX - startX), 16);
                 context.DrawRectangle(LoopSurfaceBrush, null, selection, 2, 2);
             }
-            var loopPen = new Pen(loopEnabled ? LoopBrush : HoverTrackBrush, loopEnabled ? 2.5 : 1.5);
+            var loopPen = new Pen(_loopEnabled ? LoopBrush : HoverTrackBrush, _loopEnabled ? 2.5 : 1.5);
             context.DrawLine(loopPen, new Point(startX, logicalY - 10), new Point(startX, logicalY + 10));
             context.DrawLine(loopPen, new Point(startX, logicalY - 10), new Point(startX + 6, logicalY - 10));
             context.DrawLine(loopPen, new Point(startX, logicalY + 10), new Point(startX + 6, logicalY + 10));
@@ -151,10 +159,10 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
             context.DrawLine(loopPen, new Point(endX - 6, logicalY + 10), new Point(endX, logicalY + 10));
         }
 
-        foreach (var markerFrame in markerFrames)
+        foreach (var markerFrame in _markerFrames)
         {
             var x = PositionFor(markerFrame);
-            var brush = markerFrame == value ? ActiveMarkerBrush : MarkerBrush;
+            var brush = markerFrame == _value ? ActiveMarkerBrush : MarkerBrush;
             context.DrawLine(new Pen(brush, 1.5), new Point(x, 2), new Point(x, logicalY - 1));
             var flag = new StreamGeometry();
             using (var path = flag.Open())
@@ -167,28 +175,31 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
             context.DrawGeometry(brush, null, flag);
         }
 
-        var playheadX = Math.Clamp(PositionFor(value), left, right);
+        var playheadX = Math.Clamp(PositionFor(_value), left, right);
         var playheadPen = new Pen(PlayheadBrush, IsPointerOver ? 2 : 1.5);
         context.DrawLine(playheadPen, new Point(playheadX, 2), new Point(playheadX, Bounds.Height - 2));
         context.DrawLine(playheadPen, new Point(playheadX - 3, 2), new Point(playheadX + 3, 2));
 
-        if (hoverFrame is { } frame && IsPointerOver)
+        if (_hoverFrame is { } frame && IsPointerOver)
             DrawHoverLabel(context, frame, PositionFor(frame));
     }
 
+    /// <inheritdoc />
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (dragTarget == DragTarget.None) hoverFrame = null;
+        if (_dragTarget == DragTarget.None) _hoverFrame = null;
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         if (!IsEnabled || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -200,18 +211,18 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         base.OnPointerPressed(e);
         var position = e.GetPosition(this);
         var frame = FrameFor(position.X);
-        if (loopEnabled && loopStart is { } start && Math.Abs(PositionFor(start) - position.X) <= 9)
+        if (_loopEnabled && _loopStart is { } start && Math.Abs(PositionFor(start) - position.X) <= 9)
         {
-            dragTarget = DragTarget.LoopStart;
+            _dragTarget = DragTarget.LoopStart;
         }
-        else if (loopEnabled && loopEnd is { } end && Math.Abs(PositionFor(end) - position.X) <= 9)
+        else if (_loopEnabled && _loopEnd is { } end && Math.Abs(PositionFor(end) - position.X) <= 9)
         {
-            dragTarget = DragTarget.LoopEnd;
+            _dragTarget = DragTarget.LoopEnd;
         }
         else
         {
-            dragTarget = DragTarget.Playhead;
-            value = frame;
+            _dragTarget = DragTarget.Playhead;
+            _value = frame;
             SeekRequested?.Invoke(this, new ReplayTimelineSeekEventArgs(frame));
         }
         e.Pointer.Capture(this);
@@ -219,45 +230,47 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
         var frame = FrameFor(e.GetPosition(this).X);
-        hoverFrame = frame;
-        if (dragTarget == DragTarget.Playhead)
+        _hoverFrame = frame;
+        if (_dragTarget == DragTarget.Playhead)
         {
-            value = frame;
+            _value = frame;
             SeekRequested?.Invoke(this, new ReplayTimelineSeekEventArgs(frame, isContinuous: true));
         }
-        else if (dragTarget == DragTarget.LoopStart && loopEnd is { } end)
+        else if (_dragTarget == DragTarget.LoopStart && _loopEnd is { } end)
         {
-            loopStart = Math.Min(frame, Math.Max(0, end - 1));
-            LoopRangeChanged?.Invoke(this, new ReplayTimelineLoopEventArgs(loopStart.Value, end));
+            _loopStart = Math.Min(frame, Math.Max(0, end - 1));
+            LoopRangeChanged?.Invoke(this, new ReplayTimelineLoopEventArgs(_loopStart.Value, end));
         }
-        else if (dragTarget == DragTarget.LoopEnd && loopStart is { } start)
+        else if (_dragTarget == DragTarget.LoopEnd && _loopStart is { } start)
         {
-            loopEnd = Math.Max(frame, Math.Min(maximum, start + 1));
-            LoopRangeChanged?.Invoke(this, new ReplayTimelineLoopEventArgs(start, loopEnd.Value));
+            _loopEnd = Math.Max(frame, Math.Min(_maximum, start + 1));
+            LoopRangeChanged?.Invoke(this, new ReplayTimelineLoopEventArgs(start, _loopEnd.Value));
         }
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        if (dragTarget == DragTarget.None)
+        if (_dragTarget == DragTarget.None)
         {
             base.OnPointerReleased(e);
             return;
         }
 
         base.OnPointerReleased(e);
-        if (dragTarget == DragTarget.Playhead)
+        if (_dragTarget == DragTarget.Playhead)
         {
             var frame = FrameFor(e.GetPosition(this).X);
-            value = frame;
+            _value = frame;
             SeekRequested?.Invoke(this, new ReplayTimelineSeekEventArgs(frame));
         }
-        dragTarget = DragTarget.None;
+        _dragTarget = DragTarget.None;
         if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
         e.Handled = true;
         InvalidateVisual();
@@ -269,7 +282,7 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
 
         var logicalIndex = e.TryGetPosition(this, out var position)
             ? FrameFor(position.X)
-            : value;
+            : _value;
         var request = new ReplayTimelineContextEventArgs(logicalIndex);
         ContextFrameRequested?.Invoke(this, request);
         e.Handled = request.Handled;
@@ -307,13 +320,13 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     }
 
     private double PositionFor(int frame) =>
-        TrackInset + ((Bounds.Width - (TrackInset * 2)) * Math.Clamp(frame, 0, maximum) / maximum);
+        TrackInset + ((Bounds.Width - (TrackInset * 2)) * Math.Clamp(frame, 0, _maximum) / _maximum);
 
     private int FrameFor(double x)
     {
         var width = Math.Max(1, Bounds.Width - (TrackInset * 2));
         var fraction = Math.Clamp((x - TrackInset) / width, 0, 1);
-        return (int)Math.Round(fraction * maximum);
+        return (int)Math.Round(fraction * _maximum);
     }
 
     private enum DragTarget
