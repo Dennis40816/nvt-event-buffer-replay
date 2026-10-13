@@ -44,7 +44,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 948
+        "fileLines": 939
       },
       "owner": "NFU",
       "locations": [
@@ -58,7 +58,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 933
+        "viewTypeLines": 925
       },
       "owner": "NFU",
       "locations": [
@@ -8954,16 +8954,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "b450c759a0e2100937d8b630eba6c779ea5baa740f4eba9bc614b911b18b7532",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface..ctor()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "0b8c2997c4f9e0ea472be7767027227dfca9f29dc79f8403a88a52394c442df3",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -9014,16 +9004,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "21949f93e4dac11d7210d334631f8a75abb5a9e4f0c47f1c68f47bc9c9712b38",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.Render(DrawingContext)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "d942bf1dc4a4da1688d7f4d9bb2e7869856c65596b3c6a87aea1eaa4f5a1af4b",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -9050,16 +9030,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.SetStrongGrid(bool)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "17184b057396b08479124d8f04dfebafcb3b89e3e93a2738b72b71768010d4f5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.Show(ReplayScene,bool)",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "CS1591"
     },
@@ -17034,52 +17004,12 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "f43498b4a323bced8b3606daf1120253b383744998a9557b686878d275a0ff9b",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:LoopCrossfadeDuration",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "5dc6f29d2da30a005fdba607d0150ea311a847861d8ec2eb5fe9b77ba73911d8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:loopCrossfadeStarted",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "981bf2c9bd4acb9440741a54f5b5d73ff6342c7b55771e1e09d75d5ca2167b9f",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:loopCrossfadeTimer",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "3c7cf1eb041fcd53077d7c5f216f485137839dacec66e00a62876a111cf65eae",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:outgoingScene",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "729037435687eb53ffc6f03f2aac93a8bd9f0e6acf1f35db16df62997eee5142",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:outgoingTrailBatches",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
@@ -20072,16 +20002,6 @@
       "member": "Nvt.Replay.Avalonia.Tests.WorkspaceSnapshotTestHelpers.WaitUntilAsync(Func<bool>)",
       "project": "Nvt.Replay.Avalonia.Tests",
       "symbol": "P:Avalonia.Threading.Dispatcher.UIThread"
-    },
-    {
-      "syntaxHash": "2ece9b90c36858a9ba4198d57566ffdd065b33ef0be411b559093ff99dd26064",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "RS0030",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.Show(ReplayScene,bool)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "T:System.Diagnostics.Stopwatch"
     },
     {
       "syntaxHash": "bdd75e1a33b784f0b59a10e7c89a7dab97b85dec9f6259c986b84200401b4674",
