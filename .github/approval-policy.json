@@ -8,13 +8,31 @@
     "src/**", "*.sln", "*.slnx", "*.slnf", "*.csproj",
     "packages.lock.json", "*.props", "*.targets", "*.rsp",
     "global.json", "nuget.config", ".editorconfig", ".globalconfig",
-    ".github/**", "scripts/**", "eng/**", "VERSION",
+    ".github/**", "scripts/**", "tools/repo-checks/**", "eng/**", "VERSION",
     "docs/release.md", "CODEOWNERS", "docs/adr/**",
     "docs/product-spec.md", "AGENTS.md", "AGENTS.override.md",
     "CLAUDE.md", "CONTRIBUTING.md", ".agents/**", ".claude/**",
     ".codex/**", ".mcp.json", ".gitignore", ".gitattributes"
   ],
   "tests_non_added": "tests/**",
+  "agent_gated": {
+    "enabled": true,
+    "declaration": "Approval tier: B",
+    "veto_label": "needs-owner",
+    "max_changed_lines": 600,
+    "allowed_paths": ["src/**", "tests/**"],
+    "ledger_paths": [
+      "eng/code-health/baseline.json",
+      "eng/code-health/test-debt.json",
+      "eng/file-size-baseline.json",
+      "eng/architecture/command-entries.json"
+    ],
+    "extra_denied_paths": [
+      "*.user", "*.proj", "*.projitems", "*.fsproj", "*.vbproj", "*.shproj",
+      "xunit.runner.json", "testconfig.json", "*.runsettings", "*.testsettings"
+    ],
+    "released_patterns": ["src/**"]
+  },
   "owner_gated_base_branch": "main",
   "required_check": "build-and-test",
   "approval_status_context": "governance/approval-rule"
