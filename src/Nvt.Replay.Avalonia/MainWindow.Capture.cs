@@ -647,9 +647,8 @@ public partial class MainWindow : Window
         }
 
         if (!committed) return;
-        var canDecode = EventVersionComboBox.SelectedIndex >= 0 &&
-            (EventVersionComboBox.SelectedIndex != 4 ||
-             (choice.IcFamily is not null && Desay97ProfileComboBox.SelectedIndex >= 0));
+        var canDecode = RegisterProfileDecodeGate.CanDecode(
+            EventVersionComboBox.SelectedIndex, choice.IcFamily, Desay97ProfileComboBox.SelectedIndex);
         if (decodeIfReady && canDecode)
             await DecodeSelectedAsync(
                 preserveWorkspaceContext: true,
