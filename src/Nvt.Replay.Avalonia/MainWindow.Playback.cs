@@ -266,14 +266,14 @@ public partial class MainWindow : Window
         var waited = false;
         while (true)
         {
-            var remaining = scheduledElapsed - Stopwatch.GetElapsedTime(startedTimestamp);
+            var remaining = scheduledElapsed - TimeProvider.System.GetElapsedTime(startedTimestamp);
             if (remaining <= TimeSpan.Zero) break;
             var slice = remaining > TimeSpan.FromSeconds(1)
                 ? TimeSpan.FromSeconds(1)
                 : remaining < TimeSpan.FromMilliseconds(1)
                     ? TimeSpan.FromMilliseconds(1)
                     : remaining;
-            await Task.Delay(slice, cancellationToken);
+            await Task.Delay(slice, TimeProvider.System, cancellationToken);
             waited = true;
         }
         if (!waited)

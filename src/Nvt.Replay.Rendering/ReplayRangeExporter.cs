@@ -389,6 +389,7 @@ public static class ReplayFramePlan
         options.Speed);
 }
 
+/// <summary>Exports a range of a replay as an MP4 video or a PNG sequence with a manifest.</summary>
 public sealed class ReplayRangeExporter
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -674,7 +675,7 @@ public sealed class ReplayRangeExporter
             {
                 lastError = exception;
                 if (attempt < maximumAttempts)
-                    await Task.Delay(delay).ConfigureAwait(false);
+                    await Task.Delay(delay, TimeProvider.System).ConfigureAwait(false);
             }
         }
         throw new IOException($"Could not remove partial output after {maximumAttempts} attempts: {path}", lastError);
