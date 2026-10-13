@@ -884,7 +884,7 @@ public partial class MainWindow : Window
         ExportSelectedOutputButton.IsEnabled = false;
         AnalysisTab.IsEnabled = false;
         currentOutputReport = null;
-        outputRangeUserDefined = false;
+        _outputState.RangeUserDefined = false;
         InitializeOutputRange();
         ClearOutputVideoPreview();
         AnalysisHeatmapPreview.Show(null);
