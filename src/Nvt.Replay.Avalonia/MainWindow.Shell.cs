@@ -33,8 +33,8 @@ public partial class MainWindow : Window
         }
         // The review queue is secondary evidence, so it never consumes the first
         // viewport unless the user explicitly opens it.
-        SetReviewRailCollapsed(_reviewRail.ResolveDefault(fallback: true));
-        SetInspectorRailCollapsed(_inspectorRail.ResolveDefault(width < 1240));
+        SetReviewRailCollapsed(_inspectorLayout.ReviewRail.ResolveDefault(fallback: true));
+        SetInspectorRailCollapsed(_inspectorLayout.InspectorRail.ResolveDefault(width < 1240));
     }
 
     private void SetOutputWorkspaceChrome(bool active, bool showReplayTransport)
@@ -45,19 +45,19 @@ public partial class MainWindow : Window
             ? new GridLength(ReplayTransportHeight)
             : new GridLength(0);
         InspectorRailBorder.IsVisible = !active;
-        InspectorGridSplitter.IsVisible = !active && !_inspectorRail.Collapsed;
+        InspectorGridSplitter.IsVisible = !active && !_inspectorLayout.InspectorRail.Collapsed;
         var inspectorColumn = WorkspaceShellGrid.ColumnDefinitions[3];
         if (active)
         {
             if (inspectorColumn.ActualWidth >= MinimumInspectorRailWidth)
-                expandedInspectorRailWidth = Math.Clamp(inspectorColumn.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
+                _inspectorLayout.ExpandedInspectorWidth = Math.Clamp(inspectorColumn.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
             inspectorColumn.MinWidth = 0;
             inspectorColumn.MaxWidth = 0;
             inspectorColumn.Width = new GridLength(0);
         }
         else
         {
-            SetInspectorRailCollapsed(_inspectorRail.ResolveDefault(Bounds.Width < 1240));
+            SetInspectorRailCollapsed(_inspectorLayout.InspectorRail.ResolveDefault(Bounds.Width < 1240));
         }
     }
 

@@ -1,6 +1,5 @@
 using Avalonia.Input.Platform;
 using System.Globalization;
-using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -21,30 +20,28 @@ public partial class MainWindow : Window
 
     private ReviewGroupRow[] reviewRows => DiagnosticListBox.ItemsSource as ReviewGroupRow[] ?? [];
     private PaintMarkerRow[] paintMarkerRows => PaintMarkerListBox.ItemsSource as PaintMarkerRow[] ?? [];
-    private RailState _reviewRail; // UI thread only.
-    private RailState _inspectorRail; // UI thread only.
+    private readonly InspectorLayoutState _inspectorLayout = new(); // UI thread only.
     private InspectorSelection? _inspectorSelection; // UI thread only.
     private RawRecordRow? expandedRawRow => allRawRows.FirstOrDefault(row => row.IsExpanded);
     private readonly EventSuppressionScope synchronizingReviewSelection = new();
     private readonly EventSuppressionScope synchronizingPaintMarkerSelection = new();
-    private double expandedInspectorRailWidth = 286;
     private const double ExpandedReviewRailWidth = 260;
     private const double DefaultInspectorRailWidth = 286;
     private const double MinimumInspectorRailWidth = 280;
     private const double MaximumInspectorRailWidth = 420;
     private const double CollapsedInspectorRailWidth = 58;
     private static readonly TimeSpan PlaybackDetailPresentationInterval = TimeSpan.FromMilliseconds(100);
-    private long lastDetailPresentationTimestamp;
-    internal int DetailPresentationCount { get; private set; }
+    private readonly DetailPresentationThrottle _detailThrottle = new();
+    internal int DetailPresentationCount => _detailThrottle.Count;
     internal ReviewInspectorWorkspace? ReviewWorkspace => reviewWorkspace;
     private void ReviewRailToggleButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        SetReviewRailCollapsed(_reviewRail.ToggleUserPreference());
+        SetReviewRailCollapsed(_inspectorLayout.ReviewRail.ToggleUserPreference());
     }
 
     private void InspectorRailToggleButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        SetInspectorRailCollapsed(_inspectorRail.ToggleUserPreference());
+        SetInspectorRailCollapsed(_inspectorLayout.InspectorRail.ToggleUserPreference());
     }
 
     private void CopyInspectorButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("review.copy-inspector", _ => CopyInspectorAsync(sender, e), CancellationToken.None);
@@ -86,7 +83,7 @@ public partial class MainWindow : Window
 
     private void SetReviewRailCollapsed(bool collapsed)
     {
-        _reviewRail.SetCollapsed(collapsed);
+        _inspectorLayout.ReviewRail.SetCollapsed(collapsed);
         WorkspaceShellGrid.ColumnDefinitions[0].Width = new GridLength(collapsed ? 0 : ExpandedReviewRailWidth);
         ReviewRailBorder.IsVisible = !collapsed;
         ReviewRailTitle.IsVisible = !collapsed;
@@ -118,13 +115,13 @@ public partial class MainWindow : Window
 
     private void SetInspectorRailCollapsed(bool collapsed)
     {
-        var wasCollapsed = _inspectorRail.Collapsed;
-        _inspectorRail.SetCollapsed(collapsed);
+        var wasCollapsed = _inspectorLayout.InspectorRail.Collapsed;
+        _inspectorLayout.InspectorRail.SetCollapsed(collapsed);
         var column = WorkspaceShellGrid.ColumnDefinitions[3];
         if (collapsed)
         {
             if (column.ActualWidth >= MinimumInspectorRailWidth)
-                expandedInspectorRailWidth = Math.Clamp(column.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
+                _inspectorLayout.ExpandedInspectorWidth = Math.Clamp(column.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
             column.MinWidth = 0;
             column.MaxWidth = CollapsedInspectorRailWidth;
             column.Width = new GridLength(CollapsedInspectorRailWidth);
@@ -132,11 +129,11 @@ public partial class MainWindow : Window
         else
         {
             if (!wasCollapsed && column.ActualWidth >= MinimumInspectorRailWidth)
-                expandedInspectorRailWidth = Math.Clamp(column.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
+                _inspectorLayout.ExpandedInspectorWidth = Math.Clamp(column.ActualWidth, MinimumInspectorRailWidth, MaximumInspectorRailWidth);
             column.MinWidth = MinimumInspectorRailWidth;
             column.MaxWidth = MaximumInspectorRailWidth;
             column.Width = new GridLength(Math.Clamp(
-                expandedInspectorRailWidth <= 0 ? DefaultInspectorRailWidth : expandedInspectorRailWidth,
+                _inspectorLayout.ExpandedInspectorWidth <= 0 ? DefaultInspectorRailWidth : _inspectorLayout.ExpandedInspectorWidth,
                 MinimumInspectorRailWidth,
                 MaximumInspectorRailWidth));
         }
@@ -644,7 +641,7 @@ public partial class MainWindow : Window
         PaintMarkerRailBorder.IsVisible =
             paintMarkerRows.Length > 0 &&
             PaintTab.IsSelected &&
-            _reviewRail.Collapsed &&
+            _inspectorLayout.ReviewRail.Collapsed &&
             !SettingsPage.IsVisible;
     }
 
@@ -963,19 +960,13 @@ public partial class MainWindow : Window
 
     private bool ShouldPresentPlaybackDetails()
     {
-        if (!InspectorRailBorder.IsVisible || _inspectorRail.Collapsed) return false;
-        var now = Stopwatch.GetTimestamp();
-        if (lastDetailPresentationTimestamp != 0 &&
-            Stopwatch.GetElapsedTime(lastDetailPresentationTimestamp, now) < PlaybackDetailPresentationInterval)
-            return false;
-        lastDetailPresentationTimestamp = now;
-        return true;
+        if (!InspectorRailBorder.IsVisible || _inspectorLayout.InspectorRail.Collapsed) return false;
+        return _detailThrottle.TryAcquire(PlaybackDetailPresentationInterval);
     }
 
     private void PresentReplayDetails(ITouchReplaySnapshot snapshot)
     {
-        lastDetailPresentationTimestamp = Stopwatch.GetTimestamp();
-        DetailPresentationCount++;
+        _detailThrottle.MarkPresented();
         ShowRecord(snapshot.PhysicalRecords[^1], snapshot.DecodedFrame, snapshot);
     }
 
