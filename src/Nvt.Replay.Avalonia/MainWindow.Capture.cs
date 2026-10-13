@@ -611,7 +611,7 @@ public partial class MainWindow : Window
         CaptureSession? profiledSession = null;
         var committed = false;
         var lease = _operation.Begin();
-        SetBusy(true, choice.IcFamily is null ? "Removing IC register profile" : $"Applying IC profile {choice.IcFamily}");
+        SetBusy(true, RegisterProfileText.Busy(choice.IcFamily));
         try
         {
             profiledSession = await Task.Run(() => loadedSession.WithRegisterProfile(choice.IcFamily));
@@ -629,12 +629,8 @@ public partial class MainWindow : Window
             SynchronizeReviewWorkspaceConsumers();
             committed = true;
             var ambiguous = registerActivities.Count(item => item.IsAmbiguous);
-            ConfigurationHintText.Text = choice.IcFamily is null
-                ? $"IC profile unconfirmed · {ambiguous:N0} collision-prone register events remain raw-only"
-                : $"IC profile {choice.IcFamily} confirmed · register semantics and Event Buffer base reapplied";
-            SessionStatusText.Text = choice.IcFamily is null
-                ? "Register profile removed; original capture remains unchanged"
-                : $"Register profile {choice.IcFamily} applied without changing source bytes";
+            ConfigurationHintText.Text = RegisterProfileText.AppliedHint(choice.IcFamily, ambiguous);
+            SessionStatusText.Text = RegisterProfileText.AppliedStatus(choice.IcFamily);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidDataException)
         {
@@ -724,7 +720,7 @@ public partial class MainWindow : Window
         if (inference.Status is NvtRegisterProfileInferenceStatus.Ambiguous or NvtRegisterProfileInferenceStatus.Conflicting)
             ShowRegisterProfileInference(inference);
         else if (inference.Status == NvtRegisterProfileInferenceStatus.None)
-            ConfigurationHintText.Text = $"I²C 0x{targetI2cAddress:X2} selected · no complete Event Buffer address evidence; IC profile remains unconfirmed.";
+            ConfigurationHintText.Text = RegisterProfileText.NoAddressEvidenceHint(targetI2cAddress);
     }
 
     internal Task SetTargetI2cAddressForTestingAsync(string value)
