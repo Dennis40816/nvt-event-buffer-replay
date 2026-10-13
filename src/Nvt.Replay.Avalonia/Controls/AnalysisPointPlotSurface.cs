@@ -21,11 +21,12 @@ public sealed record ReportedPointHover(
     ushort X,
     ushort Y);
 
+/// <summary>Plots reported touch points by contact and shows the point under the pointer.</summary>
 public sealed class AnalysisPointPlotSurface : Control
 {
     private const int SpatialColumns = 64;
     private const int SpatialRows = 36;
-    private static readonly Typeface AxisTypeface = new("Cascadia Mono", FontStyle.Normal, FontWeight.Medium);
+    private static readonly Typeface _axisTypeface = new("Cascadia Mono", FontStyle.Normal, FontWeight.Medium);
 
     public static readonly StyledProperty<IBrush?> SurfaceBrushProperty =
         AvaloniaProperty.Register<AnalysisPointPlotSurface, IBrush?>(nameof(SurfaceBrush));
@@ -38,13 +39,13 @@ public sealed class AnalysisPointPlotSurface : Control
     public static readonly StyledProperty<IBrush?> ToolTipBorderBrushProperty =
         AvaloniaProperty.Register<AnalysisPointPlotSurface, IBrush?>(nameof(ToolTipBorderBrush));
 
-    private IReadOnlyList<AnalysisEvent> events = [];
-    private ReportedPointSample[] points = [];
-    private IReadOnlyList<ReportedPointBatch> batches = [];
-    private List<int>?[] spatialCells = new List<int>?[SpatialColumns * SpatialRows];
-    private double maximumX = 1;
-    private double maximumY = 1;
-    private ReportedPointHover? hoveredPoint;
+    private IReadOnlyList<AnalysisEvent> _events = [];
+    private ReportedPointSample[] _points = [];
+    private ReportedPointBatch[] _batches = [];
+    private List<int>?[] _spatialCells = new List<int>?[SpatialColumns * SpatialRows];
+    private double _maximumX = 1;
+    private double _maximumY = 1;
+    private ReportedPointHover? _hoveredPoint;
 
     public IBrush? SurfaceBrush { get => GetValue(SurfaceBrushProperty); set => SetValue(SurfaceBrushProperty, value); }
     public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
@@ -52,10 +53,13 @@ public sealed class AnalysisPointPlotSurface : Control
     public IBrush? ToolTipSurfaceBrush { get => GetValue(ToolTipSurfaceBrushProperty); set => SetValue(ToolTipSurfaceBrushProperty, value); }
     public IBrush? ToolTipBorderBrush { get => GetValue(ToolTipBorderBrushProperty); set => SetValue(ToolTipBorderBrushProperty, value); }
 
-    public int PointCount => points.Length;
-    public int ContactIdCount => batches.Count;
+    /// <summary>Gets the number of reported points that are plotted.</summary>
+    public int PointCount => _points.Length;
+    /// <summary>Gets the number of contact IDs that have plotted points.</summary>
+    public int ContactIdCount => _batches.Length;
     public int OccupiedSpatialCellCount { get; private set; }
-    public ReportedPointHover? HoveredPoint => hoveredPoint;
+    /// <summary>Gets the reported point under the pointer, or null when there is none.</summary>
+    public ReportedPointHover? HoveredPoint => _hoveredPoint;
     public ReplayRenderTheme? RenderThemeOverride { get; set; }
 
     public AnalysisPointPlotSurface()
@@ -66,22 +70,23 @@ public sealed class AnalysisPointPlotSurface : Control
     public void Show(CaptureAnalysisReport? report, double panelMaximumX, double panelMaximumY) =>
         ShowEvents(report?.Events, panelMaximumX, panelMaximumY);
 
+    /// <summary>Plots the reported points of the given events against the given panel maximums.</summary>
     public void ShowEvents(IReadOnlyList<AnalysisEvent>? value, double panelMaximumX, double panelMaximumY)
     {
         value ??= [];
         var nextMaximumX = Math.Max(1, panelMaximumX);
         var nextMaximumY = Math.Max(1, panelMaximumY);
-        if (ReferenceEquals(events, value) &&
-            Math.Abs(maximumX - nextMaximumX) < 0.001 &&
-            Math.Abs(maximumY - nextMaximumY) < 0.001)
+        if (ReferenceEquals(_events, value) &&
+            Math.Abs(_maximumX - nextMaximumX) < 0.001 &&
+            Math.Abs(_maximumY - nextMaximumY) < 0.001)
         {
             ClearHover();
             return;
         }
 
-        events = value;
-        maximumX = nextMaximumX;
-        maximumY = nextMaximumY;
+        _events = value;
+        _maximumX = nextMaximumX;
+        _maximumY = nextMaximumY;
         var collected = new List<ReportedPointSample>();
         foreach (var analysisEvent in value)
         {
@@ -97,9 +102,9 @@ public sealed class AnalysisPointPlotSurface : Control
                     contact.Y));
             }
         }
-        points = collected.ToArray();
+        _points = collected.ToArray();
 
-        batches = points
+        _batches = _points
             .GroupBy(point => point.ContactId)
             .OrderBy(group => group.Key)
             .Select(group => new ReportedPointBatch(
@@ -107,34 +112,36 @@ public sealed class AnalysisPointPlotSurface : Control
                 group.Select(point => new SKPoint(point.X, point.Y)).ToArray()))
             .ToArray();
 
-        spatialCells = new List<int>?[SpatialColumns * SpatialRows];
+        _spatialCells = new List<int>?[SpatialColumns * SpatialRows];
         OccupiedSpatialCellCount = 0;
-        for (var index = 0; index < points.Length; index++)
+        for (var index = 0; index < _points.Length; index++)
         {
-            var point = points[index];
+            var point = _points[index];
             var column = SpatialColumn(point.X);
             var row = SpatialRow(point.Y);
             var cellIndex = (row * SpatialColumns) + column;
-            var cell = spatialCells[cellIndex];
+            var cell = _spatialCells[cellIndex];
             if (cell is null)
             {
-                spatialCells[cellIndex] = cell = [];
+                _spatialCells[cellIndex] = cell = [];
                 OccupiedSpatialCellCount++;
             }
             cell.Add(index);
         }
 
-        hoveredPoint = null;
+        _hoveredPoint = null;
         InvalidateVisual();
     }
 
+    /// <summary>Clears the hovered point.</summary>
     public void ClearHover()
     {
-        if (hoveredPoint is null) return;
-        hoveredPoint = null;
+        if (_hoveredPoint is null) return;
+        _hoveredPoint = null;
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -144,7 +151,7 @@ public sealed class AnalysisPointPlotSurface : Control
         var plot = Plot(bounds);
         context.DrawRectangle(null, new Pen(GridBrush, 1), plot);
         DrawGuideLines(context, plot);
-        if (points.Length == 0)
+        if (_points.Length == 0)
         {
             DrawText(context, "No reported coordinate samples in range", new Point(plot.X + 12, plot.Y + 12), 13, FontWeight.Medium);
             DrawAxes(context, plot);
@@ -154,24 +161,28 @@ public sealed class AnalysisPointPlotSurface : Control
         var palette = ReplayVisualStyle.For(RenderThemeOverride ?? (ActualThemeVariant == ThemeVariant.Light
             ? ReplayRenderTheme.Light
             : ReplayRenderTheme.Dark));
+        var maximumX = _maximumX;
+        var maximumY = _maximumY;
+        var batches = _batches;
         context.Custom(new ReportedPointDrawOperation(plot, maximumX, maximumY, batches, palette));
         DrawAxes(context, plot);
-        if (hoveredPoint is { } hover) DrawHoverCard(context, plot, hover);
+        if (_hoveredPoint is { } hover) DrawHoverCard(context, plot, hover);
     }
 
+    /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
         var plot = Plot(new Rect(Bounds.Size));
         var pointer = e.GetPosition(this);
-        if (!plot.Contains(pointer) || points.Length == 0)
+        if (!plot.Contains(pointer) || _points.Length == 0)
         {
             ClearHover();
             return;
         }
 
-        var sourceX = Math.Clamp((pointer.X - plot.X) / plot.Width * maximumX, 0, maximumX);
-        var sourceY = Math.Clamp((pointer.Y - plot.Y) / plot.Height * maximumY, 0, maximumY);
+        var sourceX = Math.Clamp((pointer.X - plot.X) / plot.Width * _maximumX, 0, _maximumX);
+        var sourceY = Math.Clamp((pointer.Y - plot.Y) / plot.Height * _maximumY, 0, _maximumY);
         var column = SpatialColumn(sourceX);
         var row = SpatialRow(sourceY);
         var bestIndex = -1;
@@ -184,19 +195,19 @@ public sealed class AnalysisPointPlotSurface : Control
             {
                 var candidateColumn = column + columnOffset;
                 if (candidateColumn is < 0 or >= SpatialColumns) continue;
-                var cell = spatialCells[(candidateRow * SpatialColumns) + candidateColumn];
+                var cell = _spatialCells[(candidateRow * SpatialColumns) + candidateColumn];
                 if (cell is null) continue;
                 foreach (var pointIndex in cell)
                 {
-                    var candidate = points[pointIndex];
-                    var screenX = plot.X + (candidate.X / maximumX * plot.Width);
-                    var screenY = plot.Y + (candidate.Y / maximumY * plot.Height);
+                    var candidate = _points[pointIndex];
+                    var screenX = plot.X + (candidate.X / _maximumX * plot.Width);
+                    var screenY = plot.Y + (candidate.Y / _maximumY * plot.Height);
                     var dx = pointer.X - screenX;
                     var dy = pointer.Y - screenY;
                     var distanceSquared = (dx * dx) + (dy * dy);
                     if (distanceSquared > bestDistanceSquared) continue;
                     if (distanceSquared < bestDistanceSquared ||
-                        bestIndex < 0 || candidate.LogicalIndex >= points[bestIndex].LogicalIndex)
+                        bestIndex < 0 || candidate.LogicalIndex >= _points[bestIndex].LogicalIndex)
                     {
                         bestDistanceSquared = distanceSquared;
                         bestIndex = pointIndex;
@@ -207,12 +218,13 @@ public sealed class AnalysisPointPlotSurface : Control
 
         var next = bestIndex < 0
             ? null
-            : points[bestIndex].ToHover();
-        if (Equals(hoveredPoint, next)) return;
-        hoveredPoint = next;
+            : _points[bestIndex].ToHover();
+        if (Equals(_hoveredPoint, next)) return;
+        _hoveredPoint = next;
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
@@ -220,10 +232,10 @@ public sealed class AnalysisPointPlotSurface : Control
     }
 
     private int SpatialColumn(double x) =>
-        Math.Clamp((int)(x / maximumX * SpatialColumns), 0, SpatialColumns - 1);
+        Math.Clamp((int)(x / _maximumX * SpatialColumns), 0, SpatialColumns - 1);
 
     private int SpatialRow(double y) =>
-        Math.Clamp((int)(y / maximumY * SpatialRows), 0, SpatialRows - 1);
+        Math.Clamp((int)(y / _maximumY * SpatialRows), 0, SpatialRows - 1);
 
     private static Rect Plot(Rect bounds)
     {
@@ -249,9 +261,9 @@ public sealed class AnalysisPointPlotSurface : Control
     private void DrawAxes(DrawingContext context, Rect plot)
     {
         DrawText(context, "0", new Point(plot.X - 4, plot.Bottom + 7), 11, FontWeight.Medium);
-        DrawText(context, maximumX.ToString("0", CultureInfo.InvariantCulture), new Point(plot.Right - 30, plot.Bottom + 7), 11, FontWeight.Medium);
+        DrawText(context, _maximumX.ToString("0", CultureInfo.InvariantCulture), new Point(plot.Right - 30, plot.Bottom + 7), 11, FontWeight.Medium);
         DrawText(context, "0", new Point(plot.X - 28, plot.Y - 6), 11, FontWeight.Medium);
-        DrawText(context, maximumY.ToString("0", CultureInfo.InvariantCulture), new Point(plot.X - 42, plot.Bottom - 7), 11, FontWeight.Medium);
+        DrawText(context, _maximumY.ToString("0", CultureInfo.InvariantCulture), new Point(plot.X - 42, plot.Bottom - 7), 11, FontWeight.Medium);
         DrawText(context, "X", new Point(plot.Center.X, plot.Bottom + 24), 11, FontWeight.SemiBold);
         DrawText(context, "Y", new Point(plot.X - 42, plot.Center.Y), 11, FontWeight.SemiBold);
     }
@@ -266,8 +278,8 @@ public sealed class AnalysisPointPlotSurface : Control
         var text3 = Formatted(line3, 11.5, FontWeight.Medium);
         var width = Math.Max(text1.Width, Math.Max(text2.Width, text3.Width)) + 20;
         var height = text1.Height + text2.Height + text3.Height + 18;
-        var pointX = plot.X + (hover.X / maximumX * plot.Width);
-        var pointY = plot.Y + (hover.Y / maximumY * plot.Height);
+        var pointX = plot.X + (hover.X / _maximumX * plot.Width);
+        var pointY = plot.Y + (hover.Y / _maximumY * plot.Height);
         var cardX = Math.Clamp(pointX + 12, plot.X + 4, Math.Max(plot.X + 4, plot.Right - width - 4));
         var cardY = Math.Clamp(pointY - height - 12, plot.Y + 4, Math.Max(plot.Y + 4, plot.Bottom - height - 4));
         var rect = new Rect(cardX, cardY, width, height);
@@ -285,7 +297,7 @@ public sealed class AnalysisPointPlotSurface : Control
             value,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
-            new Typeface(AxisTypeface.FontFamily, FontStyle.Normal, weight),
+            new Typeface(_axisTypeface.FontFamily, FontStyle.Normal, weight),
             size,
             TextBrush);
 
@@ -305,10 +317,10 @@ internal sealed record ReportedPointBatch(byte ContactId, SKPoint[] Points);
 
 internal sealed class ReportedPointDrawOperation : ICustomDrawOperation
 {
-    private readonly double maximumX;
-    private readonly double maximumY;
-    private readonly IReadOnlyList<ReportedPointBatch> batches;
-    private readonly ReplayVisualPalette palette;
+    private readonly double _maximumX;
+    private readonly double _maximumY;
+    private readonly IReadOnlyList<ReportedPointBatch> _batches;
+    private readonly ReplayVisualPalette _palette;
 
     public ReportedPointDrawOperation(
         Rect bounds,
@@ -318,10 +330,10 @@ internal sealed class ReportedPointDrawOperation : ICustomDrawOperation
         ReplayVisualPalette palette)
     {
         Bounds = bounds;
-        this.maximumX = Math.Max(1, maximumX);
-        this.maximumY = Math.Max(1, maximumY);
-        this.batches = batches;
-        this.palette = palette;
+        _maximumX = Math.Max(1, maximumX);
+        _maximumY = Math.Max(1, maximumY);
+        _batches = batches;
+        _palette = palette;
     }
 
     public Rect Bounds { get; }
@@ -329,12 +341,12 @@ internal sealed class ReportedPointDrawOperation : ICustomDrawOperation
     public void Render(ImmediateDrawingContext context)
     {
         var feature = context.TryGetFeature<ISkiaSharpApiLeaseFeature>();
-        if (feature is null || batches.Count == 0) return;
+        if (feature is null || _batches.Count == 0) return;
 
         using var lease = feature.Lease();
         var canvas = lease.SkCanvas;
-        var scaleX = Bounds.Width / maximumX;
-        var scaleY = Bounds.Height / maximumY;
+        var scaleX = Bounds.Width / _maximumX;
+        var scaleY = Bounds.Height / _maximumY;
         var strokeScale = Math.Max(0.0001, Math.Min(Math.Abs(scaleX), Math.Abs(scaleY)));
         var saved = canvas.Save();
         try
@@ -349,9 +361,9 @@ internal sealed class ReportedPointDrawOperation : ICustomDrawOperation
                 StrokeWidth = (float)(3.2 / strokeScale),
                 StrokeCap = SKStrokeCap.Round,
             };
-            foreach (var batch in batches)
+            foreach (var batch in _batches)
             {
-                var color = ReplayVisualStyle.ContactColor(palette, batch.ContactId);
+                var color = ReplayVisualStyle.ContactColor(_palette, batch.ContactId);
                 paint.Color = new SKColor(color.Red, color.Green, color.Blue, 178);
                 canvas.DrawPoints(SKPointMode.Points, batch.Points, paint);
             }

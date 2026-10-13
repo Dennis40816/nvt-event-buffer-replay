@@ -16,10 +16,10 @@ internal readonly record struct ReplayTrailDrawBatch(
 internal sealed class ReplayTrailBatchCache
 {
     private const int MaximumEntries = 1024;
-    private readonly Dictionary<CacheKey, BatchCoordinates> entries = new();
-    private readonly Queue<CacheKey> insertionOrder = new();
+    private readonly Dictionary<CacheKey, BatchCoordinates> _entries = new();
+    private readonly Queue<CacheKey> _insertionOrder = new();
 
-    internal int Count => entries.Count;
+    internal int Count => _entries.Count;
     internal long CoordinateBuildPointCount { get; private set; }
 
     public IReadOnlyList<ReplayTrailDrawBatch> Build(ReplayScene scene)
@@ -43,8 +43,8 @@ internal sealed class ReplayTrailBatchCache
 
     public void Clear()
     {
-        entries.Clear();
-        insertionOrder.Clear();
+        _entries.Clear();
+        _insertionOrder.Clear();
         CoordinateBuildPointCount = 0;
     }
 
@@ -56,13 +56,13 @@ internal sealed class ReplayTrailBatchCache
             chunk.Count,
             chunk.LeadingOffset,
             swapAxes);
-        if (entries.TryGetValue(key, out var existing)) return existing;
+        if (_entries.TryGetValue(key, out var existing)) return existing;
 
         var created = CreateCoordinates(chunk, swapAxes);
-        entries[key] = created;
-        insertionOrder.Enqueue(key);
-        while (entries.Count > MaximumEntries && insertionOrder.TryDequeue(out var oldest))
-            entries.Remove(oldest);
+        _entries[key] = created;
+        _insertionOrder.Enqueue(key);
+        while (_entries.Count > MaximumEntries && _insertionOrder.TryDequeue(out var oldest))
+            _entries.Remove(oldest);
         return created;
     }
 
@@ -92,49 +92,49 @@ internal sealed class ReplayTrailBatchCache
 
     private readonly struct CacheKey : IEquatable<CacheKey>
     {
-        private readonly object source;
-        private readonly int offset;
-        private readonly int count;
-        private readonly int leadingOffset;
-        private readonly bool swapAxes;
+        private readonly object _source;
+        private readonly int _offset;
+        private readonly int _count;
+        private readonly int _leadingOffset;
+        private readonly bool _swapAxes;
 
         public CacheKey(object source, int offset, int count, int? leadingOffset, bool swapAxes)
         {
-            this.source = source;
-            this.offset = offset;
-            this.count = count;
-            this.leadingOffset = leadingOffset ?? -1;
-            this.swapAxes = swapAxes;
+            _source = source;
+            _offset = offset;
+            _count = count;
+            _leadingOffset = leadingOffset ?? -1;
+            _swapAxes = swapAxes;
         }
 
         public bool Equals(CacheKey other) =>
-            ReferenceEquals(source, other.source) &&
-            offset == other.offset &&
-            count == other.count &&
-            leadingOffset == other.leadingOffset &&
-            swapAxes == other.swapAxes;
+            ReferenceEquals(_source, other._source) &&
+            _offset == other._offset &&
+            _count == other._count &&
+            _leadingOffset == other._leadingOffset &&
+            _swapAxes == other._swapAxes;
 
         public override bool Equals(object? obj) => obj is CacheKey other && Equals(other);
 
         public override int GetHashCode() => HashCode.Combine(
-            RuntimeHelpers.GetHashCode(source),
-            offset,
-            count,
-            leadingOffset,
-            swapAxes);
+            RuntimeHelpers.GetHashCode(_source),
+            _offset,
+            _count,
+            _leadingOffset,
+            _swapAxes);
     }
 }
 
 internal sealed class ReplayTrailDrawOperation : ICustomDrawOperation
 {
-    private readonly ReplayExtent extent;
-    private readonly IReadOnlyList<ReplayTrailDrawBatch> batches;
-    private readonly IReadOnlyList<Color> contactColors;
-    private readonly bool reverseX;
-    private readonly bool reverseY;
-    private readonly bool showLines;
-    private readonly bool showPoints;
-    private readonly double opacity;
+    private readonly ReplayExtent _extent;
+    private readonly IReadOnlyList<ReplayTrailDrawBatch> _batches;
+    private readonly IReadOnlyList<Color> _contactColors;
+    private readonly bool _reverseX;
+    private readonly bool _reverseY;
+    private readonly bool _showLines;
+    private readonly bool _showPoints;
+    private readonly double _opacity;
 
     public ReplayTrailDrawOperation(
         Rect viewport,
@@ -148,14 +148,14 @@ internal sealed class ReplayTrailDrawOperation : ICustomDrawOperation
         double opacity)
     {
         Bounds = viewport;
-        this.extent = extent;
-        this.batches = batches;
-        this.contactColors = contactColors;
-        this.reverseX = reverseX;
-        this.reverseY = reverseY;
-        this.showLines = showLines;
-        this.showPoints = showPoints;
-        this.opacity = Math.Clamp(opacity, 0, 1);
+        _extent = extent;
+        _batches = batches;
+        _contactColors = contactColors;
+        _reverseX = reverseX;
+        _reverseY = reverseY;
+        _showLines = showLines;
+        _showPoints = showPoints;
+        _opacity = Math.Clamp(opacity, 0, 1);
     }
 
     public Rect Bounds { get; }
@@ -163,12 +163,12 @@ internal sealed class ReplayTrailDrawOperation : ICustomDrawOperation
     public void Render(ImmediateDrawingContext context)
     {
         var feature = context.TryGetFeature<ISkiaSharpApiLeaseFeature>();
-        if (feature is null || batches.Count == 0 || (!showLines && !showPoints)) return;
+        if (feature is null || _batches.Count == 0 || (!_showLines && !_showPoints)) return;
 
         using var lease = feature.Lease();
         var canvas = lease.SkCanvas;
-        var scaleX = Bounds.Width / Math.Max(1, extent.MaximumX);
-        var scaleY = Bounds.Height / Math.Max(1, extent.MaximumY);
+        var scaleX = Bounds.Width / Math.Max(1, _extent.MaximumX);
+        var scaleY = Bounds.Height / Math.Max(1, _extent.MaximumY);
         var strokeScale = Math.Max(0.0001, Math.Min(Math.Abs(scaleX), Math.Abs(scaleY)));
         var saved = canvas.Save();
         try
@@ -179,11 +179,11 @@ internal sealed class ReplayTrailDrawOperation : ICustomDrawOperation
                 (float)Bounds.Right,
                 (float)Bounds.Bottom));
             canvas.Translate(
-                (float)(reverseX ? Bounds.Right : Bounds.Left),
-                (float)(reverseY ? Bounds.Bottom : Bounds.Top));
+                (float)(_reverseX ? Bounds.Right : Bounds.Left),
+                (float)(_reverseY ? Bounds.Bottom : Bounds.Top));
             canvas.Scale(
-                (float)(reverseX ? -scaleX : scaleX),
-                (float)(reverseY ? -scaleY : scaleY));
+                (float)(_reverseX ? -scaleX : scaleX),
+                (float)(_reverseY ? -scaleY : scaleY));
 
             using var linePaint = new SKPaint
             {
@@ -201,17 +201,17 @@ internal sealed class ReplayTrailDrawOperation : ICustomDrawOperation
                 StrokeCap = SKStrokeCap.Round,
             };
 
-            foreach (var batch in batches)
+            foreach (var batch in _batches)
             {
-                var color = contactColors[(Math.Max(1, (int)batch.ContactId) - 1) % contactColors.Count];
-                if (showLines && batch.LinePoints.Length > 1)
+                var color = _contactColors[(Math.Max(1, (int)batch.ContactId) - 1) % _contactColors.Count];
+                if (_showLines && batch.LinePoints.Length > 1)
                 {
-                    linePaint.Color = ToSkColor(color, 150 / 255d * opacity);
+                    linePaint.Color = ToSkColor(color, 150 / 255d * _opacity);
                     canvas.DrawPoints(SKPointMode.Polygon, batch.LinePoints, linePaint);
                 }
-                if (showPoints && batch.ReportPoints.Length > 0)
+                if (_showPoints && batch.ReportPoints.Length > 0)
                 {
-                    pointPaint.Color = ToSkColor(color, opacity);
+                    pointPaint.Color = ToSkColor(color, _opacity);
                     canvas.DrawPoints(SKPointMode.Points, batch.ReportPoints, pointPaint);
                 }
             }
