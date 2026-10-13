@@ -8,7 +8,7 @@
     "src/**", "*.sln", "*.slnx", "*.slnf", "*.csproj",
     "packages.lock.json", "*.props", "*.targets", "*.rsp",
     "global.json", "nuget.config", ".editorconfig", ".globalconfig",
-    ".github/**", "scripts/**", "eng/**", "VERSION",
+    ".github/**", "scripts/**", "tools/repo-checks/**", "eng/**", "VERSION",
     "docs/release.md", "CODEOWNERS", "docs/adr/**",
     "docs/product-spec.md", "AGENTS.md", "AGENTS.override.md",
     "CLAUDE.md", "CONTRIBUTING.md", ".agents/**", ".claude/**",
@@ -27,12 +27,10 @@
       "eng/file-size-baseline.json",
       "eng/architecture/command-entries.json"
     ],
-    "denied_paths": [
-      "*.sln", "*.slnx", "*.slnf", "*.csproj", "packages.lock.json", "*.props",
-      "*.targets", "*.rsp", "global.json", "nuget.config", ".editorconfig",
-      ".globalconfig"
+    "extra_denied_paths": [
+      "*.user", "*.proj", "*.projitems", "*.fsproj", "*.vbproj", "*.shproj"
     ],
-    "codeowners_dropped_patterns": ["src/**"]
+    "released_patterns": ["src/**"]
   },
   "owner_gated_base_branch": "main",
   "required_check": "build-and-test",

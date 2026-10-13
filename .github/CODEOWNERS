@@ -15,6 +15,7 @@
 **/.globalconfig @Dennis40816
 **/.github/** @Dennis40816
 **/scripts/** @Dennis40816
+**/tools/repo-checks/** @Dennis40816
 **/eng/** @Dennis40816
 **/VERSION @Dennis40816
 **/docs/release.md @Dennis40816

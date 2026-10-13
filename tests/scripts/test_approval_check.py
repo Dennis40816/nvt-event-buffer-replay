@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import copy
 from contextlib import redirect_stdout
 import http.client
@@ -25,6 +26,7 @@ spec.loader.exec_module(approval)
 POLICY = json.loads((ROOT / ".github/approval-policy.json").read_text(
     encoding="utf-8"))
 HEAD = "a" * 40
+BASE = "b" * 40
 OLD = "d" * 40
 OWNER = {"login": "Dennis40816", "id": 146855708}
 OTHER = {"login": "untrusted-reviewer", "id": 999}
@@ -592,7 +594,7 @@ class ApprovalCheckTests(unittest.TestCase):
         lines = (ROOT / ".github/CODEOWNERS").read_text(
             encoding="utf-8").splitlines()
         actual = [line.split() for line in lines if line and not line.startswith("#")]
-        dropped = POLICY["agent_gated"]["codeowners_dropped_patterns"]
+        dropped = POLICY["agent_gated"]["released_patterns"]
         expected = [[pattern if pattern.startswith("*.") else f"**/{pattern}",
                      "@Dennis40816"]
                     for pattern in POLICY["owner_gated_patterns"]
@@ -626,9 +628,12 @@ class ApprovalCheckTests(unittest.TestCase):
             "eng/file-size-baseline.json",
             "eng/architecture/command-entries.json",
         ])
-        for pattern in agent["denied_paths"]:
-            self.assertIn(pattern, POLICY["owner_gated_patterns"])
-        self.assertEqual(agent["codeowners_dropped_patterns"], ["src/**"])
+        self.assertEqual(agent["released_patterns"], ["src/**"])
+        self.assertIn("src/**", POLICY["owner_gated_patterns"])
+        self.assertIn("tools/repo-checks/**", POLICY["owner_gated_patterns"])
+        self.assertEqual(agent["extra_denied_paths"], [
+            "*.user", "*.proj", "*.projitems", "*.fsproj", "*.vbproj",
+            "*.shproj"])
         self.assertEqual(POLICY["owner_gated_base_branch"], "main")
         self.assertEqual(POLICY["required_check"], "build-and-test")
         self.assertEqual(POLICY["approval_status_context"],
@@ -720,7 +725,9 @@ class ApprovalCheckTests(unittest.TestCase):
 
     # Tier B (agent-gated).
     def tier_b(self, files, body="Approval tier: B\n\nIntent: refactor.",
-               labels=None):
+               labels=None, record_tier=True):
+        if record_tier:
+            self.reader.payloads["reviews-1"][0]["body"] += "\nApproval tier: B"
         self.reader.payloads["files-1"] = files
         self.reader.payloads["pull"]["body"] = body
         self.reader.payloads["pull"]["labels"] = [
@@ -749,8 +756,9 @@ class ApprovalCheckTests(unittest.TestCase):
         self.tier_b([self.changed("src/View.cs")])
         self.reader.payloads["reviews-1"] = []
         result = self.result()
-        self.assertIn("agent-gated", result["gate"][1])
+        self.assertIn("owner-gated", result["gate"][1])
         self.assertFalse(result["review record"][0])
+        self.assertFalse(result["owner approval"][0])
 
     def test_tier_b_without_declaration_is_owner_gated(self):
         self.tier_b([self.changed("src/View.cs")], body="Intent: refactor.")
@@ -777,10 +785,89 @@ class ApprovalCheckTests(unittest.TestCase):
     def test_tier_b_denies_build_graph_files_even_under_src(self):
         for path in ("src/App/App.csproj", "src/Directory.Build.props",
                      "src/x/packages.lock.json", "src/nuget.config",
-                     "Nvt.EventBufferReplay.sln", "src/.editorconfig"):
+                     "Nvt.EventBufferReplay.sln", "src/.editorconfig",
+                     "src/App/App.csproj.user", "src/App/Tweaks.proj",
+                     "src/App/Shared.projitems", "src/App/App.fsproj",
+                     "src/Directory.Build.targets", "src/Dir.rsp"):
             with self.subTest(path=path):
                 self.tier_b([self.changed(path)])
                 self.assert_owner_gated("denied path")
+
+    def test_tier_b_denies_nested_governance_and_agent_files(self):
+        for path in ("src/AGENTS.md", "src/CLAUDE.md", "src/App/CLAUDE.md",
+                     "src/.claude/settings.json", "src/.codex/config.toml",
+                     "src/.mcp.json", "src/.gitattributes", "src/.gitignore",
+                     "src/App/.github/workflows/x.yml", "src/App/scripts/x.ps1",
+                     "src/tools/repo-checks/repo-health.ps1",
+                     "src/eng/x.json", "src/VERSION", "src/docs/adr/0001.md"):
+            with self.subTest(path=path):
+                self.tier_b([self.changed(path)])
+                self.assert_owner_gated("denied path")
+
+    def test_tools_repo_checks_is_owner_gated(self):
+        self.reader.payloads["files-1"] = [
+            self.changed("tools/repo-checks/repo-health.ps1")]
+        self.assertIn("owner-gated", self.result()["gate"][1])
+
+    def test_tier_b_ledger_names_match_exactly(self):
+        for path in ("ENG/code-health/baseline.json",
+                     "eng/Code-Health/baseline.json",
+                     "eng/code-health/baseline.json.bak"):
+            with self.subTest(path=path):
+                self.tier_b([self.changed(path)])
+                self.assert_owner_gated()
+
+    def test_tier_b_needs_the_tier_line_in_the_review_record(self):
+        self.tier_b([self.changed("src/View.cs")], record_tier=False)
+        self.assert_owner_gated("no 'Approval tier: B' line")
+
+    def test_tier_b_record_tier_line_must_be_exact(self):
+        self.reader.payloads["reviews-1"][0]["body"] += (
+            "\nApproval tier: B2\nnot Approval tier: B")
+        self.tier_b([self.changed("src/View.cs")], record_tier=False)
+        self.assert_owner_gated("no 'Approval tier: B' line")
+
+    def size_ledger(self, base, head, base_extra=None):
+        base_tree = "1" * 40
+        head_tree = "2" * 40
+        base_blob, head_blob = "3" * 40, "4" * 40
+        for commit, tree, blob, files in (
+                (BASE, base_tree, base_blob, base), (HEAD, head_tree, head_blob, head)):
+            self.reader.payloads[f"commit-{commit}"] = {"tree": {"sha": tree}}
+            self.reader.payloads[f"tree-{tree}"] = {
+                "truncated": False,
+                "tree": [] if files is None else [{
+                    "path": "eng/file-size-baseline.json", "mode": "100644",
+                    "type": "blob", "sha": blob}]}
+            if files is not None:
+                self.reader.payloads[f"blob-{blob}"] = {
+                    "encoding": "base64", "sha": blob,
+                    "content": base64.b64encode(json.dumps(
+                        {"files": files}).encode()).decode()}
+
+    def test_tier_b_size_ledger_may_shrink_or_drop_entries(self):
+        self.tier_b([self.changed("src/View.cs"),
+                     self.changed("eng/file-size-baseline.json")])
+        self.size_ledger({"src/A.cs": 900, "src/B.cs": 850},
+                         {"src/A.cs": 880})
+        self.assertIn("agent-gated", self.result()["gate"][1])
+
+    def test_tier_b_size_ledger_cannot_raise_a_value(self):
+        self.tier_b([self.changed("src/View.cs"),
+                     self.changed("eng/file-size-baseline.json")])
+        self.size_ledger({"src/A.cs": 900}, {"src/A.cs": 901})
+        self.assert_owner_gated("raises src/A.cs from 900 to 901")
+
+    def test_tier_b_size_ledger_cannot_add_an_entry(self):
+        self.tier_b([self.changed("src/View.cs"),
+                     self.changed("eng/file-size-baseline.json")])
+        self.size_ledger({"src/A.cs": 900}, {"src/A.cs": 900, "src/C.cs": 810})
+        self.assert_owner_gated("adds an entry for src/C.cs")
+
+    def test_tier_b_size_ledger_cannot_be_added_or_removed(self):
+        self.tier_b([self.changed("eng/file-size-baseline.json", status="added")])
+        self.size_ledger(None, {"src/A.cs": 900})
+        self.assert_owner_gated("added or removed")
 
     def test_tier_b_rejects_paths_outside_the_allowed_list(self):
         for path in (".github/workflows/ci.yml", ".github/approval-policy.json",
@@ -824,6 +911,7 @@ class ApprovalCheckTests(unittest.TestCase):
                      self.changed("eng/code-health/test-debt.json"),
                      self.changed("eng/file-size-baseline.json"),
                      self.changed("eng/architecture/command-entries.json")])
+        self.size_ledger({"src/A.cs": 900}, {"src/A.cs": 900})
         result = self.result()
         self.assertIn("agent-gated", result["gate"][1])
         self.assertIn("500 changed line(s)", result["gate"][1])
@@ -903,7 +991,7 @@ class ApprovalCheckTests(unittest.TestCase):
         self.assertIn(f"at most\n  {agent['max_changed_lines']}", text)
         for path in agent["ledger_paths"]:
             self.assertIn(f"`{path}`", text)
-        for pattern in agent["denied_paths"]:
+        for pattern in agent["extra_denied_paths"]:
             self.assertIn(f"`{pattern}`", text)
 
 

@@ -181,13 +181,40 @@ def anchored_match(path: str, pattern: str) -> bool:
                                pattern.casefold())
 
 
+def file_size_baseline_only_shrinks(reader: Reader, base: str, head: str,
+                                    path: str) -> tuple[bool, str]:
+    """The size ledger may lose entries or lower a value, never add or raise."""
+    base_entry, head_entry = reader.tree(base).get(path), reader.tree(head).get(path)
+    if base_entry is None or head_entry is None:
+        return False, f"{path} is added or removed"
+    values = []
+    for entry in (base_entry, head_entry):
+        data = load_json(reader.text(sha(entry.get("sha"), "ledger blob SHA")).encode(),
+                         path)
+        require(isinstance(data, dict) and isinstance(data.get("files"), dict)
+                and all(type(value) is int for value in data["files"].values()),
+                f"{path} is malformed")
+        values.append(data["files"])
+    old, new = values
+    for name, value in new.items():
+        if name not in old:
+            return False, f"{path} adds an entry for {name}"
+        if value > old[name]:
+            return False, f"{path} raises {name} from {old[name]} to {value}"
+    return True, ""
+
+
 def agent_gated_result(policy: dict, base_ref: str, pull: dict,
-                       files: list[dict], reviews: list[dict]) -> tuple[bool, str]:
+                       files: list[dict], reviews: list[dict],
+                       reader: Reader | None = None, base_sha: str | None = None,
+                       head_sha: str | None = None) -> tuple[bool, str]:
     """Decide whether an owner-gated pull request qualifies for tier B.
 
     Every condition must hold. The allowed paths are anchored at the
-    repository root, the denied patterns match at any depth, and the first
-    line of the pull request body must name the tier exactly.
+    repository root. The denied patterns are every owner-gated pattern that
+    tier B does not release, plus the extra ones, and match at any depth. The
+    first line of the pull request body and a line of the latest review record
+    must both name the tier exactly.
     """
     setting = policy.get("agent_gated")
     if not isinstance(setting, dict) or setting.get("enabled") is not True:
@@ -206,6 +233,11 @@ def agent_gated_result(policy: dict, base_ref: str, pull: dict,
     veto = str(setting["veto_label"]).casefold()
     if any(str(item.get("name") or "").casefold() == veto for item in labels):
         return False, f"label {setting['veto_label']} is set"
+    latest = latest_record(reviews, policy)
+    record_lines = [line.strip() for line in
+                    ((latest[0].get("body") or "").splitlines() if latest else [])]
+    if setting["declaration"] not in record_lines:
+        return False, f"the latest review record has no '{setting['declaration']}' line"
     owner = policy["owner"]
     decisions = [review for review in reviews if identity(review, owner)
                  and review.get("state") in
@@ -213,7 +245,10 @@ def agent_gated_result(policy: dict, base_ref: str, pull: dict,
     if decisions and max(decisions, key=review_order)["state"] == "CHANGES_REQUESTED":
         return False, "owner's latest decision is changes_requested"
     tests_non_added = policy.get("tests_non_added")
-    ledgers = [pattern.casefold() for pattern in setting["ledger_paths"]]
+    ledgers = set(setting["ledger_paths"])
+    released = setting["released_patterns"]
+    denied = [pattern for pattern in policy["owner_gated_patterns"]
+              if pattern not in released] + setting["extra_denied_paths"]
     changed_lines = 0
     for item in files:
         name, status = item.get("filename"), item.get("status")
@@ -225,9 +260,9 @@ def agent_gated_result(policy: dict, base_ref: str, pull: dict,
             require(isinstance(previous, str), "renamed file has no previous_filename")
             paths.append(previous)
         for path in paths:
-            if path.replace("\\", "/").casefold() in ledgers:
+            if path in ledgers:
                 continue
-            if any(path_matches(path, pattern) for pattern in setting["denied_paths"]):
+            if any(path_matches(path, pattern) for pattern in denied):
                 return False, f"denied path {path}"
             if not any(anchored_match(path, pattern)
                        for pattern in setting["allowed_paths"]):
@@ -235,7 +270,13 @@ def agent_gated_result(policy: dict, base_ref: str, pull: dict,
             if (status != "added" and tests_non_added is not None
                     and anchored_match(path, tests_non_added)):
                 return False, f"{status} file under tests: {path}"
-        if name.replace("\\", "/").casefold() not in ledgers:
+        if name == "eng/file-size-baseline.json" and "eng/file-size-baseline.json" in ledgers:
+            require(reader is not None and base_sha is not None and head_sha is not None,
+                    "tier B needs the base and head to read the size ledger")
+            ok, reason = file_size_baseline_only_shrinks(reader, base_sha, head_sha, name)
+            if not ok:
+                return False, reason
+        if name not in ledgers:
             additions, deletions = item.get("additions"), item.get("deletions")
             require(type(additions) is int and type(deletions) is int,
                     "changed file has no line counts")
@@ -492,9 +533,8 @@ def carryover_result(reader: Reader, policy: dict, accepted: str, head: str,
                   f"{total} added/deleted line(s); files: {json.dumps(sorted(changed))}")
 
 
-def record_result(reviews: list[dict], policy: dict, head: str,
-                  reader: Reader | None = None, base: str | None = None,
-                  net_comparison: dict | None = None) -> tuple[bool, str]:
+def latest_record(reviews: list[dict], policy: dict):
+    """The newest allowed review that mentions a review record, with its match."""
     records = []
     for review in reviews:
         if not any(identity(review, author)
@@ -512,8 +552,18 @@ def record_result(reviews: list[dict], policy: dict, head: str,
             records.append((review_order(review), review,
                             RECORD.fullmatch(first)))
     if not records:
-        return False, "no allowed pull request review has a review record"
+        return None
     _, review, match = max(records, key=lambda entry: entry[0])
+    return review, match
+
+
+def record_result(reviews: list[dict], policy: dict, head: str,
+                  reader: Reader | None = None, base: str | None = None,
+                  net_comparison: dict | None = None) -> tuple[bool, str]:
+    latest = latest_record(reviews, policy)
+    if latest is None:
+        return False, "no allowed pull request review has a review record"
+    review, match = latest
     if review.get("state") in ("DISMISSED", "CHANGES_REQUESTED"):
         return False, "latest review record was dismissed or requests changes"
     if match is None:
@@ -573,7 +623,8 @@ def evaluate(reader: Reader, policy: dict,
     gate, gate_reason = classify(policy, base_ref, files)
     reviews = reader.reviews()
     if gate == "owner-gated":
-        agent_ok, agent_reason = agent_gated_result(policy, base_ref, pull, files, reviews)
+        agent_ok, agent_reason = agent_gated_result(policy, base_ref, pull, files, reviews,
+                                                 reader, base_sha, head_sha)
         if agent_ok:
             gate, gate_reason = "agent-gated", agent_reason
         elif not agent_reason.startswith(("tier B is not enabled",
