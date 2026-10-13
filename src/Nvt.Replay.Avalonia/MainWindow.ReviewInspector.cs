@@ -17,7 +17,7 @@ namespace Nvt.Replay.Avalonia;
 
 public partial class MainWindow : Window
 {
-    internal Action<string, int>? SourceLocationOpenActionForTesting { get; set; }
+    internal Action<string, int>? SourceLocationOpenActionForTesting { get => TestSeams.SourceLocationOpenAction; set => TestSeams.SourceLocationOpenAction = value; }
 
     private ReviewGroupRow[] reviewRows = [];
     private PaintMarkerRow[] paintMarkerRows = [];
