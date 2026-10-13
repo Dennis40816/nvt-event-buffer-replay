@@ -13,8 +13,6 @@ public partial class MainWindow : Window
 {
     private bool outputWorkspaceActive;
 
-    private int themeMode;
-
     private const double ReplayTransportHeight = 64;
 
     private void MainWindow_OnSizeChanged(object? sender, SizeChangedEventArgs e) => ApplyResponsiveRails(e.NewSize.Width);
@@ -117,11 +115,12 @@ public partial class MainWindow : Window
     private void ThemeButton_OnClick(object? sender, RoutedEventArgs e)
         => ToggleTheme();
 
-    private void ToggleTheme()
+    private static void ToggleTheme()
     {
-        themeMode = (themeMode + 1) % 2;
-        var variant = themeMode == 0 ? ThemeVariant.Dark : ThemeVariant.Light;
-        if (Application.Current is { } application) application.RequestedThemeVariant = variant;
+        if (Application.Current is not { } application) return;
+        application.RequestedThemeVariant = application.RequestedThemeVariant == ThemeVariant.Light
+            ? ThemeVariant.Dark
+            : ThemeVariant.Light;
     }
 
     private void WorkspaceTabs_OnSelectionChanged(object? sender, SelectionChangedEventArgs e) => FailureReporter.Runner.Run("workspace.selection", _ => SelectWorkspaceAsync(sender, e), CancellationToken.None);
