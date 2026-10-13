@@ -46,13 +46,18 @@ public sealed class MainWindowDerivedStateTests
             await window.OpenCaptureAsync(Path.Combine(AppContext.BaseDirectory, "fixtures", "kingstvis-common-0x83.csv"));
             await window.ApplyStartupDecodeAsync("0x83", palmProfile: null);
 
+            RaiseClick(Required<Button>(window, "AddMarkerButton"));
+
             var diagnostics = Required<ListBox>(window, "DiagnosticListBox");
             var markers = Required<ListBox>(window, "PaintMarkerListBox");
-            Assert.IsType<ReviewGroupRow[]>(diagnostics.ItemsSource);
-            Assert.IsType<PaintMarkerRow[]>(markers.ItemsSource);
+            var reviewRows = Assert.IsType<ReviewGroupRow[]>(diagnostics.ItemsSource);
+            var markerRows = Assert.IsType<PaintMarkerRow[]>(markers.ItemsSource);
+            Assert.Single(markerRows);
+            Assert.Equal("1", Required<TextBlock>(window, "PaintMarkerCountText").Text);
             Assert.Equal(
-                ((ReviewGroupRow[])diagnostics.ItemsSource!).Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                reviewRows.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 Required<TextBlock>(window, "DiagnosticCountText").Text);
+            Assert.Same(markerRows[0], markers.SelectedItem);
         }
         finally
         {
