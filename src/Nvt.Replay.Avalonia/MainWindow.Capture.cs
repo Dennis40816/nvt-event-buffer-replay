@@ -679,7 +679,7 @@ public partial class MainWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
+            TargetI2cAddressTextBox.Text = TargetI2cAddress.Format(targetI2cAddress);
             e.Handled = true;
             return;
         }
@@ -690,14 +690,14 @@ public partial class MainWindow : Window
 
     private async Task CommitTargetI2cAddressAsync()
     {
-        if (!TryParseTargetI2cAddress(TargetI2cAddressTextBox.Text, out var requested))
+        if (!TargetI2cAddress.TryParse(TargetI2cAddressTextBox.Text, out var requested))
         {
-            TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
+            TargetI2cAddressTextBox.Text = TargetI2cAddress.Format(targetI2cAddress);
             SessionStatusText.Text = "I²C address rejected · enter a 7-bit value from 0x00 through 0x7F";
             return;
         }
 
-        TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(requested);
+        TargetI2cAddressTextBox.Text = TargetI2cAddress.Format(requested);
         if (requested == targetI2cAddress) return;
         targetI2cAddress = requested;
         if (session is null)
@@ -733,20 +733,6 @@ public partial class MainWindow : Window
         return CommitTargetI2cAddressAsync();
     }
 
-    internal static bool TryParseTargetI2cAddress(string? value, out int address)
-    {
-        var text = value?.Trim() ?? string.Empty;
-        var style = NumberStyles.Integer;
-        if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-        {
-            text = text[2..];
-            style = NumberStyles.AllowHexSpecifier;
-        }
-        return int.TryParse(text, style, CultureInfo.InvariantCulture, out address) &&
-               address is >= 0 and <= 0x7F;
-    }
-
-    private static string FormatTargetI2cAddress(int address) => $"0x{address:X2}";
 
     private void RefreshRawExplorer(string? preferredStableId = null)
     {
@@ -883,7 +869,7 @@ public partial class MainWindow : Window
         DetailPresentationCount = 0;
         RawRecordsList.ItemsSource = null;
         RegisterSearchTextBox.Text = string.Empty;
-        TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
+        TargetI2cAddressTextBox.Text = TargetI2cAddress.Format(targetI2cAddress);
         RegisterFilterComboBox.SelectedIndex = 0;
         using (configuringRegisterProfile.Enter())
         {
@@ -1022,19 +1008,13 @@ public partial class MainWindow : Window
     {
         if (_captureWorkspace.Pending is not PendingCaptureOperation.Decode pending ||
             progress.Generation != pending.Operation.Generation) return;
-        var phase = progress.Phase switch
-        {
-            CaptureDecodePhase.SelectingFormat => "Selecting Event Buffer format",
-            CaptureDecodePhase.ProjectingRegisters => "Applying IC register profile",
-            CaptureDecodePhase.DecodingFrames => "Decoding Event Buffer frames",
-            CaptureDecodePhase.BuildingWorkspace => "Building replay workspace",
-            CaptureDecodePhase.Ready => "Replay workspace ready",
-            _ => progress.Phase.ToString(),
-        };
+        var phase = CaptureDecodeProgressText.Phase(progress.Phase);
+
         SessionStatusText.Text = progress.TotalItems is > 0
             ? $"{phase} · {progress.CompletedItems:N0}/{progress.TotalItems:N0}"
             : phase;
     }
+
 
     private sealed record CaptureDecodePresentation(DecodedCaptureProjection Projection)
     {
@@ -1047,7 +1027,6 @@ public partial class MainWindow : Window
     {
         public void Report(T value) => report(value);
     }
-
     private static string FormatBytes(IReadOnlyList<byte> data)
     {
         const int displayLimit = 4096;
@@ -1071,73 +1050,4 @@ public partial class MainWindow : Window
 
         return builder.ToString();
     }
-
-    private static string FormatDecodedFields(CommonEventBufferFrame frame)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"touches       {frame.NumTouches}");
-        builder.AppendLine($"all break     {frame.AllBreak}");
-        builder.AppendLine($"crc           {(frame.CrcValid ? "OK" : $"FAIL ({frame.CapturedCrc:X2}/{frame.ComputedCrc:X2})")}");
-        builder.AppendLine($"ASIL byte     0x{frame.Asil.Raw:X2}");
-        builder.AppendLine($"button valid  {frame.Button.Valid}");
-        if (frame.BusStatus is { } bus)
-        {
-            builder.AppendLine($"bus counters  no-response={bus.NoResponseCounter} busy={bus.BusyCounter}");
-        }
-
-        if (frame.DiagnosticPacket is { } packet)
-        {
-            builder.AppendLine($"EMS bitmap    {Convert.ToString(packet.EmsBitmap, 2).PadLeft(4, '0')}");
-            builder.AppendLine($"global palm   {packet.PalmOn}");
-        }
-
-        if (frame.Fingers.Any(IsReportedFinger))
-            builder.AppendLine("\nCONTACTS      TYPE     STATE        X     Y");
-        foreach (var finger in frame.Fingers.Where(IsReportedFinger))
-        {
-            builder.AppendLine($"#{finger.Id,-2}           {finger.Type,-8} {finger.Status,-8} {finger.X,5} {finger.Y,5}");
-        }
-
-        return builder.ToString().TrimEnd();
-    }
-
-    private static string FormatDecodedFields(Desay97Frame frame)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"profile       {ProfileText(frame.Profile)}");
-        builder.AppendLine($"touches       {frame.NumTouches}");
-        builder.AppendLine($"all break     {frame.AllBreak}");
-        builder.AppendLine($"crc           {(frame.CrcValid ? "OK" : $"FAIL ({frame.CapturedCrc:X2}/{frame.ComputedCrc:X2})")}");
-        builder.AppendLine($"short/open    {frame.Short}/{frame.Open}");
-        builder.AppendLine($"TP ASIL       {frame.TpAsilError}");
-        builder.AppendLine($"phase 1       Physical #{frame.Packet.Probe.Index} · L{frame.Packet.Probe.Location.LineNumber}");
-        builder.AppendLine($"phase 2       Physical #{frame.Packet.PayloadRead.Index} · L{frame.Packet.PayloadRead.Location.LineNumber}");
-        if (frame.Fingers.Count > 0)
-            builder.AppendLine("\nCONTACTS      TYPE     STATE        X     Y");
-        foreach (var finger in frame.Fingers)
-        {
-            var semantic = finger.Invalid ? "Invalid" : finger.Palm ? "Palm" : "Finger";
-            builder.AppendLine($"#{finger.Id,-2}           {semantic,-8} {finger.Status,-8} {finger.X,5} {finger.Y,5}");
-        }
-        return builder.ToString().TrimEnd();
-    }
-
-    private static bool IsReportedFinger(CommonFinger finger) =>
-        finger.IsReported;
-
-    private static string VersionText(CommonEventBufferVersion version) => version switch
-    {
-        CommonEventBufferVersion.V82 => "0x82",
-        CommonEventBufferVersion.V83 => "0x83",
-        CommonEventBufferVersion.V84 => "0x84",
-        CommonEventBufferVersion.V85 => "0x85",
-        _ => throw new ArgumentOutOfRangeException(nameof(version)),
-    };
-
-    private static string ProfileText(Desay97Profile profile) => profile switch
-    {
-        Desay97Profile.Standard => "Standard",
-        Desay97Profile.BenzPalm => "Benz Palm",
-        _ => throw new ArgumentOutOfRangeException(nameof(profile)),
-    };
 }
