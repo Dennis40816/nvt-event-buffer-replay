@@ -42,8 +42,8 @@ public partial class MainWindow : Window
     internal int OutputVideoRenderCount => OutputVideoPreview.RgbRenderCount;
     internal bool OutputVideoPreviewDirty => _outputPreview.Dirty;
     internal CaptureAnalysisReport? CurrentOutputReport => currentOutputReport;
-    internal Action<string>? OutputFolderRevealActionForTesting { get; set; }
-    internal Func<CancellationToken, Task<FfmpegProbeResult>>? FfmpegProbeForTesting { get; set; }
+    internal Action<string>? OutputFolderRevealActionForTesting { get => TestSeams.OutputFolderRevealAction; set => TestSeams.OutputFolderRevealAction = value; }
+    internal Func<CancellationToken, Task<FfmpegProbeResult>>? FfmpegProbeForTesting { get => TestSeams.FfmpegProbe; set => TestSeams.FfmpegProbe = value; }
     internal OutputReportInputs CaptureCurrentOutputReportInputsForTesting(AnalysisRange range) =>
         CaptureOutputReportInputs(range);
     internal string OutputReplayIdentityForTesting => OutputReplayIdentity();

@@ -6,6 +6,7 @@ Describe the change and why it is needed.
 
 - [ ] Owner-gated
 - [ ] Review-gated
+- [ ] Agent-gated (tier B): the first line of this body is `Approval tier: B`
 
 Reason (paths or base branch):
 

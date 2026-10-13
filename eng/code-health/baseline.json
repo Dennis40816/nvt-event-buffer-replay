@@ -86,7 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5375,
+        "viewTypeLines": 5359,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -124,7 +124,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1049
+        "fileLines": 1034
       },
       "owner": "NFU",
       "locations": [
@@ -166,7 +166,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 149
+        "methodLines": 148
       },
       "owner": "NFU",
       "locations": [
@@ -18064,16 +18064,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "824dbfff3f0cf549b860cdc5dd0fd8cf99b80f524edb88dbf34bfc958f1d1ded",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:paintMarkerRows",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "b16bc4e504d867409223aabd6597be47cc1c68160e32278c29fd2d2b65308051",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
@@ -18110,16 +18100,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.fields:PlaybackDetailPresentationInterval",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "bcd066e1c0981feb8e96e12a01e6970e81fec4b0869472749d00e11082a1df05",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:reviewRows",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
@@ -18190,16 +18170,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.fields:targetI2cAddress",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "8a855a704aeed1d2961ffe4c646da686a32896e44d83150d5eca444358c93d36",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:themeMode",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
