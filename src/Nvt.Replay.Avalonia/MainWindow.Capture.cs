@@ -41,8 +41,9 @@ public partial class MainWindow : Window
     private readonly EventSuppressionScope configuringRegisterProfile = new();
     private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference => _captureWorkspace.PendingConfiguration;
     private int targetI2cAddress = 0x01;
-    internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get; set; }
-    internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get; set; }
+    internal MainWindowTestSeams TestSeams { get; } = new();
+    internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get => TestSeams.CaptureLoadProgressObserver; set => TestSeams.CaptureLoadProgressObserver = value; }
+    internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get => TestSeams.CaptureDecodeProgressObserver; set => TestSeams.CaptureDecodeProgressObserver = value; }
 
     private void LoadButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("capture.load", _ => _replayShell.ExecuteAsync(_replayShell.LoadCommand), CancellationToken.None);
 
@@ -226,8 +227,7 @@ public partial class MainWindow : Window
         HideRegisterProfileInference();
         if (!string.IsNullOrWhiteSpace(registerProfile))
         {
-            var profileChoice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-                .FirstOrDefault(item => item.IcFamily?.Equals(registerProfile, StringComparison.OrdinalIgnoreCase) == true);
+            var profileChoice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, registerProfile);
             if (profileChoice is null)
             {
                 ConfigurationHintText.Text = $"Unsupported startup IC register profile: {registerProfile}";
@@ -576,10 +576,7 @@ public partial class MainWindow : Window
 
     private void SelectRegisterProfileChoice(string? icFamily)
     {
-        var choices = RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>;
-        var choice = choices?.FirstOrDefault(item =>
-            string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
-        if (choice is null && icFamily is null) choice = choices?.FirstOrDefault(item => item.IcFamily is null);
+        var choice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, icFamily);
         using (configuringRegisterProfile.Enter())
         {
             RegisterProfileComboBox.SelectedItem = choice;
@@ -611,7 +608,7 @@ public partial class MainWindow : Window
         CaptureSession? profiledSession = null;
         var committed = false;
         var lease = _operation.Begin();
-        SetBusy(true, choice.IcFamily is null ? "Removing IC register profile" : $"Applying IC profile {choice.IcFamily}");
+        SetBusy(true, RegisterProfileText.Busy(choice.IcFamily));
         try
         {
             profiledSession = await Task.Run(() => loadedSession.WithRegisterProfile(choice.IcFamily));
@@ -629,12 +626,8 @@ public partial class MainWindow : Window
             SynchronizeReviewWorkspaceConsumers();
             committed = true;
             var ambiguous = registerActivities.Count(item => item.IsAmbiguous);
-            ConfigurationHintText.Text = choice.IcFamily is null
-                ? $"IC profile unconfirmed · {ambiguous:N0} collision-prone register events remain raw-only"
-                : $"IC profile {choice.IcFamily} confirmed · register semantics and Event Buffer base reapplied";
-            SessionStatusText.Text = choice.IcFamily is null
-                ? "Register profile removed; original capture remains unchanged"
-                : $"Register profile {choice.IcFamily} applied without changing source bytes";
+            ConfigurationHintText.Text = RegisterProfileText.AppliedHint(choice.IcFamily, ambiguous);
+            SessionStatusText.Text = RegisterProfileText.AppliedStatus(choice.IcFamily);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidDataException)
         {
@@ -658,11 +651,7 @@ public partial class MainWindow : Window
 
     internal async Task ApplyRegisterProfileForTestingAsync(string? icFamily)
     {
-        var choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-            .FirstOrDefault(item => string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
-        if (choice is null && icFamily is null)
-            choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-                .FirstOrDefault(item => item.IcFamily is null);
+        var choice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, icFamily);
         if (choice is null) throw new ArgumentException($"Unknown IC profile '{icFamily}'.", nameof(icFamily));
         await ApplyRegisterProfileAsync(choice);
     }
@@ -708,13 +697,7 @@ public partial class MainWindow : Window
         HideRegisterProfileInference();
         var inference = NvtRegisterProfileInference.Infer(session.Records, targetI2cAddress);
         var icFamily = inference.UniqueProfile?.IcFamily;
-        var choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-            .FirstOrDefault(item => string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
-        if (choice is null && icFamily is null)
-        {
-            choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-                .FirstOrDefault(item => item.IcFamily is null);
-        }
+        var choice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, icFamily);
         if (choice is null)
             throw new InvalidOperationException($"IC profile choice '{icFamily ?? "Unconfirmed"}' is unavailable.");
 
@@ -723,7 +706,7 @@ public partial class MainWindow : Window
         if (inference.Status is NvtRegisterProfileInferenceStatus.Ambiguous or NvtRegisterProfileInferenceStatus.Conflicting)
             ShowRegisterProfileInference(inference);
         else if (inference.Status == NvtRegisterProfileInferenceStatus.None)
-            ConfigurationHintText.Text = $"I²C 0x{targetI2cAddress:X2} selected · no complete Event Buffer address evidence; IC profile remains unconfirmed.";
+            ConfigurationHintText.Text = RegisterProfileText.NoAddressEvidenceHint(targetI2cAddress);
     }
 
     internal Task SetTargetI2cAddressForTestingAsync(string value)
@@ -731,7 +714,6 @@ public partial class MainWindow : Window
         TargetI2cAddressTextBox.Text = value;
         return CommitTargetI2cAddressAsync();
     }
-
 
     private void RefreshRawExplorer(string? preferredStableId = null)
     {
@@ -855,7 +837,6 @@ public partial class MainWindow : Window
         paintWorkspace = null;
         autoPauseIndex = null;
         CollapseExpandedRawRow();
-        reviewRows = [];
         ReplayTimelineSurface.SetMarkerFrames([]);
         pendingSidecar = null;
         playbackController.Clear();
