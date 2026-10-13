@@ -856,7 +856,6 @@ public partial class MainWindow : Window
         paintWorkspace = null;
         autoPauseIndex = null;
         CollapseExpandedRawRow();
-        reviewRows = [];
         ReplayTimelineSurface.SetMarkerFrames([]);
         pendingSidecar = null;
         playbackController.Clear();
