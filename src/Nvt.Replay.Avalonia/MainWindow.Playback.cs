@@ -27,7 +27,7 @@ public partial class MainWindow : Window
 
     private double replaySpeed => playbackController.Rate.Multiplier;
 
-    private ReplayAutoPauseIndex? autoPauseIndex;
+    private ReplayAutoPauseIndex? autoPauseIndex => _captureWorkspace.Replay?.Decoded.Workspace.AutoPauseIndex;
 
     private bool maxReplaySpeed => playbackController.Rate.IsMaximum;
 

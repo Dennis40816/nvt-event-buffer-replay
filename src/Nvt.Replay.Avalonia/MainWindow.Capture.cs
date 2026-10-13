@@ -386,7 +386,6 @@ public partial class MainWindow : Window
             ResetOutputPlanning();
             if (!_captureWorkspace.AdoptDecoded(decodeOperation, presentation.Projection))
                 throw new CaptureDecodeSupersededException(result.Generation);
-            autoPauseIndex = result.Workspace.AutoPauseIndex;
             CreateReviewWorkspace(
                 diagnosticRows.Select(row => row.Diagnostic).ToArray(),
                 result.Workspace.Frames.Snapshots,
@@ -836,7 +835,6 @@ public partial class MainWindow : Window
         CollapseExpandedRawRow();
         _captureWorkspace.Clear();
         paintWorkspace = null;
-        autoPauseIndex = null;
         ReplayTimelineSurface.SetMarkerFrames([]);
         pendingSidecar = null;
         playbackController.Clear();
