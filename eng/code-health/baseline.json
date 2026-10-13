@@ -86,7 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5353,
+        "viewTypeLines": 5350,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -208,7 +208,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 995
+        "fileLines": 992
       },
       "owner": "NFU",
       "locations": [
@@ -532,16 +532,6 @@
       "member": "Nvt.Replay.Avalonia.MainWindow.BeginReplayExportAsync(bool)",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "Result"
-    },
-    {
-      "syntaxHash": "2ea55210ec0e63f1195ac1316d80aeb5502c63011b201531ef627658cac43d06",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
-      "rule": "generationFields",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:zoomHintRevision",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "Nvt.Replay.Avalonia.MainWindow.zoomHintRevision"
     },
     {
       "syntaxHash": "23ee68308987779c0a96b7ab541405318a1a482d82e502e63ce95263954a1d0a",
@@ -17974,16 +17964,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "eeb671f1c0b2f1207d78888d8485b2d7266d99981e66c83c7cd6e628c4f7b302",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:expandedRawRow",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "907a7a11d9a2dc0f26f36e699e2a7cfd0550ff22faca3f7ea6050f7d9abd80b3",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
@@ -18130,16 +18110,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.fields:targetI2cAddress",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "013582c362b421f6700363a0ecb6d14b3e325628ae9568ee0617e73a407cdcb8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:zoomHintRevision",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },

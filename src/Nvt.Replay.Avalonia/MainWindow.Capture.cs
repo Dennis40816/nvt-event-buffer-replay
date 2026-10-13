@@ -833,10 +833,10 @@ public partial class MainWindow : Window
         HideRegisterProfileInference();
         StopPlayback();
         ResetOutputPlanning();
+        CollapseExpandedRawRow();
         _captureWorkspace.Clear();
         paintWorkspace = null;
         autoPauseIndex = null;
-        CollapseExpandedRawRow();
         ReplayTimelineSurface.SetMarkerFrames([]);
         pendingSidecar = null;
         playbackController.Clear();
