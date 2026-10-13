@@ -86,7 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5379,
+        "viewTypeLines": 5374,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -180,7 +180,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1437
+        "fileLines": 1432
       },
       "owner": "NFU",
       "locations": [
@@ -17994,52 +17994,12 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "2152532313769faf4f3f7b3c4c5a22744df5b6b1fd160e5869ad5896fff466f8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputEncoderWarning",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "d65fb3975b9fbb421a69e8ebdbf0fe7d9543bdd10ad64435e6be227aa48a60d3",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputExportJobs",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "23511bd0522fd29469b4433e0d8d489649df6a8d732c34ed9bf32e61401c1528",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputPlanService",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "119d860ce570d46acf61d67e54740e028f3a1c4649410dc1a4002f726a912308",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputRangeUserDefined",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "cbef3f17bd730c21c3e09fd99725da91a706b726a62cd57769306f79f01b73d9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:outputReportService",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
