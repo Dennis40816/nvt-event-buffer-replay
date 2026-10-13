@@ -67,7 +67,8 @@ case. The exact pattern list is in
   approved snapshots and fixtures. GitHub's changed-file list supplies the
   status (`added` means `A`) and detects renames. A rename or copy into
   `tests/**` is owner-gated even when its destination is new.
-- CI, gates and release: `.github/**`, `scripts/**`, `eng/**`, `VERSION`,
+- CI, gates and release: `.github/**`, `scripts/**`, `tools/repo-checks/**`,
+  `eng/**`, `VERSION`,
   `docs/release.md`, `CODEOWNERS`.
 - Decisions and contracts: `docs/adr/**`, `docs/product-spec.md`.
 - Rules and agent configuration: `AGENTS.md`, `AGENTS.override.md`,
@@ -89,6 +90,45 @@ and zero P0 and P1 findings, and the required check has completed green on it.
 Owner-gated merge condition: all review-gated conditions, plus the owner's
 latest review decision being an approval on that same head. A later change
 request or dismissal blocks it.
+
+Agent-gated (tier B): a pull request that would be owner-gated can skip the
+owner's approval when every one of these holds. Otherwise it stays
+owner-gated, and the gate line in the check says why tier B was not granted.
+
+- The first non-empty line of the pull request body is exactly
+  `Approval tier: B`, and one line of the latest review record is exactly
+  `Approval tier: B`. The reviewer agrees to the tier in the record.
+- Every changed path, and the old path of a rename, is under `src/**` or
+  `tests/**` at the repository root, or is one of the four ledger files
+  `eng/code-health/baseline.json`, `eng/code-health/test-debt.json`,
+  `eng/file-size-baseline.json` and `eng/architecture/command-entries.json`.
+- No changed path matches an owner-gated pattern other than `src/**`, at any
+  depth and even inside `src/**`. A nested `AGENTS.md`, `.claude/**`,
+  `.gitattributes`, `*.csproj` or `*.props` keeps the gate. Also denied are
+  the MSBuild files `*.user`, `*.proj`, `*.projitems`, `*.fsproj`, `*.vbproj`
+  and `*.shproj`, and the test runner files `xunit.runner.json`,
+  `testconfig.json`, `*.runsettings` and `*.testsettings`.
+- Files under `tests/**` are new. Any other status is owner-gated.
+- Added plus deleted lines, not counting the four ledger files, are at most
+  600.
+- The label `needs-owner` is not set, and the owner's latest review decision
+  is not a change request.
+- The base branch is not `main`.
+- The review-gated merge condition holds: a review record accepts the exact
+  head, and `build-and-test` is green.
+- The ledgers only shrink. `health` fails on a new finding or a higher count
+  in `eng/code-health/baseline.json` and `eng/code-health/test-debt.json`.
+  The command inventory test fails when `eng/architecture/command-entries.json`
+  differs from the source. The check script itself compares
+  `eng/file-size-baseline.json` with the base: a new entry or a higher value
+  is owner-gated.
+
+The script cannot tell who reviewed or whether behavior changed. Tier B
+relies on the independent reviewer named in the record. The label
+`needs-owner` is read each time the check runs. Adding it does not start a
+run, so a green status stays until the next event. A change request from the
+owner starts a run and is the durable veto. The weekly list of merged tier B
+pull requests is the audit trail.
 
 The required build check is the `build-and-test` job of
 `.github/workflows/ci.yml`. CI runs on every pull request and on pushes to

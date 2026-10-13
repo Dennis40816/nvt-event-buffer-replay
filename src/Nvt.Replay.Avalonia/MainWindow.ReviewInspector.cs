@@ -19,8 +19,8 @@ public partial class MainWindow : Window
 {
     internal Action<string, int>? SourceLocationOpenActionForTesting { get => TestSeams.SourceLocationOpenAction; set => TestSeams.SourceLocationOpenAction = value; }
 
-    private ReviewGroupRow[] reviewRows = [];
-    private PaintMarkerRow[] paintMarkerRows = [];
+    private ReviewGroupRow[] reviewRows => DiagnosticListBox.ItemsSource as ReviewGroupRow[] ?? [];
+    private PaintMarkerRow[] paintMarkerRows => PaintMarkerListBox.ItemsSource as PaintMarkerRow[] ?? [];
     private RailState _reviewRail; // UI thread only.
     private RailState _inspectorRail; // UI thread only.
     private InspectorSelection? _inspectorSelection; // UI thread only.
@@ -593,10 +593,10 @@ public partial class MainWindow : Window
 
     private void RefreshReviewQueue()
     {
-        reviewRows = reviewWorkspace?.VisibleGroups.Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
+        var rows = reviewWorkspace?.VisibleGroups.Select(group => new ReviewGroupRow(group)).ToArray() ?? [];
         using (synchronizingReviewSelection.Enter())
         {
-            DiagnosticListBox.ItemsSource = reviewRows;
+            DiagnosticListBox.ItemsSource = rows;
             var selected = reviewWorkspace?.SelectedFindingGroupId is { } groupId
                 ? reviewRows.FirstOrDefault(row => row.Group.Id == groupId)
                 : null;
@@ -615,7 +615,7 @@ public partial class MainWindow : Window
 
     private void RefreshPaintMarkerRows()
     {
-        paintMarkerRows = reviewWorkspace?.Markers
+        var markerRows = reviewWorkspace?.Markers
             .OrderBy(marker => marker.StartLogicalIndex)
             .Select(marker =>
             {
@@ -632,7 +632,7 @@ public partial class MainWindow : Window
 
         using (synchronizingPaintMarkerSelection.Enter())
         {
-            PaintMarkerListBox.ItemsSource = paintMarkerRows;
+            PaintMarkerListBox.ItemsSource = markerRows;
             PaintMarkerListBox.SelectedItem = reviewWorkspace?.SelectedMarkerId is { } markerId
                 ? paintMarkerRows.FirstOrDefault(row => row.MarkerId == markerId)
                 : null;
