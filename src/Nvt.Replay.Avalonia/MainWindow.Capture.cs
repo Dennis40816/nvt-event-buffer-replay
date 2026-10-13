@@ -41,8 +41,9 @@ public partial class MainWindow : Window
     private readonly EventSuppressionScope configuringRegisterProfile = new();
     private NvtRegisterProfileInferenceResult? pendingRegisterProfileInference => _captureWorkspace.PendingConfiguration;
     private int targetI2cAddress = 0x01;
-    internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get; set; }
-    internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get; set; }
+    internal MainWindowTestSeams TestSeams { get; } = new();
+    internal Action<CaptureLoadProgress>? CaptureLoadProgressObserver { get => TestSeams.CaptureLoadProgressObserver; set => TestSeams.CaptureLoadProgressObserver = value; }
+    internal Action<CaptureDecodeProgress>? CaptureDecodeProgressObserver { get => TestSeams.CaptureDecodeProgressObserver; set => TestSeams.CaptureDecodeProgressObserver = value; }
 
     private void LoadButton_OnClick(object? sender, RoutedEventArgs e) => FailureReporter.Runner.Run("capture.load", _ => _replayShell.ExecuteAsync(_replayShell.LoadCommand), CancellationToken.None);
 
@@ -732,7 +733,6 @@ public partial class MainWindow : Window
         TargetI2cAddressTextBox.Text = value;
         return CommitTargetI2cAddressAsync();
     }
-
 
     private void RefreshRawExplorer(string? preferredStableId = null)
     {
