@@ -3744,26 +3744,6 @@
       "symbol": "CA1859"
     },
     {
-      "syntaxHash": "cb3cec7724bf35d4061d439667610f24c9e12367084162c72a97bd0ff8027dde",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "CA1859",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.fields:navigablePositionByOccurrenceId",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1859"
-    },
-    {
-      "syntaxHash": "6170252e1f2932a148e388f8893f096f414d2a7fb9abb30a77d8f99e2500500c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "CA1859",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.fields:visibleGroupsById",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1859"
-    },
-    {
       "syntaxHash": "643e7129f8a60e67bc66145102678978a4965e3d1c1c2fa1fd700f824838f890",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
@@ -11064,16 +11044,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "8e5b7bd97193eb182f14c8819f4a0a195991e5f3d3d5d7057f76f33b447b2baa",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.NavigateFinding(ReviewFindingDirection)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "8989077468f3b7265ec788135feb979c92fede38c14a49a74bfc21e36c23e9c6",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
@@ -11174,16 +11144,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "213c1c6c2dcb1602fd7105bc9f210ba1591dc28ea6f51772d1e6da6a052789d1",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.SelectedFinding",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "57d92e9c279140297173cafa7b45fa73debc8476f6efd39993b38bf3e3ceb119",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
@@ -11234,32 +11194,12 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "5d65f016f64bcc5d627323e860d6b7f8b766bc7180e92d9d5509a3eac9f29bea",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.SelectFinding(string,int)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "dfa98aa40ba3ecbb66bbaf4a37c116d7068dbaaa1178dfc3912e1bdae40e09c4",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.SelectFrame(int)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "df3a10a17fd018ed7982cbe998ee70c6bc1926bf8a15e2c8021f5f7c95978e21",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.SelectMarker(string)",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "CS1591"
     },
@@ -11320,16 +11260,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.SetReviewOptions(ReviewSessionOptions)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "66451e7a3cc228732d1a150048a96c1f72a9bd94971a36da81d1cebf61c5160e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.VisibleGroups",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "CS1591"
     },
@@ -17964,26 +17894,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "a4ed04f021761b6eb37889734009a58ef1bfbcaadd7de5dd10784b5e8f918740",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.fields:navigableOccurrences",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "cb3cec7724bf35d4061d439667610f24c9e12367084162c72a97bd0ff8027dde",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.fields:navigablePositionByOccurrenceId",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "877cd9c8027ed517d5e76994ecc4072562ff9b1e1ca93609529a14fd80999bf7",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
@@ -18030,26 +17940,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.fields:timeProvider",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "f1e41ff2939fb3a94a23f039e93e9a3c0c43d5c5230f8a28b34622a4a4820d21",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.fields:visibleGroups",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "6170252e1f2932a148e388f8893f096f414d2a7fb9abb30a77d8f99e2500500c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/ReviewInspectorWorkspace.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.ViewModels.ReviewInspectorWorkspace.fields:visibleGroupsById",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },

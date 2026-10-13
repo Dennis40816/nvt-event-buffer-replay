@@ -37,12 +37,8 @@ public sealed class ReviewInspectorWorkspace
     private readonly IReadOnlyList<ReplayMarker> markerView;
     private readonly TimeProvider timeProvider;
     private readonly Func<string, bool> evidenceExists;
-    private ReviewEventGroup[] visibleGroups = [];
-    private IReadOnlyDictionary<string, ReviewEventGroup> visibleGroupsById =
-        new Dictionary<string, ReviewEventGroup>(StringComparer.Ordinal);
-    private NavigableOccurrence[] navigableOccurrences = [];
-    private IReadOnlyDictionary<string, int> navigablePositionByOccurrenceId =
-        new Dictionary<string, int>(StringComparer.Ordinal);
+    // UI thread only; publish the complete projection before updating its revision or selection.
+    private ReviewPresentationIndex _presentationIndex = ReviewPresentationIndex.Empty;
     private ReviewSession reviewSession = null!;
     private ReviewSessionOptions reviewOptions;
     private ReplayRenderMode renderMode;
@@ -94,7 +90,8 @@ public sealed class ReviewInspectorWorkspace
 
     public ReviewQueueFilter Filter { get; private set; }
 
-    public IReadOnlyList<ReviewEventGroup> VisibleGroups => visibleGroups;
+    /// <summary>Gets the visible review groups in the session's urgency order.</summary>
+    public IReadOnlyList<ReviewEventGroup> VisibleGroups => _presentationIndex.VisibleGroups;
 
     public int CurrentLogicalIndex { get; private set; }
 
@@ -115,8 +112,9 @@ public sealed class ReviewInspectorWorkspace
 
     public string? SelectedOccurrenceId { get; private set; }
 
+    /// <summary>Gets the selected review group when it is visible under the current filter.</summary>
     public ReviewEventGroup? SelectedFinding => SelectedFindingGroupId is { } id &&
-        visibleGroupsById.TryGetValue(id, out var group)
+        _presentationIndex.VisibleGroupsById.TryGetValue(id, out var group)
             ? group
             : null;
 
@@ -174,10 +172,11 @@ public sealed class ReviewInspectorWorkspace
         RefreshVisibleGroups();
     }
 
+    /// <summary>Selects an occurrence in a visible review group and its replay frame, when available.</summary>
     public ReviewOccurrence SelectFinding(string groupId, int occurrenceIndex = 0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
-        if (!visibleGroupsById.TryGetValue(groupId, out var group))
+        if (!_presentationIndex.VisibleGroupsById.TryGetValue(groupId, out var group))
             throw new KeyNotFoundException($"Review group '{groupId}' is not visible under filter {Filter}.");
         if ((uint)occurrenceIndex >= (uint)group.Occurrences.Count)
             throw new ArgumentOutOfRangeException(nameof(occurrenceIndex));
@@ -192,13 +191,14 @@ public sealed class ReviewInspectorWorkspace
         return ApplyOccurrence(group, group.Occurrences[occurrenceIndex]);
     }
 
+    /// <summary>Navigates visible occurrences in timeline order, wrapping at either end.</summary>
     public ReviewOccurrence? NavigateFinding(ReviewFindingDirection direction)
     {
-        var candidates = navigableOccurrences;
+        var candidates = _presentationIndex.NavigableOccurrences;
         if (candidates.Length == 0) return null;
 
         var selectedIndex = SelectedOccurrenceId is { } occurrenceId &&
-            navigablePositionByOccurrenceId.TryGetValue(occurrenceId, out var position)
+            _presentationIndex.NavigablePositionByOccurrenceId.TryGetValue(occurrenceId, out var position)
                 ? position
                 : -1;
         int targetIndex;
@@ -210,12 +210,12 @@ public sealed class ReviewInspectorWorkspace
         }
         else if (direction == ReviewFindingDirection.Next)
         {
-            targetIndex = FirstOccurrenceAfter(CurrentLogicalIndex);
+            targetIndex = _presentationIndex.FirstOccurrenceAfter(CurrentLogicalIndex);
             if (targetIndex == candidates.Length) targetIndex = 0;
         }
         else
         {
-            targetIndex = FirstOccurrenceAtOrAfter(CurrentLogicalIndex) - 1;
+            targetIndex = _presentationIndex.FirstOccurrenceAtOrAfter(CurrentLogicalIndex) - 1;
             if (targetIndex < 0) targetIndex = candidates.Length - 1;
         }
 
@@ -368,11 +368,12 @@ public sealed class ReviewInspectorWorkspace
         return new ReviewWorkspaceImportResult(markers.Count, unresolved, markersChanged, reviewStateChanged);
     }
 
+    /// <summary>Selects an existing marker and its review occurrence when visible.</summary>
     public bool SelectMarker(string markerId)
     {
         if (!markers.Any(marker => marker.Id.Equals(markerId, StringComparison.Ordinal))) return false;
         SelectedMarkerId = markerId;
-        var group = visibleGroups.FirstOrDefault(item =>
+        var group = _presentationIndex.VisibleGroups.FirstOrDefault(item =>
             item.Id.Equals($"ANNOTATION_MARKER:{markerId}", StringComparison.Ordinal));
         if (group is null)
         {
@@ -407,7 +408,7 @@ public sealed class ReviewInspectorWorkspace
         if (previous.WorkflowState != updated.WorkflowState || previous.Disposition != updated.Disposition)
             ReportRevision++;
         RefreshVisibleGroups();
-        return visibleGroups.FirstOrDefault(group => group.Id.Equals(groupId, StringComparison.Ordinal)) ?? updated;
+        return _presentationIndex.VisibleGroups.FirstOrDefault(group => group.Id.Equals(groupId, StringComparison.Ordinal)) ?? updated;
     }
 
     private (ReplayMarker Marker, int Index) FindMarker(string markerId)
@@ -511,7 +512,7 @@ public sealed class ReviewInspectorWorkspace
             markers.Any(marker => marker.Id.Equals(markerId, StringComparison.Ordinal))
                 ? markerId
                 : null;
-        if (groupId is null || !visibleGroupsById.TryGetValue(groupId, out var group)) return;
+        if (groupId is null || !_presentationIndex.VisibleGroupsById.TryGetValue(groupId, out var group)) return;
         var occurrence = group.Occurrences.FirstOrDefault(item => item.Id.Equals(occurrenceId, StringComparison.Ordinal))
             ?? group.Occurrences[0];
         SelectedFindingGroupId = group.Id;
@@ -648,14 +649,14 @@ public sealed class ReviewInspectorWorkspace
 
     private void RefreshVisibleGroups()
     {
-        visibleGroups = reviewSession.Filter(Filter)
+        var visibleGroups = reviewSession.Filter(Filter)
             .Where(group =>
                 group.Severity >= DiagnosticSeverity.Warning ||
                 group.IsAsil ||
                 group.Category is ReviewEventCategory.QaResult or ReviewEventCategory.Annotation)
             .ToArray();
-        visibleGroupsById = visibleGroups.ToDictionary(group => group.Id, StringComparer.Ordinal);
-        navigableOccurrences = visibleGroups
+        var visibleGroupsById = visibleGroups.ToDictionary(group => group.Id, StringComparer.Ordinal);
+        var navigableOccurrences = visibleGroups
             .SelectMany(group => group.Occurrences.Select((occurrence, index) =>
                 new NavigableOccurrence(group, occurrence, index)))
             .Where(item => item.Occurrence.LogicalIndex is not null)
@@ -663,45 +664,16 @@ public sealed class ReviewInspectorWorkspace
             .ThenBy(item => item.Group.Id, StringComparer.Ordinal)
             .ThenBy(item => item.OccurrenceIndex)
             .ToArray();
-        navigablePositionByOccurrenceId = navigableOccurrences
+        var navigablePositionByOccurrenceId = navigableOccurrences
             .Select((item, index) => (item.Occurrence.Id, Index: index))
             .ToDictionary(item => item.Id, item => item.Index, StringComparer.Ordinal);
+        _presentationIndex = new ReviewPresentationIndex(
+            visibleGroups, visibleGroupsById, navigableOccurrences, navigablePositionByOccurrenceId);
         NavigationIndexRevision++;
         if (SelectedFindingGroupId is not { } id ||
-            visibleGroupsById.ContainsKey(id)) return;
+            _presentationIndex.VisibleGroupsById.ContainsKey(id)) return;
         ClearFindingSelection();
     }
-
-    private int FirstOccurrenceAfter(int logicalIndex)
-    {
-        var low = 0;
-        var high = navigableOccurrences.Length;
-        while (low < high)
-        {
-            var middle = low + (high - low) / 2;
-            if (navigableOccurrences[middle].Occurrence.LogicalIndex!.Value <= logicalIndex) low = middle + 1;
-            else high = middle;
-        }
-        return low;
-    }
-
-    private int FirstOccurrenceAtOrAfter(int logicalIndex)
-    {
-        var low = 0;
-        var high = navigableOccurrences.Length;
-        while (low < high)
-        {
-            var middle = low + (high - low) / 2;
-            if (navigableOccurrences[middle].Occurrence.LogicalIndex!.Value < logicalIndex) low = middle + 1;
-            else high = middle;
-        }
-        return low;
-    }
-
-    private sealed record NavigableOccurrence(
-        ReviewEventGroup Group,
-        ReviewOccurrence Occurrence,
-        int OccurrenceIndex);
 
     private sealed class CompositeReadOnlyList<T>(IReadOnlyList<T> first, IReadOnlyList<T> second)
         : IReadOnlyList<T>
