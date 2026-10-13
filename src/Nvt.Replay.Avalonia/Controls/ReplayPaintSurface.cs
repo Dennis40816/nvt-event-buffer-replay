@@ -12,14 +12,13 @@ using Nvt.Replay.Rendering;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
+/// <summary>Draws one replay scene with its trails, legend and label layout, and handles zoom and pan.</summary>
 public sealed class ReplayPaintSurface : Control
 {
     private static readonly Cursor PanCursor = new(StandardCursorType.SizeAll);
     private static readonly TimeSpan LoopCrossfadeDuration = TimeSpan.FromMilliseconds(140);
-
     private static readonly PaintPalette DarkPalette = PaintPalette.From(ReplayVisualStyle.Dark);
     private static readonly PaintPalette LightPalette = PaintPalette.From(ReplayVisualStyle.Light);
-
     private PaintPalette Palette => ActualThemeVariant == ThemeVariant.Light ? LightPalette : DarkPalette;
     private IBrush StageBrush => Palette.Stage;
     private IBrush SurfaceBrush => Palette.Surface;
@@ -35,7 +34,6 @@ public sealed class ReplayPaintSurface : Control
     private IBrush PalmBrush => Palette.Palm;
     private IBrush AlarmBrush => Palette.Alarm;
     private IBrush InvalidBrush => Palette.Invalid;
-
     private ReplayScene? scene;
     private ReplayScene? outgoingScene;
     private readonly ReplayTrailBatchCache trailBatchCache = new();
@@ -48,28 +46,24 @@ public sealed class ReplayPaintSurface : Control
     private double zoomFactor = 1;
     private Vector viewportOffset;
     private bool strongGrid;
-    private ReplayLegendPosition legendPosition = ReplayLegendPosition.TopLeft;
-    private bool legendVisible = true;
-    private bool legendCollapsed = true;
-    private bool legendHovered;
-    private bool trailLinesVisible = true;
-    private bool trailPointsVisible = true;
-    private Rect? legendBounds;
-    private bool isPanning;
     private byte? highlightedContactId;
-    private Point panStart;
-    private Vector panStartOffset;
-    private IPointer? panPointer;
+    private readonly PaintOverlayState _overlay = new();
+    private readonly PanGesture _pan = new();
 
     public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.HostState;
     public double ZoomFactor => zoomFactor;
     public byte? HighlightedContactId => highlightedContactId;
     public bool StrongGrid => strongGrid;
-    public bool LegendVisible => legendVisible;
-    public bool LegendCollapsed => legendCollapsed;
-    public ReplayLegendPosition LegendPosition => legendPosition;
-    public bool TrailLinesVisible => trailLinesVisible;
-    public bool TrailPointsVisible => trailPointsVisible;
+    /// <summary>Whether the legend is shown.</summary>
+    public bool LegendVisible => _overlay.LegendVisible;
+    /// <summary>Whether the legend shows only the one-line contact summary.</summary>
+    public bool LegendCollapsed => _overlay.LegendCollapsed;
+    /// <summary>The corner the legend is drawn in.</summary>
+    public ReplayLegendPosition LegendPosition => _overlay.LegendPosition;
+    /// <summary>Whether contact trails are drawn as lines.</summary>
+    public bool TrailLinesVisible => _overlay.TrailLinesVisible;
+    /// <summary>Whether contact trails are drawn as points.</summary>
+    public bool TrailPointsVisible => _overlay.TrailPointsVisible;
     internal int CachedTrailBatchCount => trailBatchCache.Count;
     internal ReplayScene? CurrentScene => scene;
     internal int ScenePresentationCount { get; private set; }
@@ -110,11 +104,12 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
+    /// <summary>Chooses whether contact trails are drawn as lines, as points, both or neither.</summary>
     public void SetTrailVisibility(bool showLines, bool showPoints)
     {
-        if (trailLinesVisible == showLines && trailPointsVisible == showPoints) return;
-        trailLinesVisible = showLines;
-        trailPointsVisible = showPoints;
+        if (_overlay.TrailLinesVisible == showLines && _overlay.TrailPointsVisible == showPoints) return;
+        _overlay.TrailLinesVisible = showLines;
+        _overlay.TrailPointsVisible = showPoints;
         InvalidateVisual();
     }
 
@@ -162,6 +157,7 @@ public sealed class ReplayPaintSurface : Control
         labelAnchorsAdvancedForScene = true;
     }
 
+    /// <summary>Drops the scene, the trail cache and the label anchors, ends any pan and clears the hover.</summary>
     public void Clear()
     {
         scene = null;
@@ -174,8 +170,7 @@ public sealed class ReplayPaintSurface : Control
         highlightedContactId = null;
         loopCrossfadeTimer.Stop();
         EndPan(releaseCapture: true);
-        legendBounds = null;
-        legendHovered = false;
+        _overlay.ClearHit();
         UpdatePanCursor();
         InvalidateVisual();
     }
@@ -199,30 +194,29 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
+    /// <summary>Places the legend in a corner. <c>Auto</c> resolves to the top-left corner.</summary>
     public void SetLegendPosition(ReplayLegendPosition value)
     {
         var resolved = value == ReplayLegendPosition.Auto ? ReplayLegendPosition.TopLeft : value;
-        if (legendPosition == resolved) return;
-        legendPosition = resolved;
+        if (_overlay.LegendPosition == resolved) return;
+        _overlay.LegendPosition = resolved;
         InvalidateVisual();
     }
 
+    /// <summary>Shows or hides the legend. Hiding it also clears its hit area and hover state.</summary>
     public void SetLegendVisible(bool value)
     {
-        if (legendVisible == value) return;
-        legendVisible = value;
-        if (!value)
-        {
-            legendBounds = null;
-            legendHovered = false;
-        }
+        if (_overlay.LegendVisible == value) return;
+        _overlay.LegendVisible = value;
+        if (!value) _overlay.ClearHit();
         InvalidateVisual();
     }
 
+    /// <summary>Collapses the legend to a one-line summary or expands it, and raises <see cref="LegendCollapsedChanged"/> on change.</summary>
     public void SetLegendCollapsed(bool value)
     {
-        if (legendCollapsed == value) return;
-        legendCollapsed = value;
+        if (_overlay.LegendCollapsed == value) return;
+        _overlay.LegendCollapsed = value;
         InvalidateVisual();
         LegendCollapsedChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -264,14 +258,15 @@ public sealed class ReplayPaintSurface : Control
         e.Handled = true;
     }
 
+    /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
         var position = e.GetPosition(this);
-        if (isPanning && scene is not null)
+        if (_pan.IsPanning && scene is not null)
         {
             viewportOffset = ClampViewportOffset(
-                panStartOffset + (position - panStart),
+                _pan.StartOffset + (position - _pan.Start),
                 scene.ViewExtent,
                 zoomFactor);
             InvalidateVisual();
@@ -279,49 +274,52 @@ public sealed class ReplayPaintSurface : Control
             return;
         }
 
-        var hovered = legendVisible && legendBounds?.Contains(position) == true;
-        if (hovered == legendHovered) return;
-        legendHovered = hovered;
+        var hovered = _overlay.LegendVisible && _overlay.LegendBounds?.Contains(position) == true;
+        if (hovered == _overlay.LegendHovered) return;
+        _overlay.LegendHovered = hovered;
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (!legendHovered) return;
-        legendHovered = false;
+        if (!_overlay.LegendHovered) return;
+        _overlay.LegendHovered = false;
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
 
         var position = e.GetPosition(this);
-        if (legendVisible && legendBounds?.Contains(position) == true)
+        if (_overlay.LegendVisible && _overlay.LegendBounds?.Contains(position) == true)
         {
-            SetLegendCollapsed(!legendCollapsed);
+            SetLegendCollapsed(!_overlay.LegendCollapsed);
             e.Handled = true;
             return;
         }
 
         if (scene is null || !CanPan(scene.ViewExtent, zoomFactor)) return;
 
-        isPanning = true;
-        panStart = position;
-        panStartOffset = viewportOffset;
-        panPointer = e.Pointer;
-        legendHovered = false;
+        _pan.IsPanning = true;
+        _pan.Start = position;
+        _pan.StartOffset = viewportOffset;
+        _pan.Pointer = e.Pointer;
+        _overlay.LegendHovered = false;
         e.Pointer.Capture(this);
         UpdatePanCursor();
         e.Handled = true;
     }
 
+    /// <inheritdoc />
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
-        if (!isPanning) return;
+        if (!_pan.IsPanning) return;
 
         EndPan(releaseCapture: true);
         e.Handled = true;
@@ -479,11 +477,11 @@ public sealed class ReplayPaintSurface : Control
 
     private void EndPan(bool releaseCapture)
     {
-        if (!isPanning && panPointer is null) return;
+        if (!_pan.IsPanning && _pan.Pointer is null) return;
 
-        var pointer = panPointer;
-        isPanning = false;
-        panPointer = null;
+        var pointer = _pan.Pointer;
+        _pan.IsPanning = false;
+        _pan.Pointer = null;
         if (releaseCapture)
             pointer?.Capture(null);
         UpdatePanCursor();
@@ -491,7 +489,7 @@ public sealed class ReplayPaintSurface : Control
 
     private void UpdatePanCursor()
     {
-        Cursor = isPanning || (scene is not null && CanPan(scene.ViewExtent, zoomFactor))
+        Cursor = _pan.IsPanning || (scene is not null && CanPan(scene.ViewExtent, zoomFactor))
             ? PanCursor
             : null;
     }
@@ -517,6 +515,8 @@ public sealed class ReplayPaintSurface : Control
         IReadOnlyList<ReplayTrailDrawBatch> batches,
         double opacity)
     {
+        var trailLinesVisible = _overlay.TrailLinesVisible;
+        var trailPointsVisible = _overlay.TrailPointsVisible;
         if ((!trailLinesVisible && !trailPointsVisible) || batches.Count == 0) return;
         context.Custom(new ReplayTrailDrawOperation(
             viewport,
@@ -532,9 +532,9 @@ public sealed class ReplayPaintSurface : Control
 
     private void DrawLegend(DrawingContext context, Rect viewport, ReplayScene scene)
     {
-        if (!legendVisible)
+        if (!_overlay.LegendVisible)
         {
-            legendBounds = null;
+            _overlay.LegendBounds = null;
             return;
         }
 
@@ -561,11 +561,11 @@ public sealed class ReplayPaintSurface : Control
             .ToArray();
         if (entries.Length == 0)
         {
-            legendBounds = null;
+            _overlay.LegendBounds = null;
             return;
         }
 
-        if (legendCollapsed)
+        if (_overlay.LegendCollapsed)
         {
             DrawCollapsedLegend(context, viewport, activeContacts);
             return;
@@ -577,8 +577,8 @@ public sealed class ReplayPaintSurface : Control
         var legendRect = PositionLegend(
             viewport,
             new Size(150, headerHeight + (entries.Length * itemHeight) + bottomPadding));
-        legendBounds = legendRect;
-        context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
+        _overlay.LegendBounds = legendRect;
+        context.DrawRectangle(_overlay.LegendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
 
         var heading = new FormattedText(
             "CONTACTS",
@@ -631,8 +631,8 @@ public sealed class ReplayPaintSurface : Control
             13,
             LabelTextBrush);
         var legendRect = PositionLegend(viewport, new Size(text.Width + 39, 32));
-        legendBounds = legendRect;
-        context.DrawRectangle(legendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 15, 15);
+        _overlay.LegendBounds = legendRect;
+        context.DrawRectangle(_overlay.LegendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 15, 15);
         context.DrawEllipse(AxisLabelBrush, null, new Point(legendRect.X + 13, legendRect.Center.Y), 3.5, 3.5);
         var textBounds = new Rect(legendRect.X + 25, legendRect.Y, legendRect.Width - 31, legendRect.Height);
         context.DrawText(text, new Point(textBounds.X, CenteredTextY(textBounds, text)));
@@ -665,8 +665,8 @@ public sealed class ReplayPaintSurface : Control
     private Rect PositionLegend(Rect viewport, Size size)
     {
         const double inset = 12;
-        var rightAligned = legendPosition is ReplayLegendPosition.TopRight or ReplayLegendPosition.BottomRight;
-        var bottomAligned = legendPosition is ReplayLegendPosition.BottomLeft or ReplayLegendPosition.BottomRight;
+        var rightAligned = _overlay.LegendPosition is ReplayLegendPosition.TopRight or ReplayLegendPosition.BottomRight;
+        var bottomAligned = _overlay.LegendPosition is ReplayLegendPosition.BottomLeft or ReplayLegendPosition.BottomRight;
         var x = rightAligned ? viewport.Right - inset - size.Width : viewport.Left + inset;
         var y = bottomAligned ? viewport.Bottom - inset - size.Height : viewport.Top + inset;
         return new Rect(x, y, size.Width, size.Height);

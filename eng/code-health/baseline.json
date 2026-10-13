@@ -58,7 +58,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 934
+        "viewTypeLines": 933
       },
       "owner": "NFU",
       "locations": [
@@ -8984,16 +8984,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "414d0c6fdb7a658858a7ed12ae90814ad5fac4e13d0888db0a4596cc88ddf95f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.Clear()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "0b8c2997c4f9e0ea472be7767027227dfca9f29dc79f8403a88a52394c442df3",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -9014,36 +9004,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "50a310f43f045c40a3c7f69fe15f97929e7da9d722fb02652ae2132f6872eef4",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.LegendCollapsed",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "bd8a69e16ebe83fdeb5011ad8806c097035090a8c7588277ce46d4b2930efb34",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.LegendPosition",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8862c9942f50785590de32133b86ae55cd830bf90832f7bb74ebc85db03f7409",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.LegendVisible",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "3a4843d7df9a0ec3b9549347e59b9e7de0aa3b8c7b0f94360de4989813a25246",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -9060,46 +9020,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.OnPointerCaptureLost(PointerCaptureLostEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "995b2c182d0d0e92c19d5ce97ed359a8f52ac7d67901f8e31cdd75e7738e480e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.OnPointerExited(PointerEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "c17c36850034ddb7a74ec12e5fa4ef9cf036ebc6ad871df1b9f283381e985692",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.OnPointerMoved(PointerEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "15d38ad552d58e9f0e670eeeb2fcff4326a0df2bf2da9854ea1a8f0578b5806f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.OnPointerPressed(PointerPressedEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "cf24c60ba99f6fe9cac0453d8f1122bb1c5c12d6e1bf50580e35eb1b42592d5c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.OnPointerReleased(PointerReleasedEventArgs)",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "CS1591"
     },
@@ -9134,36 +9054,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "9f7722cdbfffa36175476b07473b57544cbe06936e4961934eb9ac40dcaf2bfc",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.SetLegendCollapsed(bool)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "50b5d07dceca7dea67bb966a73ac2517fbe5d29a81566d777b08578fb45a5835",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.SetLegendPosition(ReplayLegendPosition)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "f5d066daedbd97eb4852a616d371625614fe6b6090c3280e7171fbcae9c7d589",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.SetLegendVisible(bool)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "44d9ca728e18c5802d5827950fd3d32dee48d661fca0357a6e842763c12bcb74",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -9184,16 +9074,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "75b38e75143f260917cca35e017cb52ac64fccc472591e32f991ab60a7222be0",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.SetTrailVisibility(bool,bool)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "17184b057396b08479124d8f04dfebafcb3b89e3e93a2738b72b71768010d4f5",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -9210,26 +9090,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.StrongGrid",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "20972ced301475e6c36899a9f960562428853be048e73d9a7addebada0d86a56",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.TrailLinesVisible",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "92a1def5c1a9135ca2ce029ea98a3c435fba9fc62bdd81fe430e25ae668589fc",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.TrailPointsVisible",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "CS1591"
     },
@@ -9260,16 +9120,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.ZoomOut()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "0e22e90db5dbd88984e065ac450c605ac14f36801a2dc99a05ebfb60a8d77ad7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "CS1591"
     },
@@ -17224,16 +17074,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "f5c03128bc856b752e1dae8c4439b2026b3e564610c1d8298c583532ae9f869c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:isPanning",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "7c1709267774e7d76e19a3924f631785134d12f43305f1bc3dc38ccfebc474fb",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -17250,56 +17090,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:labelAnchorsAdvancedForScene",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "0d1e746ad7eefd74e493dfd3d049c5cc9dbc9dca42779bafc513fc78f896830e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:legendBounds",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "ce2d81f370c1cfbd5750b6d4a25a0a57d1928fb943f1721a4bf38b9a0dda5379",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:legendCollapsed",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "3212ee56739e42caaff2395655b40fa9227f92d47a88d008ec697d65307e1375",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:legendHovered",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "23ecad95243b617a8a039d1a6f202e24d374589f163d55154a7e84719b6f1f7a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:legendPosition",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "771fd3ec28a44eb54dc2ab0a5c6a67cedb3bf5b18cbd52efa1fdbab409449a51",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:legendVisible",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
@@ -17374,36 +17164,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "d68058a87997ac16d0df5dc095213cb316d8384249fd7d352c20633076daf40a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:panPointer",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "81923e9985d3053bb6472826bbbf81ada59886550f3c370c1d05b542a6a5cfd5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:panStart",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "0ea60ebb58b6f21dbb4a8c1c43b2bcb4d0c4ac031b932696f6299eb6f28d4102",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:panStartOffset",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "87f6895394d88ce6ea161380f0787a489dc39247002c9c238b8f8dffef62bc94",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
@@ -17440,26 +17200,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:trailBatchCache",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "4c573072a929c060ce84fbe76824124cfe795bb5a017b26d64b7ba8ff5738abc",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:trailLinesVisible",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "bbbd9cf7368ff2b1689e8bfdf56044ef6966781014ade82a6d5be19e0ba38a88",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayPaintSurface.fields:trailPointsVisible",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
