@@ -86,7 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5341,
+        "viewTypeLines": 5339,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -124,7 +124,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1032
+        "fileLines": 1030
       },
       "owner": "NFU",
       "locations": [
@@ -152,7 +152,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 174
+        "methodLines": 173
       },
       "owner": "NFU",
       "locations": [
@@ -166,7 +166,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 147
+        "methodLines": 146
       },
       "owner": "NFU",
       "locations": [
@@ -17830,16 +17830,6 @@
       "rule": "IDE1006",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.EventSuppressionScope.Scope.fields:owner",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "bf454d7f3bffe631790d088d0cf0c3bb1e0e442b72ba35af1764efbd2c59c417",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:autoPauseIndex",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "IDE1006"
     },
