@@ -150,8 +150,8 @@ public partial class MainWindow : Window
                 ExitOutputFullscreen();
                 StopOutputVideoPreviewPlayback();
                 _outputPreviewCancellation.CancelCurrent();
-                if (_outputPreview.PlanPending) outputPlanService.Invalidate();
-                outputReportService.CancelActive();
+                if (_outputPreview.PlanPending) _outputState.PlanService.Invalidate();
+                _outputState.ReportService.CancelActive();
             }
             SetOutputWorkspaceChrome(false, paintSelected && !SettingsPage.IsVisible);
             SetSourceTransportEnabled(paintSelected && !SettingsPage.IsVisible);
@@ -218,7 +218,7 @@ public partial class MainWindow : Window
 
     private void HandleWindowKeyDown(KeyEventArgs e)
     {
-        if (_outputFullscreenRestoreState.HasValue && e.Key == Key.Escape)
+        if (_outputState.FullscreenRestoreState.HasValue && e.Key == Key.Escape)
         {
             ExitOutputFullscreen();
             e.Handled = true;
@@ -360,8 +360,8 @@ public partial class MainWindow : Window
         StopPlayback();
         StopOutputVideoPreviewPlayback();
         ResetOutputPlanning();
-        outputPlanService.Dispose();
-        outputReportService.Dispose();
+        _outputState.PlanService.Dispose();
+        _outputState.ReportService.Dispose();
         _operation.CancelCurrent();
         _operation.Dispose();
         captureDecodeController.Dispose();

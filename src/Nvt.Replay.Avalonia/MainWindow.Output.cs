@@ -22,23 +22,18 @@ public partial class MainWindow : Window
     private readonly CancellationSlot _outputPreviewCancellation = new();
     private readonly CancellationSlot _outputVideoPlaybackCancellation = new();
     private readonly ReplayOutputWorkspace outputWorkspace = new();
-    private ReplayOutputPlanService outputPlanService = new();
     private readonly ExportJobService outputExportJobs = new();
+    private readonly OutputWindowState _outputState = new();
     private readonly OutputPreviewState _outputPreview = new();
-    private OutputReportService outputReportService = new();
     private CaptureAnalysisReport? currentOutputReport;
-    private HeatmapSettings _heatmap = HeatmapSettings.Default;
-    private WindowState? _outputFullscreenRestoreState; // UI thread only.
     private readonly EventSuppressionScope configuringOutputSettings = new();
     private readonly EventSuppressionScope configuringOutputRange = new();
-    private bool outputRangeUserDefined;
-    private bool outputEncoderWarning;
     internal ReplayOutputSettings OutputSettings => outputWorkspace.Settings;
     internal long OutputSettingsRevision => outputWorkspace.Revision;
     internal ReplayOutputPlanIdentity? OutputPreviewPlanIdentity => _outputPreview.Plan?.Identity;
     internal ReplayFramePlanSnapshot? OutputPreviewFramePlan => _outputPreview.Plan?.FramePlan;
-    internal int OutputPreviewPlanBuildCount => outputPlanService.BuildCount;
-    internal int OutputReportBuildCount => outputReportService.BuildCount;
+    internal int OutputPreviewPlanBuildCount => _outputState.PlanService.BuildCount;
+    internal int OutputReportBuildCount => _outputState.ReportService.BuildCount;
     internal int OutputVideoRenderCount => OutputVideoPreview.RgbRenderCount;
     internal bool OutputVideoPreviewDirty => _outputPreview.Dirty;
     internal CaptureAnalysisReport? CurrentOutputReport => currentOutputReport;
@@ -51,16 +46,16 @@ public partial class MainWindow : Window
     {
         ArgumentNullException.ThrowIfNull(replacement);
         ResetOutputPlanning();
-        outputPlanService.Dispose();
-        outputPlanService = replacement;
+        _outputState.PlanService.Dispose();
+        _outputState.PlanService = replacement;
         ClearOutputVideoPreview();
     }
     internal void ReplaceOutputReportServiceForTesting(OutputReportService replacement)
     {
         ArgumentNullException.ThrowIfNull(replacement);
-        outputReportService.Reset();
-        outputReportService.Dispose();
-        outputReportService = replacement;
+        _outputState.ReportService.Reset();
+        _outputState.ReportService.Dispose();
+        _outputState.ReportService = replacement;
         currentOutputReport = null;
     }
     private int outputVideoFrameCount => _outputPreview.Plan?.Estimate.OutputFrameCount ?? 0;
@@ -140,11 +135,11 @@ public partial class MainWindow : Window
         }
         var selectedMode = SelectedHeatmapMode();
         var nextLabelRatio = labelPercent / 100d;
-        if (minimumCount == _heatmap.MinimumCount &&
-            Math.Abs(nextLabelRatio - _heatmap.LabelThresholdRatio) < 0.0001 &&
-            string.Equals(selectedMode, _heatmap.Mode, StringComparison.Ordinal))
+        if (minimumCount == _outputState.Heatmap.MinimumCount &&
+            Math.Abs(nextLabelRatio - _outputState.Heatmap.LabelThresholdRatio) < 0.0001 &&
+            string.Equals(selectedMode, _outputState.Heatmap.Mode, StringComparison.Ordinal))
             return;
-        _heatmap = new HeatmapSettings(minimumCount, nextLabelRatio, selectedMode);
+        _outputState.Heatmap = new HeatmapSettings(minimumCount, nextLabelRatio, selectedMode);
         RefreshHeatmapPresentation();
     }
 
@@ -277,7 +272,7 @@ public partial class MainWindow : Window
             await WriteCurrentHeatmapPreviewAsync(path, cancellationToken);
             ThrowIfStaleOutputOperation(operation);
             SetActualOutputSize(path);
-            var mode = SelectedHeatmapMode() == "repeated" ? $"repeated N≥{_heatmap.MinimumCount:N0}" : "all recorded points";
+            var mode = SelectedHeatmapMode() == "repeated" ? $"repeated N≥{_outputState.Heatmap.MinimumCount:N0}" : "all recorded points";
             AnalysisOutputText.Text = $"Heatmap PNG · {path}\n{AnalysisHeatmapPreview.VisibleSampleCount:N0} visible samples · {mode} · range {report.Manifest.Range.StartLogicalIndex + 1:N0}-{report.Manifest.Range.EndLogicalIndex + 1:N0}";
             SessionStatusText.Text = "Heatmap PNG exported";
         }
@@ -376,10 +371,10 @@ public partial class MainWindow : Window
     private void OutputExportDismissButton_OnClick(object? sender, RoutedEventArgs e)
     {
         OutputExportWarningPanel.IsVisible = false;
-        SessionStatusText.Text = outputEncoderWarning
+        SessionStatusText.Text = _outputState.EncoderWarning
             ? "MP4 encoder warning dismissed; no output was created"
             : "Long MP4 export not started";
-        outputEncoderWarning = false;
+        _outputState.EncoderWarning = false;
     }
 
     private void OutputExportCancelButton_OnClick(object? sender, RoutedEventArgs e)
@@ -417,7 +412,7 @@ public partial class MainWindow : Window
         {
             _outputPreview.SetRequestPending(true);
             UpdateOutputExportButtonAvailability();
-            preview = await outputPlanService.GetPreviewAsync(
+            preview = await _outputState.PlanService.GetPreviewAsync(
                 replaySession,
                 OutputReplayIdentity(),
                 outputWorkspace.Settings,
@@ -455,7 +450,7 @@ public partial class MainWindow : Window
         var settings = preview.Identity.Settings;
         if (!longExportConfirmed && estimate.RequiresConfirmation)
         {
-            outputEncoderWarning = false;
+            _outputState.EncoderWarning = false;
             OutputExportWarningTitleText.Text = "Long MP4 export";
             OutputExportContinueButton.IsVisible = true;
             OutputExportDismissButton.Content = "Cancel";
@@ -532,7 +527,7 @@ public partial class MainWindow : Window
 
     private void ShowOutputEncoderWarning(string message)
     {
-        outputEncoderWarning = true;
+        _outputState.EncoderWarning = true;
         OutputExportWarningTitleText.Text = "MP4 encoder unavailable";
         OutputExportWarningText.Text = message;
         OutputExportContinueButton.IsVisible = false;
@@ -680,7 +675,7 @@ public partial class MainWindow : Window
     private void OutputRangeFullButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (replaySession is not { Count: > 0 }) return;
-        outputRangeUserDefined = false;
+        _outputState.RangeUserDefined = false;
         ApplyOutputRange(new AnalysisRange(0, replaySession.Count - 1), showStatus: true);
     }
 
@@ -696,7 +691,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        outputRangeUserDefined = true;
+        _outputState.RangeUserDefined = true;
         ApplyOutputRange(new AnalysisRange(start - 1, end - 1), showStatus: true);
     }
 
@@ -704,20 +699,20 @@ public partial class MainWindow : Window
     {
         if (replaySession is not { Count: > 0 })
         {
-            outputRangeUserDefined = false;
+            _outputState.RangeUserDefined = false;
             ApplyOutputRange(new AnalysisRange(0, 0), showStatus: false, refreshPreview: false);
             return;
         }
 
         var existing = outputWorkspace.Settings.Range;
-        var preserveExisting = outputRangeUserDefined &&
+        var preserveExisting = _outputState.RangeUserDefined &&
                                existing.StartLogicalIndex >= 0 &&
                                existing.EndLogicalIndex >= existing.StartLogicalIndex &&
                                existing.EndLogicalIndex < replaySession.Count;
         var range = preserveExisting
             ? existing
             : new AnalysisRange(0, replaySession.Count - 1);
-        if (!preserveExisting) outputRangeUserDefined = false;
+        if (!preserveExisting) _outputState.RangeUserDefined = false;
         ApplyOutputRange(range, showStatus: false, refreshPreview: false);
     }
 
@@ -1063,7 +1058,7 @@ public partial class MainWindow : Window
         OutputReportIdentity identity,
         CancellationToken cancellationToken)
     {
-        return outputReportService.GetAsync(
+        return _outputState.ReportService.GetAsync(
             identity,
             () => CaptureOutputReportInputs(identity.Range),
             cancellationToken);
@@ -1113,7 +1108,7 @@ public partial class MainWindow : Window
             ReplayOutputPreviewPlan? preview = null;
             if (settings.ContentType == ReplayOutputContentType.Mp4Video)
             {
-                preview = await outputPlanService.GetPreviewAsync(
+                preview = await _outputState.PlanService.GetPreviewAsync(
                     replaySession,
                     replayIdentity,
                     settings,
@@ -1189,8 +1184,8 @@ public partial class MainWindow : Window
         }
 
         var repeated = SelectedHeatmapMode() == "repeated";
-        var minimum = repeated ? _heatmap.MinimumCount : 1;
-        AnalysisHeatmapPreview.Show(report.Hotspot, minimum, _heatmap.LabelThresholdRatio);
+        var minimum = repeated ? _outputState.Heatmap.MinimumCount : 1;
+        AnalysisHeatmapPreview.Show(report.Hotspot, minimum, _outputState.Heatmap.LabelThresholdRatio);
         var hiddenSamples = Math.Max(0, report.Hotspot.SampleCount - AnalysisHeatmapPreview.VisibleSampleCount);
         OutputHotspotText.Text = repeated
             ? $"N≥{minimum:N0} · {AnalysisHeatmapPreview.VisibleSampleCount:N0}/{report.Hotspot.SampleCount:N0} samples · peak {AnalysisHeatmapPreview.PeakCount:N0}"
@@ -1251,7 +1246,7 @@ public partial class MainWindow : Window
         var settings = CurrentReplayRenderSettings();
         var outputSettings = _outputPreview.Plan.Identity.Settings;
         OutputVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
-        if (_outputFullscreenRestoreState.HasValue)
+        if (_outputState.FullscreenRestoreState.HasValue)
             OutputFullscreenVideoPreview.Show(scene, settings, outputSettings.Width, outputSettings.Height);
         _outputPreview.MarkRendered();
         OutputVideoTimeline.SetPosition(_outputPreview.FrameIndex);
@@ -1272,7 +1267,7 @@ public partial class MainWindow : Window
 
     private void OutputVideoTimeline_OnRangeChanged(object? sender, OutputVideoRangeEventArgs e)
     {
-        outputRangeUserDefined = true;
+        _outputState.RangeUserDefined = true;
         ApplyOutputRange(new AnalysisRange(e.StartLogicalIndex, e.EndLogicalIndex), showStatus: true);
     }
 
@@ -1289,8 +1284,8 @@ public partial class MainWindow : Window
 
     private void EnterOutputFullscreen()
     {
-        if (outputVideoFrameCount == 0 || _outputFullscreenRestoreState.HasValue) return;
-        _outputFullscreenRestoreState = WindowState;
+        if (outputVideoFrameCount == 0 || _outputState.FullscreenRestoreState.HasValue) return;
+        _outputState.FullscreenRestoreState = WindowState;
         OutputFullscreenOverlay.IsVisible = true;
         WindowState = WindowState.FullScreen;
         ShowOutputVideoFrame(_outputPreview.FrameIndex);
@@ -1299,8 +1294,8 @@ public partial class MainWindow : Window
 
     private void ExitOutputFullscreen()
     {
-        if (_outputFullscreenRestoreState is not { } previousWindowState) return;
-        _outputFullscreenRestoreState = null;
+        if (_outputState.FullscreenRestoreState is not { } previousWindowState) return;
+        _outputState.FullscreenRestoreState = null;
         OutputFullscreenOverlay.IsVisible = false;
         OutputFullscreenVideoPreview.Clear();
         WindowState = previousWindowState;
@@ -1406,7 +1401,7 @@ public partial class MainWindow : Window
 
     private void RefreshCurrentOutputVideoFrame()
     {
-        var visible = _outputFullscreenRestoreState.HasValue || outputWorkspaceActive && OutputVideoPanel.IsVisible;
+        var visible = _outputState.FullscreenRestoreState.HasValue || outputWorkspaceActive && OutputVideoPanel.IsVisible;
         if (!visible || !_outputPreview.Dirty || outputVideoFrameCount == 0 || _outputPreview.Plan is null)
             return;
         ShowOutputVideoFrame(_outputPreview.FrameIndex);
@@ -1416,8 +1411,8 @@ public partial class MainWindow : Window
     {
         _outputPreview.AdvanceGeneration();
         _outputPreviewCancellation.CancelAndClear();
-        outputPlanService.Invalidate();
-        outputReportService.Reset();
+        _outputState.PlanService.Invalidate();
+        _outputState.ReportService.Reset();
         _outputPreview.ResetRequest();
         currentOutputReport = null;
         AnalysisHeatmapPreview.Show(null);
