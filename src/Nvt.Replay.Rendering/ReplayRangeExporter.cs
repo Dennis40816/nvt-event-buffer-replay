@@ -2,53 +2,8 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Nvt.Replay.Analysis;
-using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
-
-public enum ReplayExportClock
-{
-    Recorded,
-    Frame,
-}
-
-public enum ReplayExportKind
-{
-    Mp4,
-    PngSequence,
-}
-
-public sealed record ReplayExportOptions(
-    string OutputPath,
-    AnalysisRange Range,
-    int Width = 1280,
-    int Height = 720,
-    int FrameRate = 30,
-    double Speed = 1,
-    ReplayExportClock Clock = ReplayExportClock.Recorded,
-    ReplayRenderMode Mode = ReplayRenderMode.Compare,
-    string? FfmpegPath = null,
-    string? SourceFileName = null,
-    string? SourceSha256 = null,
-    ReplayDecodeConfiguration? DecodeConfiguration = null,
-    ReplayRenderSettings? RenderSettings = null)
-{
-    public bool AllowPngSequenceFallback { get; init; }
-    public string? VideoEncoder { get; init; }
-
-    public ReplayRenderSettings ResolvedRenderSettings =>
-        (RenderSettings ?? new ReplayRenderSettings(Mode)) with { Mode = Mode };
-}
-
-public sealed record ReplayFramePlanEntry(int LogicalIndex, int RepeatCount);
-
-public sealed record ReplayFramePlanIdentity(
-    int ReplayFrameCount,
-    TimeSpan ReplayFrameInterval,
-    AnalysisRange Range,
-    ReplayExportClock Clock,
-    int FrameRate,
-    double Speed);
 
 /// <summary>
 /// Immutable frame sampling plan bound to the replay instance and timing options that produced it.
@@ -143,43 +98,6 @@ public sealed class ReplayFramePlanSnapshot : IReadOnlyList<ReplayFramePlanEntry
         }
         return low;
     }
-}
-
-public sealed record ReplayVideoManifest(
-    int SchemaVersion,
-    string? SourceFileName,
-    string? SourceSha256,
-    ReplayDecodeConfiguration? DecodeConfiguration,
-    AnalysisRange Range,
-    ReplayExportClock Clock,
-    ReplayRenderMode Mode,
-    int Width,
-    int Height,
-    int FrameRate,
-    double Speed,
-    int OutputFrameCount,
-    TimeSpan Duration,
-    ReplayExportKind Kind,
-    string Encoder,
-    string? EncoderWarning,
-    ReplayRenderSettings RenderSettings);
-
-public sealed record ReplayExportResult(
-    ReplayExportKind Kind,
-    string OutputPath,
-    string ManifestPath,
-    int OutputFrameCount,
-    TimeSpan Duration,
-    string? Warning);
-
-public sealed record ReplayExportProgress(
-    int CompletedFrames,
-    int TotalFrames,
-    string Stage)
-{
-    public double Percent => TotalFrames == 0
-        ? 0
-        : Math.Clamp(CompletedFrames * 100d / TotalFrames, 0, 100);
 }
 
 public static class ReplayFramePlan
