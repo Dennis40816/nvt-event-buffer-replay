@@ -86,7 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5350,
+        "viewTypeLines": 5341,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -124,7 +124,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1033
+        "fileLines": 1032
       },
       "owner": "NFU",
       "locations": [
@@ -166,7 +166,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 148
+        "methodLines": 147
       },
       "owner": "NFU",
       "locations": [
@@ -208,7 +208,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 992
+        "fileLines": 983
       },
       "owner": "NFU",
       "locations": [
@@ -17954,26 +17954,6 @@
       "symbol": "IDE1006"
     },
     {
-      "syntaxHash": "4bb3b4ce9679c9ae3eed7362423725821a1def8405cab7f651a040f9207e9ab6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:expandedInspectorRailWidth",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
-      "syntaxHash": "907a7a11d9a2dc0f26f36e699e2a7cfd0550ff22faca3f7ea6050f7d9abd80b3",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "rule": "IDE1006",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.fields:lastDetailPresentationTimestamp",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE1006"
-    },
-    {
       "syntaxHash": "d65fb3975b9fbb421a69e8ebdbf0fe7d9543bdd10ad64435e6be227aa48a60d3",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Output.cs",
@@ -20524,16 +20504,6 @@
       "symbol": "P:Avalonia.Threading.Dispatcher.UIThread"
     },
     {
-      "syntaxHash": "04d724a26995a9f90b7307ac63e62b2aad01e5c3463049153fba5a5b541ba67f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "rule": "RS0030",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.PresentReplayDetails(ITouchReplaySnapshot)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "T:System.Diagnostics.Stopwatch"
-    },
-    {
       "syntaxHash": "c1efc57f36d923fa18e97c99568767d8b1479dd23c1ae03cc214e1e8da8fccfc",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
@@ -20582,16 +20552,6 @@
       "member": "Nvt.Replay.Avalonia.MainWindow.SelectWorkspaceAsync(object?,SelectionChangedEventArgs)",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "P:Avalonia.Threading.Dispatcher.UIThread"
-    },
-    {
-      "syntaxHash": "bc2bbff20bb9adb661089095e7bca8ffd9969e5bf492ac9f1dee1403fb7dc568",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs",
-      "rule": "RS0030",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.ShouldPresentPlaybackDetails()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "T:System.Diagnostics.Stopwatch"
     },
     {
       "syntaxHash": "fa8a4efe499760827beca70b67507bebf7b49898152ec3947579f432faa616d2",

@@ -845,8 +845,7 @@ public partial class MainWindow : Window
         SourceLineButton.IsEnabled = false;
         SourceOffsetText.Text = "-";
         StableIdText.Text = "-";
-        lastDetailPresentationTimestamp = 0;
-        DetailPresentationCount = 0;
+        _detailThrottle.Reset();
         RawRecordsList.ItemsSource = null;
         RegisterSearchTextBox.Text = string.Empty;
         TargetI2cAddressTextBox.Text = TargetI2cAddress.Format(targetI2cAddress);
