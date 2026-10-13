@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -16,7 +15,6 @@ namespace Nvt.Replay.Avalonia.Controls;
 public sealed class ReplayPaintSurface : Control
 {
     private static readonly Cursor PanCursor = new(StandardCursorType.SizeAll);
-    private static readonly TimeSpan LoopCrossfadeDuration = TimeSpan.FromMilliseconds(140);
     private static readonly PaintPalette DarkPalette = PaintPalette.From(ReplayVisualStyle.Dark);
     private static readonly PaintPalette LightPalette = PaintPalette.From(ReplayVisualStyle.Light);
     private PaintPalette Palette => ActualThemeVariant == ThemeVariant.Light ? LightPalette : DarkPalette;
@@ -35,14 +33,12 @@ public sealed class ReplayPaintSurface : Control
     private IBrush AlarmBrush => Palette.Alarm;
     private IBrush InvalidBrush => Palette.Invalid;
     private ReplayScene? scene;
-    private ReplayScene? outgoingScene;
+    private readonly LoopCrossfadeState _crossfade;
     private readonly ReplayTrailBatchCache trailBatchCache = new();
     private readonly Dictionary<int, ReplayLabelAnchor> labelAnchors = [];
     private bool labelAnchorsAdvancedForScene;
     private IReadOnlyList<ReplayTrailDrawBatch> sceneTrailBatches = [];
-    private IReadOnlyList<ReplayTrailDrawBatch> outgoingTrailBatches = [];
     private readonly DispatcherTimer loopCrossfadeTimer;
-    private long loopCrossfadeStarted;
     private double zoomFactor = 1;
     private Vector viewportOffset;
     private bool strongGrid;
@@ -78,16 +74,19 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
-    public ReplayPaintSurface()
+    /// <summary>Creates a paint surface using the system timestamp clock.</summary>
+    public ReplayPaintSurface() : this(TimeProvider.System.GetTimestamp) { }
+
+    internal ReplayPaintSurface(Func<long> readTimestamp)
     {
+        _crossfade = new LoopCrossfadeState(readTimestamp);
         SizeChanged += (_, _) => { if (scene is not null && !labelAnchorsAdvancedForScene) AdvanceLabelAnchors(scene); };
         loopCrossfadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         loopCrossfadeTimer.Tick += (_, _) =>
         {
             if (LoopCrossfadeProgress() >= 1)
             {
-                outgoingScene = null;
-                outgoingTrailBatches = [];
+                _crossfade.End();
                 loopCrossfadeTimer.Stop();
             }
             InvalidateVisual();
@@ -113,20 +112,18 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
+    /// <summary>Shows a scene, optionally fading from the previous scene over the loop transition.</summary>
     public void Show(ReplayScene value, bool crossfade = false)
     {
         ScenePresentationCount++;
         if (crossfade && scene is not null)
         {
-            outgoingScene = scene;
-            outgoingTrailBatches = sceneTrailBatches;
-            loopCrossfadeStarted = Stopwatch.GetTimestamp();
+            _crossfade.Begin(scene, sceneTrailBatches);
             loopCrossfadeTimer.Start();
         }
         else
         {
-            outgoingScene = null;
-            outgoingTrailBatches = [];
+            _crossfade.End();
         }
         scene = value;
         labelAnchorsAdvancedForScene = false;
@@ -161,9 +158,8 @@ public sealed class ReplayPaintSurface : Control
     public void Clear()
     {
         scene = null;
-        outgoingScene = null;
+        _crossfade.End();
         sceneTrailBatches = [];
-        outgoingTrailBatches = [];
         trailBatchCache.Clear();
         labelAnchors.Clear();
         labelAnchorsAdvancedForScene = false;
@@ -331,6 +327,7 @@ public sealed class ReplayPaintSurface : Control
         EndPan(releaseCapture: false);
     }
 
+    /// <inheritdoc />
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -349,9 +346,10 @@ public sealed class ReplayPaintSurface : Control
         DrawAxisLabels(context, viewport, scene);
 
         var transition = LoopCrossfadeProgress();
-        if (outgoingScene is { } previous)
+        if (_crossfade.OutgoingScene is { } previous)
         {
             var previousViewport = BuildViewport(bounds, previous.ViewExtent, zoomFactor, viewportOffset);
+            var outgoingTrailBatches = _crossfade.OutgoingTrailBatches;
             DrawSceneContacts(context, previousViewport, available, previous, outgoingTrailBatches, 1 - transition);
         }
         DrawSceneContacts(context, viewport, available, scene, sceneTrailBatches, transition);
@@ -419,14 +417,7 @@ public sealed class ReplayPaintSurface : Control
         return (labelData, placements);
     }
 
-    private double LoopCrossfadeProgress()
-    {
-        if (outgoingScene is null || loopCrossfadeStarted == 0) return 1;
-        return Math.Clamp(
-            Stopwatch.GetElapsedTime(loopCrossfadeStarted).TotalMilliseconds / LoopCrossfadeDuration.TotalMilliseconds,
-            0,
-            1);
-    }
+    private double LoopCrossfadeProgress() => _crossfade.Progress();
 
     private static Rect BuildAvailableBounds(Rect bounds)
     {
