@@ -328,8 +328,8 @@
       "event": "RegisterActivitySurface.ActivitySelected",
       "method": "RegisterActivitySurface_OnActivitySelected",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "startLine": 796,
-      "endLine": 801,
+      "startLine": 782,
+      "endLine": 787,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
@@ -424,8 +424,8 @@
       "event": "SelectionChanged",
       "method": "SourceAdapterComboBox_OnSelectionChanged",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "startLine": 844,
-      "endLine": 844,
+      "startLine": 830,
+      "endLine": 830,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -792,8 +792,8 @@
       "event": "Click",
       "method": "ExportReadableLogButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "startLine": 803,
-      "endLine": 803,
+      "startLine": 789,
+      "endLine": 789,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",

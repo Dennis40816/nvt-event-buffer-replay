@@ -26,7 +26,7 @@ public partial class MainWindow
         using (configuringCaptureSetup.Enter())
         {
             CaptureSetupEventVersionComboBox.SelectedItem = CurrentCaptureSetupVersion();
-            CaptureSetupI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
+            CaptureSetupI2cAddressTextBox.Text = TargetI2cAddress.Format(targetI2cAddress);
             CaptureSetupPalmProfileComboBox.SelectedIndex = Desay97ProfileComboBox.SelectedIndex;
             PresentCaptureSetupInference(inference, preserveSelectedProfile: false);
         }
@@ -140,7 +140,7 @@ public partial class MainWindow
 
         CaptureSetupDecodeButton.IsEnabled = false;
         targetI2cAddress = targetAddress;
-        TargetI2cAddressTextBox.Text = FormatTargetI2cAddress(targetI2cAddress);
+        TargetI2cAddressTextBox.Text = TargetI2cAddress.Format(targetI2cAddress);
         if (!string.Equals(session?.RegisterProfile, profileChoice.IcFamily, StringComparison.OrdinalIgnoreCase))
         {
             SelectRegisterProfileChoice(profileChoice.IcFamily);
@@ -183,7 +183,7 @@ public partial class MainWindow
         palmProfile = CaptureSetupPalmProfileComboBox.SelectedIndex;
         targetAddress = targetI2cAddress;
         if (string.IsNullOrWhiteSpace(version) ||
-            !TryParseTargetI2cAddress(CaptureSetupI2cAddressTextBox.Text, out targetAddress))
+            !TargetI2cAddress.TryParse(CaptureSetupI2cAddressTextBox.Text, out targetAddress))
             return false;
         if (!version.Equals("0x97", StringComparison.OrdinalIgnoreCase)) return true;
         return profileChoice.IcFamily is not null && palmProfile >= 0;
@@ -235,7 +235,7 @@ public partial class MainWindow
     private void CaptureSetupI2cAddressTextBox_OnLostFocus(object? sender, RoutedEventArgs e)
     {
         if (session is null ||
-            !TryParseTargetI2cAddress(CaptureSetupI2cAddressTextBox.Text, out var requested))
+            !TargetI2cAddress.TryParse(CaptureSetupI2cAddressTextBox.Text, out var requested))
         {
             SetCaptureSetupValidation(
                 "Enter a 7-bit I²C address from 0x00 through 0x7F.",
@@ -244,8 +244,8 @@ public partial class MainWindow
             return;
         }
 
-        CaptureSetupI2cAddressTextBox.Text = FormatTargetI2cAddress(requested);
-        CaptureSetupTargetText.Text = $"I²C {FormatTargetI2cAddress(requested)}";
+        CaptureSetupI2cAddressTextBox.Text = TargetI2cAddress.Format(requested);
+        CaptureSetupTargetText.Text = $"I²C {TargetI2cAddress.Format(requested)}";
         var inference = NvtRegisterProfileInference.Infer(session.Records, requested);
         _captureWorkspace.Configure(inference);
         using (configuringCaptureSetup.Enter())
@@ -264,7 +264,7 @@ public partial class MainWindow
             CaptureSetupDecodeButton.IsEnabled = false;
             return;
         }
-        if (!TryParseTargetI2cAddress(CaptureSetupI2cAddressTextBox.Text, out _))
+        if (!TargetI2cAddress.TryParse(CaptureSetupI2cAddressTextBox.Text, out _))
         {
             SetCaptureSetupValidation(
                 "Enter a 7-bit I²C address from 0x00 through 0x7F.",

@@ -86,7 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5469,
+        "viewTypeLines": 5379,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -124,7 +124,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1143
+        "fileLines": 1053
       },
       "owner": "NFU",
       "locations": [
@@ -2240,186 +2240,6 @@
       "rule": "CA1305",
       "count": 1,
       "member": "Nvt.Replay.Avalonia.MainWindow.FormatBytes(IReadOnlyList<byte>)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "7dc39e6765e808a0ee9e6a9909c0385520e2be6839d50bb1cec38411f584eff6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "a6e30019d022a9ab64c28201b39a6c197e3a5e6e35acd8f2435dd398b6478387",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "ad96efd3746ed0938b525685d5bb5f30c20f212cc755ca4be256cafacc8aaa47",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "b5a2d3a7695f45c2df970be325ab135f0e0e58ca8e1aa3a51e85787a7b355f2a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "c4a67e64205d9d0d7b44381da1282a71033a73a62845579aa003ebc5530489ed",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "c6d65ff020d33c0e8c69ab368a4cede4e58af3de3db476d042ea5aa3a05dd7aa",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "c74d21edaf7a08721a3dd503287c481ad6ea5e33a11ed3f7257f88c244d885aa",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "f414feb4dd030b162b3d45bc4dacafae5ecd4f08866b79ca151c7cf09f22f1a5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "fe5a454bf500325279b98c122a706dedb2b72b4e4b3644fea0c1b960fcba93c1",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "3b301e2320bf75b4961d30e1f2437f51f4347df00bc7f220834771619a3003f8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "51ee11eb35cd07365d7b006620dbfa9e2487eb645afc854553cf659df2613c63",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "7dc39e6765e808a0ee9e6a9909c0385520e2be6839d50bb1cec38411f584eff6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "9bb66050480ec99e9e5eac2e42308a553160492171f079c035ff7634b760a9d1",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "a6e30019d022a9ab64c28201b39a6c197e3a5e6e35acd8f2435dd398b6478387",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "c6d65ff020d33c0e8c69ab368a4cede4e58af3de3db476d042ea5aa3a05dd7aa",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "ec23f5d7e1e129c7d077a33b1029e8162808304a96159878f343a95a742a9aa7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "f3a9908d3d3ec39604cbca51f05d0c2c6fb3904ea1ef29be8ffc7e10e199365d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CA1305"
-    },
-    {
-      "syntaxHash": "faac34462bdf249e0b9d9fc44662e93e07751a2e5e337ce64502152e5903766e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "CA1305",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
       "project": "Nvt.Replay.Avalonia",
       "symbol": "CA1305"
     },
@@ -16632,36 +16452,6 @@
       "member": "<global>",
       "project": "Nvt.Replay.Sources",
       "symbol": "IDE0005"
-    },
-    {
-      "syntaxHash": "c8d2c1a1faac86c3f26694ec8be6fcd90a584ae63889edf2a3593fa4ee9aa88d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "IDE0051",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE0051"
-    },
-    {
-      "syntaxHash": "ced58275d35a201fdb1435bcec9b3b67ae370bcb545c361a04b833904b532c6e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "IDE0051",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.FormatDecodedFields(Desay97Frame)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE0051"
-    },
-    {
-      "syntaxHash": "9bafe28c7b71e908309cc3c17e51fa0b9ab6c4be975d3d62b222daf729ea54c7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
-      "rule": "IDE0051",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.VersionText(CommonEventBufferVersion)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "IDE0051"
     },
     {
       "syntaxHash": "e01f25807ff7bd1fbaaf5c94ef772c7e282ad36b3584397c69525a8dc924cd21",
