@@ -115,6 +115,33 @@ public sealed class ReplayPaintSurfaceInteractionTests
     }
 
     [AvaloniaFact]
+    public void Hiding_and_showing_the_legend_clears_an_active_hover()
+    {
+        using var host = new Host();
+        var resting = host.Frame();
+        host.Window.MouseMove(LegendPoint);
+        Assert.NotEqual(resting, host.Frame());
+
+        host.Surface.SetLegendVisible(false);
+        host.Frame();
+        host.Surface.SetLegendVisible(true);
+
+        Assert.Equal(resting, host.Frame());
+    }
+
+    [AvaloniaFact]
+    public void Leaving_the_surface_clears_the_hover()
+    {
+        using var host = new Host();
+        var resting = host.Frame();
+        host.Window.MouseMove(LegendPoint);
+        Assert.NotEqual(resting, host.Frame());
+
+        host.Window.MouseMove(new Point(-20, -20));
+
+        Assert.Equal(resting, host.Frame());
+    }
+    [AvaloniaFact]
     public void Hidden_legend_ignores_hover_and_click()
     {
         using var host = new Host();
