@@ -90,6 +90,35 @@ Owner-gated merge condition: all review-gated conditions, plus the owner's
 latest review decision being an approval on that same head. A later change
 request or dismissal blocks it.
 
+Agent-gated (tier B): a pull request that would be owner-gated can skip the
+owner's approval when every one of these holds. Otherwise it stays
+owner-gated, and the gate line in the check says why tier B was not granted.
+
+- The first non-empty line of the pull request body is exactly
+  `Approval tier: B`.
+- Every changed path, and the old path of a rename, is under `src/**` or
+  `tests/**` at the repository root, or is one of the four ledger files
+  `eng/code-health/baseline.json`, `eng/code-health/test-debt.json`,
+  `eng/file-size-baseline.json` and `eng/architecture/command-entries.json`.
+- No changed path is a build-graph file: `*.sln`, `*.slnx`, `*.slnf`,
+  `*.csproj`, `packages.lock.json`, `*.props`, `*.targets`, `*.rsp`,
+  `global.json`, `nuget.config`, `.editorconfig`, `.globalconfig`. These are
+  denied at any depth, even inside `src/**`.
+- Files under `tests/**` are new. Any other status is owner-gated.
+- Added plus deleted lines, not counting the four ledger files, are at most
+  600.
+- The label `needs-owner` is not set, and the owner's latest review decision
+  is not a change request.
+- The base branch is not `main`.
+- The review-gated merge condition holds: a review record accepts the exact
+  head, and `build-and-test` is green. The ledgers can only shrink there:
+  `health`, the line budget and the command inventory test fail otherwise.
+
+The script cannot tell who reviewed or whether behavior changed. Tier B
+relies on the independent reviewer named in the record. The owner can pull any
+pull request back with the label `needs-owner`, and the weekly list of merged
+tier B pull requests is the audit trail.
+
 The required build check is the `build-and-test` job of
 `.github/workflows/ci.yml`. CI runs on every pull request and on pushes to
 `main`, three-part numeric version trunks such as `0.1.2`, and `x` trunks such as

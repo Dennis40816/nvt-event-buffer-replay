@@ -175,6 +175,77 @@ def path_matches(path: str, pattern: str) -> bool:
                for index in range(len(parts)))
 
 
+def anchored_match(path: str, pattern: str) -> bool:
+    """Match the whole path from its root, ignoring case; no suffix search."""
+    return fnmatch.fnmatchcase(path.replace("\\", "/").casefold(),
+                               pattern.casefold())
+
+
+def agent_gated_result(policy: dict, base_ref: str, pull: dict,
+                       files: list[dict], reviews: list[dict]) -> tuple[bool, str]:
+    """Decide whether an owner-gated pull request qualifies for tier B.
+
+    Every condition must hold. The allowed paths are anchored at the
+    repository root, the denied patterns match at any depth, and the first
+    line of the pull request body must name the tier exactly.
+    """
+    setting = policy.get("agent_gated")
+    if not isinstance(setting, dict) or setting.get("enabled") is not True:
+        return False, "tier B is not enabled"
+    owner_branch = policy.get("owner_gated_base_branch")
+    if owner_branch is not None and base_ref.casefold() == owner_branch.casefold():
+        return False, f"base branch {base_ref}"
+    body = pull.get("body") or ""
+    require(isinstance(body, str), "pull request body is malformed")
+    first = next((line.strip() for line in body.splitlines() if line.strip()), "")
+    if first != setting["declaration"]:
+        return False, f"first line of the body is not '{setting['declaration']}'"
+    labels = pull.get("labels") or []
+    require(isinstance(labels, list) and all(isinstance(item, dict) for item in labels),
+            "pull request labels are malformed")
+    veto = str(setting["veto_label"]).casefold()
+    if any(str(item.get("name") or "").casefold() == veto for item in labels):
+        return False, f"label {setting['veto_label']} is set"
+    owner = policy["owner"]
+    decisions = [review for review in reviews if identity(review, owner)
+                 and review.get("state") in
+                 ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")]
+    if decisions and max(decisions, key=review_order)["state"] == "CHANGES_REQUESTED":
+        return False, "owner's latest decision is changes_requested"
+    tests_non_added = policy.get("tests_non_added")
+    ledgers = [pattern.casefold() for pattern in setting["ledger_paths"]]
+    changed_lines = 0
+    for item in files:
+        name, status = item.get("filename"), item.get("status")
+        require(isinstance(name, str) and isinstance(status, str),
+                "changed file is malformed")
+        paths = [name]
+        if status in ("renamed", "copied"):
+            previous = item.get("previous_filename")
+            require(isinstance(previous, str), "renamed file has no previous_filename")
+            paths.append(previous)
+        for path in paths:
+            if path.replace("\\", "/").casefold() in ledgers:
+                continue
+            if any(path_matches(path, pattern) for pattern in setting["denied_paths"]):
+                return False, f"denied path {path}"
+            if not any(anchored_match(path, pattern)
+                       for pattern in setting["allowed_paths"]):
+                return False, f"path outside the allowed list {path}"
+            if (status != "added" and tests_non_added is not None
+                    and anchored_match(path, tests_non_added)):
+                return False, f"{status} file under tests: {path}"
+        if name.replace("\\", "/").casefold() not in ledgers:
+            additions, deletions = item.get("additions"), item.get("deletions")
+            require(type(additions) is int and type(deletions) is int,
+                    "changed file has no line counts")
+            changed_lines += additions + deletions
+    limit = setting["max_changed_lines"]
+    if changed_lines > limit:
+        return False, f"{changed_lines} changed lines exceed the limit of {limit}"
+    return True, f"tier B declared; {changed_lines} changed line(s) outside the ledgers"
+
+
 def identity(review: dict, principal: dict) -> bool:
     user = review.get("user")
     return (isinstance(user, dict) and user.get("id") == principal["id"]
@@ -498,14 +569,24 @@ def evaluate(reader: Reader, policy: dict,
     comparison = reader.compare(base_sha, head_sha)
     behind = comparison["behind_by"]
     require(behind >= 0, "negative behind_by")
-    gate, gate_reason = classify(policy, base_ref, reader.files())
+    files = reader.files()
+    gate, gate_reason = classify(policy, base_ref, files)
     reviews = reader.reviews()
+    if gate == "owner-gated":
+        agent_ok, agent_reason = agent_gated_result(policy, base_ref, pull, files, reviews)
+        if agent_ok:
+            gate, gate_reason = "agent-gated", agent_reason
+        elif not agent_reason.startswith(("tier B is not enabled",
+                                          "first line of the body")):
+            gate_reason += f"; tier B not granted: {agent_reason}"
     record_ok, record_reason = record_result(reviews, policy, head_sha,
                                            reader, base_sha, comparison)
     if gate == "owner-gated":
         owner_ok, owner_reason = owner_result(reviews, policy["owner"], head_sha)
         if policy.get("owner_requires_review_record", True) is False:
             record_ok, record_reason = True, "not required for owner-gated pull request"
+    elif gate == "agent-gated":
+        owner_ok, owner_reason = True, "not required for agent-gated pull request"
     else:
         owner_ok, owner_reason = True, "not required for review-gated pull request"
     if reader.fixture is None:

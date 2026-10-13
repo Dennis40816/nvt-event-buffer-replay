@@ -1,7 +1,6 @@
 # Every path below is owner-gated by .github/approval-policy.json.
 # CODEOWNERS cannot express the modified-versus-added rule under tests/**,
 # case-insensitive matching, or the main base-branch rule. The script covers them.
-**/src/** @Dennis40816
 *.sln @Dennis40816
 *.slnx @Dennis40816
 *.slnf @Dennis40816
@@ -32,3 +31,10 @@
 **/.mcp.json @Dennis40816
 **/.gitignore @Dennis40816
 **/.gitattributes @Dennis40816
+
+# Tier B ledgers (agent-gated, see CONTRIBUTING.md). A pattern with no owner
+# removes the code owner for these files. The approval script still gates them.
+**/eng/code-health/baseline.json
+**/eng/code-health/test-debt.json
+**/eng/file-size-baseline.json
+**/eng/architecture/command-entries.json

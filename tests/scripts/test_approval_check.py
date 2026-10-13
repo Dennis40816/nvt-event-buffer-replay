@@ -592,9 +592,13 @@ class ApprovalCheckTests(unittest.TestCase):
         lines = (ROOT / ".github/CODEOWNERS").read_text(
             encoding="utf-8").splitlines()
         actual = [line.split() for line in lines if line and not line.startswith("#")]
+        dropped = POLICY["agent_gated"]["codeowners_dropped_patterns"]
         expected = [[pattern if pattern.startswith("*.") else f"**/{pattern}",
                      "@Dennis40816"]
-                    for pattern in POLICY["owner_gated_patterns"]]
+                    for pattern in POLICY["owner_gated_patterns"]
+                    if pattern not in dropped]
+        # A pattern with no owner removes the code owner for the tier B ledgers.
+        expected += [[f"**/{path}"] for path in POLICY["agent_gated"]["ledger_paths"]]
         self.assertEqual(actual, expected)
         self.assertIn("modified-versus-added", "\n".join(lines))
 
@@ -610,6 +614,21 @@ class ApprovalCheckTests(unittest.TestCase):
             self.assertIs(type(principal["id"]), int)
         self.assertIsInstance(POLICY["owner_gated_patterns"], list)
         self.assertEqual(POLICY["tests_non_added"], "tests/**")
+        agent = POLICY["agent_gated"]
+        self.assertIs(agent["enabled"], True)
+        self.assertEqual(agent["declaration"], "Approval tier: B")
+        self.assertEqual(agent["veto_label"], "needs-owner")
+        self.assertEqual(agent["max_changed_lines"], 600)
+        self.assertEqual(agent["allowed_paths"], ["src/**", "tests/**"])
+        self.assertEqual(agent["ledger_paths"], [
+            "eng/code-health/baseline.json",
+            "eng/code-health/test-debt.json",
+            "eng/file-size-baseline.json",
+            "eng/architecture/command-entries.json",
+        ])
+        for pattern in agent["denied_paths"]:
+            self.assertIn(pattern, POLICY["owner_gated_patterns"])
+        self.assertEqual(agent["codeowners_dropped_patterns"], ["src/**"])
         self.assertEqual(POLICY["owner_gated_base_branch"], "main")
         self.assertEqual(POLICY["required_check"], "build-and-test")
         self.assertEqual(POLICY["approval_status_context"],
@@ -698,6 +717,194 @@ class ApprovalCheckTests(unittest.TestCase):
                          ["success", "failure"])
         self.assertIn("for attempt in 1 2 3; do", body)
         self.assertIn('-f "state=$state"', body)
+
+    # Tier B (agent-gated).
+    def tier_b(self, files, body="Approval tier: B\n\nIntent: refactor.",
+               labels=None):
+        self.reader.payloads["files-1"] = files
+        self.reader.payloads["pull"]["body"] = body
+        self.reader.payloads["pull"]["labels"] = [
+            {"name": name} for name in (labels or [])]
+
+    @staticmethod
+    def changed(path, status="modified", additions=5, deletions=2, **extra):
+        return {"filename": path, "status": status, "additions": additions,
+                "deletions": deletions, **extra}
+
+    def assert_owner_gated(self, expect_reason=None):
+        result = self.result()
+        self.assertIn("owner-gated", result["gate"][1])
+        self.assertFalse(result["owner approval"][0])
+        if expect_reason is not None:
+            self.assertIn(expect_reason, result["gate"][1])
+
+    def test_tier_b_source_change_is_agent_gated(self):
+        self.tier_b([self.changed("src/Nvt.Replay.Avalonia/View.cs")])
+        result = self.result()
+        self.assertTrue(all(ok for ok, _ in result.values()))
+        self.assertIn("agent-gated", result["gate"][1])
+        self.assertIn("not required for agent-gated", result["owner approval"][1])
+
+    def test_tier_b_still_needs_a_review_record(self):
+        self.tier_b([self.changed("src/View.cs")])
+        self.reader.payloads["reviews-1"] = []
+        result = self.result()
+        self.assertIn("agent-gated", result["gate"][1])
+        self.assertFalse(result["review record"][0])
+
+    def test_tier_b_without_declaration_is_owner_gated(self):
+        self.tier_b([self.changed("src/View.cs")], body="Intent: refactor.")
+        self.assert_owner_gated()
+        self.assertNotIn("tier B not granted", self.result()["gate"][1])
+
+    def test_tier_b_declaration_must_be_the_first_line(self):
+        self.tier_b([self.changed("src/View.cs")],
+                    body="Intent\n\nApproval tier: B")
+        self.assert_owner_gated()
+
+    def test_tier_b_declaration_must_be_exact(self):
+        for body in ("Approval tier: B2", "approval tier: b",
+                     "Approval tier: A", "Approval tier: B (proposed)"):
+            with self.subTest(body=body):
+                self.tier_b([self.changed("src/View.cs")], body=body)
+                self.assert_owner_gated()
+
+    def test_tier_b_leading_blank_lines_are_ignored(self):
+        self.tier_b([self.changed("src/View.cs")],
+                    body="\n  \nApproval tier: B  \nrest")
+        self.assertIn("agent-gated", self.result()["gate"][1])
+
+    def test_tier_b_denies_build_graph_files_even_under_src(self):
+        for path in ("src/App/App.csproj", "src/Directory.Build.props",
+                     "src/x/packages.lock.json", "src/nuget.config",
+                     "Nvt.EventBufferReplay.sln", "src/.editorconfig"):
+            with self.subTest(path=path):
+                self.tier_b([self.changed(path)])
+                self.assert_owner_gated("denied path")
+
+    def test_tier_b_rejects_paths_outside_the_allowed_list(self):
+        for path in (".github/workflows/ci.yml", ".github/approval-policy.json",
+                     "scripts/verify.ps1", "eng/code-health/projects.props",
+                     "eng/architecture/other.json", "docs/adr/0001.md",
+                     "VERSION", "AGENTS.md", "CONTRIBUTING.md"):
+            with self.subTest(path=path):
+                self.tier_b([self.changed("src/View.cs"), self.changed(path)])
+                self.assert_owner_gated()
+
+    def test_tier_b_allowed_paths_are_anchored_at_the_root(self):
+        for path in ("docs/src/guide.md", ".github/workflows/src/x.yml",
+                     "tools/tests/new.cs"):
+            with self.subTest(path=path):
+                self.tier_b([self.changed(path, status="added")])
+                result = self.result()
+                self.assertNotIn("agent-gated", result["gate"][1])
+
+    def test_tier_b_modified_or_deleted_tests_are_owner_gated(self):
+        for status in ("modified", "removed", "renamed"):
+            with self.subTest(status=status):
+                self.tier_b([self.changed("tests/A.Tests/FooTests.cs",
+                                          status=status,
+                                          previous_filename="tests/A.Tests/Old.cs")])
+                self.assert_owner_gated("file under tests")
+
+    def test_tier_b_allows_added_tests(self):
+        self.tier_b([self.changed("src/View.cs"),
+                     self.changed("tests/A.Tests/NewTests.cs", status="added")])
+        self.assertIn("agent-gated", self.result()["gate"][1])
+
+    def test_tier_b_rename_checks_the_old_path(self):
+        self.tier_b([self.changed("src/Moved.cs", status="renamed",
+                                  previous_filename=".github/workflows/ci.yml")])
+        self.assert_owner_gated()
+
+    def test_tier_b_ledgers_do_not_count_toward_the_line_limit(self):
+        self.tier_b([self.changed("src/View.cs", additions=400, deletions=100),
+                     self.changed("eng/code-health/baseline.json",
+                                  additions=3000, deletions=3000),
+                     self.changed("eng/code-health/test-debt.json"),
+                     self.changed("eng/file-size-baseline.json"),
+                     self.changed("eng/architecture/command-entries.json")])
+        result = self.result()
+        self.assertIn("agent-gated", result["gate"][1])
+        self.assertIn("500 changed line(s)", result["gate"][1])
+
+    def test_tier_b_line_limit_is_inclusive(self):
+        self.tier_b([self.changed("src/View.cs", additions=300, deletions=300)])
+        self.assertIn("agent-gated", self.result()["gate"][1])
+        self.tier_b([self.changed("src/View.cs", additions=300, deletions=301)])
+        self.assert_owner_gated("exceed the limit of 600")
+
+    def test_tier_b_line_count_sums_all_files(self):
+        self.tier_b([self.changed("src/A.cs", additions=300, deletions=0),
+                     self.changed("src/B.cs", additions=250, deletions=51)])
+        self.assert_owner_gated("601 changed lines")
+
+    def test_tier_b_missing_line_counts_fail_closed(self):
+        self.tier_b([{"filename": "src/View.cs", "status": "modified"}])
+        with self.assertRaises(approval.InputError):
+            approval.evaluate(self.reader, POLICY, None)
+
+    def test_tier_b_veto_label_returns_to_owner(self):
+        for label in ("needs-owner", "Needs-Owner"):
+            with self.subTest(label=label):
+                self.tier_b([self.changed("src/View.cs")], labels=["bug", label])
+                self.assert_owner_gated("label needs-owner")
+
+    def test_tier_b_owner_change_request_returns_to_owner(self):
+        self.tier_b([self.changed("src/View.cs")])
+        self.reader.payloads["reviews-1"].append(
+            review(102, state="CHANGES_REQUESTED"))
+        self.assert_owner_gated("changes_requested")
+
+    def test_tier_b_later_owner_approval_is_agent_gated_again(self):
+        self.tier_b([self.changed("src/View.cs")])
+        self.reader.payloads["reviews-1"].append(
+            review(102, state="CHANGES_REQUESTED"))
+        self.reader.payloads["reviews-1"].append(review(103))
+        self.assertTrue(all(ok for ok, _ in self.result().values()))
+
+    def test_tier_b_other_users_change_request_does_not_veto(self):
+        self.tier_b([self.changed("src/View.cs")])
+        self.reader.payloads["reviews-1"].append(
+            review(102, user=OTHER, state="CHANGES_REQUESTED"))
+        self.assertIn("agent-gated", self.result()["gate"][1])
+
+    def test_tier_b_into_main_is_owner_gated(self):
+        self.tier_b([self.changed("src/View.cs")])
+        self.reader.payloads["pull"]["base"]["ref"] = "main"
+        self.reader.payloads["base-ref"]["ref"] = "refs/heads/main"
+        self.assert_owner_gated("base branch main")
+
+    def test_tier_b_can_be_switched_off_in_policy(self):
+        self.tier_b([self.changed("src/View.cs")])
+        policy = copy.deepcopy(POLICY)
+        policy["agent_gated"]["enabled"] = False
+        result = {name: (ok, reason) for name, ok, reason in
+                  approval.evaluate(self.reader, policy, None)}
+        self.assertIn("owner-gated", result["gate"][1])
+        self.assertFalse(result["owner approval"][0])
+
+    def test_tier_b_head_behind_base_still_fails(self):
+        self.tier_b([self.changed("src/View.cs")])
+        self.reader.payloads["compare"]["behind_by"] = 1
+        self.assertFalse(self.result()["up to date"][0])
+
+    def test_tier_b_denied_reason_names_the_path_in_the_check_line(self):
+        self.tier_b([self.changed("src/App/App.csproj")])
+        self.assertIn("tier B not granted: denied path src/App/App.csproj",
+                      self.result()["gate"][1])
+
+    def test_contributing_documents_tier_b(self):
+        text = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        agent = POLICY["agent_gated"]
+        self.assertIn("Agent-gated (tier B)", text)
+        self.assertIn(f"`{agent['declaration']}`", text)
+        self.assertIn(f"`{agent['veto_label']}`", text)
+        self.assertIn(f"at most\n  {agent['max_changed_lines']}", text)
+        for path in agent["ledger_paths"]:
+            self.assertIn(f"`{path}`", text)
+        for pattern in agent["denied_paths"]:
+            self.assertIn(f"`{pattern}`", text)
 
 
 if __name__ == "__main__":
