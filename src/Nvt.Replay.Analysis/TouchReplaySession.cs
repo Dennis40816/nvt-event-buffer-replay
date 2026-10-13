@@ -2,15 +2,22 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Configures host-state checkpoints, nominal frame timing, and display-time compression of idle gaps.</summary>
+/// <param name="CheckpointInterval">The number of logical frames between cached host-state checkpoints.</param>
+/// <param name="DefaultFrameInterval">The nominal frame interval used for frame time and unusable timestamp gaps.</param>
+/// <param name="IdleGapThreshold">The recorded interval above which a gap is replaced in display time.</param>
+/// <param name="CompressedIdleGap">The display-time interval substituted for gaps above the idle gap threshold.</param>
 public sealed record TouchReplayOptions(
     int CheckpointInterval,
     TimeSpan DefaultFrameInterval,
     TimeSpan IdleGapThreshold,
     TimeSpan CompressedIdleGap)
 {
+    /// <summary>Gets the nominal frame interval calculated as one second divided by 120.</summary>
     public static TimeSpan NominalTpFrameInterval { get; } =
         TimeSpan.FromTicks(TimeSpan.TicksPerSecond / 120);
 
+    /// <summary>Gets replay options with 256-frame checkpoints, 120 Hz timing, and gaps over one second replaced by 100 ms.</summary>
     public static TouchReplayOptions Default { get; } = new(
         256,
         NominalTpFrameInterval,
@@ -18,6 +25,14 @@ public sealed record TouchReplayOptions(
         TimeSpan.FromMilliseconds(100));
 }
 
+/// <summary>Stores a reported contact's identifier, type, status, coordinates, source record, and invalid flag.</summary>
+/// <param name="Id">The identifier of the reported contact.</param>
+/// <param name="Type">The touch type reported for the contact.</param>
+/// <param name="Status">The touch status reported for the contact.</param>
+/// <param name="X">The X coordinate stored for the reported contact.</param>
+/// <param name="Y">The Y coordinate stored for the reported contact.</param>
+/// <param name="SourceRecordId">The identifier of the source record that reported this contact.</param>
+/// <param name="Invalid">Whether the contact is marked invalid and excluded from active-contact checks.</param>
 public sealed record ReplayContact(
     byte Id,
     TouchType Type,
@@ -27,12 +42,21 @@ public sealed record ReplayContact(
     string SourceRecordId,
     bool Invalid = false)
 {
+    /// <summary>Indicates an Enter or Move contact, or a Palm contact with NoFinger status, unless marked invalid.</summary>
     public bool IsActive =>
         !Invalid &&
         (Status is TouchStatus.Enter or TouchStatus.Move ||
          Type == TouchType.Palm && Status == TouchStatus.NoFinger);
 }
 
+/// <summary>Stores recorded, nominal frame, and compressed display times for a logical replay frame.</summary>
+/// <param name="LogicalIndex">The zero-based logical frame index.</param>
+/// <param name="RecordedTime">The elapsed capture time accumulated from timestamps or synthetic frame intervals.</param>
+/// <param name="FrameTime">The logical frame index multiplied by the nominal frame interval.</param>
+/// <param name="DisplayTime">The elapsed display time after replacing gaps above the idle gap threshold.</param>
+/// <param name="RecordedDelta">The interval added to recorded time for this frame, with zero used for the first frame.</param>
+/// <param name="TimestampSynthetic">Whether the frame lacks usable timestamp timing and uses synthetic timing.</param>
+/// <param name="IdleGapCompressed">Whether the recorded interval exceeds the configured idle gap threshold.</param>
 public sealed record ReplayTimelineEntry(
     int LogicalIndex,
     TimeSpan RecordedTime,
@@ -42,6 +66,14 @@ public sealed record ReplayTimelineEntry(
     bool TimestampSynthetic,
     bool IdleGapCompressed);
 
+/// <summary>Carries source evidence, reported contacts, and host-state flags projected from a decoded frame.</summary>
+/// <param name="PrimarySource">The source record used for frame timestamps and diagnostic provenance.</param>
+/// <param name="PhysicalRecords">The physical source records associated with the decoded frame.</param>
+/// <param name="ReportedContacts">The contacts reported by the frame.</param>
+/// <param name="HostReportedContacts">The contacts used to replace host state when the frame is eligible.</param>
+/// <param name="AllBreak">Whether the frame carries an All Break flag that clears eligible host contact state.</param>
+/// <param name="GlobalPalm">Whether the frame carries a global palm flag that clears eligible host contact state.</param>
+/// <param name="HostStateEligible">Whether the frame is eligible to update host contact state.</param>
 public sealed record TouchReplayFrameProjection(
     SourceRecord PrimarySource,
     IReadOnlyList<SourceRecord> PhysicalRecords,
@@ -51,20 +83,40 @@ public sealed record TouchReplayFrameProjection(
     bool GlobalPalm,
     bool HostStateEligible);
 
+/// <summary>Exposes a decoded frame, its source evidence and timing, and its reported and replayed host contact states.</summary>
 public interface ITouchReplaySnapshot
 {
+    /// <summary>Gets the zero-based logical frame index of the snapshot.</summary>
     int LogicalIndex { get; }
+    /// <summary>Gets the decoded frame represented by the snapshot.</summary>
     object DecodedFrame { get; }
+    /// <summary>Gets the source record selected as the frame's primary evidence.</summary>
     SourceRecord PrimarySource { get; }
+    /// <summary>Gets the physical source records associated with the decoded frame.</summary>
     IReadOnlyList<SourceRecord> PhysicalRecords { get; }
+    /// <summary>Gets the recorded, nominal frame, and compressed display times for the snapshot.</summary>
     ReplayTimelineEntry Timeline { get; }
+    /// <summary>Gets the contacts reported by the snapshot's frame.</summary>
     IReadOnlyList<ReplayContact> ReportedContacts { get; }
+    /// <summary>Gets the host contact state reconstructed through this frame.</summary>
     IReadOnlyList<ReplayContact> HostContacts { get; }
+    /// <summary>Indicates an All Break frame; the default implementation returns false.</summary>
     bool AllBreak => false;
+    /// <summary>Indicates whether the replayed host state has its global palm flag set.</summary>
     bool GlobalPalm { get; }
+    /// <summary>Indicates whether the frame is marked as eligible to update host state.</summary>
     bool HostStateUpdated { get; }
 }
 
+/// <summary>Stores a typed decoded frame with its source projection, timing, reported contacts, and replayed host state.</summary>
+/// <param name="LogicalIndex">The zero-based logical index of the decoded frame.</param>
+/// <param name="Frame">The decoded frame represented by the snapshot.</param>
+/// <param name="Projection">The source evidence, reported contacts, and host-state flags projected from the frame.</param>
+/// <param name="Timeline">The recorded, nominal frame, and compressed display times for the frame.</param>
+/// <param name="ReportedContacts">The contacts reported by this frame's projection.</param>
+/// <param name="HostContacts">The host contact state after applying eligible frame projections.</param>
+/// <param name="GlobalPalm">Whether the replayed host state's global palm flag is set.</param>
+/// <param name="HostStateUpdated">Whether the frame projection is marked as eligible to update host state.</param>
 public sealed record TouchReplaySnapshot<TFrame>(
     int LogicalIndex,
     TFrame Frame,
@@ -75,22 +127,35 @@ public sealed record TouchReplaySnapshot<TFrame>(
     bool GlobalPalm,
     bool HostStateUpdated) : ITouchReplaySnapshot
 {
+    /// <inheritdoc />
     public object DecodedFrame => Frame!;
+    /// <inheritdoc />
     public SourceRecord PrimarySource => Projection.PrimarySource;
+    /// <inheritdoc />
     public IReadOnlyList<SourceRecord> PhysicalRecords => Projection.PhysicalRecords;
+    /// <inheritdoc />
     public bool AllBreak => Projection.AllBreak;
 }
 
+/// <summary>Exposes replay frames, timeline evidence, diagnostics, and snapshot reconstruction.</summary>
 public interface ITouchReplaySession
 {
+    /// <summary>Gets the number of decoded frames in the replay session.</summary>
     int Count { get; }
+    /// <summary>Gets the number of cached host-state checkpoints; the default implementation returns zero.</summary>
     int CheckpointCount => 0;
+    /// <summary>Gets the configured nominal interval used for frame time and synthetic timestamp gaps.</summary>
     TimeSpan FrameInterval { get; }
+    /// <summary>Gets the recorded, nominal frame, and compressed display times for each logical frame.</summary>
     IReadOnlyList<ReplayTimelineEntry> Timeline { get; }
+    /// <summary>Gets the diagnostics associated with the replay session.</summary>
     IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }
+    /// <summary>Gets all contacts reported by frame projections in capture order.</summary>
     IReadOnlyList<ReplayContact> AllReportedContacts { get; }
+    /// <summary>Reconstructs the replay snapshot at the requested logical frame index.</summary>
     ITouchReplaySnapshot Seek(int logicalIndex);
 
+    /// <summary>Enumerates replay snapshots in logical frame order and checks cancellation before each frame.</summary>
     IEnumerable<ITouchReplaySnapshot> EnumerateSnapshots(CancellationToken cancellationToken = default)
     {
         for (var index = 0; index < Count; index++)
@@ -101,6 +166,7 @@ public interface ITouchReplaySession
     }
 }
 
+/// <summary>Reconstructs replay snapshots and host contact state from frame projections using cached checkpoints.</summary>
 public class TouchReplaySession<TFrame> : ITouchReplaySession
 {
     private readonly IReadOnlyList<TFrame> frames;
@@ -109,6 +175,7 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
     private readonly SortedDictionary<int, HostCheckpoint> checkpoints = [];
     private readonly TouchReplayOptions options;
 
+    /// <summary>Creates frame projections, replay timelines, host-state checkpoints, and capture-end diagnostics.</summary>
     protected TouchReplaySession(
         IReadOnlyList<TFrame> frames,
         Func<TFrame, TouchReplayFrameProjection> projector,
@@ -126,13 +193,20 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
         Diagnostics = BuildCheckpointsAndDiagnostics();
     }
 
+    /// <inheritdoc />
     public int Count => frames.Count;
+    /// <inheritdoc />
     public int CheckpointCount => checkpoints.Count;
+    /// <inheritdoc />
     public TimeSpan FrameInterval { get; }
+    /// <inheritdoc />
     public IReadOnlyList<ReplayTimelineEntry> Timeline => timeline;
+    /// <inheritdoc />
     public IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }
+    /// <inheritdoc />
     public IReadOnlyList<ReplayContact> AllReportedContacts { get; }
 
+    /// <summary>Reconstructs a typed snapshot at the requested logical frame index from the nearest cached checkpoint.</summary>
     public TouchReplaySnapshot<TFrame> Seek(int logicalIndex)
     {
         if (logicalIndex < 0 || logicalIndex >= frames.Count)
@@ -154,6 +228,7 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
 
     ITouchReplaySnapshot ITouchReplaySession.Seek(int logicalIndex) => Seek(logicalIndex);
 
+    /// <inheritdoc />
     public IEnumerable<ITouchReplaySnapshot> EnumerateSnapshots(CancellationToken cancellationToken = default)
     {
         var state = HostCheckpoint.Empty;
@@ -165,6 +240,7 @@ public class TouchReplaySession<TFrame> : ITouchReplaySession
         }
     }
 
+    /// <summary>Returns the snapshot at the supplied logical index plus the delta, clamped to the loaded frame range.</summary>
     public TouchReplaySnapshot<TFrame> Step(int logicalIndex, int delta)
     {
         if (frames.Count == 0)
