@@ -14,7 +14,7 @@ public partial class MainWindow : Window
 {
     private static readonly ReplayExtent DefaultPaintExtent = new(2304, 1280);
     private ReplayPaintWorkspace? paintWorkspace;
-    private int zoomHintRevision;
+    private readonly OperationOwner _zoomHint = new(); // UI thread only.
     private readonly EventSuppressionScope synchronizingPaintControls = new();
     internal ReplayPaintWorkspace? PaintWorkspace => paintWorkspace;
     private ReplayExtent CurrentPaintExtent => paintWorkspace?.Settings.PanelExtent ?? DefaultPaintExtent;
@@ -231,10 +231,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var revision = ++zoomHintRevision;
+        var hint = _zoomHint.Begin();
         PaintZoomHintBorder.IsVisible = true;
         await Task.Delay(TimeSpan.FromMilliseconds(900), FailureReporter.TimeProvider);
-        if (revision == zoomHintRevision)
+        if (_zoomHint.IsCurrent(hint))
             PaintZoomHintBorder.IsVisible = false;
     }
 

@@ -24,7 +24,7 @@ public partial class MainWindow : Window
     private RailState _reviewRail; // UI thread only.
     private RailState _inspectorRail; // UI thread only.
     private InspectorSelection? _inspectorSelection; // UI thread only.
-    private RawRecordRow? expandedRawRow;
+    private RawRecordRow? expandedRawRow => allRawRows.FirstOrDefault(row => row.IsExpanded);
     private readonly EventSuppressionScope synchronizingReviewSelection = new();
     private readonly EventSuppressionScope synchronizingPaintMarkerSelection = new();
     private double expandedInspectorRailWidth = 286;
@@ -198,16 +198,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (ReferenceEquals(expandedRawRow, row))
+        if (row.IsExpanded)
         {
             row.SetExpanded(false);
-            expandedRawRow = null;
             return;
         }
 
         expandedRawRow?.SetExpanded(false);
         row.SetExpanded(true);
-        expandedRawRow = row;
     }
 
     private void RawSourceOpenButton_OnClick(object? sender, RoutedEventArgs e)
@@ -258,7 +256,6 @@ public partial class MainWindow : Window
     private void CollapseExpandedRawRow()
     {
         expandedRawRow?.SetExpanded(false);
-        expandedRawRow = null;
     }
 
     private void DecodedFramesList_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
