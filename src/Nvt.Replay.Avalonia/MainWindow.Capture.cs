@@ -226,8 +226,7 @@ public partial class MainWindow : Window
         HideRegisterProfileInference();
         if (!string.IsNullOrWhiteSpace(registerProfile))
         {
-            var profileChoice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-                .FirstOrDefault(item => item.IcFamily?.Equals(registerProfile, StringComparison.OrdinalIgnoreCase) == true);
+            var profileChoice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, registerProfile);
             if (profileChoice is null)
             {
                 ConfigurationHintText.Text = $"Unsupported startup IC register profile: {registerProfile}";
@@ -576,10 +575,7 @@ public partial class MainWindow : Window
 
     private void SelectRegisterProfileChoice(string? icFamily)
     {
-        var choices = RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>;
-        var choice = choices?.FirstOrDefault(item =>
-            string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
-        if (choice is null && icFamily is null) choice = choices?.FirstOrDefault(item => item.IcFamily is null);
+        var choice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, icFamily);
         using (configuringRegisterProfile.Enter())
         {
             RegisterProfileComboBox.SelectedItem = choice;
@@ -659,11 +655,7 @@ public partial class MainWindow : Window
 
     internal async Task ApplyRegisterProfileForTestingAsync(string? icFamily)
     {
-        var choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-            .FirstOrDefault(item => string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
-        if (choice is null && icFamily is null)
-            choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-                .FirstOrDefault(item => item.IcFamily is null);
+        var choice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, icFamily);
         if (choice is null) throw new ArgumentException($"Unknown IC profile '{icFamily}'.", nameof(icFamily));
         await ApplyRegisterProfileAsync(choice);
     }
@@ -709,13 +701,7 @@ public partial class MainWindow : Window
         HideRegisterProfileInference();
         var inference = NvtRegisterProfileInference.Infer(session.Records, targetI2cAddress);
         var icFamily = inference.UniqueProfile?.IcFamily;
-        var choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-            .FirstOrDefault(item => string.Equals(item.IcFamily, icFamily, StringComparison.OrdinalIgnoreCase));
-        if (choice is null && icFamily is null)
-        {
-            choice = (RegisterProfileComboBox.ItemsSource as IEnumerable<RegisterProfileChoice>)?
-                .FirstOrDefault(item => item.IcFamily is null);
-        }
+        var choice = RegisterProfileChoices.Find(RegisterProfileComboBox.ItemsSource, icFamily);
         if (choice is null)
             throw new InvalidOperationException($"IC profile choice '{icFamily ?? "Unconfirmed"}' is unavailable.");
 

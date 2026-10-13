@@ -86,7 +86,7 @@
       "kind": "type",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "viewTypeLines": 5379,
+        "viewTypeLines": 5365,
         "partialFiles": 10
       },
       "owner": "NFU",
@@ -124,7 +124,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 1053
+        "fileLines": 1039
       },
       "owner": "NFU",
       "locations": [
