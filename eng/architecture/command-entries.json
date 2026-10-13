@@ -168,13 +168,13 @@
       "event": "Unregistered",
       "method": "CommandPaletteButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 77,
-      "endLine": 77,
+      "startLine": 75,
+      "endLine": 75,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 77,
-        "endLine": 77,
+        "startLine": 75,
+        "endLine": 75,
         "element": ""
       }
     },
@@ -184,13 +184,13 @@
       "event": "Unregistered",
       "method": "ThemeButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 117,
-      "endLine": 118,
+      "startLine": 115,
+      "endLine": 116,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 117,
-        "endLine": 118,
+        "startLine": 115,
+        "endLine": 116,
         "element": ""
       }
     },
@@ -200,13 +200,13 @@
       "event": "KeyDown",
       "method": "OnKeyDown",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 213,
-      "endLine": 218,
+      "startLine": 212,
+      "endLine": 217,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 213,
-        "endLine": 218,
+        "startLine": 212,
+        "endLine": 217,
         "element": ""
       }
     },
@@ -216,13 +216,13 @@
       "event": "KeyDown",
       "method": "HandleWindowKeyDown",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 220,
-      "endLine": 248,
+      "startLine": 219,
+      "endLine": 247,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-        "startLine": 220,
-        "endLine": 248,
+        "startLine": 219,
+        "endLine": 247,
         "element": ""
       }
     },
@@ -280,8 +280,8 @@
       "event": "InputElement.KeyDownEvent",
       "method": "MainWindow_OnPreviewKeyDown",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 199,
-      "endLine": 202,
+      "startLine": 198,
+      "endLine": 201,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
@@ -296,8 +296,8 @@
       "event": "InputElement.KeyUpEvent",
       "method": "MainWindow_OnPreviewKeyUp",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 204,
-      "endLine": 211,
+      "startLine": 203,
+      "endLine": 210,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
@@ -360,8 +360,8 @@
       "event": "SizeChanged",
       "method": "MainWindow_OnSizeChanged",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 20,
-      "endLine": 20,
+      "startLine": 18,
+      "endLine": 18,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
@@ -376,8 +376,8 @@
       "event": "application.ActualThemeVariantChanged",
       "method": "Application_OnActualThemeVariantChanged",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 66,
-      "endLine": 75,
+      "startLine": 64,
+      "endLine": 73,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
@@ -744,8 +744,8 @@
       "event": "SelectionChanged",
       "method": "WorkspaceTabs_OnSelectionChanged",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 127,
-      "endLine": 127,
+      "startLine": 126,
+      "endLine": 126,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -2312,8 +2312,8 @@
       "event": "KeyDown",
       "method": "CommandPaletteOverlay_OnKeyDown",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 81,
-      "endLine": 86,
+      "startLine": 79,
+      "endLine": 84,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -2328,8 +2328,8 @@
       "event": "Click",
       "method": "CloseCommandPaletteButton_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 79,
-      "endLine": 79,
+      "startLine": 77,
+      "endLine": 77,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
@@ -2344,8 +2344,8 @@
       "event": "Click",
       "method": "ShortcutAction_OnClick",
       "file": "src/Nvt.Replay.Avalonia/MainWindow.Shell.cs",
-      "startLine": 100,
-      "endLine": 105,
+      "startLine": 98,
+      "endLine": 103,
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
