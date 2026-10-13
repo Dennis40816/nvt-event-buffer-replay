@@ -21,7 +21,7 @@ public enum ReplayExportKind
 }
 
 /// <summary>Describes one range export: output location, frame size and rate, speed, clock and render settings.</summary>
-/// <param name="OutputPath">The output video file path; a PNG sequence is written to a directory named after it with the suffix .frames.</param>
+/// <param name="OutputPath">The output video file path; a PNG sequence is written to a directory named by appending .frames to this path, extension included.</param>
 /// <param name="Range">The inclusive logical index range to export.</param>
 /// <param name="Width">The output width in pixels.</param>
 /// <param name="Height">The output height in pixels.</param>
