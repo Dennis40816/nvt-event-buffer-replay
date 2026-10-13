@@ -302,20 +302,6 @@
       "project": "Nvt.Replay.Formats"
     },
     {
-      "contentHash": "4a04904830fca7bbb6d2b4dbfd3e4ccd6177c614498527d34c0bba5c18e0a48a",
-      "kind": "file",
-      "issue": "health-refactor/2026-10-31",
-      "ceilings": {
-        "fileLines": 840
-      },
-      "owner": "NFU",
-      "locations": [
-        "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs"
-      ],
-      "symbol": "file:Nvt.Replay.Rendering.ReplayExportClock;Nvt.Replay.Rendering.ReplayExportKind;Nvt.Replay.Rendering.ReplayExportOptions;Nvt.Replay.Rendering.ReplayExportProgress;Nvt.Replay.Rendering.ReplayExportResult;Nvt.Replay.Rendering.ReplayFramePlan;Nvt.Replay.Rendering.ReplayFramePlanEntry;Nvt.Replay.Rendering.ReplayFramePlanIdentity;Nvt.Replay.Rendering.ReplayFramePlanSnapshot;Nvt.Replay.Rendering.ReplayRangeExporter;Nvt.Replay.Rendering.ReplayVideoManifest",
-      "project": "Nvt.Replay.Rendering"
-    },
-    {
       "contentHash": "8d49ed12e29efa26cf454b1294ff00afb67abcf3ebc0952e74faf271114af258",
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
@@ -10984,136 +10970,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "c7175fa7a0db0d3ca4b26d27675d2e4e0776634ce5ffa35c88daa749b57d6846",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportClock",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "d0b50e064a4f8d9438c977e05a087f07815802c0055005c7f913181729464607",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportClock",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "fb7a39a7d5951b35b721b6736ed87fbb23cf59661667ff3ee27aef69d505ce6d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportClock",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "4fb581d128007c39abe5c7fccb2fa363d15d9e0072f382bd56c513c30eaea1a0",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportKind",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "5071a4685a84014da9fd418ae24afa645a881343b92265827f2ed81816a582eb",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportKind",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "5b3cb005ce164333c2637af538927c3c0e32e7adc535d64fcb79953ab21ddb41",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportKind",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "f32e6a3abb5bca866dcafae33a241b967a7aa13273cc69c08aea20b0b2902a05",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportOptions.AllowPngSequenceFallback",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "5e4872c49c249a41051fba0ea5f61df91dba3e301d99d4720cbcf02bb1c83367",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportOptions.ResolvedRenderSettings",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "2b06439cc057f3aa8fb62aa44c9304008749e4bae4039f83321a6605eff4a680",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportOptions.VideoEncoder",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "cb9ed82f78bbb12955fbda5131b8c4c6158e3dfc33a38c218946f74809849119",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 15,
-      "member": "Nvt.Replay.Rendering.ReplayExportOptions",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "6e6fed63a693c3ab96f87f02d2967eed1b975a59f27790ae8afc7b810fb14870",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExportProgress.Percent",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "4bacef736d7ba54ccef099ec1070d595875e565e33ff7e24b3ce6b18b2c48ee3",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 5,
-      "member": "Nvt.Replay.Rendering.ReplayExportProgress",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "5b70ab1b54a41918ab0404e671bd749fb2f37d5df71849bc010e71c4ac96f324",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 8,
-      "member": "Nvt.Replay.Rendering.ReplayExportResult",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "044e12f7d22c9eecfbbb0007881f913139739f49538277e1d86e8a35553b884e",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
@@ -11240,26 +11096,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Rendering.ReplayFramePlan",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "834c53557bb7f84ed8e0ef0e864701a6cef84535099a575ca2b014deb8e3641b",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 4,
-      "member": "Nvt.Replay.Rendering.ReplayFramePlanEntry",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "e2426fdf84af06b458c760f3887274523561a425fab45e9283ea2088247eacca",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 8,
-      "member": "Nvt.Replay.Rendering.ReplayFramePlanIdentity",
       "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
@@ -12640,16 +12476,6 @@
       "rule": "CS1591",
       "count": 5,
       "member": "Nvt.Replay.Rendering.ReplayTrailStorageStatistics",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "319302e547032522231acba6e75fd5bf003ec757cd5e88d94a132838c56342da",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 19,
-      "member": "Nvt.Replay.Rendering.ReplayVideoManifest",
       "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
@@ -14241,16 +14067,6 @@
       "count": 1,
       "member": "<global>",
       "project": "Nvt.Replay.Formats",
-      "symbol": "IDE0005"
-    },
-    {
-      "syntaxHash": "0bbba4f065a972addcf4184bd58e377f0a4fd6f28cc969044e31e38848022638",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "IDE0005",
-      "count": 1,
-      "member": "<global>",
-      "project": "Nvt.Replay.Rendering",
       "symbol": "IDE0005"
     },
     {

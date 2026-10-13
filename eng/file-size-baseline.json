@@ -4,7 +4,6 @@
     "src/Nvt.Replay.Avalonia/MainWindow.axaml": 1550,
     "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs": 1030,
     "src/Nvt.Replay.Avalonia/MainWindow.Output.cs": 1432,
-    "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs": 983,
-    "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs": 840
+    "src/Nvt.Replay.Avalonia/MainWindow.ReviewInspector.cs": 983
   }
 }
