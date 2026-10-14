@@ -6,22 +6,34 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Reads NDS communication logs into source records with timestamps, byte offsets and address semantics.</summary>
 public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
 {
+    /// <summary>Identifies the adapter for NDS communication logs.</summary>
     public const string AdapterId = "nds-communication-log";
+    /// <summary>Names the source field that distinguishes absolute register addresses from I2C slave addresses.</summary>
     public const string AddressSemanticsField = "address_semantics";
+    /// <summary>Marks a source address as an absolute register address.</summary>
     public const string AbsoluteRegisterAddress = "absolute_register";
+    /// <summary>Marks a source address as an I2C slave address.</summary>
     public const string I2cSlaveAddress = "i2c_slave";
+    /// <summary>Names the source field that describes the record's access operation.</summary>
     public const string AccessSemanticsField = "access_semantics";
+    /// <summary>Marks an access as an Event Buffer read carried by a Paint record with an I2C slave address.</summary>
     public const string EventBufferRead = "event_buffer_read";
+    /// <summary>Marks an access as a register read carried by a Read or absolute-address Paint record.</summary>
     public const string RegisterRead = "register_read";
+    /// <summary>Marks an access as a register write carried by a Write record.</summary>
     public const string RegisterWrite = "register_write";
     private const int ProbeLineLimit = 40;
 
+    /// <inheritdoc />
     public string Id => AdapterId;
 
+    /// <inheritdoc />
     public string DisplayName => "NDS communication log";
 
+    /// <inheritdoc />
     public async ValueTask<SourceProbeResult> ProbeAsync(
         string path,
         CancellationToken cancellationToken = default)
@@ -59,6 +71,7 @@ public sealed partial class NdsCommunicationLogAdapter : ISourceAdapter
         return new SourceProbeResult(Id, DisplayName, confidence, reasons);
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
         SourceOpenContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
