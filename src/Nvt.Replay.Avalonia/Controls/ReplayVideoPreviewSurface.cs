@@ -9,6 +9,7 @@ using Nvt.Replay.Rendering;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
+/// <summary>Displays replay scenes as bitmap previews scaled to fit the control.</summary>
 public sealed class ReplayVideoPreviewSurface : Control
 {
     private WriteableBitmap? bitmap;
@@ -19,11 +20,13 @@ public sealed class ReplayVideoPreviewSurface : Control
     internal int RgbRenderCount { get; private set; }
     internal bool HasBitmap => bitmap is not null;
 
+    /// <summary>Creates a preview surface with high quality bitmap interpolation.</summary>
     public ReplayVideoPreviewSurface()
     {
         RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.HighQuality);
     }
 
+    /// <summary>Renders the replay scene into a bitmap at the requested dimensions and schedules the preview to redraw.</summary>
     public void Show(ReplayScene scene, ReplayRenderSettings settings, int width, int height)
     {
         RgbRenderCount++;
@@ -68,6 +71,7 @@ public sealed class ReplayVideoPreviewSurface : Control
         rgbaBuffer = new byte[checked(width * height * 4)];
     }
 
+    /// <summary>Releases the preview bitmap and pixel buffers and schedules the control to redraw.</summary>
     public void Clear()
     {
         bitmap?.Dispose();
@@ -78,6 +82,7 @@ public sealed class ReplayVideoPreviewSurface : Control
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -90,6 +95,7 @@ public sealed class ReplayVideoPreviewSurface : Control
         context.DrawImage(bitmap, new Rect(0, 0, bitmapSize.Width, bitmapSize.Height), destination);
     }
 
+    /// <inheritdoc />
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         Clear();

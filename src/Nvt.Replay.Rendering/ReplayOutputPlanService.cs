@@ -3,6 +3,7 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Builds an output frame sampling snapshot for a replay using the supplied settings.</summary>
 public delegate ReplayFramePlanSnapshot ReplayOutputPlanBuilder(
     ITouchReplaySession replay,
     ReplayOutputSettings settings,
@@ -22,11 +23,14 @@ public sealed class ReplayOutputPlanService : IDisposable
     private int buildCount;
     private bool disposed;
 
+    /// <summary>Creates a planning service using the supplied builder or the default frame plan builder.</summary>
     public ReplayOutputPlanService(ReplayOutputPlanBuilder? builder = null) =>
         this.builder = builder ?? BuildDefault;
 
+    /// <summary>Gets the number of output plan builds started by this service.</summary>
     public int BuildCount => Volatile.Read(ref buildCount);
 
+    /// <summary>Gets the generation of the active output plan, or zero when no plan is active.</summary>
     public long ActiveGeneration
     {
         get
@@ -35,6 +39,7 @@ public sealed class ReplayOutputPlanService : IDisposable
         }
     }
 
+    /// <summary>Gets a video preview asynchronously, sharing a sampling plan when the replay and sampling identity match.</summary>
     public Task<ReplayOutputPreviewPlan> GetPreviewAsync(
         ITouchReplaySession replay,
         string replayIdentity,
@@ -89,6 +94,7 @@ public sealed class ReplayOutputPlanService : IDisposable
         return AwaitPreviewAsync(request, replayIdentity, settings, cancellationToken);
     }
 
+    /// <summary>Clears the active output plan and requests cancellation of its build.</summary>
     public void Invalidate()
     {
         ActivePlan? request;
@@ -100,6 +106,7 @@ public sealed class ReplayOutputPlanService : IDisposable
         CancelAndDisposeWhenComplete(request);
     }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         ActivePlan? request;
