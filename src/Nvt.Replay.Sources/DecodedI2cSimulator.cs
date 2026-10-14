@@ -5,6 +5,12 @@ using System.Text.Json;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Holds synthetic I2C transaction metadata, write commands, and read bytes.</summary>
+/// <param name="Index">The transaction index included in exports that retain transaction identifiers.</param>
+/// <param name="TimestampSeconds">The transaction timestamp in seconds.</param>
+/// <param name="SlaveAddress">The seven-bit I2C slave address used for the transaction.</param>
+/// <param name="WriteCommands">The ordered byte sequences written before the read.</param>
+/// <param name="ReadData">The bytes returned by the read.</param>
 public sealed record SyntheticI2cTransaction(
     long Index,
     double TimestampSeconds,
@@ -12,8 +18,10 @@ public sealed record SyntheticI2cTransaction(
     IReadOnlyList<IReadOnlyList<byte>> WriteCommands,
     IReadOnlyList<byte> ReadData);
 
+/// <summary>Generates decoded I2C exports in supported capture formats from synthetic transactions.</summary>
 public static class DecodedI2cSimulator
 {
+    /// <summary>Formats synthetic I2C write commands and reads as Saleae CSV.</summary>
     public static string ToSaleaeCsv(IEnumerable<SyntheticI2cTransaction> transactions)
     {
         var lines = new List<string> { "Time [s],Packet ID,Address,Data,Read/Write,ACK/NAK" };
@@ -33,6 +41,7 @@ public static class DecodedI2cSimulator
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
+    /// <summary>Formats synthetic I2C write commands and reads as KingstVIS CSV with eight-bit addresses.</summary>
     public static string ToKingstVisCsv(IEnumerable<SyntheticI2cTransaction> transactions)
     {
         var lines = new List<string> { "Time[s],Packet ID,Address,Read/Write,Data" };
@@ -50,6 +59,7 @@ public static class DecodedI2cSimulator
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
+    /// <summary>Formats synthetic I2C transactions as DSL CSV with start, address, data, acknowledgement, and stop rows.</summary>
     public static string ToDslCsv(IEnumerable<SyntheticI2cTransaction> transactions)
     {
         var lines = new List<string> { "Id,Time[ns],1:I²C: Address/Data" };
@@ -75,6 +85,7 @@ public static class DecodedI2cSimulator
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
+    /// <summary>Formats synthetic I2C write commands and reads as Acute CSV with a column for each byte.</summary>
     public static string ToAcuteCsv(IEnumerable<SyntheticI2cTransaction> transactions)
     {
         var materialized = transactions.ToArray();
@@ -96,6 +107,7 @@ public static class DecodedI2cSimulator
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
+    /// <summary>Formats synthetic I2C transactions as canonical text with a header and one JSON record per transaction.</summary>
     public static string ToCanonicalText(IEnumerable<SyntheticI2cTransaction> transactions)
     {
         var lines = new List<string> { CanonicalI2cTextAdapter.Magic };
@@ -116,6 +128,7 @@ public static class DecodedI2cSimulator
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
+    /// <summary>Creates an Excel workbook containing transaction indices, timestamps, and addressed read bytes.</summary>
     public static void WriteExcel(string path, IEnumerable<SyntheticI2cTransaction> transactions)
     {
         using var archive = ZipFile.Open(path, ZipArchiveMode.Create);

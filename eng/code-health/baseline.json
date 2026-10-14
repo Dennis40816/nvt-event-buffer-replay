@@ -4810,26 +4810,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "0e524cc2580d19193f40ed6d229b8d0a9f7fe9f07e134970de9c76ed7a7f0fca",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/FormatModels.cs",
-      "rule": "CS1591",
-      "count": 7,
-      "member": "Nvt.Replay.Core.ConfigurationField",
-      "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "b864ffad93a560970aceaf34ef8ef4b61ca85a06f7511d5907df668b0ffaf682",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/FormatModels.cs",
-      "rule": "CS1591",
-      "count": 4,
-      "member": "Nvt.Replay.Core.DecodeConfiguration",
-      "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "170322a32f3c35b2c61576a5553d352d7b3c8ae7086dab78f15fc891a28c067c",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Core/Diagnostics.cs",
@@ -4880,62 +4860,12 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "3f60ad22c950f32ed855ba2342c1df989f4212ec432c79e253d5388270f86f0a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/FormatModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Core.EvidenceStatus",
-      "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "4f7838402f37674e8ebedb6cf048c0aea66bacdb25607aa3eee4b53093d83f5c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/FormatModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Core.EvidenceStatus",
-      "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "4ff402d768211082ae1a70ae586a4c7a907c57d66467279a71283219968c04bc",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/FormatModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Core.EvidenceStatus",
-      "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "9b46c2e6d68c16f55ac7f5c1bbb0760788c64303df7fc2689aa90ec699baf0b6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/FormatModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Core.EvidenceStatus",
-      "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "500b488bb789764df85c75ce16aefa5624a9b6ff99a874d05d7e6b1c2317e245",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Core/FileHasher.cs",
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Core.FileNotHashableException..ctor(string,string,Exception?)",
-      "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "74165e3c110dfdd6c3c2c1033f486953a096e6a6c280522e8411504d7c90a1e9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/FormatModels.cs",
-      "rule": "CS1591",
-      "count": 8,
-      "member": "Nvt.Replay.Core.FormatDescriptor",
       "project": "Nvt.Replay.Core",
       "symbol": "CS1591"
     },
@@ -5610,76 +5540,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "af378946c484c689039c91c9d45a03d28b464f8ae5c772616b2f08a7f3587f3f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.DecodedI2cSimulator.ToAcuteCsv(IEnumerable<SyntheticI2cTransaction>)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "5adbb39db9f4ff023ca2f42dbc4de6df4e30042f9a9f943448201d49b48cfa3f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.DecodedI2cSimulator.ToCanonicalText(IEnumerable<SyntheticI2cTransaction>)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "30d82c86b5841badadd2be888345abc113724f80acc38de37e97a991225df5d7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.DecodedI2cSimulator.ToDslCsv(IEnumerable<SyntheticI2cTransaction>)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8e4c48fcaf0f1e315d46bd9dc691902e80432cb5fb2af40cfa5c9e90d9ab3021",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.DecodedI2cSimulator.ToKingstVisCsv(IEnumerable<SyntheticI2cTransaction>)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a842911d68277eb7806f25217f774e05405a756d5db266d4c22e7578de5e1c07",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.DecodedI2cSimulator.ToSaleaeCsv(IEnumerable<SyntheticI2cTransaction>)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "0e57b2f62f3275d98e756b93c308c2446c364b910fa442f604664b9160bdbe45",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.DecodedI2cSimulator.WriteExcel(string,IEnumerable<SyntheticI2cTransaction>)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "4da3d14ee8940e16b569330bbd4fc954360d7244eab918dbc06c863626089ba5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.DecodedI2cSimulator",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "052464034a3e7f49e289fca5b5fc787343b8ff7c1cffa18e86e5aacaf19b3e14",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Sources/DslDecodedI2cAdapter.cs",
@@ -5976,16 +5836,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Sources.SaleaeDecodedI2cAdapter",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "b8d46089a718b18bcf28fdad5429e6c5a04ed2e8967a3a0cd57733bac7657d32",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/DecodedI2cSimulator.cs",
-      "rule": "CS1591",
-      "count": 7,
-      "member": "Nvt.Replay.Sources.SyntheticI2cTransaction",
       "project": "Nvt.Replay.Sources",
       "symbol": "CS1591"
     },
