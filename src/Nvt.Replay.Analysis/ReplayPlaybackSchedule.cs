@@ -1,11 +1,17 @@
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Holds a logical replay index and its scheduled elapsed time.</summary>
+/// <param name="LogicalIndex">The logical replay index.</param>
+/// <param name="ScheduledElapsed">The scheduled elapsed time at the logical replay index.</param>
 public readonly record struct ReplayPlaybackPosition(int LogicalIndex, TimeSpan ScheduledElapsed);
 
+/// <summary>Calculates visual update due times and advances replay positions through frames that are due.</summary>
 public static class ReplayPlaybackSchedule
 {
+    /// <summary>The default maximum number of frame advances allowed in one catch-up operation.</summary>
     public const int DefaultMaximumAdvance = 512;
 
+    /// <summary>Returns the later of the logical due time (current plus frame delay, at least zero) and the visual due time.</summary>
     public static TimeSpan NextVisualDue(
         TimeSpan currentScheduledElapsed,
         TimeSpan nextFrameDelay,
@@ -21,6 +27,7 @@ public static class ReplayPlaybackSchedule
         return logicalDue > visualDue ? logicalDue : visualDue;
     }
 
+    /// <summary>Advances while the next frame is due, stopping at the end index, the optional stop index or the advance limit.</summary>
     public static ReplayPlaybackPosition CatchUp(
         int currentIndex,
         int endIndex,
