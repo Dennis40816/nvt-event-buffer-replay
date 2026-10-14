@@ -5,16 +5,22 @@ using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Associates a source record and register profile identity with a register description.</summary>
+/// <param name="SourceRecordId">The stable identifier of the annotated source record.</param>
+/// <param name="ProfileIdentity">The register profile identity associated with the annotation.</param>
+/// <param name="Description">The register description used to derive the annotation fields.</param>
 public sealed record RegisterAnnotation(
     string SourceRecordId,
     NvtRegisterProfileIdentity ProfileIdentity,
     NvtRegisterDescription Description)
 {
+    /// <summary>Gets the read-only source fields derived from the register description.</summary>
     public IReadOnlyDictionary<string, string> Fields { get; } =
         new ReadOnlyDictionary<string, string>(
             new Dictionary<string, string>(Description.ToSourceFields(), StringComparer.Ordinal));
 }
 
+/// <summary>Holds register annotations, profile information and diagnostics for a set of source records.</summary>
 public sealed class RegisterAnnotationProjection
 {
     private readonly IReadOnlyDictionary<string, RegisterAnnotation> annotations;
@@ -32,23 +38,30 @@ public sealed class RegisterAnnotationProjection
         Diagnostics = diagnostics;
     }
 
+    /// <summary>Gets the register profile used for this projection, or null for automatic register lookup.</summary>
     public NvtRegisterProfile? Profile { get; }
 
+    /// <summary>Gets the selected profile identity or the automatic profile identity used for this projection.</summary>
     public NvtRegisterProfileIdentity ProfileIdentity { get; }
 
+    /// <summary>Gets the number of source record annotations in this projection.</summary>
     public int Count => annotations.Count;
 
+    /// <summary>Gets the diagnostics produced while observing register activity in source record order.</summary>
     public IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }
 
+    /// <summary>Finds the annotation for a source record's stable identifier and reports whether it exists.</summary>
     public bool TryGet(SourceRecord record, out RegisterAnnotation annotation)
     {
         ArgumentNullException.ThrowIfNull(record);
         return annotations.TryGetValue(record.StableId, out annotation!);
     }
 
+    /// <summary>Gets the annotation for a source record identifier, or null if none exists.</summary>
     public RegisterAnnotation? Find(string sourceRecordId) =>
         annotations.GetValueOrDefault(sourceRecordId);
 
+    /// <summary>Builds read-only fields by filtering projected source fields and overlaying any register annotation.</summary>
     public IReadOnlyDictionary<string, string> EffectiveFields(SourceRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -92,18 +105,21 @@ public sealed class RegisterAnnotationProjection
     };
 }
 
+/// <summary>Builds and caches register annotation projections by profile identity for source records.</summary>
 public sealed class RegisterAnnotationIndex
 {
     private readonly object gate = new();
     private readonly IReadOnlyList<SourceRecord> records;
     private readonly Dictionary<NvtRegisterProfileIdentity, RegisterAnnotationProjection> projections = [];
 
+    /// <summary>Creates an annotation index over the supplied source records.</summary>
     public RegisterAnnotationIndex(IReadOnlyList<SourceRecord> records)
     {
         ArgumentNullException.ThrowIfNull(records);
         this.records = records;
     }
 
+    /// <summary>Gets or builds a cached projection using the selected profile or automatic register lookup.</summary>
     public RegisterAnnotationProjection Project(
         NvtRegisterProfile? profile,
         CancellationToken cancellationToken = default)
