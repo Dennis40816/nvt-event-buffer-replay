@@ -3,43 +3,84 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Specifies the rendering, geometry, inspector, and workspace work required by a Paint change.</summary>
 [Flags]
 public enum ReplayPaintChangeImpact
 {
+    /// <summary>Indicates that no Paint update work is required.</summary>
     None = 0,
+    /// <summary>Requires an update to the rendered Paint surface.</summary>
     Surface = 1 << 0,
+    /// <summary>Requires rebuilding the projected Paint scene.</summary>
     Scene = 1 << 1,
+    /// <summary>Requires invalidating cached transformed geometry.</summary>
     Geometry = 1 << 2,
+    /// <summary>Requires fitting the Paint view to the panel extent.</summary>
     Fit = 1 << 3,
+    /// <summary>Requires refreshing the Paint inspector.</summary>
     Inspector = 1 << 4,
+    /// <summary>Requires rebuilding the Paint workspace.</summary>
     Workspace = 1 << 5,
 
     // Named compound values keep the public 0.0.x contract readable while allowing the UI to
     // consume orthogonal work requirements instead of maintaining parallel boolean guesses.
+    /// <summary>Requires a surface update and scene rebuild.</summary>
     SceneOnly = Surface | Scene,
+    /// <summary>Requires a surface update, scene rebuild, and geometry cache invalidation.</summary>
     GeometryCacheInvalidation = Surface | Scene | Geometry,
+    /// <summary>Requires surface, scene, geometry, fit, and workspace updates.</summary>
     WorkspaceRebuild = Surface | Scene | Geometry | Fit | Workspace,
 }
 
+/// <summary>Reports Paint setting revisions and the work required to apply a settings update.</summary>
+/// <param name="Revision">The settings revision after the update.</param>
+/// <param name="GeometryRevision">The geometry revision after the update.</param>
+/// <param name="Impact">The rendering and workspace work required by the update.</param>
 public readonly record struct ReplayPaintUpdate(
     long Revision,
     long GeometryRevision,
     ReplayPaintChangeImpact Impact)
 {
+    /// <summary>Gets whether the update reports any required Paint work.</summary>
     public bool Changed => Impact != ReplayPaintChangeImpact.None;
+    /// <summary>Gets whether the impact flags require a Paint surface update.</summary>
     public bool RequiresSurfaceUpdate => (Impact & ReplayPaintChangeImpact.Surface) != 0;
+    /// <summary>Gets whether the impact flags require rebuilding the Paint scene.</summary>
     public bool RequiresSceneRebuild => (Impact & ReplayPaintChangeImpact.Scene) != 0;
+    /// <summary>Gets whether the impact flags require invalidating cached geometry.</summary>
     public bool RequiresGeometryCacheInvalidation =>
         (Impact & ReplayPaintChangeImpact.Geometry) != 0;
+    /// <summary>Gets whether the impact flags require fitting the Paint view.</summary>
     public bool RequiresFit => (Impact & ReplayPaintChangeImpact.Fit) != 0;
+    /// <summary>Gets whether the impact flags require refreshing the Paint inspector.</summary>
     public bool RequiresInspectorRefresh => (Impact & ReplayPaintChangeImpact.Inspector) != 0;
+    /// <summary>Gets whether the impact flags require rebuilding the Paint workspace.</summary>
     public bool RequiresWorkspaceRebuild => (Impact & ReplayPaintChangeImpact.Workspace) != 0;
 }
 
+/// <summary>Reports the annotation revision and whether diagnostics or markers changed.</summary>
+/// <param name="Revision">The annotation revision after the update.</param>
+/// <param name="Changed">Whether the diagnostics or markers differed from the previous annotation state.</param>
 public readonly record struct ReplayPaintAnnotationUpdate(
     long Revision,
     bool Changed);
 
+/// <summary>Stores panel, trail, coordinate transform, legend, and theme settings for Paint rendering.</summary>
+/// <param name="PanelExtent">The panel coordinate extent used for projection and legend placement.</param>
+/// <param name="PointView">The point display mode passed to the renderer.</param>
+/// <param name="TrailRetention">The retention mode used to construct trail history.</param>
+/// <param name="TrailLength">The requested trail length, validated to range from 2 through 120.</param>
+/// <param name="TrailVisibilityStart">The logical frame index at which visible trail history starts.</param>
+/// <param name="TraceVisible">Whether trail traces are displayed.</param>
+/// <param name="TrailPointsVisible">Whether individual trail points are displayed.</param>
+/// <param name="ReverseX">Whether X reversal is enabled for projection and legend placement.</param>
+/// <param name="ReverseY">Whether Y reversal is enabled for projection and legend placement.</param>
+/// <param name="SwapAxes">Whether X and Y axes are swapped for projection and legend placement.</param>
+/// <param name="StrongGrid">Whether the renderer uses the strong grid setting.</param>
+/// <param name="LegendVisible">Whether the legend is displayed.</param>
+/// <param name="LegendCollapsed">Whether the legend is displayed in its collapsed form.</param>
+/// <param name="LegendPosition">The requested legend position, which may be selected automatically.</param>
+/// <param name="Theme">The visual theme passed to the renderer.</param>
 public sealed record ReplayPaintSettings(
     ReplayExtent PanelExtent,
     ReplayRenderMode PointView,
@@ -57,6 +98,7 @@ public sealed record ReplayPaintSettings(
     ReplayLegendPosition LegendPosition,
     ReplayRenderTheme Theme)
 {
+    /// <summary>Creates host-state Paint settings with trails enabled, automatic legend placement, and the dark theme.</summary>
     public static ReplayPaintSettings Default(ReplayExtent panelExtent) => new(
         panelExtent,
         ReplayRenderMode.HostState,
@@ -82,6 +124,7 @@ public sealed record ReplayPaintSettings(
 /// </summary>
 public sealed class ReplayPaintWorkspace
 {
+    /// <summary>Defines the largest allowed X or Y maximum in a Paint panel extent.</summary>
     public const double MaximumPanelCoordinate = 1_000_000;
 
     private readonly ITouchReplaySession replay;
@@ -91,6 +134,7 @@ public sealed class ReplayPaintWorkspace
     private IReadOnlyList<ReplayMarker> markers;
     private ReplayPaintAnnotationIndex annotationIndex;
 
+    /// <summary>Creates Paint state for a replay and matching trail history, with validated settings and annotation snapshots.</summary>
     public ReplayPaintWorkspace(
         ITouchReplaySession replay,
         ReplayTrailHistory trailHistory,
@@ -115,16 +159,26 @@ public sealed class ReplayPaintWorkspace
         ResolvedLegendPosition = ResolveLegendPosition(Settings);
     }
 
+    /// <summary>Gets the replay session used to create Paint scenes.</summary>
     public ITouchReplaySession Replay => replay;
+    /// <summary>Gets the trail history associated with the replay's frames.</summary>
     public ReplayTrailHistory TrailHistory => trailHistory;
+    /// <summary>Gets the current snapshot of diagnostics used for scene annotations.</summary>
     public IReadOnlyList<ReplayDiagnostic> Diagnostics => diagnostics;
+    /// <summary>Gets the current snapshot of markers used for scene annotations.</summary>
     public IReadOnlyList<ReplayMarker> Markers => markers;
+    /// <summary>Gets the current validated Paint rendering settings.</summary>
     public ReplayPaintSettings Settings { get; private set; }
+    /// <summary>Gets the explicit or automatically selected legend position for the current settings.</summary>
     public ReplayLegendPosition ResolvedLegendPosition { get; private set; }
+    /// <summary>Gets the revision counter incremented when Paint settings change.</summary>
     public long Revision { get; private set; }
+    /// <summary>Gets the revision counter for settings changes that invalidate cached geometry.</summary>
     public long GeometryRevision { get; private set; }
+    /// <summary>Gets the revision counter incremented when diagnostics or markers change.</summary>
     public long AnnotationRevision { get; private set; }
 
+    /// <summary>Validates and applies Paint settings, returning the resulting revisions and required rendering work.</summary>
     public ReplayPaintUpdate Update(ReplayPaintSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -148,6 +202,7 @@ public sealed class ReplayPaintWorkspace
         return new ReplayPaintUpdate(Revision, GeometryRevision, impact);
     }
 
+    /// <summary>Snapshots changed diagnostics and markers, rebuilds their index, and reports the annotation revision.</summary>
     public ReplayPaintAnnotationUpdate UpdateAnnotations(
         IReadOnlyList<ReplayDiagnostic> diagnostics,
         IReadOnlyList<ReplayMarker> markers)
@@ -167,8 +222,10 @@ public sealed class ReplayPaintWorkspace
         return new ReplayPaintAnnotationUpdate(AnnotationRevision, Changed: true);
     }
 
+    /// <summary>Seeks the replay to a logical frame index and creates its projected scene with trails and annotations.</summary>
     public ReplayScene CreateScene(int logicalIndex) => CreateScene(replay.Seek(logicalIndex));
 
+    /// <summary>Creates a projected scene for an in-range snapshot using current Paint settings, trails, and annotations.</summary>
     public ReplayScene CreateScene(ITouchReplaySnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -195,6 +252,7 @@ public sealed class ReplayPaintWorkspace
             Settings.SwapAxes);
     }
 
+    /// <summary>Creates renderer settings from the current Paint options, resolved legend position, and frame chrome choice.</summary>
     public ReplayRenderSettings CreateRenderSettings(bool showFrameChrome = false) => new(
         Settings.PointView,
         Settings.Theme,
