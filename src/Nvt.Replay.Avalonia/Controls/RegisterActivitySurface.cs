@@ -7,20 +7,28 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
+/// <summary>Draws register activity markers by source record index and handles pointer selection.</summary>
 public sealed class RegisterActivitySurface : Control
 {
+    /// <summary>Identifies the styled property for the register activity track and default marker brush.</summary>
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
         AvaloniaProperty.Register<RegisterActivitySurface, IBrush?>(nameof(TrackBrush));
+    /// <summary>Identifies the styled property for the register read marker brush.</summary>
     public static readonly StyledProperty<IBrush?> ReadBrushProperty =
         AvaloniaProperty.Register<RegisterActivitySurface, IBrush?>(nameof(ReadBrush));
+    /// <summary>Identifies the styled property for the register write marker brush.</summary>
     public static readonly StyledProperty<IBrush?> WriteBrushProperty =
         AvaloniaProperty.Register<RegisterActivitySurface, IBrush?>(nameof(WriteBrush));
+    /// <summary>Identifies the styled property for the command and page-switch marker brush.</summary>
     public static readonly StyledProperty<IBrush?> CommandBrushProperty =
         AvaloniaProperty.Register<RegisterActivitySurface, IBrush?>(nameof(CommandBrush));
+    /// <summary>Identifies the styled property for the register reset marker brush.</summary>
     public static readonly StyledProperty<IBrush?> ResetBrushProperty =
         AvaloniaProperty.Register<RegisterActivitySurface, IBrush?>(nameof(ResetBrush));
+    /// <summary>Identifies the styled property for the ambiguous register activity marker brush.</summary>
     public static readonly StyledProperty<IBrush?> AmbiguousBrushProperty =
         AvaloniaProperty.Register<RegisterActivitySurface, IBrush?>(nameof(AmbiguousBrush));
+    /// <summary>Identifies the styled property for the selected activity and changed-read marker brush.</summary>
     public static readonly StyledProperty<IBrush?> SelectionBrushProperty =
         AvaloniaProperty.Register<RegisterActivitySurface, IBrush?>(nameof(SelectionBrush));
 
@@ -29,16 +37,25 @@ public sealed class RegisterActivitySurface : Control
     private long maximumIndex = 1;
     private string? selectedStableId;
 
+    /// <summary>Occurs when a left click selects the nearest register activity.</summary>
     public event EventHandler<RegisterActivitySelectedEventArgs>? ActivitySelected;
 
+    /// <summary>Gets or sets the brush for the register activity track and default markers.</summary>
     public IBrush? TrackBrush { get => GetValue(TrackBrushProperty); set => SetValue(TrackBrushProperty, value); }
+    /// <summary>Gets or sets the brush for register read markers.</summary>
     public IBrush? ReadBrush { get => GetValue(ReadBrushProperty); set => SetValue(ReadBrushProperty, value); }
+    /// <summary>Gets or sets the brush for register write markers.</summary>
     public IBrush? WriteBrush { get => GetValue(WriteBrushProperty); set => SetValue(WriteBrushProperty, value); }
+    /// <summary>Gets or sets the brush for command and page-switch markers.</summary>
     public IBrush? CommandBrush { get => GetValue(CommandBrushProperty); set => SetValue(CommandBrushProperty, value); }
+    /// <summary>Gets or sets the brush for register reset markers.</summary>
     public IBrush? ResetBrush { get => GetValue(ResetBrushProperty); set => SetValue(ResetBrushProperty, value); }
+    /// <summary>Gets or sets the brush for ambiguous register activity markers.</summary>
     public IBrush? AmbiguousBrush { get => GetValue(AmbiguousBrushProperty); set => SetValue(AmbiguousBrushProperty, value); }
+    /// <summary>Gets or sets the brush for selected activities and changed-read markers.</summary>
     public IBrush? SelectionBrush { get => GetValue(SelectionBrushProperty); set => SetValue(SelectionBrushProperty, value); }
 
+    /// <summary>Sets the register activities and source record index range, then requests a redraw.</summary>
     public void SetActivities(IReadOnlyList<RegisterActivityEntry> value, long minRecordIndex, long maxRecordIndex)
     {
         activities = value;
@@ -47,12 +64,14 @@ public sealed class RegisterActivitySurface : Control
         InvalidateVisual();
     }
 
+    /// <summary>Sets the stable identifier of the selected source record and requests a redraw.</summary>
     public void SetSelected(string? stableId)
     {
         selectedStableId = stableId;
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -70,6 +89,7 @@ public sealed class RegisterActivitySurface : Control
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
@@ -104,7 +124,9 @@ public sealed class RegisterActivitySurface : Control
     };
 }
 
+/// <summary>Carries the source record selected from the register activity track.</summary>
 public sealed class RegisterActivitySelectedEventArgs(SourceRecord record) : EventArgs
 {
+    /// <summary>Gets the source record selected from the register activity track.</summary>
     public SourceRecord Record { get; } = record;
 }
