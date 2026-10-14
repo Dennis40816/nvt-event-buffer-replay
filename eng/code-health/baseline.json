@@ -7410,126 +7410,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "981215d1c23c06e0fd22e4f8a583e4b2874db42971957da8b1fa82956d5d20f4",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 9,
-      "member": "Nvt.Replay.Formats.Common.AsilByte",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "28612ec179080f63ea74b0c67598bca8157a5815dc767d72afeddc58261b1473",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "7ca1d766a47120d5060c1dee4db6cc873a6be9d83147289890d8d2e0661b1f7d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a9230ad6958ea369ae4c1af63b2640f239356d9404158f9b117da075fb9497d5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "acea6d16a2cf372f9e05d9e4d22f66c541276f8483c439d178aa852034c74598",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "b7b29d30fb9b14bcaba2e034e6ce2c916bfab29056bfbd361b02512273aa8f9a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "bad2c96574768468faefa3b453e98a4fed8adf600061cdd6a0a4b65da641046a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "d684ed5e1d4f9a0f19d45df4bca45929a0859c69eeb8323bde230c3ba8a081cc",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "def537127e11a3d4e87f31fddd73bb6cb415608d8c7259ca753ac0dec26f2174",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "ffcc8af5eb8f29e9eb111a46bb42639a54e12ab4da7d2cd26aaa037e06c26d8f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.AsilErrorCode",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "081c9a17758d36d071b487293ef9c797f46ae2379a932bbd2c227eebf963c24d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 5,
-      "member": "Nvt.Replay.Formats.Common.ButtonStatus",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "ed7fc31f5ec50ca643811a00bb2e48e3348d52f59d2a7d4b1ac492f55c5a0474",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 7,
-      "member": "Nvt.Replay.Formats.Common.CommonBusStatus",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "ad28ad29169060a1a1177f60aec4361cc7d5c38eff1feadbca1573a41f73a7e2",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Formats/Common/CommonCrc8.cs",
@@ -7556,36 +7436,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Formats.Common.CommonCrc8",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "08f60bc6ccfc54f81a38b5d992cdc22f25f55b56d521cfca10606598ffba479c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 8,
-      "member": "Nvt.Replay.Formats.Common.CommonCrcProfile",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "76e981086f5b6f34a24cd1ec5b7469bbdd1c960e364e5a947647009c204473cf",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 4,
-      "member": "Nvt.Replay.Formats.Common.CommonDecodeResult",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "d1be5aca033bd9f660092231ac9f449ee40d636c76470d984fce20ebca6206a5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 7,
-      "member": "Nvt.Replay.Formats.Common.CommonDiagnosticPacket",
       "project": "Nvt.Replay.Formats",
       "symbol": "CS1591"
     },
@@ -7646,106 +7496,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Formats.Common.CommonEventBufferDecoder",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "68c7cf08ad3df93912e0bede61bfbf862a9327096da35048c6709d0edbc5369a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 21,
-      "member": "Nvt.Replay.Formats.Common.CommonEventBufferFrame",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "194308123b20ba7d795e0257a8becb0905465f8efa6af712128246a8fcb474f7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonEventBufferVersion",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "22da27699a857c7693165cd201ad9c7b7ccd88bed7ad686899ce67c667affe68",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonEventBufferVersion",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "426337ee90887d9e2933cfd25944fb33773a74bb188575dc9516b8d130f4e63d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonEventBufferVersion",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a3b5d2d95b951ce1ad1a8d2bf85c7c9036ee89a5644fd94362770ca7aca1de68",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonEventBufferVersion",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "ac75b12cb642d301fd36c2692807c955ac3f1a09728c80bb1a54e0ed0196fc55",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonEventBufferVersion",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "40c6d3f91de697770bf4e1538f50cadc3bd868e9c4f71ed15b3c86c9ea3ce343",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonFinger.IsReported",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "31d15e32b69adcc436a4089f1b90c5a2b3789835a260bb5d39e55a962abafa5c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonFinger.IsUnused",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8d0a6a789cd4eaa8b905e502ef11561358cd09dc4a522a72a275f67c8b9b66b3",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 9,
-      "member": "Nvt.Replay.Formats.Common.CommonFinger",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "be6b5770395e7c2828ce19e368e8983b0cf0af9937d10d56cc6ccaa5a879f645",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonModels.cs",
-      "rule": "CS1591",
-      "count": 5,
-      "member": "Nvt.Replay.Formats.Common.CommonKnob",
       "project": "Nvt.Replay.Formats",
       "symbol": "CS1591"
     },
@@ -8360,16 +8110,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "b7b975dcf935e595af4152ca15a20ab3b01bf694e7ce235024d92644587c95bf",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 6,
-      "member": "Nvt.Replay.Rendering.ReplayContactTrail",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "a96d1beedac1c9c32dcb2db48eaed4056d67e37fd81458bf06266e4c063a6bf6",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
@@ -8396,26 +8136,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Rendering.ReplayEncoderUnavailableException",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "044e12f7d22c9eecfbbb0007881f913139739f49538277e1d86e8a35553b884e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayExtent.Measure(IEnumerable<ReplayContact>)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8c0dd6c849d1a79797e8c0fa1946adc19e4cd6e2312cee4d18f1671836caa9b8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 4,
-      "member": "Nvt.Replay.Rendering.ReplayExtent",
       "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
@@ -9200,46 +8920,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "0957a2d8c8ca9da5bb3fcfcfdffba4234c8876fd5fee981b00eda7fe871029cf",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayRenderMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "5d59018a1c6dac18318958ffdcf5ecf00216e4e13cc8d2d25aaa1aed59bf2d02",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayRenderMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "dde8df507e4b32bc18fee7e08d231333386a76384c333e3489644bb3b0064505",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayRenderMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "e888155d8c7d2e3c3f9eb1bf57e8d81ba1a3c182b5e94b01e09de2cb2cca81f9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayRenderMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "f1bdca5491efb610e3e9f377dbfba88a473e8feb7755b42f8401a083e02f01ef",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/ReplayVisualStyle.cs",
@@ -9276,66 +8956,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Rendering.ReplayRenderTheme",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "3caa78271722fc617581a06de15ae318d5f8d9310d18dd37ed324aeb095de3e1",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayScene.ViewCoordinates(double,double)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "3b432bcedb4abcd92cde3201bb56e15404c3a708e38ac17661ef66de152238db",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayScene.ViewExtent",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "de0342fa05edd307ef399292a1c012f4a5b073f01033d53422c22c9b8987a733",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 15,
-      "member": "Nvt.Replay.Rendering.ReplayScene",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "30ba756bb798f08b1d049b533674596d4e6304863a1cb6ec30d6a15a83e8b1da",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplaySceneFactory.BuildTrails(ITouchReplaySession,int,int)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "9801bed9f5b2bc93144168eb6378a8483781d91bdfd6cb0a9636651116e1d9fd",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplaySceneFactory.Create(ITouchReplaySnapshot,int,ReplayExtent,IEnumerable<ReplayDiagnostic>?,IEnumerable<ReplayMarker>?,IReadOnlyList<ReplayContactTrail>?,bool,bool,bool)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "e22c42bc4eb249e918394ab6e931acb94003901a76a16134d2128afcf979517a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplaySceneFactory",
       "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
@@ -9396,126 +9016,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Rendering.ReplayTrailChunker",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "e5f2164ff8266a71fe6f388a4380de9b81aaae67fc45f43cef88a75ef8633934",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailHistory.Build(int,ReplayTrailMode,int,int)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "3481703ac19492fd87192d99d89406ac34f6ec2b2ff144f088d778d67ddb96d3",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailHistory.Count",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "cdb9e52438c768df2d5fca8daa7b91b8a9326a9aef172fa16eb0d963e0c85ae8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailHistory.Create(IReadOnlyList<ITouchReplaySnapshot>,CancellationToken)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "52b10b9303d03ea04f9b7f0c30f57508e2e1a058de5b0c9ec96f45b67997f60b",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailHistory.Create(ITouchReplaySession,CancellationToken)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8470b5d1433bf19bc36b943d33d8d81fc547e9662921d556759e6f1e502de20c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailHistory.Statistics",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "7ff079789bde47937bdbe80775e3c2e32a3c377b76549a304dd35ecf17cc34d9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailHistory",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "659d96cbb32651d66703c8dcaa8099424b02b866dca90cf9a15ca0d9f03fc679",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "690dbe9dc0993c4256683738fc3fd541cfa96f60d299be33343615dd58179d93",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "9d4a67eb4d6beed2ebc7fa7dc9f7d2f55e5227fe2d54f067069434708dcc5fd3",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "f067b731a9eb7fda659d8a6f16dcfd2233516f5f87281c196925d26d4b65f9eb",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailMode",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "13ff2182b0c5ee03d038c3f2583372c3390869c2cb6a878c15b5f1966833ec8e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 6,
-      "member": "Nvt.Replay.Rendering.ReplayTrailPoint",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "dcf6a39d4c32a4c3a3edd4d2ae834c77ad39ff97777341a90a50a9c889bbb002",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
-      "rule": "CS1591",
-      "count": 5,
-      "member": "Nvt.Replay.Rendering.ReplayTrailStorageStatistics",
       "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
