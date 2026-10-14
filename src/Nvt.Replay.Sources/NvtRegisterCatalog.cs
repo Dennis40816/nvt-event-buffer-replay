@@ -4,15 +4,33 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Defines an IC family and the base addresses of its Event Buffer, Common Buffer, and History regions.</summary>
+/// <param name="IcFamily">IC family label used to select this register profile.</param>
+/// <param name="EventBufferBase">Base address of the profile's Event Buffer region.</param>
+/// <param name="CommonBufferBase">Address of the profile's Common Buffer.</param>
+/// <param name="HistoryBase">Base address of the profile's History region.</param>
 public sealed record NvtRegisterProfile(
     string IcFamily,
     uint EventBufferBase,
     uint CommonBufferBase,
     uint HistoryBase)
 {
+    /// <summary>Gets the identity created from this register profile.</summary>
     public NvtRegisterProfileIdentity Identity => NvtRegisterProfileIdentity.Create(this);
 }
 
+/// <summary>Describes a register address, its profile resolution, raw value, and display interpretation.</summary>
+/// <param name="Profiles">Profile labels associated with the register address.</param>
+/// <param name="ProfileResolution">Resolution label indicating common, resolved, or ambiguous profile interpretation.</param>
+/// <param name="Region">Register region containing the address, or an unresolved region label.</param>
+/// <param name="Name">Display name of the register or unresolved profile placeholder.</param>
+/// <param name="Address">Absolute register address being described.</param>
+/// <param name="BaseAddress">Base address used to locate the register within its region.</param>
+/// <param name="Offset">Register address offset from the region base address.</param>
+/// <param name="RawValue">Register payload formatted as hexadecimal bytes, or a placeholder for an empty payload.</param>
+/// <param name="Meaning">Interpreted register meaning or the raw_only marker.</param>
+/// <param name="Readable">Display text describing the register value or required profile selection.</param>
+/// <param name="FwCommand">Parsed firmware command for an Event Buffer command write, or null.</param>
 public sealed record NvtRegisterDescription(
     string Profiles,
     string ProfileResolution,
@@ -26,8 +44,10 @@ public sealed record NvtRegisterDescription(
     string Readable,
     NvtFwCommand? FwCommand = null)
 {
+    /// <summary>Gets the register display name normalized to lowercase letters and digits separated by underscores.</summary>
     public string StableName => NvtRegisterCatalog.StableName(Name);
 
+    /// <summary>Exports register annotations and any parsed firmware command as source-field key-value pairs.</summary>
     public IReadOnlyDictionary<string, string> ToSourceFields()
     {
         var fields = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -54,6 +74,7 @@ public sealed record NvtRegisterDescription(
     }
 }
 
+/// <summary>Provides register profiles and annotates register accesses with names, raw values, and known meanings.</summary>
 public static class NvtRegisterCatalog
 {
     private const uint EventBufferLength = 128;
@@ -85,6 +106,7 @@ public static class NvtRegisterCatalog
         "fw_command_confirmed",
     ];
 
+    /// <summary>Gets the catalogued IC families and their register-region base addresses.</summary>
     public static IReadOnlyList<NvtRegisterProfile> Profiles { get; } =
     [
         new("51923", 0x94000, 0x941C0, 0x9ACA0),
@@ -94,8 +116,10 @@ public static class NvtRegisterCatalog
         new("51950/51951", 0x80800, 0xAAD8C, 0xA445C),
     ];
 
+    /// <summary>Gets the automatic profile identity whose content hash combines the catalogued profile identity hashes.</summary>
     public static NvtRegisterProfileIdentity AutomaticProfileIdentity { get; } = CreateAutomaticProfileIdentity();
 
+    /// <summary>Adds catalog register fields to an addressed source record when its address can be described.</summary>
     public static SourceRecord Annotate(SourceRecord record, string? icFamily = null)
     {
         if (record.Address is not { } address || Describe(address, record.Operation, record.Data, icFamily) is not { } description)
@@ -106,6 +130,7 @@ public static class NvtRegisterCatalog
         return record with { SourceFields = fields };
     }
 
+    /// <summary>Removes prior catalog semantics and reapplies register annotations for the requested IC family.</summary>
     public static SourceRecord Reannotate(SourceRecord record, string? icFamily)
     {
         if (!string.IsNullOrWhiteSpace(icFamily) && FindProfile(icFamily) is null)
@@ -120,11 +145,13 @@ public static class NvtRegisterCatalog
         return Annotate(record with { SourceFields = fields }, string.IsNullOrWhiteSpace(icFamily) ? null : icFamily);
     }
 
+    /// <summary>Finds a catalogued profile by case-insensitive IC family label, or returns null when no profile matches.</summary>
     public static NvtRegisterProfile? FindProfile(string? icFamily) =>
         string.IsNullOrWhiteSpace(icFamily)
             ? null
             : Profiles.FirstOrDefault(profile => profile.IcFamily.Equals(icFamily, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Describes a register access using common definitions or matching IC profiles, preserving unresolved ambiguity.</summary>
     public static NvtRegisterDescription? Describe(
         uint address,
         BusOperation operation,
@@ -171,6 +198,7 @@ public static class NvtRegisterCatalog
             command);
     }
 
+    /// <summary>Describes a register access using common definitions or the supplied register profile.</summary>
     public static NvtRegisterDescription? DescribeForProfile(
         uint address,
         BusOperation operation,
@@ -199,6 +227,7 @@ public static class NvtRegisterCatalog
             command);
     }
 
+    /// <summary>Returns the normalized register name for an Event Buffer offset.</summary>
     public static string EventBufferOffsetName(byte offset) => StableName(DescribeEventBufferOffset(offset).Name);
 
     internal static string StableName(string value)

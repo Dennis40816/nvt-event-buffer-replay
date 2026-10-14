@@ -3,20 +3,35 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Indicates whether register evidence identifies no profile, one profile, multiple profiles, or conflicting profiles.</summary>
 public enum NvtRegisterProfileInferenceStatus
 {
+    /// <summary>No qualifying Event Buffer address evidence was found.</summary>
     None,
+    /// <summary>The evidence resolves to exactly one register profile.</summary>
     Unique,
+    /// <summary>Multiple register profiles remain compatible with the evidence.</summary>
     Ambiguous,
+    /// <summary>The Event Buffer evidence sets have no register profile in common.</summary>
     Conflicting,
 }
 
+/// <summary>Identifies whether profile evidence comes from page selection or an absolute register address.</summary>
 public enum NvtRegisterProfileEvidenceKind
 {
+    /// <summary>Evidence pairs a Switch Page command with an Event Buffer access on the selected page.</summary>
     SwitchPage,
+    /// <summary>Evidence comes from an absolute NDS register address inside a catalogued Event Buffer.</summary>
     AbsoluteRegister,
 }
 
+/// <summary>Records the source location and Event Buffer address used as register profile evidence.</summary>
+/// <param name="RecordIndex">Index of the source record containing the evidence.</param>
+/// <param name="SourceRecordId">Stable identifier of the source record containing the evidence.</param>
+/// <param name="EventBufferAddress">Resolved register address inside a catalogued Event Buffer.</param>
+/// <param name="SelectedPage">Event Buffer base address established by page selection or absolute address matching.</param>
+/// <param name="SwitchPageCommand">Hexadecimal Switch Page command bytes, or an empty string for absolute register evidence.</param>
+/// <param name="Kind">Transport evidence kind used to establish the Event Buffer address.</param>
 public sealed record NvtRegisterProfileEvidence(
     long RecordIndex,
     string SourceRecordId,
@@ -25,21 +40,28 @@ public sealed record NvtRegisterProfileEvidence(
     string SwitchPageCommand,
     NvtRegisterProfileEvidenceKind Kind = NvtRegisterProfileEvidenceKind.SwitchPage)
 {
+    /// <summary>Gets display text for the Switch Page command or absolute NDS register address.</summary>
     public string DisplayEvidence => Kind == NvtRegisterProfileEvidenceKind.SwitchPage
         ? $"Switch Page {SwitchPageCommand}"
         : $"NDS absolute register 0x{EventBufferAddress:X}";
 }
 
+/// <summary>Holds the profile inference status, candidate profiles, and supporting source evidence.</summary>
+/// <param name="Status">Resolution status derived from the collected profile evidence.</param>
+/// <param name="Candidates">Compatible profiles, or the combined profiles from conflicting evidence sets.</param>
+/// <param name="Evidence">Source records and Event Buffer addresses supporting the inference result.</param>
 public sealed record NvtRegisterProfileInferenceResult(
     NvtRegisterProfileInferenceStatus Status,
     IReadOnlyList<NvtRegisterProfile> Candidates,
     IReadOnlyList<NvtRegisterProfileEvidence> Evidence)
 {
+    /// <summary>Gets the sole candidate when the inference status is unique, or null otherwise.</summary>
     public NvtRegisterProfile? UniqueProfile =>
         Status == NvtRegisterProfileInferenceStatus.Unique && Candidates.Count == 1
             ? Candidates[0]
             : null;
 
+    /// <summary>Gets text summarizing the evidence count, Event Buffer pages, and first record, or reporting no evidence.</summary>
     public string EvidenceSummary
     {
         get
@@ -65,6 +87,7 @@ public static class NvtRegisterProfileInference
     private const uint EventBufferLength = 128;
     private const uint HistoryLength = 128;
 
+    /// <summary>Infers profile candidates from Event Buffer address evidence and narrows them using known region accesses.</summary>
     public static NvtRegisterProfileInferenceResult Infer(
         IEnumerable<SourceRecord> records,
         int targetI2cAddress = 0x01)
