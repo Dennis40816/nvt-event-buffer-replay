@@ -6,26 +6,47 @@ using System.Text.RegularExpressions;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Identifies which base address resolves a register or command offset.</summary>
 public enum NvtRegisterRegionV1
 {
+    /// <summary>Selects the event-buffer base address for resolving offsets.</summary>
     EventBuffer,
+    /// <summary>Selects the common-buffer base address for resolving offsets.</summary>
     CommonBuffer,
+    /// <summary>Selects the history base address for resolving offsets.</summary>
     History,
 }
 
+/// <summary>Stores the base addresses used to resolve event-buffer, common-buffer, and history register offsets.</summary>
+/// <param name="EventBufferBase">The base address used to resolve event-buffer offsets.</param>
+/// <param name="CommonBufferBase">The base address used to resolve common-buffer offsets.</param>
+/// <param name="HistoryBase">The base address used to resolve history offsets.</param>
 public sealed record NvtRegisterAddressMapV1(
     uint EventBufferBase,
     uint CommonBufferBase,
     uint HistoryBase);
 
+/// <summary>Stores a firmware-scope expression as profile metadata.</summary>
+/// <param name="Expression">The expression stored as firmware-scope metadata.</param>
 public sealed record NvtFirmwareScopeV1(string Expression);
 
+/// <summary>Describes a named register by its region, offset, and meaning metadata.</summary>
+/// <param name="Region">The region whose base address is added to the register offset.</param>
+/// <param name="Offset">The register offset relative to the region's base address.</param>
+/// <param name="Name">The register name stored in the profile.</param>
+/// <param name="Meaning">The descriptive register metadata, defaulting to raw_only.</param>
 public sealed record NvtRegisterDefinitionV1(
     NvtRegisterRegionV1 Region,
     uint Offset,
     string Name,
     string Meaning = "raw_only");
 
+/// <summary>Describes a named opcode at a region-relative register offset with a confirmation flag.</summary>
+/// <param name="Region">The region containing the command register.</param>
+/// <param name="RegisterOffset">The command register offset relative to the region's base address.</param>
+/// <param name="Opcode">The byte value identifying the command.</param>
+/// <param name="Name">The command name stored in the profile.</param>
+/// <param name="Confirmed">Whether the command is marked as confirmed.</param>
 public sealed record NvtCommandDefinitionV1(
     NvtRegisterRegionV1 Region,
     uint RegisterOffset,
@@ -50,10 +71,12 @@ public sealed record NvtRegisterProfileDocumentV1(
     IReadOnlyList<NvtCommandDefinitionV1> Commands,
     string ContentSha256)
 {
+    /// <summary>Gets the profile identity formed from its identifier and content SHA-256.</summary>
     [JsonIgnore]
     public NvtRegisterProfileIdentity Identity => new(ProfileId, ContentSha256);
 }
 
+/// <summary>Reports invalid register-profile content or malformed profile JSON.</summary>
 public sealed class NvtRegisterProfileValidationException(string message, Exception? innerException = null)
     : FormatException(message, innerException);
 
@@ -63,11 +86,13 @@ public sealed class NvtRegisterProfileValidationException(string message, Except
 /// </summary>
 public static partial class NvtRegisterProfileFile
 {
+    /// <summary>Defines the supported version number of the register-profile JSON schema.</summary>
     public const int CurrentSchemaVersion = 1;
     private const uint MaximumNvtAddress = 0xFFFFFF;
 
     private static readonly JsonSerializerOptions ReadOptions = CreateReadOptions();
 
+    /// <summary>Creates a validated v1 register-profile document with a computed content SHA-256.</summary>
     public static NvtRegisterProfileDocumentV1 CreateV1(
         string profileId,
         string displayName,
@@ -93,6 +118,7 @@ public static partial class NvtRegisterProfileFile
         return document with { ContentSha256 = ComputeContentSha256(document) };
     }
 
+    /// <summary>Creates a v1 document from a built-in profile using the built-in register and command definitions.</summary>
     public static NvtRegisterProfileDocumentV1 FromBuiltIn(NvtRegisterProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -110,6 +136,7 @@ public static partial class NvtRegisterProfileFile
             BuiltInCommands);
     }
 
+    /// <summary>Validates a document and creates a runtime profile from its IC family and base addresses.</summary>
     public static NvtRegisterProfile ToRuntimeProfile(NvtRegisterProfileDocumentV1 document)
     {
         Validate(document);
@@ -120,6 +147,7 @@ public static partial class NvtRegisterProfileFile
             document.Addresses.HistoryBase);
     }
 
+    /// <summary>Validates a document and returns its canonical indented JSON with a trailing newline.</summary>
     public static string SerializeCanonical(NvtRegisterProfileDocumentV1 document)
     {
         Validate(document);
@@ -127,6 +155,7 @@ public static partial class NvtRegisterProfileFile
         return Encoding.UTF8.GetString(bytes) + "\n";
     }
 
+    /// <summary>Parses register-profile JSON and validates its schema, content, and SHA-256.</summary>
     public static NvtRegisterProfileDocumentV1 Parse(string json)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -163,6 +192,7 @@ public static partial class NvtRegisterProfileFile
         }
     }
 
+    /// <summary>Reads a UTF-8 register-profile file asynchronously and parses and validates its content.</summary>
     public static async Task<NvtRegisterProfileDocumentV1> LoadAsync(
         string path,
         CancellationToken cancellationToken = default)
@@ -173,6 +203,7 @@ public static partial class NvtRegisterProfileFile
         return Parse(json);
     }
 
+    /// <summary>Validates a document and writes its canonical JSON asynchronously as UTF-8 without a byte-order mark.</summary>
     public static async Task SaveAsync(
         string path,
         NvtRegisterProfileDocumentV1 document,
@@ -185,6 +216,7 @@ public static partial class NvtRegisterProfileFile
             .ConfigureAwait(false);
     }
 
+    /// <summary>Validates profile content and verifies that its SHA-256 matches the canonical content.</summary>
     public static void Validate(NvtRegisterProfileDocumentV1 document)
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -205,6 +237,7 @@ public static partial class NvtRegisterProfileFile
         }
     }
 
+    /// <summary>Computes a lowercase SHA-256 hash of validated canonical content, excluding the stored hash.</summary>
     public static string ComputeContentSha256(NvtRegisterProfileDocumentV1 document)
     {
         ArgumentNullException.ThrowIfNull(document);
