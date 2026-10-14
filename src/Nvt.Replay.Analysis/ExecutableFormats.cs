@@ -6,21 +6,32 @@ using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Specifies an Event Buffer version, optional decode profiles, and the target I2C address.</summary>
+/// <param name="EventBufferVersion">The requested Event Buffer version text.</param>
+/// <param name="RegisterProfile">The requested IC register profile, or null when unspecified.</param>
+/// <param name="Desay97Profile">The requested Desay 0x97 profile, or null when unspecified.</param>
+/// <param name="TargetI2cAddress">The seven-bit I2C slave address whose Event Buffer records are decoded.</param>
 public sealed record FormatDecodeRequest(
     string EventBufferVersion,
     string? RegisterProfile = null,
     string? Desay97Profile = null,
     int TargetI2cAddress = 0x01);
 
+/// <summary>Provides source provenance and diagnostics from a format inspection.</summary>
 public interface IFormatInspectionReport
 {
+    /// <summary>Gets the path of the inspected source capture.</summary>
     string SourcePath { get; }
+    /// <summary>Gets the SHA-256 hash of the inspected source capture.</summary>
     string SourceSha256 { get; }
+    /// <summary>Gets the diagnostics produced by the format inspection.</summary>
     IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }
 }
 
+/// <summary>Defines a selected format and the register profile and I2C address used to decode a capture.</summary>
 public abstract class ExecutableFormatSelection
 {
+    /// <summary>Initializes a format selection with its descriptor, register profile, and target I2C address.</summary>
     protected ExecutableFormatSelection(
         FormatDescriptor descriptor,
         string? registerProfile,
@@ -31,15 +42,21 @@ public abstract class ExecutableFormatSelection
         TargetI2cAddress = targetI2cAddress;
     }
 
+    /// <summary>Gets the descriptor for the selected Event Buffer format.</summary>
     public FormatDescriptor Descriptor { get; }
+    /// <summary>Gets the selected IC register profile, or null when none is specified.</summary>
     public string? RegisterProfile { get; }
+    /// <summary>Gets the target I2C slave address used to select records for decoding.</summary>
     public int TargetI2cAddress { get; }
+    /// <summary>Gets the display label identifying the selected format and any format-specific profile.</summary>
     public abstract string DisplayIdentity { get; }
 
+    /// <summary>Decodes a capture with the selected format and produces inspection, replay, and configuration data.</summary>
     public abstract ExecutableFormatDecodeResult Decode(
         CaptureSession capture,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Returns the capture with the selected register profile, reusing it when the profile already matches.</summary>
     protected CaptureSession ConfigureCapture(
         CaptureSession capture,
         CancellationToken cancellationToken = default)
@@ -51,6 +68,7 @@ public abstract class ExecutableFormatSelection
     }
 }
 
+/// <summary>Decodes captures using a selected Common Event Buffer version.</summary>
 public sealed class CommonFormatSelection : ExecutableFormatSelection
 {
     internal CommonFormatSelection(
@@ -60,9 +78,12 @@ public sealed class CommonFormatSelection : ExecutableFormatSelection
         int targetI2cAddress)
         : base(descriptor, registerProfile, targetI2cAddress) => Version = version;
 
+    /// <summary>Gets the Common Event Buffer version passed to the decoder.</summary>
     public CommonEventBufferVersion Version { get; }
+    /// <inheritdoc />
     public override string DisplayIdentity => $"Common {Descriptor.Version}";
 
+    /// <inheritdoc />
     public override ExecutableFormatDecodeResult Decode(
         CaptureSession capture,
         CancellationToken cancellationToken = default)
@@ -82,6 +103,7 @@ public sealed class CommonFormatSelection : ExecutableFormatSelection
     }
 }
 
+/// <summary>Decodes Desay 0x97 captures using an explicit profile and IC-specific Event Buffer base.</summary>
 public sealed class Desay97FormatSelection : ExecutableFormatSelection
 {
     internal Desay97FormatSelection(
@@ -95,11 +117,16 @@ public sealed class Desay97FormatSelection : ExecutableFormatSelection
         EventBufferBase = registerProfile.EventBufferBase;
     }
 
+    /// <summary>Gets the Desay 0x97 profile passed to the decoder.</summary>
     public Desay97Profile Profile { get; }
+    /// <summary>Gets the Event Buffer base address from the selected IC register profile.</summary>
     public uint EventBufferBase { get; }
+    /// <summary>Gets Standard or Benz Palm as the display name for the selected Desay 0x97 profile.</summary>
     public string ProfileDisplayName => Profile == Desay97Profile.Standard ? "Standard" : "Benz Palm";
+    /// <inheritdoc />
     public override string DisplayIdentity => $"Desay 0x97 / {ProfileDisplayName}";
 
+    /// <inheritdoc />
     public override ExecutableFormatDecodeResult Decode(
         CaptureSession capture,
         CancellationToken cancellationToken = default)
@@ -118,8 +145,10 @@ public sealed class Desay97FormatSelection : ExecutableFormatSelection
     }
 }
 
+/// <summary>Holds the selected format, configured capture, inspection report, replay, and combined diagnostics.</summary>
 public abstract class ExecutableFormatDecodeResult
 {
+    /// <summary>Stores the decode outputs and combines inspection diagnostics with replay diagnostics.</summary>
     protected ExecutableFormatDecodeResult(
         ExecutableFormatSelection selection,
         CaptureSession capture,
@@ -135,17 +164,27 @@ public abstract class ExecutableFormatDecodeResult
         Diagnostics = inspectionReport.Diagnostics.Concat(replay.Diagnostics).ToArray();
     }
 
+    /// <summary>Gets the executable format selection used to decode the capture.</summary>
     public ExecutableFormatSelection Selection { get; }
+    /// <summary>Gets the format descriptor from the decode selection.</summary>
     public FormatDescriptor Descriptor => Selection.Descriptor;
+    /// <summary>Gets the display label from the decode selection.</summary>
     public string DisplayIdentity => Selection.DisplayIdentity;
+    /// <summary>Gets the capture configured with the register profile used for decoding.</summary>
     public CaptureSession Capture { get; }
+    /// <summary>Gets the inspection report containing source provenance and decode diagnostics.</summary>
     public IFormatInspectionReport InspectionReport { get; }
+    /// <summary>Gets the touch replay session created from the decoded frames.</summary>
     public ITouchReplaySession Replay { get; }
+    /// <summary>Gets the format, profile, adapter, and address configuration recorded for the decode.</summary>
     public ReplayDecodeConfiguration Configuration { get; }
+    /// <summary>Gets inspection diagnostics followed by replay diagnostics.</summary>
     public IReadOnlyList<ReplayDiagnostic> Diagnostics { get; }
+    /// <summary>Gets whether the inspection report contains any error-severity diagnostic.</summary>
     public bool HasInspectionErrors => InspectionReport.Diagnostics.Any(item => item.Severity == DiagnosticSeverity.Error);
 }
 
+/// <summary>Holds the Common format selection, inspection report, and replay session for a decoded capture.</summary>
 public sealed class CommonFormatDecodeResult : ExecutableFormatDecodeResult
 {
     internal CommonFormatDecodeResult(
@@ -161,11 +200,15 @@ public sealed class CommonFormatDecodeResult : ExecutableFormatDecodeResult
         CommonReplay = replay;
     }
 
+    /// <summary>Gets the Common format selection used for this decode.</summary>
     public CommonFormatSelection CommonSelection { get; }
+    /// <summary>Gets the Common format inspection report produced by this decode.</summary>
     public CommonInspectionReport Report { get; }
+    /// <summary>Gets the Common replay session created from the decoded frames.</summary>
     public CommonReplaySession CommonReplay { get; }
 }
 
+/// <summary>Holds the Desay 0x97 format selection, inspection report, and replay session for a decoded capture.</summary>
 public sealed class Desay97FormatDecodeResult : ExecutableFormatDecodeResult
 {
     internal Desay97FormatDecodeResult(
@@ -181,13 +224,18 @@ public sealed class Desay97FormatDecodeResult : ExecutableFormatDecodeResult
         DesayReplay = replay;
     }
 
+    /// <summary>Gets the Desay 0x97 format selection used for this decode.</summary>
     public Desay97FormatSelection DesaySelection { get; }
+    /// <summary>Gets the Desay 0x97 inspection report produced by this decode.</summary>
     public Desay97InspectionReport Report { get; }
+    /// <summary>Gets the Desay 0x97 replay session created from the decoded frames.</summary>
     public Desay97ReplaySession DesayReplay { get; }
 }
 
+/// <summary>Lists built-in formats and resolves decode requests into executable format selections.</summary>
 public static class ExecutableFormatRegistry
 {
+    /// <summary>Gets the descriptors for all built-in Event Buffer formats.</summary>
     public static IReadOnlyList<FormatDescriptor> Descriptors => BuiltInFormats.All;
 
     /// <summary>
@@ -232,6 +280,7 @@ public static class ExecutableFormatRegistry
         return TryResolve(effectiveRequest, out selection, out error);
     }
 
+    /// <summary>Validates a decode request and resolves its format, profiles, and I2C address into an executable selection.</summary>
     public static bool TryResolve(
         FormatDecodeRequest request,
         out ExecutableFormatSelection? selection,
@@ -285,6 +334,7 @@ public static class ExecutableFormatRegistry
         return true;
     }
 
+    /// <summary>Converts a supported Common version to its canonical hexadecimal version text.</summary>
     public static string CommonVersionText(CommonEventBufferVersion version) => version switch
     {
         CommonEventBufferVersion.V82 => "0x82",
