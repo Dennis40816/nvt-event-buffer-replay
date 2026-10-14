@@ -1,15 +1,30 @@
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Describes a rectangular region used for label placement and overlap checks.</summary>
+/// <param name="X">The horizontal coordinate of the rectangle's left edge.</param>
+/// <param name="Y">The vertical coordinate of the rectangle's top edge.</param>
+/// <param name="Width">The horizontal extent of the rectangle.</param>
+/// <param name="Height">The vertical extent of the rectangle.</param>
 public readonly record struct ReplayLabelBounds(double X, double Y, double Width, double Height)
 {
+    /// <summary>Gets the rectangle's right edge by adding its width to its X coordinate.</summary>
     public double Right => X + Width;
+    /// <summary>Gets the rectangle's bottom edge by adding its height to its Y coordinate.</summary>
     public double Bottom => Y + Height;
 
+    /// <summary>Checks rectangle overlap using the supplied gap in the horizontal and vertical comparisons.</summary>
     public bool Intersects(ReplayLabelBounds other, double gap = 0) =>
         X < other.Right + gap && Right + gap > other.X &&
         Y < other.Bottom + gap && Bottom + gap > other.Y;
 }
 
+/// <summary>Describes a label's key, contact point, requested dimensions, and preferred placement direction.</summary>
+/// <param name="Key">The key copied to the resulting label placement.</param>
+/// <param name="AnchorX">The horizontal coordinate of the contact point.</param>
+/// <param name="AnchorY">The vertical coordinate of the contact point.</param>
+/// <param name="Width">The requested label width.</param>
+/// <param name="Height">The requested label height.</param>
+/// <param name="PreferredAnchor">The first placement direction to try, or null to choose one automatically.</param>
 public readonly record struct ReplayLabelRequest(
     int Key,
     double AnchorX,
@@ -18,18 +33,33 @@ public readonly record struct ReplayLabelRequest(
     double Height,
     ReplayLabelAnchor? PreferredAnchor = null);
 
+/// <summary>Specifies a label's placement direction relative to its contact point.</summary>
 public enum ReplayLabelAnchor
 {
+    /// <summary>Places the label above the contact point.</summary>
     North,
+    /// <summary>Places the label above and to the right of the contact point.</summary>
     NorthEast,
+    /// <summary>Places the label to the right of the contact point.</summary>
     East,
+    /// <summary>Places the label below and to the right of the contact point.</summary>
     SouthEast,
+    /// <summary>Places the label below the contact point.</summary>
     South,
+    /// <summary>Places the label below and to the left of the contact point.</summary>
     SouthWest,
+    /// <summary>Places the label to the left of the contact point.</summary>
     West,
+    /// <summary>Places the label above and to the left of the contact point.</summary>
     NorthWest,
 }
 
+/// <summary>Stores a placed label's key, bounds, leader endpoint, and selected placement direction.</summary>
+/// <param name="Key">The key copied from the label request.</param>
+/// <param name="Bounds">The rectangle occupied by the placed label.</param>
+/// <param name="LeaderX">The contact point's horizontal coordinate clamped to the label bounds.</param>
+/// <param name="LeaderY">The contact point's vertical coordinate clamped to the label bounds.</param>
+/// <param name="Anchor">The placement direction selected for the label.</param>
 public readonly record struct ReplayLabelPlacement(
     int Key,
     ReplayLabelBounds Bounds,
@@ -44,6 +74,7 @@ public readonly record struct ReplayLabelPlacement(
 /// </summary>
 public static class ReplayLabelLayout
 {
+    /// <summary>Places labels within the supplied bounds, avoiding contacts, labels, and obstacles where space permits.</summary>
     public static IReadOnlyList<ReplayLabelPlacement> Place(
         ReplayLabelBounds bounds,
         IReadOnlyList<ReplayLabelRequest> requests,
