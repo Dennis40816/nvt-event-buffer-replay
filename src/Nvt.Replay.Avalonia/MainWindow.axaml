@@ -452,7 +452,7 @@
                       <ToggleButton x:Name="ReverseXToggleButton" Classes="actionGhost flat" Content="Flip X" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse X axis" />
                       <ToggleButton x:Name="ReverseYToggleButton" Classes="actionGhost flat" Content="Flip Y" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" AutomationProperties.Name="Reverse Y axis" />
                       <ToggleButton x:Name="SwapAxesToggleButton" Classes="actionGhost flat" Content="Swap XY" IsCheckedChanged="ReverseAxisToggleButton_OnIsCheckedChanged" ToolTip.Tip="Swap the displayed X and Y axes without changing source data" AutomationProperties.Name="Swap X and Y axes" />
-                      <Button Classes="actionIconButton actionGhost" Content="&#xE9A6;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
+                      <Button Classes="actionIconButton actionGhost flat" Content="&#xE9A6;" FontFamily="Segoe Fluent Icons" FontSize="16" Click="PaintFitButton_OnClick" ToolTip.Tip="Fit panel to canvas" AutomationProperties.Name="Fit panel" />
                       <ToggleButton x:Name="CanvasSettingsToggleButton" Classes="actionIconButton actionGhost flat" Content="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="16" IsCheckedChanged="CanvasSettingsToggleButton_OnIsCheckedChanged" ToolTip.Tip="Canvas settings" AutomationProperties.Name="Show canvas settings" />
                     </StackPanel>
                   </Border>
