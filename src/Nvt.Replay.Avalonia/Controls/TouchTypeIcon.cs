@@ -7,27 +7,34 @@ using Nvt.Replay.Rendering;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
+/// <summary>Draws a touch-type shape using the contact color or the invalid-contact color.</summary>
 public sealed class TouchTypeIcon : Control
 {
+    /// <summary>Defines the styled property for the contact identifier used to select the icon color.</summary>
     public static readonly StyledProperty<byte> ContactIdProperty =
         AvaloniaProperty.Register<TouchTypeIcon, byte>(nameof(ContactId), 1);
+    /// <summary>Defines the styled property for the touch type used to select the icon shape.</summary>
     public static readonly StyledProperty<TouchType> TouchTypeProperty =
         AvaloniaProperty.Register<TouchTypeIcon, TouchType>(nameof(TouchType), TouchType.Finger);
+    /// <summary>Defines the styled property that selects the invalid-contact color when true.</summary>
     public static readonly StyledProperty<bool> InvalidProperty =
         AvaloniaProperty.Register<TouchTypeIcon, bool>(nameof(Invalid));
 
+    /// <summary>Gets or sets the contact identifier used to select the icon color.</summary>
     public byte ContactId
     {
         get => GetValue(ContactIdProperty);
         set => SetValue(ContactIdProperty, value);
     }
 
+    /// <summary>Gets or sets the touch type used to select the icon shape.</summary>
     public TouchType TouchType
     {
         get => GetValue(TouchTypeProperty);
         set => SetValue(TouchTypeProperty, value);
     }
 
+    /// <summary>Gets or sets whether the icon uses the invalid-contact color.</summary>
     public bool Invalid
     {
         get => GetValue(InvalidProperty);
@@ -37,6 +44,7 @@ public sealed class TouchTypeIcon : Control
     static TouchTypeIcon() =>
         AffectsRender<TouchTypeIcon>(ContactIdProperty, TouchTypeProperty, InvalidProperty);
 
+    /// <inheritdoc />
     public override void Render(DrawingContext context)
     {
         base.Render(context);

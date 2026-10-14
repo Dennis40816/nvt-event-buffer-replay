@@ -35,7 +35,7 @@ public sealed class ReplayAutoPauseIndex
         return Create(Enumerable.Range(0, replay.Count).Select(replay.Seek).ToArray());
     }
 
-    /// <summary>Builds an automatic pause index from snapshot positions with non-invalid Break contacts or an AllBreak flag.</summary>
+    /// <summary>Builds an automatic pause index from snapshots with non-invalid Break contacts or an AllBreak flag.</summary>
     public static ReplayAutoPauseIndex Create(IReadOnlyList<ITouchReplaySnapshot> snapshots)
     {
         ArgumentNullException.ThrowIfNull(snapshots);

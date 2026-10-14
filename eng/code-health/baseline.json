@@ -4770,86 +4770,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "7a4783c2873a9162be886ae46b8472e863dc6a125cb69237d17a08c3c96bf7e9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon.ContactId",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "57ba0c4bf4aee3d0baddd9fef7d1ca0636d7020996dd2a338f2f2dd148fba298",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon.fields:ContactIdProperty",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "7310445b910208a2be18b4ee3d02ac915c6f4ffd0b78739b2eddfb33c93e9db2",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon.fields:InvalidProperty",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "9494f30b57ba23693a6a748040d1044d9b4efe93c76e811b59d666d7b879761a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon.fields:TouchTypeProperty",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a5565d64399f4b1dc89e633a57a3d92f79d0ed9937ab1deb12d82d5f91abab04",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon.Invalid",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "e1b429e240cff5f5bdbcefd8e141ddd7f27ba5cc4647abd285fcf26b85976123",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon.Render(DrawingContext)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "076f3c969e011f6316db8c27a8a8fdebb7d1ad705b84fef463640c11666ff493",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon.TouchType",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "f911118bbab36598831e8ff064a043771c27458a9e4bdd385426c6d23381f515",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/TouchTypeIcon.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.TouchTypeIcon",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "d0d53ff2a674bd397740fc0092780ded87802ded42ce7185d23876aa8f331e46",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
@@ -5380,56 +5300,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "c17e12adeb2d23685782f7a58b338172ee01f3d549d08c02bcae4b241e270b84",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.FfmpegProbeResult.PreferredH264Encoder",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "7dfd9036170d704fb185823a18d92956d444ec7ad7619ef30dc0ac9804cc064f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 5,
-      "member": "Nvt.Replay.Rendering.FfmpegProbeResult",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "14f09d6308405e805d9242458281b9d882a7795e50942e6cbc5166b551aedec7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.FfmpegRuntime.fields:EnvironmentVariable",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a0f74092fe6bfeece2263fb53f0289ebdd88323633974639ec818ff941148ea7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.FfmpegRuntime.ProbeAsync(string?,CancellationToken)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "2e8ddf853a9c4a558f479cb8364773cc86074b3f759e0a3fda53f706e58139d8",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.FfmpegRuntime.ResolveExecutable(string?)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "e90efd464cd10504fd7fecb46e04c8ddebd8342b600ae7dce17b9f1b6713e1b2",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/HeatmapPngWriter.cs",
@@ -5526,36 +5396,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Rendering.ReadableCommunicationLogWriter",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a96d1beedac1c9c32dcb2db48eaed4056d67e37fd81458bf06266e4c063a6bf6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayEncoderUnavailableException..ctor(string,Exception)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "380c329fe93f4169f6180a99db73190ef9411003c428d68380f0b873ca4d4321",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayEncoderUnavailableException..ctor(string)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "7f4317e4fc9cb85ebeabf4a6221e444c6a7249444dc3477286da5c99f76c832d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/FfmpegRuntime.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayEncoderUnavailableException",
       "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
