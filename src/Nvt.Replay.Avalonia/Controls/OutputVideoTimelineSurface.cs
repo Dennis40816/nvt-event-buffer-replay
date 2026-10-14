@@ -10,16 +10,22 @@ namespace Nvt.Replay.Avalonia.Controls;
 /// <summary>Draws the output video timeline with its playhead and source range, and handles seek and range input.</summary>
 public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
 {
+    /// <summary>Identifies the styled property for the normal timeline track brush.</summary>
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
         AvaloniaProperty.Register<OutputVideoTimelineSurface, IBrush?>(nameof(TrackBrush));
+    /// <summary>Identifies the styled property for the hovered track, selected range, and time label border brush.</summary>
     public static readonly StyledProperty<IBrush?> HoverTrackBrushProperty =
         AvaloniaProperty.Register<OutputVideoTimelineSurface, IBrush?>(nameof(HoverTrackBrush));
+    /// <summary>Identifies the styled property for the played track segment and playhead fill brush.</summary>
     public static readonly StyledProperty<IBrush?> ProgressBrushProperty =
         AvaloniaProperty.Register<OutputVideoTimelineSurface, IBrush?>(nameof(ProgressBrush));
+    /// <summary>Identifies the styled property for the playhead outline and range handle brush.</summary>
     public static readonly StyledProperty<IBrush?> PlayheadBrushProperty =
         AvaloniaProperty.Register<OutputVideoTimelineSurface, IBrush?>(nameof(PlayheadBrush));
+    /// <summary>Identifies the styled property for the hover time label background brush.</summary>
     public static readonly StyledProperty<IBrush?> LabelSurfaceBrushProperty =
         AvaloniaProperty.Register<OutputVideoTimelineSurface, IBrush?>(nameof(LabelSurfaceBrush));
+    /// <summary>Identifies the styled property for the hover time label text brush.</summary>
     public static readonly StyledProperty<IBrush?> LabelTextBrushProperty =
         AvaloniaProperty.Register<OutputVideoTimelineSurface, IBrush?>(nameof(LabelTextBrush));
 
@@ -33,26 +39,37 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
     private int? _hoverPosition;
     private DragTarget _dragTarget;
 
+    /// <summary>Occurs when pointer or keyboard input requests an output frame position.</summary>
     public event EventHandler<OutputVideoSeekEventArgs>? SeekRequested;
+    /// <summary>Occurs when dragging a source range handle ends.</summary>
     public event EventHandler<OutputVideoRangeEventArgs>? RangeChanged;
 
+    /// <summary>Gets or sets the brush for the normal timeline track.</summary>
     public IBrush? TrackBrush { get => GetValue(TrackBrushProperty); set => SetValue(TrackBrushProperty, value); }
+    /// <summary>Gets or sets the brush for the hovered track, selected range, and time label border.</summary>
     public IBrush? HoverTrackBrush { get => GetValue(HoverTrackBrushProperty); set => SetValue(HoverTrackBrushProperty, value); }
+    /// <summary>Gets or sets the brush for the played track segment and playhead fill.</summary>
     public IBrush? ProgressBrush { get => GetValue(ProgressBrushProperty); set => SetValue(ProgressBrushProperty, value); }
+    /// <summary>Gets or sets the brush for the playhead outline and source range handles.</summary>
     public IBrush? PlayheadBrush { get => GetValue(PlayheadBrushProperty); set => SetValue(PlayheadBrushProperty, value); }
+    /// <summary>Gets or sets the background brush for the hover time label.</summary>
     public IBrush? LabelSurfaceBrush { get => GetValue(LabelSurfaceBrushProperty); set => SetValue(LabelSurfaceBrushProperty, value); }
+    /// <summary>Gets or sets the text brush for the hover time label.</summary>
     public IBrush? LabelTextBrush { get => GetValue(LabelTextBrushProperty); set => SetValue(LabelTextBrushProperty, value); }
+    /// <summary>Gets or sets whether the source range and its drag handles are displayed.</summary>
     public bool ShowRange { get; set; } = true;
     /// <summary>Gets the first source frame of the selected range.</summary>
     public int RangeStart => _rangeStart;
     /// <summary>Gets the last source frame of the selected range.</summary>
     public int RangeEnd => _rangeEnd;
 
+    /// <summary>Creates a timeline surface that can receive keyboard focus.</summary>
     public OutputVideoTimelineSurface()
     {
         Focusable = true;
     }
 
+    /// <inheritdoc />
     bool ICustomHitTest.HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
 
     /// <summary>Sets the number of output frames and the frame rate, and clamps the playhead.</summary>
@@ -280,13 +297,18 @@ public sealed class OutputVideoTimelineSurface : Control, ICustomHitTest
     }
 }
 
+/// <summary>Carries the output frame index requested by timeline input.</summary>
 public sealed class OutputVideoSeekEventArgs(int outputFrameIndex) : EventArgs
 {
+    /// <summary>Gets the output frame index requested by timeline input.</summary>
     public int OutputFrameIndex { get; } = outputFrameIndex;
 }
 
+/// <summary>Carries the start and end source frame indices reported after a range handle drag.</summary>
 public sealed class OutputVideoRangeEventArgs(int startLogicalIndex, int endLogicalIndex) : EventArgs
 {
+    /// <summary>Gets the source frame index at the start of the selected range.</summary>
     public int StartLogicalIndex { get; } = startLogicalIndex;
+    /// <summary>Gets the source frame index at the end of the selected range.</summary>
     public int EndLogicalIndex { get; } = endLogicalIndex;
 }
