@@ -1,6 +1,6 @@
 # UI event failure observation
 
-The Avalonia host uses the `Nvt.Core` 0.9.0 package's `UiEventRunner`.
+The Avalonia host uses the `Nvt.Core` 0.9.3 package's `UiEventRunner`.
 The 22 formerly `async void` MainWindow handlers now synchronously start
 observed Task operations. Work still begins on the calling UI context.
 The U1 Load and Decode command delegates also use that runner, including
