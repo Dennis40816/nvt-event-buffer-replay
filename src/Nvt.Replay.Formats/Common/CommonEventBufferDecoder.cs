@@ -2,12 +2,17 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Formats.Common;
 
+/// <summary>Decodes Common event-buffer source bytes and reports format validation diagnostics.</summary>
 public sealed class CommonEventBufferDecoder
 {
+    /// <summary>The number of bytes decoded as one Common event-buffer frame.</summary>
     public const int FrameLength = 80;
+    /// <summary>The number of finger slots decoded from each Common event-buffer frame.</summary>
     public const int FingerCount = 10;
+    /// <summary>The number of bytes occupied by each finger slot in a Common event-buffer frame.</summary>
     public const int FingerLength = 7;
 
+    /// <summary>Decodes a source record using the selected Common version and collects validation diagnostics.</summary>
     public CommonDecodeResult Decode(SourceRecord source, CommonEventBufferVersion version)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -156,6 +161,7 @@ public sealed class CommonEventBufferDecoder
         return new CommonDecodeResult(frame, diagnostics);
     }
 
+    /// <summary>Tries to parse a Common version from 82 through 85, with an optional 0x or COMMON- prefix, ignoring case.</summary>
     public static bool TryParseVersion(string value, out CommonEventBufferVersion version)
     {
         version = value.Trim().ToUpperInvariant() switch
