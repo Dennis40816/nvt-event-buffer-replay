@@ -361,6 +361,7 @@
           "Avalonia.Themes.Fluent": "[12.1.1, )",
           "AvaloniaUI.DiagnosticsSupport": "[2.2.3, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "Nvt.Core.Avalonia": "[0.9.3, 0.9.3]",
           "Nvt.Replay.Analysis": "[0.1.1, )",
           "Nvt.Replay.Core": "[0.1.1, )",
           "Nvt.Replay.Formats": "[0.1.1, )",
@@ -371,7 +372,7 @@
       "nvt.replay.core": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Core": "[0.9.0, 0.9.0]"
+          "Nvt.Core": "[0.9.3, 0.9.3]"
         }
       },
       "nvt.replay.formats": {
@@ -471,9 +472,20 @@
       },
       "Nvt.Core": {
         "type": "CentralTransitive",
-        "requested": "[0.9.0, 0.9.0]",
-        "resolved": "0.9.0",
-        "contentHash": "D6SPx6FKlf4fVVD6zBSzi2zddwKOqHQy1srz2ZnGJGWd92yJwepFUqEI3Y5I1XOBtQ20zRo4bDdLUl5pPvYTDw=="
+        "requested": "[0.9.3, 0.9.3]",
+        "resolved": "0.9.3",
+        "contentHash": "eZqjjWA3HrbPqfgd/onS9oRuWaNEoItoCqCxLAhRbzK3oA9c2CAHCGldmrfK6D+N5/Mzu8e++oRbtatZR4WkHQ=="
+      },
+      "Nvt.Core.Avalonia": {
+        "type": "CentralTransitive",
+        "requested": "[0.9.3, 0.9.3]",
+        "resolved": "0.9.3",
+        "contentHash": "n09/90uKC+hCrrPbFVZsWfKzSmW1J2qkqU9YyzoF3BzlIgBok0O7zZMBOsDOOT+h9TdWU8YcYpM3GIN7FoXddA==",
+        "dependencies": {
+          "Avalonia": "12.1.1",
+          "CommunityToolkit.Mvvm": "8.4.2",
+          "Nvt.Core": "0.9.3"
+        }
       },
       "SkiaSharp": {
         "type": "CentralTransitive",

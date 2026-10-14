@@ -28,6 +28,9 @@ internal static class VisualTestCapture
 
     public static void Stabilize(Window window)
     {
+        // Core button styles animate brush changes for 120 ms. The Core reducedMotion class removes those
+        // transitions, so a capture never shows a half-faded button and needs no waiting.
+        window.Classes.Set("reducedMotion", true);
         Dispatcher.UIThread.RunJobs();
         window.InvalidateMeasure();
         window.InvalidateArrange();

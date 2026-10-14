@@ -1005,8 +1005,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 432,
-        "endLine": 432,
+        "startLine": 429,
+        "endLine": 429,
         "element": "Button"
       }
     },
@@ -1021,8 +1021,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 447,
-        "endLine": 447,
+        "startLine": 444,
+        "endLine": 444,
         "element": "ReplayPaintSurface"
       }
     },
@@ -1037,8 +1037,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 452,
-        "endLine": 452,
+        "startLine": 449,
+        "endLine": 449,
         "element": "ToggleButton"
       }
     },
@@ -1053,8 +1053,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 453,
-        "endLine": 453,
+        "startLine": 450,
+        "endLine": 450,
         "element": "ToggleButton"
       }
     },
@@ -1069,56 +1069,56 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
+        "startLine": 451,
+        "endLine": 451,
+        "element": "ToggleButton"
+      }
+    },
+    {
+      "kind": "axaml",
+      "handlerAttribute": "IsCheckedChanged",
+      "event": "IsCheckedChanged",
+      "method": "ReverseAxisToggleButton_OnIsCheckedChanged",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
+      "startLine": 315,
+      "endLine": 325,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
+        "startLine": 452,
+        "endLine": 452,
+        "element": "ToggleButton"
+      }
+    },
+    {
+      "kind": "axaml",
+      "handlerAttribute": "IsCheckedChanged",
+      "event": "IsCheckedChanged",
+      "method": "ReverseAxisToggleButton_OnIsCheckedChanged",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
+      "startLine": 315,
+      "endLine": 325,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
+        "startLine": 453,
+        "endLine": 453,
+        "element": "ToggleButton"
+      }
+    },
+    {
+      "kind": "axaml",
+      "handlerAttribute": "IsCheckedChanged",
+      "event": "IsCheckedChanged",
+      "method": "ReverseAxisToggleButton_OnIsCheckedChanged",
+      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
+      "startLine": 315,
+      "endLine": 325,
+      "asyncVoid": false,
+      "registration": {
+        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
         "startLine": 454,
         "endLine": 454,
-        "element": "ToggleButton"
-      }
-    },
-    {
-      "kind": "axaml",
-      "handlerAttribute": "IsCheckedChanged",
-      "event": "IsCheckedChanged",
-      "method": "ReverseAxisToggleButton_OnIsCheckedChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
-      "startLine": 315,
-      "endLine": 325,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 455,
-        "endLine": 455,
-        "element": "ToggleButton"
-      }
-    },
-    {
-      "kind": "axaml",
-      "handlerAttribute": "IsCheckedChanged",
-      "event": "IsCheckedChanged",
-      "method": "ReverseAxisToggleButton_OnIsCheckedChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
-      "startLine": 315,
-      "endLine": 325,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 456,
-        "endLine": 456,
-        "element": "ToggleButton"
-      }
-    },
-    {
-      "kind": "axaml",
-      "handlerAttribute": "IsCheckedChanged",
-      "event": "IsCheckedChanged",
-      "method": "ReverseAxisToggleButton_OnIsCheckedChanged",
-      "file": "src/Nvt.Replay.Avalonia/MainWindow.Paint.cs",
-      "startLine": 315,
-      "endLine": 325,
-      "asyncVoid": false,
-      "registration": {
-        "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 457,
-        "endLine": 457,
         "element": "ToggleButton"
       }
     },
@@ -1133,8 +1133,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 458,
-        "endLine": 458,
+        "startLine": 455,
+        "endLine": 455,
         "element": "Button"
       }
     },
@@ -1149,8 +1149,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 459,
-        "endLine": 459,
+        "startLine": 456,
+        "endLine": 456,
         "element": "ToggleButton"
       }
     },
@@ -1165,8 +1165,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 468,
-        "endLine": 468,
+        "startLine": 465,
+        "endLine": 465,
         "element": "ComboBox"
       }
     },
@@ -1181,8 +1181,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 480,
-        "endLine": 480,
+        "startLine": 477,
+        "endLine": 477,
         "element": "ToggleButton"
       }
     },
@@ -1197,8 +1197,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 484,
-        "endLine": 484,
+        "startLine": 481,
+        "endLine": 481,
         "element": "ToggleButton"
       }
     },
@@ -1213,8 +1213,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 529,
-        "endLine": 529,
+        "startLine": 526,
+        "endLine": 526,
         "element": "Button"
       }
     },
@@ -1229,8 +1229,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 543,
-        "endLine": 543,
+        "startLine": 540,
+        "endLine": 540,
         "element": "OutputVideoTimelineSurface"
       }
     },
@@ -1245,8 +1245,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 544,
-        "endLine": 544,
+        "startLine": 541,
+        "endLine": 541,
         "element": "OutputVideoTimelineSurface"
       }
     },
@@ -1261,8 +1261,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 558,
-        "endLine": 558,
+        "startLine": 552,
+        "endLine": 552,
         "element": "Button"
       }
     },
@@ -1277,8 +1277,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 570,
-        "endLine": 570,
+        "startLine": 564,
+        "endLine": 564,
         "element": "Button"
       }
     },
@@ -1293,8 +1293,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 571,
-        "endLine": 571,
+        "startLine": 565,
+        "endLine": 565,
         "element": "Button"
       }
     },
@@ -1309,8 +1309,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 586,
-        "endLine": 586,
+        "startLine": 580,
+        "endLine": 580,
         "element": "ComboBox"
       }
     },
@@ -1325,8 +1325,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 599,
-        "endLine": 599,
+        "startLine": 593,
+        "endLine": 593,
         "element": "ComboBox"
       }
     },
@@ -1341,8 +1341,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 607,
-        "endLine": 607,
+        "startLine": 601,
+        "endLine": 601,
         "element": "TextBox"
       }
     },
@@ -1357,8 +1357,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 607,
-        "endLine": 607,
+        "startLine": 601,
+        "endLine": 601,
         "element": "TextBox"
       }
     },
@@ -1373,8 +1373,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 617,
-        "endLine": 617,
+        "startLine": 611,
+        "endLine": 611,
         "element": "ComboBox"
       }
     },
@@ -1389,8 +1389,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 624,
-        "endLine": 624,
+        "startLine": 618,
+        "endLine": 618,
         "element": "TextBox"
       }
     },
@@ -1405,8 +1405,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 624,
-        "endLine": 624,
+        "startLine": 618,
+        "endLine": 618,
         "element": "TextBox"
       }
     },
@@ -1421,8 +1421,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 677,
-        "endLine": 677,
+        "startLine": 671,
+        "endLine": 671,
         "element": "ComboBox"
       }
     },
@@ -1437,8 +1437,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 700,
-        "endLine": 700,
+        "startLine": 694,
+        "endLine": 694,
         "element": "TextBox"
       }
     },
@@ -1453,8 +1453,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 700,
-        "endLine": 700,
+        "startLine": 694,
+        "endLine": 694,
         "element": "TextBox"
       }
     },
@@ -1469,8 +1469,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 709,
-        "endLine": 709,
+        "startLine": 703,
+        "endLine": 703,
         "element": "TextBox"
       }
     },
@@ -1485,8 +1485,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 709,
-        "endLine": 709,
+        "startLine": 703,
+        "endLine": 703,
         "element": "TextBox"
       }
     },
@@ -1501,8 +1501,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 819,
-        "endLine": 819,
+        "startLine": 813,
+        "endLine": 813,
         "element": "ComboBox"
       }
     },
@@ -1517,8 +1517,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 838,
-        "endLine": 838,
+        "startLine": 832,
+        "endLine": 832,
         "element": "TextBox"
       }
     },
@@ -1533,8 +1533,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 838,
-        "endLine": 838,
+        "startLine": 832,
+        "endLine": 832,
         "element": "TextBox"
       }
     },
@@ -1549,8 +1549,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 840,
-        "endLine": 840,
+        "startLine": 834,
+        "endLine": 834,
         "element": "TextBox"
       }
     },
@@ -1565,8 +1565,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 840,
-        "endLine": 840,
+        "startLine": 834,
+        "endLine": 834,
         "element": "TextBox"
       }
     },
@@ -1581,8 +1581,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 841,
-        "endLine": 841,
+        "startLine": 835,
+        "endLine": 835,
         "element": "Button"
       }
     },
@@ -1597,8 +1597,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 882,
-        "endLine": 882,
+        "startLine": 873,
+        "endLine": 873,
         "element": "Button"
       }
     },
@@ -1613,8 +1613,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 888,
-        "endLine": 888,
+        "startLine": 879,
+        "endLine": 879,
         "element": "Button"
       }
     },
@@ -1629,8 +1629,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 902,
-        "endLine": 902,
+        "startLine": 893,
+        "endLine": 893,
         "element": "Button"
       }
     },
@@ -1645,8 +1645,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 903,
-        "endLine": 903,
+        "startLine": 894,
+        "endLine": 894,
         "element": "Button"
       }
     },
@@ -1661,8 +1661,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 969,
-        "endLine": 969,
+        "startLine": 960,
+        "endLine": 960,
         "element": "Button"
       }
     },
@@ -1677,8 +1677,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 970,
-        "endLine": 970,
+        "startLine": 961,
+        "endLine": 961,
         "element": "Button"
       }
     },
@@ -1693,8 +1693,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 983,
-        "endLine": 983,
+        "startLine": 974,
+        "endLine": 974,
         "element": "ListBox"
       }
     },
@@ -1709,8 +1709,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1081,
-        "endLine": 1081,
+        "startLine": 1072,
+        "endLine": 1072,
         "element": "Button"
       }
     },
@@ -1725,8 +1725,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1105,
-        "endLine": 1105,
+        "startLine": 1096,
+        "endLine": 1096,
         "element": "Button"
       }
     },
@@ -1741,8 +1741,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1114,
-        "endLine": 1114,
+        "startLine": 1105,
+        "endLine": 1105,
         "element": "ComboBox"
       }
     },
@@ -1757,8 +1757,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1117,
-        "endLine": 1117,
+        "startLine": 1108,
+        "endLine": 1108,
         "element": "Button"
       }
     },
@@ -1773,8 +1773,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1118,
-        "endLine": 1118,
+        "startLine": 1109,
+        "endLine": 1109,
         "element": "Button"
       }
     },
@@ -1789,8 +1789,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1119,
-        "endLine": 1119,
+        "startLine": 1110,
+        "endLine": 1110,
         "element": "Button"
       }
     },
@@ -1805,8 +1805,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1120,
-        "endLine": 1120,
+        "startLine": 1111,
+        "endLine": 1111,
         "element": "Button"
       }
     },
@@ -1821,8 +1821,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1126,
-        "endLine": 1126,
+        "startLine": 1117,
+        "endLine": 1117,
         "element": "Button"
       }
     },
@@ -1837,8 +1837,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1130,
-        "endLine": 1130,
+        "startLine": 1121,
+        "endLine": 1121,
         "element": "Button"
       }
     },
@@ -1853,8 +1853,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1131,
-        "endLine": 1131,
+        "startLine": 1122,
+        "endLine": 1122,
         "element": "Button"
       }
     },
@@ -1869,8 +1869,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1132,
-        "endLine": 1132,
+        "startLine": 1123,
+        "endLine": 1123,
         "element": "Button"
       }
     },
@@ -1885,8 +1885,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1149,
-        "endLine": 1149,
+        "startLine": 1140,
+        "endLine": 1140,
         "element": "Button"
       }
     },
@@ -1901,8 +1901,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1150,
-        "endLine": 1150,
+        "startLine": 1141,
+        "endLine": 1141,
         "element": "Button"
       }
     },
@@ -1917,8 +1917,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1151,
-        "endLine": 1151,
+        "startLine": 1142,
+        "endLine": 1142,
         "element": "Button"
       }
     },
@@ -1933,8 +1933,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1155,
-        "endLine": 1155,
+        "startLine": 1146,
+        "endLine": 1146,
         "element": "ComboBox"
       }
     },
@@ -1949,8 +1949,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1159,
-        "endLine": 1159,
+        "startLine": 1150,
+        "endLine": 1150,
         "element": "ComboBox"
       }
     },
@@ -1965,8 +1965,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1175,
-        "endLine": 1175,
+        "startLine": 1166,
+        "endLine": 1166,
         "element": "ToggleButton"
       }
     },
@@ -1981,8 +1981,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1176,
-        "endLine": 1176,
+        "startLine": 1167,
+        "endLine": 1167,
         "element": "Button"
       }
     },
@@ -1997,8 +1997,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1182,
-        "endLine": 1182,
+        "startLine": 1173,
+        "endLine": 1173,
         "element": "Button"
       }
     },
@@ -2013,8 +2013,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1206,
-        "endLine": 1206,
+        "startLine": 1197,
+        "endLine": 1197,
         "element": "ReplayTimelineSurface"
       }
     },
@@ -2029,8 +2029,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1207,
-        "endLine": 1207,
+        "startLine": 1198,
+        "endLine": 1198,
         "element": "ReplayTimelineSurface"
       }
     },
@@ -2045,8 +2045,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1208,
-        "endLine": 1208,
+        "startLine": 1199,
+        "endLine": 1199,
         "element": "ReplayTimelineSurface"
       }
     },
@@ -2061,8 +2061,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1228,
-        "endLine": 1228,
+        "startLine": 1219,
+        "endLine": 1219,
         "element": "CheckBox"
       }
     },
@@ -2077,8 +2077,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1239,
-        "endLine": 1239,
+        "startLine": 1230,
+        "endLine": 1230,
         "element": "CheckBox"
       }
     },
@@ -2093,8 +2093,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1240,
-        "endLine": 1240,
+        "startLine": 1231,
+        "endLine": 1231,
         "element": "CheckBox"
       }
     },
@@ -2109,8 +2109,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1241,
-        "endLine": 1241,
+        "startLine": 1232,
+        "endLine": 1232,
         "element": "CheckBox"
       }
     },
@@ -2125,8 +2125,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1243,
-        "endLine": 1243,
+        "startLine": 1234,
+        "endLine": 1234,
         "element": "Button"
       }
     },
@@ -2141,8 +2141,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1247,
-        "endLine": 1247,
+        "startLine": 1238,
+        "endLine": 1238,
         "element": "Border"
       }
     },
@@ -2157,8 +2157,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1256,
-        "endLine": 1256,
+        "startLine": 1247,
+        "endLine": 1247,
         "element": "Button"
       }
     },
@@ -2173,8 +2173,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1269,
-        "endLine": 1269,
+        "startLine": 1260,
+        "endLine": 1260,
         "element": "OutputVideoTimelineSurface"
       }
     },
@@ -2189,8 +2189,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1281,
-        "endLine": 1281,
+        "startLine": 1269,
+        "endLine": 1269,
         "element": "Button"
       }
     },
@@ -2205,8 +2205,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1297,
-        "endLine": 1297,
+        "startLine": 1285,
+        "endLine": 1285,
         "element": "Border"
       }
     },
@@ -2221,8 +2221,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1402,
-        "endLine": 1402,
+        "startLine": 1390,
+        "endLine": 1390,
         "element": "ComboBox"
       }
     },
@@ -2237,8 +2237,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1429,
-        "endLine": 1429,
+        "startLine": 1417,
+        "endLine": 1417,
         "element": "ComboBox"
       }
     },
@@ -2253,8 +2253,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1451,
-        "endLine": 1451,
+        "startLine": 1439,
+        "endLine": 1439,
         "element": "TextBox"
       }
     },
@@ -2269,8 +2269,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1467,
-        "endLine": 1467,
+        "startLine": 1455,
+        "endLine": 1455,
         "element": "ComboBox"
       }
     },
@@ -2285,8 +2285,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1492,
-        "endLine": 1492,
+        "startLine": 1480,
+        "endLine": 1480,
         "element": "Button"
       }
     },
@@ -2301,8 +2301,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1493,
-        "endLine": 1493,
+        "startLine": 1481,
+        "endLine": 1481,
         "element": "Button"
       }
     },
@@ -2317,8 +2317,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1501,
-        "endLine": 1501,
+        "startLine": 1489,
+        "endLine": 1489,
         "element": "Border"
       }
     },
@@ -2333,8 +2333,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1510,
-        "endLine": 1510,
+        "startLine": 1498,
+        "endLine": 1498,
         "element": "Button"
       }
     },
@@ -2349,8 +2349,8 @@
       "asyncVoid": false,
       "registration": {
         "file": "src/Nvt.Replay.Avalonia/MainWindow.axaml",
-        "startLine": 1528,
-        "endLine": 1528,
+        "startLine": 1516,
+        "endLine": 1516,
         "element": "Button"
       }
     }

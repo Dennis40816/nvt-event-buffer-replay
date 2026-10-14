@@ -376,7 +376,7 @@
       "kind": "file",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "fileLines": 3910
+        "fileLines": 3905
       },
       "owner": "NFU",
       "locations": [
@@ -460,7 +460,7 @@
       "kind": "member",
       "issue": "health-refactor/2026-10-31",
       "ceilings": {
-        "methodLines": 105
+        "methodLines": 104
       },
       "owner": "NFU",
       "locations": [
@@ -618,16 +618,6 @@
       "member": "Nvt.Replay.Avalonia.Tests.GapSnapshotTests.CaptureOutputExportAsync(bool,string)",
       "project": "Nvt.Replay.Avalonia.Tests",
       "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "b81c455270485e9c1a306b29e2daddf708e5d4267b3940468b5ff52f7946d5eb",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
-      "rule": "workspaceDuplicates",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests",
-      "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests"
     },
     {
       "syntaxHash": "b799b3db308adee7d6e9d1c6cd14330350e279a1fa42b058e625a9d7b1fb8e30",
@@ -11123,16 +11113,6 @@
       "syntaxHash": "108645197d63009310ac92d49dafbec0a3c8df6b99e37f13b41dfc42338d8cad",
       "owner": "NFU",
       "path": "tests/Nvt.Replay.Avalonia.Tests/LoadShortcutGuardTests.cs",
-      "rule": "FORMAT:IDE0005",
-      "count": 3,
-      "member": "<global>",
-      "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "IDE0005"
-    },
-    {
-      "syntaxHash": "2adf47a2e2d695cafc2b1442e205c4e35e0db4d7cfe9583a662011710316a9d0",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Avalonia.Tests/StyleResourceTests.cs",
       "rule": "FORMAT:IDE0005",
       "count": 3,
       "member": "<global>",

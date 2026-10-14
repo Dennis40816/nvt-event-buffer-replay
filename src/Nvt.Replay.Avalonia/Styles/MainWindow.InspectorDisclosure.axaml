@@ -20,22 +20,22 @@
       <Setter Property="Padding" Value="14,0,0,0" />
       <Setter Property="CornerRadius" Value="0" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderSoftBrush}" />
       <Setter Property="BorderThickness" Value="0,1,0,0" />
     </Style>
     <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader /template/ Border#ToggleButtonBackground">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderSoftBrush}" />
       <Setter Property="BorderThickness" Value="0,1,0,0" />
     </Style>
     <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ToggleButtonBackground">
-      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcSelectionSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderBrush}" />
     </Style>
     <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader:pressed /template/ Border#ToggleButtonBackground">
-      <Setter Property="Background" Value="{DynamicResource PressedSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcSecondaryActionPressedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderBrush}" />
     </Style>
     <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader /template/ Border#ExpandCollapseChevronBorder">
       <Setter Property="Width" Value="36" />
@@ -50,7 +50,7 @@
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Expander.inspectorDisclosure /template/ ToggleButton#ExpanderHeader /template/ Path#ExpandCollapseChevron">
-      <Setter Property="Stroke" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="Stroke" Value="{DynamicResource NfcTextSecondaryBrush}" />
       <Setter Property="StrokeThickness" Value="1.5" />
     </Style>
     <Style Selector="Expander.inspectorDisclosure /template/ Border#ExpanderContent">
@@ -60,15 +60,15 @@
       <Setter Property="Padding" Value="0" />
     </Style>
     <Style Selector="TextBlock.healthTextAlarm">
-      <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcDangerTextBrush}" />
     </Style>
     <Style Selector="TextBlock.healthTextNormal">
-      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextSecondaryBrush}" />
     </Style>
     <Style Selector="GridSplitter.inspectorSplitter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="GridSplitter.inspectorSplitter:pointerover">
-      <Setter Property="Background" Value="{DynamicResource AccentBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcAccentBorderBrush}" />
     </Style>
 </Styles>

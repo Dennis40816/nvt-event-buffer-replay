@@ -1,25 +1,25 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Style Selector="Border.outputSettingRow">
-      <Setter Property="MinHeight" Value="62" />
-      <Setter Property="Padding" Value="12,7" />
+      <Setter Property="MinHeight" Value="52" />
+      <Setter Property="Padding" Value="12,5" />
       <Setter Property="CornerRadius" Value="2" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style Selector="TextBlock.outputSettingLabel">
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="Medium" />
-      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextSecondaryBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style Selector="ComboBox.outputSetting">
-      <Setter Property="Height" Value="36" />
+      <Setter Property="Height" Value="{DynamicResource NfcControlHeight}" />
       <Setter Property="MinWidth" Value="168" />
       <Setter Property="Padding" Value="8,0" />
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcAccentBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
       <Setter Property="FontSize" Value="14" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -28,20 +28,16 @@
     <Style Selector="TextBlock.outputSettingIcon">
       <Setter Property="FontFamily" Value="Segoe Fluent Icons" />
       <Setter Property="FontSize" Value="17" />
-      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextBrush}" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="HorizontalAlignment" Value="Center" />
     </Style>
     <Style Selector="ComboBox.outputSetting:pointerover">
-      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-    </Style>
-    <Style Selector="ComboBox.outputSetting:focus">
-      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Background" Value="{DynamicResource NfcSelectionSurfaceBrush}" />
       <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
     <Style Selector="ComboBox.outputHeaderSelect">
-      <Setter Property="Height" Value="26" />
+      <Setter Property="Height" Value="{DynamicResource NfcControlHeight}" />
       <Setter Property="Padding" Value="0" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -52,13 +48,13 @@
     <Style Selector="TextBlock.outputInfoLabel">
       <Setter Property="FontSize" Value="12.5" />
       <Setter Property="FontWeight" Value="Medium" />
-      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.outputInfoValue">
       <Setter Property="FontFamily" Value="Cascadia Mono" />
       <Setter Property="FontSize" Value="12.5" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextBrush}" />
       <Setter Property="TextAlignment" Value="Right" />
     </Style>
 </Styles>

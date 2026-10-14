@@ -1,0 +1,46 @@
+<!--
+  TEMPORARY. Remove when Core ships the `flat` modifier for actionGhost (Nvt.Core.Avalonia 0.9.3 has no
+  Button.actionGhost.active state, and ToggleButton.actionGhost:checked draws a rounded accent border).
+  The selectors, class name and brush names follow the Core design, so the exit is: delete this file and its
+  include in App.axaml. The approved snapshots must stay pixel-identical after that.
+  Scope: exactly three places that carry the `flat` class. Settings left navigation (Button.actionGhost.flat,
+  switched by the `active` class), the Paint canvas quick toggles (ToggleButton.actionGhost.flat) and the
+  Settings close button (Button.actionGhost.flat). Look: rectangle, no border in any state, accent surface and
+  accent text when selected. The Core focus ring is not overridden and follows the square shape.
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Style Selector="Button.actionGhost.flat, ToggleButton.actionGhost.flat">
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.actionGhost.flat:disabled, ToggleButton.actionGhost.flat:disabled">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource NfcTextDisabledBrush}" />
+  </Style>
+  <Style Selector="Button.actionGhost.flat:pointerover:not(:disabled), ToggleButton.actionGhost.flat:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource NfcSelectionSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.actionGhost.flat:pressed:not(:disabled), ToggleButton.actionGhost.flat:pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource NfcSecondaryActionPressedBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.actionGhost.flat.active:not(:disabled), ToggleButton.actionGhost.flat:checked:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource NfcAccentSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource NfcAccentStrongBrush}" />
+  </Style>
+  <Style Selector="Button.actionGhost.flat.active:pointerover:not(:disabled), ToggleButton.actionGhost.flat:checked:pointerover:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource NfcSelectionSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource NfcAccentStrongBrush}" />
+  </Style>
+  <Style Selector="Button.actionGhost.flat.active:pressed:not(:disabled), ToggleButton.actionGhost.flat:checked:pressed:not(:disabled)">
+    <Setter Property="Background" Value="{DynamicResource NfcSecondaryActionPressedBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource NfcAccentStrongBrush}" />
+  </Style>
+</Styles>
