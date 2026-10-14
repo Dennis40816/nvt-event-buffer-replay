@@ -4710,66 +4710,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "fe3a61519c53e8a7748280b9ef35517d48fce93ab5273a19626b6e8b4bea959a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayVideoPreviewSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayVideoPreviewSurface..ctor()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a69686fbe599e4a374365e5deca2c49f1ef7c3f45de1ce7c7efde39adb95604f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayVideoPreviewSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayVideoPreviewSurface.Clear()",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "2b95152b099537c6432360ed4de58afde01c58fe71839a9364d839bddd2128ef",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayVideoPreviewSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayVideoPreviewSurface.OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "1e98b1da2d000c147a2ce0307a3633cfb9475e57fa779ff1f5da3018f013bb14",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayVideoPreviewSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayVideoPreviewSurface.Render(DrawingContext)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "6e9a9c044d711de4a3018aac63bf1be707c330a31f38424c478d78777b1f0b90",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayVideoPreviewSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayVideoPreviewSurface.Show(ReplayScene,ReplayRenderSettings,int,int)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "d99667816587ca86a9a5a1ca536623f5e2e5bae610febcdf5d2dd192ab62a877",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/Controls/ReplayVideoPreviewSurface.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Controls.ReplayVideoPreviewSurface",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "d0d53ff2a674bd397740fc0092780ded87802ded42ce7185d23876aa8f331e46",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.axaml.cs",
@@ -5280,66 +5220,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "b4158fcff62f64a4e28120c1aba57900f37e125b94f9c0d578913060786dd90c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayOutputPlanService..ctor(ReplayOutputPlanBuilder?)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "38ea39f58a089bd14d3cafab25adbfff4fc19d650decd77058cb17e808b79302",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayOutputPlanService.ActiveGeneration",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "2e7067eea069276602dc88f306dfe9f112e5fcfabc9e63d8de0c20b8e85e6556",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayOutputPlanService.BuildCount",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "b274a302d91497c4ed5d59d12f2e59471c897f0bbde8f49735b7479956fb99ea",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayOutputPlanService.Dispose()",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "25326b74a8b5ab79c8a1cb4362bba5c0e46c3c4bd8e1ccb5784b98be6dcff60e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayOutputPlanService.GetPreviewAsync(ITouchReplaySession,string,ReplayOutputSettings,CancellationToken,IProgress<ReplayExportProgress>?)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "1fa5e9fe8984e620ca089ec2dd07c5fec181b4d12fa019830d8ca6e3a51569ea",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayOutputPlanService.Invalidate()",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "08a59e735fa7046fa47b9a7412eafe3d72dd2d4deff74c7e8a9269d67828fe82",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/ReplayTrailChunker.cs",
@@ -5396,16 +5276,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Rendering.ReplayTrailChunker",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "6d24b38b089a673f26082c6598a85e9c1303ae2b7c73b22f8ad6f20ee240f360",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering",
       "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
