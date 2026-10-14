@@ -1,35 +1,60 @@
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Supplies a source file and format selection for a capture-to-workspace decode operation.</summary>
+/// <param name="SourcePath">Path of the source file to load.</param>
+/// <param name="Format">Format selection supplied to executable format resolution.</param>
+/// <param name="SourceAdapterId">Optional source adapter identifier passed to capture loading.</param>
+/// <param name="WorkspaceProgressInterval">Progress interval supplied to the workspace builder.</param>
 public sealed record CaptureDecodeRequest(
     string SourcePath,
     FormatDecodeRequest Format,
     string? SourceAdapterId = null,
     int WorkspaceProgressInterval = 1024);
 
+/// <summary>Supplies an existing capture and format selection for a capture-to-workspace decode operation.</summary>
+/// <param name="Capture">Loaded capture supplied directly to the decode operation.</param>
+/// <param name="Format">Format selection supplied to executable format resolution.</param>
+/// <param name="WorkspaceProgressInterval">Progress interval supplied to the workspace builder.</param>
 public sealed record PreparedCaptureDecodeRequest(
     CaptureSession Capture,
     FormatDecodeRequest Format,
     int WorkspaceProgressInterval = 1024);
 
+/// <summary>Identifies a stage of loading, decoding, and building a replay workspace from a capture.</summary>
 public enum CaptureDecodePhase
 {
+    /// <summary>Indicates that source probing is in progress.</summary>
     ProbingSource,
+    /// <summary>Indicates that source hashing is in progress.</summary>
     HashingSource,
+    /// <summary>Indicates that source records are being indexed.</summary>
     IndexingRecords,
+    /// <summary>Indicates that source loading has reached the ready-for-configuration stage.</summary>
     SourceReady,
+    /// <summary>Indicates that the executable format is being resolved for the capture.</summary>
     SelectingFormat,
+    /// <summary>Indicates that the selected register profile is being applied to the capture.</summary>
     ProjectingRegisters,
+    /// <summary>Indicates that the capture is being decoded with the selected format.</summary>
     DecodingFrames,
+    /// <summary>Indicates that decoded replay frames are being materialized into a workspace.</summary>
     BuildingWorkspace,
+    /// <summary>Indicates that workspace construction is complete.</summary>
     Ready,
 }
 
+/// <summary>Reports the generation, phase, and item counts of a capture decode operation.</summary>
+/// <param name="Generation">Generation of the capture decode operation reporting progress.</param>
+/// <param name="Phase">Current stage of the capture decode operation.</param>
+/// <param name="CompletedItems">Number of items reported as completed in the current phase.</param>
+/// <param name="TotalItems">Optional total item count used to calculate phase progress.</param>
 public sealed record CaptureDecodeProgress(
     long Generation,
     CaptureDecodePhase Phase,
     int CompletedItems = 0,
     int? TotalItems = null)
 {
+    /// <summary>Gets the clamped phase percentage, or 100 when ready without a positive total, otherwise null.</summary>
     public double? Percent => TotalItems is > 0
         ? Math.Clamp(CompletedItems * 100d / TotalItems.Value, 0, 100)
         : Phase == CaptureDecodePhase.Ready
@@ -37,17 +62,25 @@ public sealed record CaptureDecodeProgress(
             : null;
 }
 
+/// <summary>Holds the loaded capture, decode output, and replay workspace build result for an operation.</summary>
+/// <param name="Generation">Generation of the operation that produced this result.</param>
+/// <param name="LoadedCapture">Capture supplied by source loading or a prepared request before register projection.</param>
+/// <param name="Decode">Result of decoding the capture with the selected format.</param>
+/// <param name="WorkspaceBuild">Result of building a replay workspace from the decoded replay.</param>
 public sealed record CaptureDecodeResult(
     long Generation,
     CaptureSession LoadedCapture,
     ExecutableFormatDecodeResult Decode,
     ReplayWorkspaceBuildResult WorkspaceBuild)
 {
+    /// <summary>Gets the capture returned by the selected format decoder.</summary>
     public CaptureSession Capture => Decode.Capture;
 
+    /// <summary>Gets the replay workspace produced from the decoded replay.</summary>
     public ReplayWorkspace Workspace => WorkspaceBuild.Workspace;
 }
 
+/// <summary>Exposes the generation and completion task of a started capture decode operation.</summary>
 public sealed class CaptureDecodeOperation
 {
     internal CaptureDecodeOperation(long generation, Task<CaptureDecodeResult> completion)
@@ -56,16 +89,21 @@ public sealed class CaptureDecodeOperation
         Completion = completion;
     }
 
+    /// <summary>Gets the generation assigned to this capture decode operation.</summary>
     public long Generation { get; }
 
+    /// <summary>Gets the task that completes with the decoded capture and replay workspace.</summary>
     public Task<CaptureDecodeResult> Completion { get; }
 }
 
+/// <summary>Reports a failure to resolve an executable format for a capture.</summary>
 public sealed class CaptureDecodeConfigurationException(string message) : ArgumentException(message);
 
+/// <summary>Signals that an operation was cancelled or superseded before its result could be published.</summary>
 public sealed class CaptureDecodeSupersededException(long generation)
     : OperationCanceledException($"Capture decode operation {generation} was superseded or cancelled before publication.")
 {
+    /// <summary>Gets the generation of the operation whose result was rejected.</summary>
     public long Generation { get; } = generation;
 }
 
@@ -82,9 +120,11 @@ public sealed class CaptureDecodeController : IDisposable
     private long nextGeneration;
     private bool disposed;
 
+    /// <summary>Creates a capture decode controller using the supplied workspace builder or a default builder.</summary>
     public CaptureDecodeController(ReplayWorkspaceBuilder? workspaceBuilder = null) =>
         this.workspaceBuilder = workspaceBuilder ?? new ReplayWorkspaceBuilder();
 
+    /// <summary>Gets the last result accepted for publication, or null before the first successful publication.</summary>
     public CaptureDecodeResult? LastSuccessfulResult
     {
         get
@@ -93,6 +133,7 @@ public sealed class CaptureDecodeController : IDisposable
         }
     }
 
+    /// <summary>Gets the active capture decode operation's generation, or null when no operation is active.</summary>
     public long? ActiveGeneration
     {
         get
@@ -101,6 +142,7 @@ public sealed class CaptureDecodeController : IDisposable
         }
     }
 
+    /// <summary>Loads and decodes a source file, builds its replay workspace, and supersedes any active operation.</summary>
     public Task<CaptureDecodeResult> RunAsync(
         CaptureDecodeRequest request,
         IProgress<CaptureDecodeProgress>? progress = null,
@@ -118,12 +160,14 @@ public sealed class CaptureDecodeController : IDisposable
                 token => LoadCaptureAsync(operation, request, progress, token))).Completion;
     }
 
+    /// <summary>Decodes an existing capture, builds its replay workspace, and supersedes any active operation.</summary>
     public Task<CaptureDecodeResult> RunAsync(
         PreparedCaptureDecodeRequest request,
         IProgress<CaptureDecodeProgress>? progress = null,
         CancellationToken cancellationToken = default) =>
         StartPrepared(request, progress, cancellationToken).Completion;
 
+    /// <summary>Starts decoding an existing capture and building its workspace, exposing its generation and completion task.</summary>
     public CaptureDecodeOperation StartPrepared(
         PreparedCaptureDecodeRequest request,
         IProgress<CaptureDecodeProgress>? progress = null,
@@ -166,6 +210,7 @@ public sealed class CaptureDecodeController : IDisposable
         return new CaptureDecodeOperation(operation.Generation, completion);
     }
 
+    /// <summary>Cancels and clears the active decode operation, returning whether an operation was active.</summary>
     public bool CancelCurrent()
     {
         ActiveOperation? operation;
@@ -179,6 +224,7 @@ public sealed class CaptureDecodeController : IDisposable
         return operation is not null;
     }
 
+    /// <inheritdoc />
     public void Dispose()
     {
         ActiveOperation? operation;
