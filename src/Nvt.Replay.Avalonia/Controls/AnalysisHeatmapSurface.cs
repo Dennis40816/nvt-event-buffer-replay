@@ -7,6 +7,15 @@ using Nvt.Replay.Analysis;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
+/// <summary>Holds the grid position, sample count, peak ratio, and coordinate bounds of a hovered heatmap cell.</summary>
+/// <param name="Column">The zero-based column index of the hovered cell.</param>
+/// <param name="Row">The zero-based row index of the hovered cell.</param>
+/// <param name="Count">The number of coordinate samples in the hovered cell.</param>
+/// <param name="PeakRatio">The cell's sample count divided by the largest visible cell count.</param>
+/// <param name="MinimumX">The lower X coordinate bound of the hovered cell.</param>
+/// <param name="MaximumX">The upper X coordinate bound of the hovered cell.</param>
+/// <param name="MinimumY">The lower Y coordinate bound of the hovered cell.</param>
+/// <param name="MaximumY">The upper Y coordinate bound of the hovered cell.</param>
 public sealed record HeatmapHoverCell(
     int Column,
     int Row,
@@ -17,6 +26,7 @@ public sealed record HeatmapHoverCell(
     double MinimumY,
     double MaximumY);
 
+/// <summary>Renders a coordinate sample heatmap with count labels, a color scale, and hover details.</summary>
 public sealed class AnalysisHeatmapSurface : Control
 {
     private static readonly (double Stop, Color Color)[] Palette =
@@ -31,38 +41,56 @@ public sealed class AnalysisHeatmapSurface : Control
     private static readonly IBrush LightLabelBrush = new SolidColorBrush(Colors.White);
     private static readonly LinearGradientBrush ColorBarBrush = CreateColorBarBrush();
 
+    /// <summary>Identifies the styled property that stores the surface's accent brush.</summary>
     public static readonly StyledProperty<IBrush?> AccentBrushProperty =
         AvaloniaProperty.Register<AnalysisHeatmapSurface, IBrush?>(nameof(AccentBrush));
+    /// <summary>Identifies the styled property for the plot grid and outline brush.</summary>
     public static readonly StyledProperty<IBrush?> GridBrushProperty =
         AvaloniaProperty.Register<AnalysisHeatmapSurface, IBrush?>(nameof(GridBrush));
+    /// <summary>Identifies the styled property for the brush used by heatmap annotations and hover text.</summary>
     public static readonly StyledProperty<IBrush?> TextBrushProperty =
         AvaloniaProperty.Register<AnalysisHeatmapSurface, IBrush?>(nameof(TextBrush));
+    /// <summary>Identifies the styled property for the hover card background brush.</summary>
     public static readonly StyledProperty<IBrush?> ToolTipSurfaceBrushProperty =
         AvaloniaProperty.Register<AnalysisHeatmapSurface, IBrush?>(nameof(ToolTipSurfaceBrush));
+    /// <summary>Identifies the styled property for the hover card border brush.</summary>
     public static readonly StyledProperty<IBrush?> ToolTipBorderBrushProperty =
         AvaloniaProperty.Register<AnalysisHeatmapSurface, IBrush?>(nameof(ToolTipBorderBrush));
 
     private AnalysisHotspot? hotspot;
     private HeatmapHoverCell? hoveredCell;
 
+    /// <summary>Gets or sets the accent brush stored for this surface.</summary>
     public IBrush? AccentBrush { get => GetValue(AccentBrushProperty); set => SetValue(AccentBrushProperty, value); }
+    /// <summary>Gets or sets the brush used for plot outlines, guide lines, and the color bar border.</summary>
     public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
+    /// <summary>Gets or sets the brush used by axis labels, annotations, and hover text.</summary>
     public IBrush? TextBrush { get => GetValue(TextBrushProperty); set => SetValue(TextBrushProperty, value); }
+    /// <summary>Gets or sets the brush used to fill the hover card background.</summary>
     public IBrush? ToolTipSurfaceBrush { get => GetValue(ToolTipSurfaceBrushProperty); set => SetValue(ToolTipSurfaceBrushProperty, value); }
+    /// <summary>Gets or sets the brush used to draw the hover card border.</summary>
     public IBrush? ToolTipBorderBrush { get => GetValue(ToolTipBorderBrushProperty); set => SetValue(ToolTipBorderBrushProperty, value); }
 
+    /// <summary>Gets the minimum sample count required for a heatmap cell to be displayed.</summary>
     public int MinimumCount { get; private set; } = 1;
+    /// <summary>Gets the minimum fraction of the peak cell count required to display a count label.</summary>
     public double LabelThresholdRatio { get; private set; } = 0.65;
+    /// <summary>Gets the total sample count across cells that meet the minimum count.</summary>
     public int VisibleSampleCount { get; private set; }
+    /// <summary>Gets the number of heatmap cells that meet the minimum sample count.</summary>
     public int VisibleCellCount { get; private set; }
+    /// <summary>Gets the largest sample count among visible cells, or zero when none are visible.</summary>
     public int PeakCount { get; private set; }
+    /// <summary>Gets the current hovered cell details, or null when no visible cell is hovered.</summary>
     public HeatmapHoverCell? HoveredCell => hoveredCell;
 
+    /// <summary>Creates a heatmap surface with a crosshair cursor.</summary>
     public AnalysisHeatmapSurface()
     {
         Cursor = new Cursor(StandardCursorType.Cross);
     }
 
+    /// <summary>Sets the heatmap data and display thresholds, updates visible counts, and clears the hover state.</summary>
     public void Show(AnalysisHotspot? value, int minimumCount = 1, double labelThresholdRatio = 0.65)
     {
         hotspot = value;
@@ -76,6 +104,7 @@ public sealed class AnalysisHeatmapSurface : Control
         InvalidateVisual();
     }
 
+    /// <summary>Clears the hovered cell and requests a redraw when a cell was hovered.</summary>
     public void ClearHover()
     {
         if (hoveredCell is null) return;
@@ -83,6 +112,7 @@ public sealed class AnalysisHeatmapSurface : Control
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -141,6 +171,7 @@ public sealed class AnalysisHeatmapSurface : Control
             DrawHoverCard(context, plot, hover);
     }
 
+    /// <inheritdoc />
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
@@ -182,12 +213,14 @@ public sealed class AnalysisHeatmapSurface : Control
         InvalidateVisual();
     }
 
+    /// <inheritdoc />
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
         ClearHover();
     }
 
+    /// <summary>Interpolates the heatmap palette at the supplied value clamped to the range from zero to one.</summary>
     public static Color ColorAt(double normalized)
     {
         var value = Math.Clamp(normalized, 0, 1);
