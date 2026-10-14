@@ -4410,56 +4410,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "92f7e620259b1720a52097630ee68af9c5a4c85f9e4bb89642ce0641e24e7bdc",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayFrameCache.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayFrameCache.Count",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "e2292030d84c9c9978b70989e5021077ad6dba0707827c57ba745a107a577f95",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayFrameCache.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayFrameCache.Create(ITouchReplaySession,CancellationToken)",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8f0a254ba0515b0217ee975514407e4902820e546a5a9d15f837f635379b74cd",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayFrameCache.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayFrameCache.Snapshots",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "9096657880d97f051a4430fef802a376158b97b65906a7622fd57d23b6bf64b2",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayFrameCache.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayFrameCache",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "c481a3ca53adb1b50397301a1928a4828e5cba75078f25f6908e6ac41df4d29d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayFrameCache.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayFrameCache",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "5da74050071e94b7903c8ea95c6ff4062f25959aae911167cff734cfdea817c2",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Analysis/ReplayLoopRange.cs",
@@ -4486,56 +4436,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Analysis.ReplayLoopRangePlanner",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "f8a6194955bbe4651507848946bae3ce17d35dbbb97374169aa02d3cecc1a20a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayPlaybackSchedule.cs",
-      "rule": "CS1591",
-      "count": 4,
-      "member": "Nvt.Replay.Analysis.ReplayPlaybackPosition",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "11b7472f056e672aec990a4c7ca5d8c99e52811814f8e20355dfd3523ca800a4",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayPlaybackSchedule.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayPlaybackSchedule.CatchUp(int,int,TimeSpan,TimeSpan,Func<int, int, TimeSpan>,int?,int)",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "4f35f9dda2c8d3e0c5316c620fe67372df171f12910022f574a461c770372950",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayPlaybackSchedule.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayPlaybackSchedule.fields:DefaultMaximumAdvance",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "186875e2702ab5753353dfcdac5969474c0255da7fa4f3448fc040aca11ba048",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayPlaybackSchedule.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayPlaybackSchedule.NextVisualDue(TimeSpan,TimeSpan,TimeSpan)",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "c08c2ff600c54b49f9a5c0d27c7f84f51a282de9838b3b6a3894da418f74ab4c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/ReplayPlaybackSchedule.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.ReplayPlaybackSchedule",
       "project": "Nvt.Replay.Analysis",
       "symbol": "CS1591"
     },
