@@ -32,7 +32,7 @@ public enum RegisterActivityKind
 /// <param name="Register">The readable register label or page selection description.</param>
 /// <param name="Meaning">The annotated register meaning or page selection label.</param>
 /// <param name="RawValue">The annotated register value or hexadecimal representation of the source bytes.</param>
-/// <param name="HasPreviousSample">Whether an earlier read exists for the same profile and address or register name.</param>
+/// <param name="HasPreviousSample">True only for a Read record with an earlier read for the same profile and address or register name; always false for writes.</param>
 /// <param name="ChangedFromPreviousSample">Whether this read's bytes differ from those of the previous matching read.</param>
 public sealed record RegisterActivityEntry(
     SourceRecord Record,

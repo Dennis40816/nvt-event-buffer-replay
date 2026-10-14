@@ -3,17 +3,25 @@ using System.Text;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Represents an FFmpeg runtime or encoder availability failure during replay export.</summary>
 public sealed class ReplayEncoderUnavailableException : InvalidOperationException
 {
+    /// <summary>Initializes an encoder availability exception with the specified error message.</summary>
     public ReplayEncoderUnavailableException(string message) : base(message) { }
+    /// <summary>Initializes an encoder availability exception with an error message and the underlying exception.</summary>
     public ReplayEncoderUnavailableException(string message, Exception innerException) : base(message, innerException) { }
 }
 
+/// <summary>Stores the FFmpeg executable path, available reviewed H.264 encoders, and runtime identity.</summary>
+/// <param name="ExecutablePath">The path to the FFmpeg executable used by the probe.</param>
+/// <param name="H264Encoders">The available reviewed H.264 encoder names in preference order.</param>
+/// <param name="Identity">The executable file name used to identify the probed runtime.</param>
 public sealed record FfmpegProbeResult(
     string ExecutablePath,
     IReadOnlyList<string> H264Encoders,
     string Identity)
 {
+    /// <summary>Gets the first available reviewed H.264 encoder in preference order.</summary>
     public string PreferredH264Encoder => H264Encoders[0];
 }
 
@@ -23,8 +31,10 @@ public sealed record FfmpegProbeResult(
 /// </summary>
 public static class FfmpegRuntime
 {
+    /// <summary>Names the environment variable used to locate the FFmpeg executable.</summary>
     public const string EnvironmentVariable = "NVT_REPLAY_FFMPEG";
 
+    /// <summary>Finds an existing FFmpeg executable from an explicit path, environment settings, bundled files, or PATH.</summary>
     public static string? ResolveExecutable(string? explicitPath = null)
     {
         if (!string.IsNullOrWhiteSpace(explicitPath))
@@ -54,6 +64,7 @@ public static class FfmpegRuntime
         return null;
     }
 
+    /// <summary>Asynchronously probes FFmpeg for available reviewed H.264 encoders and runtime identity.</summary>
     public static async Task<FfmpegProbeResult> ProbeAsync(
         string? explicitPath = null,
         CancellationToken cancellationToken = default)
