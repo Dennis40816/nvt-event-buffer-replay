@@ -8,6 +8,14 @@ using Nvt.Replay.Rendering;
 
 namespace Nvt.Replay.Avalonia.ViewModels;
 
+/// <summary>Holds a contact's identity, touch state, coordinates, and source for an inspector row.</summary>
+/// <param name="Id">The contact identifier.</param>
+/// <param name="Type">The touch type reported for the contact.</param>
+/// <param name="Status">The touch status reported for the contact.</param>
+/// <param name="X">The contact's X coordinate.</param>
+/// <param name="Y">The contact's Y coordinate.</param>
+/// <param name="Invalid">Whether the contact is marked invalid.</param>
+/// <param name="ReportedThisFrame">Whether the row uses a contact reported by the current frame.</param>
 public sealed record InspectorContactRow(
     byte Id,
     TouchType Type,
@@ -17,7 +25,9 @@ public sealed record InspectorContactRow(
     bool Invalid,
     bool ReportedThisFrame)
 {
+    /// <summary>Gets the contact identifier prefixed with ID for display.</summary>
     public string IdLabel => $"ID {Id}";
+    /// <summary>Gets the finger, glove, palm, or other label for the contact's touch type.</summary>
     public string TypeLabel => Type switch
     {
         TouchType.Finger => "Finger",
@@ -25,6 +35,7 @@ public sealed record InspectorContactRow(
         TouchType.Palm => "Palm",
         _ => "Other",
     };
+    /// <summary>Gets the invalid, touch status, palm, or idle label for the contact's state.</summary>
     public string StateLabel => Invalid ? "INVALID" : Status switch
     {
         TouchStatus.Enter => "ENTER",
@@ -33,19 +44,45 @@ public sealed record InspectorContactRow(
         _ when Type == TouchType.Palm => "PALM",
         _ => "IDLE",
     };
+    /// <summary>Gets the contact's X coordinate formatted using the invariant culture.</summary>
     public string XLabel => X.ToString(CultureInfo.InvariantCulture);
+    /// <summary>Gets the contact's Y coordinate formatted using the invariant culture.</summary>
     public string YLabel => Y.ToString(CultureInfo.InvariantCulture);
+    /// <summary>Gets REPORT for a contact from the current frame or HOST for a host-state contact.</summary>
     public string SourceLabel => ReportedThisFrame ? "REPORT" : "HOST";
+    /// <summary>Gets the contact's identity, type, state, coordinates, and source as one accessible label.</summary>
     public string AccessibleLabel => $"{IdLabel}, {TypeLabel}, {StateLabel}, X {XLabel}, Y {YLabel}, {SourceLabel}";
 }
 
+/// <summary>Holds active host contact counts by type, including a global palm indication.</summary>
+/// <param name="Fingers">The active finger contact count.</param>
+/// <param name="Gloves">The active glove contact count.</param>
+/// <param name="Palms">The active palm count, or one when only a global palm is indicated.</param>
+/// <param name="Other">The active contact count for the reserved touch type.</param>
 public sealed record InspectorContactSummary(int Fingers, int Gloves, int Palms, int Other)
 {
+    /// <summary>Gets the sum of the finger, glove, palm, and reserved-type contact counts.</summary>
     public int Total => Fingers + Gloves + Palms + Other;
 }
 
+/// <summary>Holds a label and value for a protocol or register detail in the inspector.</summary>
+/// <param name="Label">The name of the displayed detail.</param>
+/// <param name="Value">The text displayed for the detail's value.</param>
 public sealed record InspectorDetailRow(string Label, string Value);
 
+/// <summary>Holds frame labels, contact rows, status indicators, and protocol details for the inspector.</summary>
+/// <param name="LogicalLabel">The one-based logical frame position and total, or a dash when unavailable.</param>
+/// <param name="TimestampLabel">The formatted display timeline time, or source timestamp when no snapshot is available.</param>
+/// <param name="Subtitle">The physical record and decoded format or register context displayed below the frame labels.</param>
+/// <param name="ContactSummary">The active host contact counts by touch type.</param>
+/// <param name="Contacts">The contact rows selected for the replay render mode.</param>
+/// <param name="CrcLabel">The CRC validation result formatted for display.</param>
+/// <param name="CrcFailed">Whether the decoded frame failed CRC validation.</param>
+/// <param name="AsilLabel">The ASIL alarm state formatted for display.</param>
+/// <param name="AsilRawLabel">The ASIL byte or TP error indicator formatted for display.</param>
+/// <param name="AsilAlarm">Whether the decoded frame indicates an ASIL or TP error alarm.</param>
+/// <param name="AllBreak">Whether the decoded frame has the all-break flag set.</param>
+/// <param name="ProtocolRows">The format-specific protocol or register details displayed for the source record.</param>
 public sealed record InspectorFramePresentation(
     string LogicalLabel,
     string TimestampLabel,
@@ -60,8 +97,10 @@ public sealed record InspectorFramePresentation(
     bool AllBreak,
     IReadOnlyList<InspectorDetailRow> ProtocolRows);
 
+/// <summary>Builds inspector presentations and copyable text from source records and replay snapshots.</summary>
 public static class InspectorPresentationBuilder
 {
+    /// <summary>Builds inspector labels, contact rows, and protocol details from a source record and optional decoded frame.</summary>
     public static InspectorFramePresentation Build(
         SourceRecord record,
         object? frame,
@@ -125,6 +164,7 @@ public static class InspectorPresentationBuilder
         };
     }
 
+    /// <summary>Builds up to ten contact rows ordered by ID for the selected replay render mode.</summary>
     public static IReadOnlyList<InspectorContactRow> BuildContacts(
         ITouchReplaySnapshot? snapshot,
         ReplayRenderMode renderMode)
@@ -159,6 +199,7 @@ public static class InspectorPresentationBuilder
             .ToArray();
     }
 
+    /// <summary>Counts active host contacts by type and includes a global palm when no palm contact is active.</summary>
     public static InspectorContactSummary BuildSummary(ITouchReplaySnapshot? snapshot)
     {
         var active = snapshot?.HostContacts
@@ -215,6 +256,7 @@ public static class InspectorPresentationBuilder
         ];
     }
 
+    /// <summary>Formats frame labels, contact counts, CRC and ASIL status, and contact rows for copying.</summary>
     public static string BuildCopyText(InspectorFramePresentation presentation)
     {
         var builder = new StringBuilder()
