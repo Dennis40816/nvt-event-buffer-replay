@@ -5100,66 +5100,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "08a59e735fa7046fa47b9a7412eafe3d72dd2d4deff74c7e8a9269d67828fe82",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayTrailChunker.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailChunk.LeadingPoint",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "d4d8e6402d86c7a3e9e5b8c4f322b141a61e28b155ac7e3e74c066cb469ca5e5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayTrailChunker.cs",
-      "rule": "CS1591",
-      "count": 7,
-      "member": "Nvt.Replay.Rendering.ReplayTrailChunk",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "ede3acb469b3fa81b490bca6f4d01766ea08508f8b17845ef9698be83b2bd309",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayTrailChunker.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailChunk",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "5ade87913fd9865cb4cd2847fa4333507703bfa0bca8bf94240575069b6c1826",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayTrailChunker.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailChunker.Enumerate(ReplayContactTrail,int)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8ed72f15f7b26cbf26b52aea2556ce9c799cce7489625a1361a44b578bafacab",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayTrailChunker.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailChunker.fields:DefaultChunkSize",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "b7bba258281a050a1b79ca16929260b388b173be3b15124286e87637a6cc3057",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayTrailChunker.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayTrailChunker",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "cdacf8f4070365cf31b49af49692bc25519643154043779144a0221d0228dbf1",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Sources/AcuteDecodedI2cAdapter.cs",
@@ -5226,66 +5166,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Sources.BuiltInSources",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "c383f304f81db1010886e22665163ccc53fce1e4690d2fe010e0c51a40bb5263",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/CanonicalI2cTextAdapter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.CanonicalI2cTextAdapter.DisplayName",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "556e0b59bb6e3694834a260d751a6fa5b7305f3b1693b32a1276f411e6b4f85d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/CanonicalI2cTextAdapter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.CanonicalI2cTextAdapter.fields:Magic",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "4587f30f08f09ad79ff2c55ecf64af60e12b9ceae7772b27fd16233d056b2fbe",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/CanonicalI2cTextAdapter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.CanonicalI2cTextAdapter.Id",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "06b441ff4582a14e4b1f96903525999c5978b2b5a6cc7bb23df6a1019de509f3",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/CanonicalI2cTextAdapter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.CanonicalI2cTextAdapter.ProbeAsync(string,CancellationToken)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "06e0271510e14faa19357df27f1b6357818b29761b5aab9f68cfd1e74da63d67",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/CanonicalI2cTextAdapter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.CanonicalI2cTextAdapter.ReadAsync(SourceOpenContext,CancellationToken)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "6f4144cacd2a3e79172da917d98ff7f6986185a0018d1d28d1c67ceb39d0755b",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/CanonicalI2cTextAdapter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.CanonicalI2cTextAdapter",
       "project": "Nvt.Replay.Sources",
       "symbol": "CS1591"
     },

@@ -6,12 +6,17 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Recognizes canonical NVT I2C text captures and reads their JSON records with source locations.</summary>
 public sealed class CanonicalI2cTextAdapter : ISourceAdapter
 {
+    /// <summary>The versioned header required on the first line of canonical NVT I2C text captures.</summary>
     public const string Magic = "# NVT-I2C-TXT 1";
+    /// <inheritdoc />
     public string Id => "canonical-i2c-txt";
+    /// <inheritdoc />
     public string DisplayName => "Canonical NVT I2C TXT";
 
+    /// <inheritdoc />
     public async ValueTask<SourceProbeResult> ProbeAsync(string path, CancellationToken cancellationToken = default)
     {
         if (!Path.GetExtension(path).Equals(".txt", StringComparison.OrdinalIgnoreCase))
@@ -23,6 +28,7 @@ public sealed class CanonicalI2cTextAdapter : ISourceAdapter
             : None("Canonical NVT-I2C-TXT magic header was not found.");
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
         SourceOpenContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
