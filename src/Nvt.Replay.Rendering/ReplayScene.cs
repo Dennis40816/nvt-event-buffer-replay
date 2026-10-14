@@ -3,22 +3,34 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Specifies which contact representation is rendered in a replay scene.</summary>
 public enum ReplayRenderMode
 {
+    /// <summary>Renders the host-maintained contact state.</summary>
     HostState,
+    /// <summary>Renders the contacts reported by the current frame.</summary>
     ReportedFrame,
+    /// <summary>Renders reported contacts together with the host-maintained contact state.</summary>
     Compare,
 }
 
+/// <summary>Specifies which contact history is included in replay trails.</summary>
 public enum ReplayTrailMode
 {
+    /// <summary>Shows recent points for contacts reported at the selected frame.</summary>
     Recent,
+    /// <summary>Shows the current gesture trails for contacts active at the selected frame.</summary>
     UntilBreak,
+    /// <summary>Shows gesture trails that began at or before the selected frame.</summary>
     Persistent,
 }
 
+/// <summary>Stores the maximum X and Y values of the replay coordinate range.</summary>
+/// <param name="MaximumX">The upper bound of the X coordinate range.</param>
+/// <param name="MaximumY">The upper bound of the Y coordinate range.</param>
 public sealed record ReplayExtent(double MaximumX, double MaximumY)
 {
+    /// <summary>Measures contact extents with padding, minimum bounds, and rounding to multiples of 256.</summary>
     public static ReplayExtent Measure(IEnumerable<ReplayContact> contacts)
     {
         ArgumentNullException.ThrowIfNull(contacts);
@@ -43,6 +55,20 @@ public sealed record ReplayExtent(double MaximumX, double MaximumY)
     }
 }
 
+/// <summary>Stores the contacts, trails, evidence, and coordinate settings for one replay frame.</summary>
+/// <param name="LogicalIndex">The logical frame index of the scene.</param>
+/// <param name="TotalFrames">The total number of frames in the replay.</param>
+/// <param name="Timeline">The timeline entry associated with the frame.</param>
+/// <param name="ReportedContacts">The contacts reported by the frame.</param>
+/// <param name="HostContacts">The host-maintained contacts at the frame.</param>
+/// <param name="GlobalPalm">Whether the snapshot has the global palm state.</param>
+/// <param name="Extent">The replay coordinate bounds before axis swapping.</param>
+/// <param name="ContactTrails">The contact trails to display in the scene.</param>
+/// <param name="Diagnostics">The diagnostics associated with the scene's source records.</param>
+/// <param name="MarkerLabels">The labels of markers covering the scene's logical frame.</param>
+/// <param name="ReverseX">Whether rendering reverses the X axis.</param>
+/// <param name="ReverseY">Whether rendering reverses the Y axis.</param>
+/// <param name="SwapAxes">Whether rendering exchanges the X and Y axes.</param>
 public sealed record ReplayScene(
     int LogicalIndex,
     int TotalFrames,
@@ -58,24 +84,38 @@ public sealed record ReplayScene(
     bool ReverseY,
     bool SwapAxes)
 {
+    /// <summary>Gets the coordinate bounds after applying the scene's axis swap setting.</summary>
     public ReplayExtent ViewExtent { get; } = SwapAxes
         ? new ReplayExtent(Extent.MaximumY, Extent.MaximumX)
         : Extent;
 
+    /// <summary>Returns the supplied coordinates with their axes exchanged when axis swapping is enabled.</summary>
     public (double X, double Y) ViewCoordinates(double x, double y) =>
         SwapAxes ? (y, x) : (x, y);
 }
 
+/// <summary>Stores one contact trail point with its touch status and logical frame index.</summary>
+/// <param name="X">The contact's X coordinate at this point.</param>
+/// <param name="Y">The contact's Y coordinate at this point.</param>
+/// <param name="Status">The touch status reported at this point.</param>
+/// <param name="LogicalIndex">The logical frame index of this point.</param>
 public readonly record struct ReplayTrailPoint(ushort X, ushort Y, TouchStatus Status, int LogicalIndex);
 
+/// <summary>Stores ordered trail points, contact identity, and a gesture completion flag.</summary>
+/// <param name="Id">The contact identifier shared by the trail points.</param>
+/// <param name="Type">The touch type assigned to the trail.</param>
+/// <param name="Points">The trail points in chronological order.</param>
+/// <param name="IsComplete">Whether the gesture end is at or before the selected logical frame.</param>
 public sealed record ReplayContactTrail(
     byte Id,
     TouchType Type,
     IReadOnlyList<ReplayTrailPoint> Points,
     bool IsComplete = false);
 
+/// <summary>Builds replay scenes and recent contact trails from replay snapshots.</summary>
 public static class ReplaySceneFactory
 {
+    /// <summary>Builds a scene from a snapshot with matching diagnostics, marker labels, and optional trails.</summary>
     public static ReplayScene Create(
         ITouchReplaySnapshot snapshot,
         int totalFrames,
@@ -132,6 +172,7 @@ public static class ReplaySceneFactory
             reverseY,
             swapAxes);
 
+    /// <summary>Builds recent trails for trackable contacts reported at the selected logical frame.</summary>
     public static IReadOnlyList<ReplayContactTrail> BuildTrails(
         ITouchReplaySession replay,
         int logicalIndex,
@@ -168,6 +209,7 @@ public static class ReplaySceneFactory
          contact.Type == TouchType.Palm && contact.Status == TouchStatus.NoFinger);
 }
 
+/// <summary>Stores contact gesture history and frame masks for constructing replay trails.</summary>
 public sealed class ReplayTrailHistory
 {
     private readonly IReadOnlyDictionary<byte, IReadOnlyList<Gesture>> gesturesById;
@@ -191,10 +233,13 @@ public sealed class ReplayTrailHistory
                 .Sum(gesture => gesture.Points.Count / ReplayTrailChunker.DefaultChunkSize));
     }
 
+    /// <summary>Gets the number of logical frames represented by the stored contact history.</summary>
     public int Count => reportedIdMasksByFrame.Length;
 
+    /// <summary>Gets the stored gesture, point, and reusable full-chunk counts.</summary>
     public ReplayTrailStorageStatistics Statistics { get; }
 
+    /// <summary>Builds contact gesture history from all snapshots enumerated by a replay session.</summary>
     public static ReplayTrailHistory Create(
         ITouchReplaySession replay,
         CancellationToken cancellationToken = default)
@@ -203,6 +248,7 @@ public sealed class ReplayTrailHistory
         return Create(replay.EnumerateSnapshots(cancellationToken).ToArray(), cancellationToken);
     }
 
+    /// <summary>Builds contact gesture history and contact masks from the supplied snapshots.</summary>
     public static ReplayTrailHistory Create(
         IReadOnlyList<ITouchReplaySnapshot> snapshots,
         CancellationToken cancellationToken = default)
@@ -279,6 +325,7 @@ public sealed class ReplayTrailHistory
             activeIdMasks);
     }
 
+    /// <summary>Builds trails using the selected logical frame, trail mode, recent-point limit, and lower frame bound.</summary>
     public IReadOnlyList<ReplayContactTrail> Build(
         int logicalIndex,
         ReplayTrailMode mode,
@@ -444,6 +491,10 @@ public sealed class ReplayTrailHistory
         IReadOnlyList<ReplayTrailPoint> Points);
 }
 
+/// <summary>Stores gesture and point counts and the number of reusable full trail chunks.</summary>
+/// <param name="GestureCount">The number of stored contact gestures.</param>
+/// <param name="PointCount">The total number of stored contact trail points.</param>
+/// <param name="ReusableFullChunkCount">The sum of full default-sized chunks in the stored gesture point lists.</param>
 public readonly record struct ReplayTrailStorageStatistics(
     int GestureCount,
     int PointCount,
