@@ -2,16 +2,29 @@ using Nvt.Replay.Analysis;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Identifies the lifecycle state of an export job.</summary>
 public enum ExportJobStatus
 {
+    /// <summary>No export job has been started.</summary>
     Idle,
+    /// <summary>The export operation is running.</summary>
     Running,
+    /// <summary>Cancellation has been requested for the active export job.</summary>
     Cancelling,
+    /// <summary>The export operation completed without cancellation or an exception.</summary>
     Succeeded,
+    /// <summary>The export job finished after cancellation was requested.</summary>
     Cancelled,
+    /// <summary>The export operation ended with an exception.</summary>
     Failed,
 }
 
+/// <summary>Captures an export job's status, progress, result and error.</summary>
+/// <param name="JobId">The identifier assigned to the export job.</param>
+/// <param name="Status">The export job's lifecycle state.</param>
+/// <param name="Progress">The latest reported export progress, if available.</param>
+/// <param name="Result">The export result when the job succeeds, if available.</param>
+/// <param name="Error">The exception captured when the export operation fails, if available.</param>
 public sealed record ExportJobSnapshot(
     long JobId,
     ExportJobStatus Status,
@@ -19,9 +32,13 @@ public sealed record ExportJobSnapshot(
     ReplayExportResult? Result = null,
     Exception? Error = null)
 {
+    /// <summary>Indicates whether this export job is running or cancelling.</summary>
     public bool IsActive => Status is ExportJobStatus.Running or ExportJobStatus.Cancelling;
 }
 
+/// <summary>Pairs an export job identifier with a task that yields its final snapshot.</summary>
+/// <param name="JobId">The identifier assigned to the export job.</param>
+/// <param name="Completion">The task that completes with the export job's final snapshot.</param>
 public sealed record ExportJobHandle(long JobId, Task<ExportJobSnapshot> Completion);
 
 /// <summary>
@@ -36,6 +53,7 @@ public sealed class ExportJobService
     private long nextJobId;
     private ExportJobSnapshot snapshot = new(0, ExportJobStatus.Idle);
 
+    /// <summary>Gets the latest snapshot of the export job's state.</summary>
     public ExportJobSnapshot Snapshot
     {
         get
@@ -44,8 +62,10 @@ public sealed class ExportJobService
         }
     }
 
+    /// <summary>Indicates whether the current export job is running or cancelling.</summary>
     public bool IsActive => Snapshot.IsActive;
 
+    /// <summary>Starts an export operation on the thread pool and returns its job identifier and completion task.</summary>
     public ExportJobHandle Start(
         Func<CancellationToken, IProgress<ReplayExportProgress>, Task<ReplayExportResult>> operation,
         IProgress<ExportJobSnapshot>? observer = null)
@@ -71,6 +91,7 @@ public sealed class ExportJobService
         return new ExportJobHandle(job.JobId, completion);
     }
 
+    /// <summary>Starts a replay export with the supplied exporter, session, scene factory and options.</summary>
     public ExportJobHandle StartReplayExport(
         ReplayRangeExporter exporter,
         ITouchReplaySession replay,
@@ -89,6 +110,7 @@ public sealed class ExportJobService
             observer);
     }
 
+    /// <summary>Requests cancellation of the active export job and reports whether a new request was made.</summary>
     public bool Cancel()
     {
         ExportJobSnapshot cancelling;
