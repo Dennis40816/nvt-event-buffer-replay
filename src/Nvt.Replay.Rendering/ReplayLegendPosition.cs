@@ -2,15 +2,22 @@ using Nvt.Replay.Analysis;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Specifies automatic selection or a fixed corner for the replay contact legend.</summary>
 public enum ReplayLegendPosition
 {
+    /// <summary>Requests automatic selection of the replay legend corner.</summary>
     Auto,
+    /// <summary>Places the replay legend in the upper-left corner of the viewport.</summary>
     TopLeft,
+    /// <summary>Places the replay legend in the upper-right corner of the viewport.</summary>
     TopRight,
+    /// <summary>Places the replay legend in the lower-left corner of the viewport.</summary>
     BottomLeft,
+    /// <summary>Places the replay legend in the lower-right corner of the viewport.</summary>
     BottomRight,
 }
 
+/// <summary>Selects a replay legend corner using contact positions and the current view transforms.</summary>
 public static class ReplayLegendPositioner
 {
     private const double HorizontalFraction = 0.17;
@@ -18,6 +25,7 @@ public static class ReplayLegendPositioner
     private const double RowFraction = 0.05;
     private const double InsetFraction = 0.015;
 
+    /// <summary>Chooses the legend corner with the lowest contact proximity score, breaking ties by enum order.</summary>
     public static ReplayLegendPosition Choose(
         IEnumerable<ReplayContact> contacts,
         ReplayExtent extent,
