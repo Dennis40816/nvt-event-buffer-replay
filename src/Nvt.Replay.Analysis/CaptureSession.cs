@@ -6,8 +6,12 @@ using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Reports the current capture-loading phase and the number of records read.</summary>
+/// <param name="Phase">The current phase of loading the capture source.</param>
+/// <param name="RecordsRead">The number of source records read so far.</param>
 public sealed record CaptureLoadProgress(string Phase, int RecordsRead);
 
+/// <summary>Holds a loaded capture source, its records and register annotations for event-buffer decoding.</summary>
 public sealed class CaptureSession
 {
     private CaptureSession(
@@ -29,26 +33,37 @@ public sealed class CaptureSession
         RegisterProfile = registerAnnotations.Profile?.IcFamily;
     }
 
+    /// <summary>Gets the absolute path of the loaded capture source.</summary>
     public string SourcePath { get; }
 
+    /// <summary>Gets the SHA-256 hash of the loaded source file.</summary>
     public string SourceSha256 { get; }
 
+    /// <summary>Gets the selected source adapter's probe result.</summary>
     public SourceProbeResult Probe { get; }
 
+    /// <summary>Gets the indexed source records in their read order.</summary>
     public IReadOnlyList<SourceRecord> Records { get; }
 
+    /// <summary>Gets the diagnostics reported by the source adapter while reading the capture.</summary>
     public IReadOnlyList<ReplayDiagnostic> TransportDiagnostics { get; }
 
+    /// <summary>Gets the same source-reading diagnostics as TransportDiagnostics.</summary>
     public IReadOnlyList<ReplayDiagnostic> SourceDiagnostics => TransportDiagnostics;
 
+    /// <summary>Gets the diagnostics produced by the current register annotation projection.</summary>
     public IReadOnlyList<ReplayDiagnostic> RegisterDiagnostics => RegisterAnnotations.Diagnostics;
 
+    /// <summary>Gets the index used to project register annotations for the loaded records.</summary>
     public RegisterAnnotationIndex RegisterAnnotationIndex { get; }
 
+    /// <summary>Gets the register annotations and diagnostics for the current profile selection.</summary>
     public RegisterAnnotationProjection RegisterAnnotations { get; }
 
+    /// <summary>Gets the selected register profile's IC family, or null for automatic annotation.</summary>
     public string? RegisterProfile { get; }
 
+    /// <summary>Probes, hashes and reads a capture source, then indexes its records and register annotations.</summary>
     public static async Task<CaptureSession> LoadAsync(
         string path,
         IProgress<CaptureLoadProgress>? progress = null,
@@ -97,6 +112,7 @@ public sealed class CaptureSession
             registerAnnotations);
     }
 
+    /// <summary>Returns a session with register annotations for the requested IC profile or automatic resolution.</summary>
     public CaptureSession WithRegisterProfile(
         string? icFamily,
         CancellationToken cancellationToken = default)
@@ -118,11 +134,13 @@ public sealed class CaptureSession
             projection);
     }
 
+    /// <summary>Decodes Common event-buffer records for I2C address 0x01 using the selected version.</summary>
     public CommonInspectionReport DecodeCommon(
         CommonEventBufferVersion version,
         CancellationToken cancellationToken = default) =>
         DecodeCommon(version, 0x01, cancellationToken);
 
+    /// <summary>Decodes Common event-buffer records for the specified I2C address and version.</summary>
     public CommonInspectionReport DecodeCommon(
         CommonEventBufferVersion version,
         int targetI2cAddress,
@@ -238,12 +256,14 @@ public sealed class CaptureSession
         record.SourceFields.GetValueOrDefault(NdsCommunicationLogAdapter.AddressSemanticsField) ==
         NdsCommunicationLogAdapter.AbsoluteRegisterAddress;
 
+    /// <summary>Assembles and decodes Desay97 frames for I2C address 0x01 using the supplied profile.</summary>
     public Desay97InspectionReport DecodeDesay97(
         Desay97Profile profile,
         uint? eventBufferBase = null,
         CancellationToken cancellationToken = default) =>
         DecodeDesay97(profile, eventBufferBase, 0x01, cancellationToken);
 
+    /// <summary>Assembles and decodes Desay97 frames with the supplied profile and target I2C address.</summary>
     public Desay97InspectionReport DecodeDesay97(
         Desay97Profile profile,
         uint? eventBufferBase,
@@ -323,8 +343,10 @@ public sealed class CaptureSession
     }
 }
 
+/// <summary>Signals that source adapters tied for the highest probe confidence require an explicit selection.</summary>
 public sealed class SourceSelectionRequiredException(IReadOnlyList<SourceProbeResult> candidates)
     : Exception($"Source format is ambiguous; select one adapter explicitly: {string.Join(", ", candidates.Select(item => item.AdapterId))}")
 {
+    /// <summary>Gets the source probes tied for the highest confidence when adapter selection is ambiguous.</summary>
     public IReadOnlyList<SourceProbeResult> Candidates { get; } = candidates;
 }
