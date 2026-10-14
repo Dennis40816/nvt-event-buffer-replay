@@ -13,6 +13,13 @@ using SkiaSharp;
 
 namespace Nvt.Replay.Avalonia.Controls;
 
+/// <summary>Holds the logical event index and reported contact data for a point under the pointer.</summary>
+/// <param name="LogicalIndex">The logical event index of the reported point.</param>
+/// <param name="ContactId">The identifier of the reported contact.</param>
+/// <param name="Type">The reported touch type of the contact.</param>
+/// <param name="Status">The reported touch status of the contact.</param>
+/// <param name="X">The reported X coordinate of the contact.</param>
+/// <param name="Y">The reported Y coordinate of the contact.</param>
 public sealed record ReportedPointHover(
     int LogicalIndex,
     byte ContactId,
@@ -28,14 +35,19 @@ public sealed class AnalysisPointPlotSurface : Control
     private const int SpatialRows = 36;
     private static readonly Typeface _axisTypeface = new("Cascadia Mono", FontStyle.Normal, FontWeight.Medium);
 
+    /// <summary>Identifies the styled property for the plot surface background brush.</summary>
     public static readonly StyledProperty<IBrush?> SurfaceBrushProperty =
         AvaloniaProperty.Register<AnalysisPointPlotSurface, IBrush?>(nameof(SurfaceBrush));
+    /// <summary>Identifies the styled property for the plot border and guide line brush.</summary>
     public static readonly StyledProperty<IBrush?> GridBrushProperty =
         AvaloniaProperty.Register<AnalysisPointPlotSurface, IBrush?>(nameof(GridBrush));
+    /// <summary>Identifies the styled property for the axis label and hover card text brush.</summary>
     public static readonly StyledProperty<IBrush?> TextBrushProperty =
         AvaloniaProperty.Register<AnalysisPointPlotSurface, IBrush?>(nameof(TextBrush));
+    /// <summary>Identifies the styled property for the hovered point card background brush.</summary>
     public static readonly StyledProperty<IBrush?> ToolTipSurfaceBrushProperty =
         AvaloniaProperty.Register<AnalysisPointPlotSurface, IBrush?>(nameof(ToolTipSurfaceBrush));
+    /// <summary>Identifies the styled property for the hovered point card border brush.</summary>
     public static readonly StyledProperty<IBrush?> ToolTipBorderBrushProperty =
         AvaloniaProperty.Register<AnalysisPointPlotSurface, IBrush?>(nameof(ToolTipBorderBrush));
 
@@ -47,26 +59,35 @@ public sealed class AnalysisPointPlotSurface : Control
     private double _maximumY = 1;
     private ReportedPointHover? _hoveredPoint;
 
+    /// <summary>Gets or sets the brush used to fill the plot surface background.</summary>
     public IBrush? SurfaceBrush { get => GetValue(SurfaceBrushProperty); set => SetValue(SurfaceBrushProperty, value); }
+    /// <summary>Gets or sets the brush used to draw the plot border and guide lines.</summary>
     public IBrush? GridBrush { get => GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
+    /// <summary>Gets or sets the brush used for axis labels and hover card text.</summary>
     public IBrush? TextBrush { get => GetValue(TextBrushProperty); set => SetValue(TextBrushProperty, value); }
+    /// <summary>Gets or sets the brush used to fill the hovered point card.</summary>
     public IBrush? ToolTipSurfaceBrush { get => GetValue(ToolTipSurfaceBrushProperty); set => SetValue(ToolTipSurfaceBrushProperty, value); }
+    /// <summary>Gets or sets the brush used to draw the hovered point card border.</summary>
     public IBrush? ToolTipBorderBrush { get => GetValue(ToolTipBorderBrushProperty); set => SetValue(ToolTipBorderBrushProperty, value); }
 
     /// <summary>Gets the number of reported points that are plotted.</summary>
     public int PointCount => _points.Length;
     /// <summary>Gets the number of contact IDs that have plotted points.</summary>
     public int ContactIdCount => _batches.Length;
+    /// <summary>Gets the number of spatial lookup cells containing reported points.</summary>
     public int OccupiedSpatialCellCount { get; private set; }
     /// <summary>Gets the reported point under the pointer, or null when there is none.</summary>
     public ReportedPointHover? HoveredPoint => _hoveredPoint;
+    /// <summary>Gets or sets the point color theme override, or null to follow the control theme.</summary>
     public ReplayRenderTheme? RenderThemeOverride { get; set; }
 
+    /// <summary>Creates a reported point plot surface with a crosshair cursor.</summary>
     public AnalysisPointPlotSurface()
     {
         Cursor = new Cursor(StandardCursorType.Cross);
     }
 
+    /// <summary>Plots the reported coordinate samples from an analysis report using the given panel maximums.</summary>
     public void Show(CaptureAnalysisReport? report, double panelMaximumX, double panelMaximumY) =>
         ShowEvents(report?.Events, panelMaximumX, panelMaximumY);
 
