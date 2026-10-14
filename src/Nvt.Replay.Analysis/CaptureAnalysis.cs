@@ -2,8 +2,17 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Defines the inclusive logical frame indices selected for capture analysis.</summary>
+/// <param name="StartLogicalIndex">The first logical frame index included in the analysis.</param>
+/// <param name="EndLogicalIndex">The last logical frame index included in the analysis.</param>
 public sealed record AnalysisRange(int StartLogicalIndex, int EndLogicalIndex);
 
+/// <summary>Summarizes captured and frame timing, synthetic timestamps, and compressed idle gaps in the selected range.</summary>
+/// <param name="Domain">The timestamp domain: captured, synthetic-frame, or mixed.</param>
+/// <param name="CapturedDuration">The elapsed captured time between the first and last selected frames.</param>
+/// <param name="FrameDuration">The elapsed frame time between the first and last selected frames.</param>
+/// <param name="SyntheticTimestampFrames">The number of selected frames whose timestamps are synthetic.</param>
+/// <param name="CompressedIdleGaps">The number of selected timeline entries with compressed idle gaps.</param>
 public sealed record AnalysisClockSummary(
     string Domain,
     TimeSpan CapturedDuration,
@@ -11,6 +20,13 @@ public sealed record AnalysisClockSummary(
     int SyntheticTimestampFrames,
     int CompressedIdleGaps);
 
+/// <summary>Holds a reported contact's identifier, type, status, coordinates, and invalid flag for analysis.</summary>
+/// <param name="Id">The reported contact identifier.</param>
+/// <param name="Type">The reported touch type of the contact.</param>
+/// <param name="Status">The reported touch status of the contact.</param>
+/// <param name="X">The contact's reported X coordinate.</param>
+/// <param name="Y">The contact's reported Y coordinate.</param>
+/// <param name="Invalid">Whether the contact is marked invalid.</param>
 public sealed record AnalysisContact(
     byte Id,
     TouchType Type,
@@ -19,14 +35,27 @@ public sealed record AnalysisContact(
     ushort Y,
     bool Invalid);
 
+/// <summary>Determines which reported contacts contribute coordinate samples to capture analysis.</summary>
 public static class AnalysisContactRules
 {
+    /// <summary>Returns whether a contact is not invalid and is entering, moving, or a palm with NoFinger status.</summary>
     public static bool IsCoordinateSample(AnalysisContact contact) =>
         !contact.Invalid &&
         (contact.Status is TouchStatus.Enter or TouchStatus.Move ||
          contact.Type == TouchType.Palm && contact.Status == TouchStatus.NoFinger);
 }
 
+/// <summary>Holds a selected replay frame's source references, timing, host state eligibility, and reported contacts.</summary>
+/// <param name="Id">The event identifier derived from the logical index and primary source record identifier.</param>
+/// <param name="LogicalIndex">The logical frame index within the replay.</param>
+/// <param name="SourceRecordId">The stable identifier of the frame's primary source record.</param>
+/// <param name="PhysicalRecordIds">The distinct stable identifiers of the frame's physical source records.</param>
+/// <param name="CapturedTime">The recorded time of the replay frame.</param>
+/// <param name="FrameTime">The replay frame's position on the frame timeline.</param>
+/// <param name="TimestampSynthetic">Whether the frame's timestamp was synthesized.</param>
+/// <param name="HostStateEligible">Whether the replay snapshot updated host state.</param>
+/// <param name="GlobalPalm">The global palm flag reported by the replay snapshot.</param>
+/// <param name="ReportedContacts">The contacts reported in the replay snapshot.</param>
 public sealed record AnalysisEvent(
     string Id,
     int LogicalIndex,
@@ -39,6 +68,15 @@ public sealed record AnalysisEvent(
     bool GlobalPalm,
     IReadOnlyList<AnalysisContact> ReportedContacts);
 
+/// <summary>Holds a replay diagnostic's severity, message, source location, associated analysis events, and details.</summary>
+/// <param name="Id">The diagnostic identifier derived from its selected-list index and diagnostic code.</param>
+/// <param name="Severity">The severity of the replay diagnostic.</param>
+/// <param name="Code">The code of the replay diagnostic.</param>
+/// <param name="Message">The message of the replay diagnostic.</param>
+/// <param name="SourceRecordId">The source record identifier referenced by the diagnostic.</param>
+/// <param name="Location">The diagnostic's location in the source capture.</param>
+/// <param name="EventIds">The distinct analysis event identifiers associated with the diagnostic's source record.</param>
+/// <param name="Details">The diagnostic's key-value details, or an empty dictionary when none were supplied.</param>
 public sealed record AnalysisDiagnostic(
     string Id,
     DiagnosticSeverity Severity,
@@ -49,6 +87,15 @@ public sealed record AnalysisDiagnostic(
     IReadOnlyList<string> EventIds,
     IReadOnlyDictionary<string, string> Details);
 
+/// <summary>Groups selected diagnostics by code with maximum severity, source references, and review state.</summary>
+/// <param name="Code">The diagnostic code shared by the group.</param>
+/// <param name="MaximumSeverity">The highest severity among the grouped diagnostics.</param>
+/// <param name="Count">The number of diagnostics in the group.</param>
+/// <param name="DiagnosticIds">The identifiers of the grouped analysis diagnostics.</param>
+/// <param name="EventIds">The distinct analysis event identifiers referenced by the group.</param>
+/// <param name="SourceRecordIds">The distinct source record identifiers referenced by the group.</param>
+/// <param name="WorkflowState">The group's review workflow state, or Open when no review group exists.</param>
+/// <param name="Disposition">The group's review disposition, or None when no review group exists.</param>
 public sealed record AnalysisDiagnosticAggregate(
     string Code,
     DiagnosticSeverity MaximumSeverity,
@@ -59,6 +106,14 @@ public sealed record AnalysisDiagnosticAggregate(
     ReviewWorkflowState WorkflowState,
     ReviewDisposition Disposition);
 
+/// <summary>Holds an ASIL alarm interval's transition references, durations, and assertion state.</summary>
+/// <param name="AssertionDiagnosticId">The identifier of the diagnostic that asserted the ASIL alarm.</param>
+/// <param name="ClearDiagnosticId">The clearing diagnostic identifier, or null if the interval remains asserted.</param>
+/// <param name="AssertionEventId">The identifier of the event associated with the assertion, when available.</param>
+/// <param name="ClearEventId">The clearing event identifier, or null if the interval remains asserted.</param>
+/// <param name="CapturedDuration">The captured time from assertion to clear or to the last selected event.</param>
+/// <param name="FrameDuration">The frame time from assertion to clear or to the last selected event.</param>
+/// <param name="RemainsAsserted">Whether the alarm remains asserted at the last selected event.</param>
 public sealed record AnalysisAsilPeriod(
     string AssertionDiagnosticId,
     string? ClearDiagnosticId,
@@ -68,6 +123,12 @@ public sealed record AnalysisAsilPeriod(
     TimeSpan FrameDuration,
     bool RemainsAsserted);
 
+/// <summary>Summarizes ASIL alarm transitions, review group states, and alarm intervals.</summary>
+/// <param name="Assertions">The number of ASIL alarm diagnostics linked to selected events.</param>
+/// <param name="Clears">The number of ASIL clear diagnostics linked to selected events.</param>
+/// <param name="AcknowledgedGroups">The number of ASIL review groups whose workflow state is not Open.</param>
+/// <param name="UnresolvedAlarmGroups">The number of ASIL review groups with Alarm severity whose workflow state is not Resolved.</param>
+/// <param name="Periods">The alarm intervals from assertion to clear or to the last selected event.</param>
 public sealed record AnalysisAsilSummary(
     int Assertions,
     int Clears,
@@ -75,6 +136,12 @@ public sealed record AnalysisAsilSummary(
     int UnresolvedAlarmGroups,
     IReadOnlyList<AnalysisAsilPeriod> Periods);
 
+/// <summary>Describes the coordinate mapping kind and axis bounds used for the analysis heatmap.</summary>
+/// <param name="Kind">The identifier of the coordinate mapping, such as linear-origin-top-left.</param>
+/// <param name="MinimumX">The lower X bound of the coordinate mapping.</param>
+/// <param name="MaximumX">The upper X bound used to scale contact coordinates into heatmap columns.</param>
+/// <param name="MinimumY">The lower Y bound of the coordinate mapping.</param>
+/// <param name="MaximumY">The upper Y bound used to scale contact coordinates into heatmap rows.</param>
 public sealed record AnalysisCoordinateTransform(
     string Kind,
     double MinimumX,
@@ -82,6 +149,12 @@ public sealed record AnalysisCoordinateTransform(
     double MinimumY,
     double MaximumY);
 
+/// <summary>Holds heatmap grid dimensions, coordinate sample counts, and the coordinate transform.</summary>
+/// <param name="Columns">The number of columns in the heatmap grid.</param>
+/// <param name="Rows">The number of rows in the heatmap grid.</param>
+/// <param name="Counts">The coordinate sample counts indexed by row times Columns plus column.</param>
+/// <param name="SampleCount">The total number of contacts accepted as coordinate samples.</param>
+/// <param name="Transform">The coordinate mapping used to assign samples to heatmap cells.</param>
 public sealed record AnalysisHotspot(
     int Columns,
     int Rows,
@@ -89,6 +162,17 @@ public sealed record AnalysisHotspot(
     int SampleCount,
     AnalysisCoordinateTransform Transform);
 
+/// <summary>Records the analysis schema, source identity, decode settings, selected range, timing, and heatmap metadata.</summary>
+/// <param name="SchemaVersion">The schema version of the analysis report.</param>
+/// <param name="SourceFileName">The file name of the source capture without its directory.</param>
+/// <param name="SourceSha256">The SHA-256 hash identifying the source capture.</param>
+/// <param name="DecodeConfiguration">The configuration supplied for decoding the capture.</param>
+/// <param name="FormatEvidenceStatus">The supplied evidence status of the capture format.</param>
+/// <param name="Range">The inclusive logical frame range selected for analysis.</param>
+/// <param name="Clock">The timing summary for the selected range.</param>
+/// <param name="HeatmapPixelWidth">The output heatmap width in pixels.</param>
+/// <param name="HeatmapPixelHeight">The output heatmap height in pixels.</param>
+/// <param name="HeatmapTransform">The coordinate mapping used by the output heatmap.</param>
 public sealed record AnalysisManifest(
     int SchemaVersion,
     string SourceFileName,
@@ -101,6 +185,13 @@ public sealed record AnalysisManifest(
     int HeatmapPixelHeight,
     AnalysisCoordinateTransform HeatmapTransform);
 
+/// <summary>Combines analysis provenance, selected events, diagnostics, ASIL alarm summaries, and heatmap data.</summary>
+/// <param name="Manifest">The source identity, configuration, range, timing, and heatmap metadata.</param>
+/// <param name="Events">The replay events within the selected logical frame range.</param>
+/// <param name="Diagnostics">The diagnostics retained for the analysis.</param>
+/// <param name="DiagnosticAggregates">The retained diagnostics grouped by code with review states.</param>
+/// <param name="Asil">The ASIL alarm transition and review summary.</param>
+/// <param name="Hotspot">The grid of accepted coordinate sample counts.</param>
 public sealed record CaptureAnalysisReport(
     AnalysisManifest Manifest,
     IReadOnlyList<AnalysisEvent> Events,
@@ -109,8 +200,10 @@ public sealed record CaptureAnalysisReport(
     AnalysisAsilSummary Asil,
     AnalysisHotspot Hotspot);
 
+/// <summary>Produces capture analysis reports from replay snapshots, diagnostics, and optional review state.</summary>
 public sealed class CaptureAnalyzer
 {
+    /// <summary>Analyzes a logical frame range to produce source-linked events, diagnostics, ASIL intervals, and a heatmap.</summary>
     public CaptureAnalysisReport Analyze(
         string sourcePath,
         string sourceSha256,

@@ -4,13 +4,24 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Classifies the external evidence referenced by a replay marker.</summary>
 public enum ReplayEvidenceKind
 {
+    /// <summary>Identifies evidence classified as a kernel log.</summary>
     KernelLog,
+    /// <summary>Identifies evidence classified as a firmware log.</summary>
     FirmwareLog,
+    /// <summary>Identifies evidence classified outside the kernel and firmware log categories.</summary>
     Other,
 }
 
+/// <summary>Records the Event Buffer format, source adapter, register profile, and target address used for decoding.</summary>
+/// <param name="EventBufferVersion">The Event Buffer version identifier used for decoding.</param>
+/// <param name="Desay97Profile">The selected Desay 0x97 profile identifier, when supplied.</param>
+/// <param name="SourceAdapterId">The identifier of the source adapter used for the capture.</param>
+/// <param name="EventBufferBase">The base address used to locate Event Buffer data.</param>
+/// <param name="RegisterProfile">The selected IC register profile identifier, when supplied.</param>
+/// <param name="TargetI2cAddress">The I2C slave address whose Event Buffer records are decoded.</param>
 public sealed record ReplayDecodeConfiguration(
     string EventBufferVersion,
     string? Desay97Profile,
@@ -19,6 +30,12 @@ public sealed record ReplayDecodeConfiguration(
     string? RegisterProfile = null,
     int TargetI2cAddress = 0x01);
 
+/// <summary>Identifies an external evidence file with its kind, path, optional hash, and optional label.</summary>
+/// <param name="Id">The identifier assigned to the evidence reference.</param>
+/// <param name="Kind">The category of the evidence file.</param>
+/// <param name="Path">The evidence file path, resolved relative to the sidecar directory when not absolute.</param>
+/// <param name="Sha256">The expected SHA-256 hash, or null when no hash verification is requested.</param>
+/// <param name="Label">The optional label assigned to the evidence reference.</param>
 public sealed record ReplayEvidenceReference(
     string Id,
     ReplayEvidenceKind Kind,
@@ -26,6 +43,15 @@ public sealed record ReplayEvidenceReference(
     string? Sha256 = null,
     string? Label = null);
 
+/// <summary>Stores a labeled logical frame position or range with notes, QA case references, and external evidence.</summary>
+/// <param name="Id">The identifier assigned to the replay marker.</param>
+/// <param name="Label">The label assigned to the replay marker.</param>
+/// <param name="StartLogicalIndex">The logical frame index at the start of the marker.</param>
+/// <param name="EndLogicalIndex">The logical frame index at the end of the marker.</param>
+/// <param name="CreatedAt">The recorded creation time of the marker.</param>
+/// <param name="Note">The optional note attached to the marker.</param>
+/// <param name="QaCaseIds">The optional QA case identifiers attached to the marker.</param>
+/// <param name="Evidence">The optional external evidence references attached to the marker.</param>
 public sealed record ReplayMarker(
     string Id,
     string Label,
@@ -36,10 +62,20 @@ public sealed record ReplayMarker(
     IReadOnlyList<string>? QaCaseIds = null,
     IReadOnlyList<ReplayEvidenceReference>? Evidence = null)
 {
+    /// <summary>Gets whether the marker's end logical frame index differs from its start index.</summary>
     [JsonIgnore]
     public bool IsRange => EndLogicalIndex != StartLogicalIndex;
 }
 
+/// <summary>Stores capture identity, decode settings, markers, review states, visibility preferences, and update time.</summary>
+/// <param name="SchemaVersion">The schema version of the sidecar document.</param>
+/// <param name="SourceSha256">The SHA-256 hash identifying the source capture.</param>
+/// <param name="SourceFileName">The source capture file name stored in the sidecar.</param>
+/// <param name="DecodeConfiguration">The decode configuration recorded for the capture.</param>
+/// <param name="Markers">The replay markers stored in the sidecar.</param>
+/// <param name="ReviewStates">The review state snapshots stored in the sidecar.</param>
+/// <param name="VisibilityPreferences">The named visibility settings stored in the sidecar.</param>
+/// <param name="UpdatedAt">The recorded update time of the sidecar document.</param>
 public sealed record ReplaySidecarDocument(
     int SchemaVersion,
     string SourceSha256,
@@ -50,9 +86,16 @@ public sealed record ReplaySidecarDocument(
     IReadOnlyDictionary<string, bool> VisibilityPreferences,
     DateTimeOffset UpdatedAt)
 {
+    /// <summary>Defines the replay sidecar schema version supported for reading and writing.</summary>
     public const int CurrentSchemaVersion = 1;
 }
 
+/// <summary>Reports an evidence reference's resolved path, file existence, hash match, and any verification limitation.</summary>
+/// <param name="Reference">The evidence reference whose file was resolved.</param>
+/// <param name="ResolvedPath">The absolute evidence path resolved from the sidecar directory.</param>
+/// <param name="Exists">Whether the resolved evidence file exists.</param>
+/// <param name="HashMatches">Whether the file exists and either matches the expected hash or has no expected hash.</param>
+/// <param name="NotVerifiedReason">The reason an existing file could not be hashed, when applicable.</param>
 public sealed record ReplayEvidenceResolution(
     ReplayEvidenceReference Reference,
     string ResolvedPath,
@@ -60,6 +103,12 @@ public sealed record ReplayEvidenceResolution(
     bool HashMatches,
     string? NotVerifiedReason = null);
 
+/// <summary>Reports a loaded sidecar, capture identity and decode checks, resolved evidence, and warnings.</summary>
+/// <param name="Document">The sidecar document loaded from JSON.</param>
+/// <param name="SourceHashMatches">Whether the stored capture hash matches the expected hash, ignoring case.</param>
+/// <param name="DecodeConfigurationMatches">Whether the stored decode configuration equals the expected configuration.</param>
+/// <param name="Evidence">The resolution and verification results for marker evidence references.</param>
+/// <param name="Warnings">The warnings about capture mismatches and missing, unverified, or hash-mismatched evidence.</param>
 public sealed record ReplaySidecarOpenResult(
     ReplaySidecarDocument Document,
     bool SourceHashMatches,
@@ -67,19 +116,24 @@ public sealed record ReplaySidecarOpenResult(
     IReadOnlyList<ReplayEvidenceResolution> Evidence,
     IReadOnlyList<string> Warnings)
 {
+    /// <summary>Gets whether the capture hash or decode configuration mismatch requires explicit operator confirmation.</summary>
     public bool RequiresExplicitConfirmation => !SourceHashMatches || !DecodeConfigurationMatches;
 }
 
+/// <summary>Signals that a replay sidecar uses a schema version newer than the supported version.</summary>
 public sealed class UnsupportedReplaySidecarVersionException(int version)
     : Exception($"Replay sidecar schema version {version} is newer than supported version {ReplaySidecarDocument.CurrentSchemaVersion}.")
 {
+    /// <summary>Gets the unsupported replay sidecar schema version that caused the exception.</summary>
     public int Version { get; } = version;
 }
 
+/// <summary>Saves and loads replay sidecars with capture identity checks and external evidence verification.</summary>
 public sealed class ReplaySidecarStore
 {
     private readonly Func<string, CancellationToken, Task<string>> hashFile;
 
+    /// <summary>Creates a sidecar store that computes evidence hashes with the file SHA-256 hasher.</summary>
     public ReplaySidecarStore() : this((path, token) => FileHasher.ComputeSha256Async(path, token))
     {
     }
@@ -97,6 +151,7 @@ public sealed class ReplaySidecarStore
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
+    /// <summary>Atomically writes a current-schema sidecar as JSON with evidence paths relative to the sidecar directory.</summary>
     public async Task SaveAsync(
         string path,
         ReplaySidecarDocument document,
@@ -112,6 +167,7 @@ public sealed class ReplaySidecarStore
             cancellationToken);
     }
 
+    /// <summary>Loads a sidecar, checks its schema and capture identity, and resolves and verifies referenced evidence.</summary>
     public async Task<ReplaySidecarOpenResult> LoadAsync(
         string path,
         string expectedSourceSha256,
