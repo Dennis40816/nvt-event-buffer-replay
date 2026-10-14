@@ -10,29 +10,45 @@ using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Avalonia.ViewModels;
 
+/// <summary>Specifies which raw records are included by the register activity filter.</summary>
 public enum RawRegisterFilter
 {
+    /// <summary>Includes all raw records.</summary>
     All,
+    /// <summary>Includes raw records with register activity.</summary>
     Registers,
+    /// <summary>Includes records whose register activity changed from the previous sample.</summary>
     ChangedReads,
+    /// <summary>Includes register writes, commands, resets, and page switches.</summary>
     WritesAndCommands,
+    /// <summary>Includes records whose register activity is marked ambiguous.</summary>
     Ambiguous,
 }
 
+/// <summary>Pairs a display label with a raw register filter choice.</summary>
+/// <param name="Label">The label displayed for the filter choice.</param>
+/// <param name="Filter">The filter applied when this choice is selected.</param>
 public sealed record RawRegisterFilterChoice(string Label, RawRegisterFilter Filter)
 {
+    /// <inheritdoc />
     public override string ToString() => Label;
 }
 
+/// <summary>Pairs a display label with an optional IC family for register interpretation.</summary>
+/// <param name="Label">The label displayed for the profile choice.</param>
+/// <param name="IcFamily">The selected IC family, or null when no family is selected.</param>
 public sealed record RegisterProfileChoice(string Label, string? IcFamily)
 {
+    /// <inheritdoc />
     public override string ToString() => Label;
 }
 
+/// <summary>Exposes a source record and its register interpretation for raw-record display and search.</summary>
 public sealed class RawRecordRow : INotifyPropertyChanged
 {
     private bool isExpanded;
 
+    /// <summary>Creates a display row for a source record with optional register activity and annotation.</summary>
     public RawRecordRow(
         SourceRecord record,
         RegisterActivityEntry? activity = null,
@@ -43,14 +59,19 @@ public sealed class RawRecordRow : INotifyPropertyChanged
         RegisterAnnotation = registerAnnotation;
     }
 
+    /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    /// <summary>Gets the source record represented by this row.</summary>
     public SourceRecord Record { get; }
 
+    /// <summary>Gets the register activity associated with the source record, if available.</summary>
     public RegisterActivityEntry? Activity { get; }
 
+    /// <summary>Gets the register annotation used to interpret the source record's fields, if available.</summary>
     public RegisterAnnotation? RegisterAnnotation { get; }
 
+    /// <summary>Gets whether the row's detailed view is expanded.</summary>
     public bool IsExpanded
     {
         get => isExpanded;
@@ -62,20 +83,28 @@ public sealed class RawRecordRow : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Gets the record's detailed display data after its first expansion.</summary>
     public RawRecordDetail? Detail { get; private set; }
 
+    /// <summary>Gets the index of the underlying source record.</summary>
     public long Index => Record.Index;
 
+    /// <summary>Gets the navigation label containing the source record's line number.</summary>
     public string SourceNavigationLabel => $"Open source line {Record.Location.LineNumber:N0}";
 
+    /// <summary>Gets the recorded time formatted as HH:mm:ss.fff, or a dash when unavailable.</summary>
     public string Timestamp => Record.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "-";
 
+    /// <summary>Gets the source record's bus operation as uppercase text.</summary>
     public string Operation => Record.Operation.ToString().ToUpperInvariant();
 
+    /// <summary>Gets the target reported by the source record.</summary>
     public string Target => Record.Target;
 
+    /// <summary>Gets the primary address label used to display this record.</summary>
     public string Address => AddressPrimary;
 
+    /// <summary>Gets the Event Buffer, page, register, or pointer label derived from the record and annotation.</summary>
     public string AddressPrimary
     {
         get
@@ -102,14 +131,18 @@ public sealed class RawRecordRow : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Gets the raw register address label displayed beside the primary address.</summary>
     public string AddressSecondary => RawRegisterAddress;
 
+    /// <summary>Gets whether the secondary address label contains more than the unavailable-value dash.</summary>
     public bool HasSecondaryAddress => AddressSecondary != "-";
 
+    /// <summary>Gets the I2C slave address and operation direction, using a dash when the address is unavailable.</summary>
     public string I2cEndpoint => Record.I2c is { } transport
         ? $"0x{transport.SlaveAddress:X2} · {Direction}"
         : $"— · {Direction}";
 
+    /// <summary>Gets a label for the raw NDS address or register offset, or an unavailable-value indicator.</summary>
     public string RawRegisterAddress
     {
         get
@@ -123,6 +156,7 @@ public sealed class RawRecordRow : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Gets explanatory text about the address interpretation, transport endpoint, and preserved address evidence.</summary>
     public string AddressTooltip
     {
         get
@@ -152,13 +186,17 @@ public sealed class RawRecordRow : INotifyPropertyChanged
         }
     }
 
+    /// <summary>Gets the register activity label or annotated register name, with an Event Buffer or dash fallback.</summary>
     public string Register => Activity?.Register ?? Field("register_readable") ?? Field("register_name") ??
         (IsNdsEventBufferRead ? "Event Buffer frame" : "-");
 
+    /// <summary>Gets the captured and declared byte counts separated by a slash, using a dash for an unknown declared count.</summary>
     public string ByteCount => $"{Record.Data.Count}/{Record.DeclaredByteCount?.ToString(CultureInfo.InvariantCulture) ?? "-"}";
 
+    /// <summary>Gets a space-separated hexadecimal preview of the first sixteen captured bytes.</summary>
     public string Preview => string.Join(' ', Record.Data.Take(16).Select(value => value.ToString("X2", CultureInfo.InvariantCulture)));
 
+    /// <summary>Sets the expansion state and creates the record's detail data on its first expansion.</summary>
     public void SetExpanded(bool expanded)
     {
         if (expanded && Detail is null)
@@ -169,6 +207,7 @@ public sealed class RawRecordRow : INotifyPropertyChanged
         IsExpanded = expanded;
     }
 
+    /// <summary>Checks searchable row fields and the stable record ID for a trimmed, case-insensitive query.</summary>
     public bool Matches(string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return true;
@@ -353,8 +392,17 @@ public sealed class RawRecordRow : INotifyPropertyChanged
     }
 }
 
+/// <summary>Stores a labeled value in a raw record's detailed display.</summary>
+/// <param name="Label">The name displayed for the detail field.</param>
+/// <param name="Value">The text displayed as the field's value.</param>
 public sealed record RawDetailField(string Label, string Value);
 
+/// <summary>Stores transaction, register, source, and payload details for an expanded raw record.</summary>
+/// <param name="TransactionFields">The labeled bus operation and transport details.</param>
+/// <param name="RegisterFields">The labeled register interpretation and address evidence.</param>
+/// <param name="SourceFields">The labeled source adapter, location, and identity details.</param>
+/// <param name="FullPayload">The captured payload formatted as an offset-based hexadecimal dump.</param>
+/// <param name="SourceText">The preserved source text or a message indicating it was not preserved.</param>
 public sealed record RawRecordDetail(
     IReadOnlyList<RawDetailField> TransactionFields,
     IReadOnlyList<RawDetailField> RegisterFields,
@@ -362,6 +410,15 @@ public sealed record RawRecordDetail(
     string FullPayload,
     string SourceText);
 
+/// <summary>Exposes a decoded frame, its source records, and replay eligibility as a display row.</summary>
+/// <param name="LogicalIndex">The zero-based index of the decoded frame.</param>
+/// <param name="Frame">The decoded protocol frame represented by the row.</param>
+/// <param name="Source">The primary source record for the decoded frame.</param>
+/// <param name="PhysicalRecords">The physical source records contributing to the decoded frame.</param>
+/// <param name="Touches">The number of touches reported by the decoded frame.</param>
+/// <param name="CrcValid">Whether the decoded frame passed CRC validation.</param>
+/// <param name="AllBreak">Whether the decoded frame indicates an all-break state.</param>
+/// <param name="HostStateEligible">Whether the decoded frame is eligible for host-state replay.</param>
 public sealed record DecodedFrameRow(
     int LogicalIndex,
     object Frame,
@@ -372,68 +429,104 @@ public sealed record DecodedFrameRow(
     bool AllBreak,
     bool HostStateEligible)
 {
+    /// <summary>Gets the one-based frame number displayed for the logical index.</summary>
     public int Index => LogicalIndex + 1;
 
+    /// <summary>Gets the primary source record's time as HH:mm:ss.fff, or a dash when unavailable.</summary>
     public string Timestamp => Source.Timestamp?.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture) ?? "-";
 
+    /// <summary>Gets OK or FAIL according to the decoded frame's CRC validity.</summary>
     public string Crc => CrcValid ? "OK" : "FAIL";
 
+    /// <summary>Gets ALL BREAK, VALID, or EVIDENCE according to the frame's break state and host-state eligibility.</summary>
     public string State => AllBreak ? "ALL BREAK" : HostStateEligible ? "VALID" : "EVIDENCE";
 
+    /// <summary>Gets the stable ID of the decoded frame's primary source record.</summary>
     public string SourceId => Source.StableId;
 
+    /// <summary>Creates a display row from a Common frame using its source record as the sole physical record.</summary>
     public static DecodedFrameRow FromCommon(int index, CommonEventBufferFrame frame) =>
         new(index, frame, frame.Source, [frame.Source], frame.NumTouches, frame.CrcValid, frame.AllBreak, frame.HostStateEligible);
 
+    /// <summary>Creates a display row from a Desay 0x97 frame and its packet's physical source records.</summary>
     public static DecodedFrameRow FromDesay97(int index, Desay97Frame frame) =>
         new(index, frame, frame.Source, frame.Packet.PhysicalRecords, frame.NumTouches, frame.CrcValid, frame.AllBreak, frame.HostStateEligible);
 }
 
+/// <summary>Exposes a replay diagnostic's code, severity, and message for display.</summary>
+/// <param name="Diagnostic">The replay diagnostic represented by the row.</param>
 public sealed record DiagnosticRow(ReplayDiagnostic Diagnostic)
 {
+    /// <summary>Gets the code identifying the replay diagnostic.</summary>
     public string Code => Diagnostic.Code;
 
+    /// <summary>Gets the replay diagnostic's severity as uppercase text.</summary>
     public string Severity => Diagnostic.Severity.ToString().ToUpperInvariant();
 
+    /// <summary>Gets the explanatory message from the replay diagnostic.</summary>
     public string Message => Diagnostic.Message;
 }
 
+/// <summary>Exposes a review event group's occurrences, state, disposition, and marker information for display.</summary>
+/// <param name="Group">The review event group represented by the row.</param>
 public sealed record ReviewGroupRow(ReviewEventGroup Group)
 {
+    /// <summary>Gets the code identifying the review event group.</summary>
     public string Code => Group.Code;
+    /// <summary>Gets the group code with zero-width spaces after underscores and equals signs for wrapping.</summary>
     public string DisplayCode => EngineeringDisplayText.AddBreakOpportunities(Group.Code);
+    /// <summary>Gets the review event group's severity as uppercase text.</summary>
     public string Severity => Group.Severity.ToString().ToUpperInvariant();
+    /// <summary>Gets the explanatory message from the review event group.</summary>
     public string Message => Group.Message;
+    /// <summary>Gets the group's occurrence count with singular or plural wording.</summary>
     public string Count => Group.Occurrences.Count == 1 ? "1 occurrence" : $"{Group.Occurrences.Count} occurrences";
+    /// <summary>Gets the group's ASIL lifecycle or, when absent, its workflow state as uppercase text.</summary>
     public string State => Group.AsilLifecycle?.ToString().ToUpperInvariant() ?? Group.WorkflowState.ToString().ToUpperInvariant();
+    /// <summary>Gets the group's disposition as uppercase text, or an empty string for no disposition.</summary>
     public string Disposition => Group.Disposition == ReviewDisposition.None ? string.Empty : Group.Disposition.ToString().ToUpperInvariant();
+    /// <summary>Gets the marker ID from the first occurrence's diagnostic details, if present.</summary>
     public string? MarkerId => Group.Occurrences.FirstOrDefault()?.Diagnostic.Details?.GetValueOrDefault("marker_id");
+    /// <summary>Gets whether the group is an annotation with a marker ID available for unmarking.</summary>
     public bool CanUnmark => Group.Category == ReviewEventCategory.Annotation && MarkerId is not null;
 }
 
+/// <summary>Pairs a review occurrence with its display number and frame or physical-source location.</summary>
+/// <param name="Number">The number displayed before the occurrence's frame and source label.</param>
+/// <param name="Occurrence">The review occurrence represented by the row.</param>
 public sealed record ReviewOccurrenceRow(int Number, ReviewOccurrence Occurrence)
 {
+    /// <summary>Gets the one-based frame number and source line, or the physical source line when no logical index exists.</summary>
     public string FrameAndSourceLabel => Occurrence.LogicalIndex is { } logicalIndex
         ? $"Frame {logicalIndex + 1} · source line {Occurrence.Diagnostic.Location.LineNumber}"
         : $"Physical source · line {Occurrence.Diagnostic.Location.LineNumber}";
 
+    /// <inheritdoc />
     public override string ToString() => $"#{Number} · {FrameAndSourceLabel}";
 }
 
+/// <summary>Stores a Paint marker's identity, logical index, and displayed frame and time labels.</summary>
+/// <param name="MarkerId">The identifier of the Paint marker.</param>
+/// <param name="LogicalIndex">The zero-based logical index at the marker's start.</param>
+/// <param name="FrameLabel">The display label for the marker's starting frame.</param>
+/// <param name="TimeLabel">The display label for the marker's starting time.</param>
 public sealed record PaintMarkerRow(
     string MarkerId,
     int LogicalIndex,
     string FrameLabel,
     string TimeLabel);
 
+/// <summary>Formats engineering text with removable wrapping opportunities at underscores and equals signs.</summary>
 public static class EngineeringDisplayText
 {
     private const char ZeroWidthSpace = '\u200B';
 
+    /// <summary>Inserts zero-width spaces after underscores and equals signs to allow text wrapping.</summary>
     public static string AddBreakOpportunities(string value) => value
         .Replace("_", $"_{ZeroWidthSpace}", StringComparison.Ordinal)
         .Replace("=", $"={ZeroWidthSpace}", StringComparison.Ordinal);
 
+    /// <summary>Formats a key-value pair with wrapping opportunities and moves long values to an indented line.</summary>
     public static string FormatKeyValue(string key, string value, int maximumInlineLength = 30)
     {
         var pair = $"{key}={value}";
@@ -442,5 +535,6 @@ public static class EngineeringDisplayText
             : $"{AddBreakOpportunities(key)}=\n  {AddBreakOpportunities(value)}";
     }
 
+    /// <summary>Removes all zero-width spaces from the supplied display text.</summary>
     public static string RemoveBreakOpportunities(string value) => value.Replace(ZeroWidthSpace.ToString(), string.Empty, StringComparison.Ordinal);
 }
