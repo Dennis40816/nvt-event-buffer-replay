@@ -30,11 +30,16 @@ public sealed class ReplayFramePlanSnapshot : IReadOnlyList<ReplayFramePlanEntry
         OutputFrameCount = outputFrameCount;
     }
 
+    /// <summary>Gets the replay frame count, interval, and export timing options that identify this plan.</summary>
     public ReplayFramePlanIdentity Identity { get; }
+    /// <summary>Gets the total number of output frames represented by the plan's repeat counts.</summary>
     public long OutputFrameCount { get; }
+    /// <inheritdoc />
     public int Count => entries.Length;
+    /// <inheritdoc />
     public ReplayFramePlanEntry this[int index] => entries[index];
 
+    /// <summary>Returns the logical replay index corresponding to the specified output frame index.</summary>
     public int LogicalIndexAt(long outputFrameIndex)
     {
         if (outputFrameIndex < 0 || outputFrameIndex >= OutputFrameCount)
@@ -80,6 +85,7 @@ public sealed class ReplayFramePlanSnapshot : IReadOnlyList<ReplayFramePlanEntry
         cancellationToken.ThrowIfCancellationRequested();
     }
 
+    /// <inheritdoc />
     public IEnumerator<ReplayFramePlanEntry> GetEnumerator() =>
         ((IEnumerable<ReplayFramePlanEntry>)entries).GetEnumerator();
 
@@ -100,14 +106,19 @@ public sealed class ReplayFramePlanSnapshot : IReadOnlyList<ReplayFramePlanEntry
     }
 }
 
+/// <summary>Builds and validates replay frame sampling plans and maps output frames to logical replay indices.</summary>
 public static class ReplayFramePlan
 {
+    /// <summary>The highest number of output frames per second allowed when building an export plan.</summary>
     public const int MaximumFrameRate = 240;
+    /// <summary>The maximum total number of output frames allowed in a replay export plan.</summary>
     public const long MaximumOutputFrames = 100_000_000;
 
+    /// <summary>Builds an immutable frame sampling plan for the selected replay range and export timing options.</summary>
     public static IReadOnlyList<ReplayFramePlanEntry> Build(ITouchReplaySession replay, ReplayExportOptions options) =>
         BuildSnapshot(replay, options, CancellationToken.None);
 
+    /// <summary>Builds a frame sampling plan with cancellation and progress reporting for the selected replay range.</summary>
     public static IReadOnlyList<ReplayFramePlanEntry> Build(
         ITouchReplaySession replay,
         ReplayExportOptions options,
@@ -115,6 +126,7 @@ public static class ReplayFramePlan
         IProgress<ReplayExportProgress>? progress = null) =>
         BuildSnapshot(replay, options, cancellationToken, progress);
 
+    /// <summary>Builds an immutable indexed sampling plan bound to the replay instance and export timing options.</summary>
     public static ReplayFramePlanSnapshot BuildSnapshot(
         ITouchReplaySession replay,
         ReplayExportOptions options,
@@ -183,6 +195,7 @@ public static class ReplayFramePlan
             outputFrameCount);
     }
 
+    /// <summary>Validates a frame sampling plan and returns an immutable snapshot bound to the replay and export options.</summary>
     public static ReplayFramePlanSnapshot Freeze(
         ITouchReplaySession replay,
         ReplayExportOptions options,
@@ -230,6 +243,7 @@ public static class ReplayFramePlan
             outputFrameCount);
     }
 
+    /// <summary>Returns the plan's total output frame count, rejecting counts that exceed the 32-bit preview index limit.</summary>
     public static int OutputFrameCount(IReadOnlyList<ReplayFramePlanEntry> plan)
     {
         var count = OutputFrameCount64(plan);
@@ -238,6 +252,7 @@ public static class ReplayFramePlan
         return (int)count;
     }
 
+    /// <summary>Returns the plan's total output frame count as a 64-bit value within the export safety limit.</summary>
     public static long OutputFrameCount64(IReadOnlyList<ReplayFramePlanEntry> plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -253,9 +268,11 @@ public static class ReplayFramePlan
         return total;
     }
 
+    /// <summary>Returns the logical replay index corresponding to the specified output frame index in the plan.</summary>
     public static int LogicalIndexAt(IReadOnlyList<ReplayFramePlanEntry> plan, int outputFrameIndex) =>
         LogicalIndexAt(plan, (long)outputFrameIndex);
 
+    /// <summary>Returns the logical replay index corresponding to the specified output frame index in the plan.</summary>
     public static int LogicalIndexAt(IReadOnlyList<ReplayFramePlanEntry> plan, long outputFrameIndex)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -399,6 +416,7 @@ public sealed class ReplayRangeExporter
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
+    /// <summary>Builds a frame plan and exports the selected replay range as MP4 or an explicitly enabled PNG fallback.</summary>
     public Task<ReplayExportResult> ExportAsync(
         ITouchReplaySession replay,
         Func<int, ReplayScene> sceneFactory,
@@ -411,6 +429,7 @@ public sealed class ReplayRangeExporter
         return ExportPlannedAsync(replay, sceneFactory, options, plan, cancellationToken, progress);
     }
 
+    /// <summary>Validates the supplied frame plan and exports the replay range as MP4 or an explicitly enabled PNG fallback.</summary>
     public Task<ReplayExportResult> ExportAsync(
         ITouchReplaySession replay,
         Func<int, ReplayScene> sceneFactory,
