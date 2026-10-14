@@ -10,24 +10,34 @@ namespace Nvt.Replay.Avalonia.Controls;
 /// <summary>Draws the replay timeline with its playhead, progress tracks, loop range and markers, and handles seek input.</summary>
 public sealed class ReplayTimelineSurface : Control, ICustomHitTest
 {
+    /// <summary>Identifies the styled property for the timeline track background brush.</summary>
     public static readonly StyledProperty<IBrush?> TrackBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(TrackBrush));
+    /// <summary>Identifies the styled property for the track brush used while the pointer is over the timeline.</summary>
     public static readonly StyledProperty<IBrush?> HoverTrackBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(HoverTrackBrush));
+    /// <summary>Identifies the styled property for the physical progress track brush.</summary>
     public static readonly StyledProperty<IBrush?> PhysicalBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(PhysicalBrush));
+    /// <summary>Identifies the styled property for the logical progress track brush.</summary>
     public static readonly StyledProperty<IBrush?> LogicalBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(LogicalBrush));
+    /// <summary>Identifies the styled property for the evidence progress track brush.</summary>
     public static readonly StyledProperty<IBrush?> EvidenceBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(EvidenceBrush));
+    /// <summary>Identifies the styled property for the playhead and hover label text brush.</summary>
     public static readonly StyledProperty<IBrush?> PlayheadBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(PlayheadBrush));
+    /// <summary>Identifies the styled property for the enabled loop boundary brush.</summary>
     public static readonly StyledProperty<IBrush?> LoopBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(LoopBrush));
+    /// <summary>Identifies the styled property for the enabled loop range fill brush.</summary>
     public static readonly StyledProperty<IBrush?> LoopSurfaceBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(LoopSurfaceBrush));
+    /// <summary>Identifies the styled property for markers outside the current playhead frame.</summary>
     public static readonly StyledProperty<IBrush?> MarkerBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(MarkerBrush));
+    /// <summary>Identifies the styled property for markers at the current playhead frame.</summary>
     public static readonly StyledProperty<IBrush?> ActiveMarkerBrushProperty =
         AvaloniaProperty.Register<ReplayTimelineSurface, IBrush?>(nameof(ActiveMarkerBrush));
 
@@ -43,28 +53,44 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     private int? _hoverFrame;
     private DragTarget _dragTarget;
 
+    /// <summary>Occurs when pointer input requests a seek to a logical replay frame.</summary>
     public event EventHandler<ReplayTimelineSeekEventArgs>? SeekRequested;
+    /// <summary>Occurs when dragging a loop boundary changes the logical frame range.</summary>
     public event EventHandler<ReplayTimelineLoopEventArgs>? LoopRangeChanged;
+    /// <summary>Occurs when a context request targets a logical replay frame.</summary>
     public event EventHandler<ReplayTimelineContextEventArgs>? ContextFrameRequested;
 
+    /// <summary>Creates a timeline surface and subscribes to context requests for replay frames.</summary>
     public ReplayTimelineSurface()
     {
         ContextRequested += OnContextRequested;
     }
 
+    /// <summary>Gets or sets the timeline track background and hover label fill brush.</summary>
     public IBrush? TrackBrush { get => GetValue(TrackBrushProperty); set => SetValue(TrackBrushProperty, value); }
+    /// <summary>Gets or sets the hovered track, disabled loop boundary, and hover label border brush.</summary>
     public IBrush? HoverTrackBrush { get => GetValue(HoverTrackBrushProperty); set => SetValue(HoverTrackBrushProperty, value); }
+    /// <summary>Gets or sets the brush for physical progress shown when the timeline is expanded.</summary>
     public IBrush? PhysicalBrush { get => GetValue(PhysicalBrushProperty); set => SetValue(PhysicalBrushProperty, value); }
+    /// <summary>Gets or sets the brush for logical progress up to the playhead.</summary>
     public IBrush? LogicalBrush { get => GetValue(LogicalBrushProperty); set => SetValue(LogicalBrushProperty, value); }
+    /// <summary>Gets or sets the brush for evidence progress shown when the timeline is expanded.</summary>
     public IBrush? EvidenceBrush { get => GetValue(EvidenceBrushProperty); set => SetValue(EvidenceBrushProperty, value); }
+    /// <summary>Gets or sets the brush for the playhead and hover label text.</summary>
     public IBrush? PlayheadBrush { get => GetValue(PlayheadBrushProperty); set => SetValue(PlayheadBrushProperty, value); }
+    /// <summary>Gets or sets the brush for the enabled loop range boundaries.</summary>
     public IBrush? LoopBrush { get => GetValue(LoopBrushProperty); set => SetValue(LoopBrushProperty, value); }
+    /// <summary>Gets or sets the brush filling the enabled loop range.</summary>
     public IBrush? LoopSurfaceBrush { get => GetValue(LoopSurfaceBrushProperty); set => SetValue(LoopSurfaceBrushProperty, value); }
+    /// <summary>Gets or sets the brush for markers outside the current playhead frame.</summary>
     public IBrush? MarkerBrush { get => GetValue(MarkerBrushProperty); set => SetValue(MarkerBrushProperty, value); }
+    /// <summary>Gets or sets the brush for markers at the current playhead frame.</summary>
     public IBrush? ActiveMarkerBrush { get => GetValue(ActiveMarkerBrushProperty); set => SetValue(ActiveMarkerBrushProperty, value); }
+    /// <summary>Gets or sets whether the timeline hides the physical and evidence progress tracks.</summary>
     public bool Compact { get; set; } = true;
     internal IReadOnlyList<int> MarkerFrames => _markerFrames;
 
+    /// <inheritdoc />
     bool ICustomHitTest.HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
 
     /// <summary>Sets the last logical index of the timeline and clamps the playhead and marker frames to it.</summary>
@@ -338,20 +364,29 @@ public sealed class ReplayTimelineSurface : Control, ICustomHitTest
     }
 }
 
+/// <summary>Describes a requested logical replay frame and whether the seek occurs during a drag.</summary>
 public sealed class ReplayTimelineSeekEventArgs(int logicalIndex, bool isContinuous = false) : EventArgs
 {
+    /// <summary>Gets the logical replay frame index requested by the seek.</summary>
     public int LogicalIndex { get; } = logicalIndex;
+    /// <summary>Gets whether the seek was requested while dragging the playhead.</summary>
     public bool IsContinuous { get; } = isContinuous;
 }
 
+/// <summary>Describes the logical frame boundaries produced by dragging a loop handle.</summary>
 public sealed class ReplayTimelineLoopEventArgs(int startLogicalIndex, int endLogicalIndex) : EventArgs
 {
+    /// <summary>Gets the logical replay frame index of the loop start.</summary>
     public int StartLogicalIndex { get; } = startLogicalIndex;
+    /// <summary>Gets the logical replay frame index of the loop end.</summary>
     public int EndLogicalIndex { get; } = endLogicalIndex;
 }
 
+/// <summary>Describes a context request for a logical replay frame and whether it was handled.</summary>
 public sealed class ReplayTimelineContextEventArgs(int logicalIndex) : EventArgs
 {
+    /// <summary>Gets the logical replay frame index targeted by the context request.</summary>
     public int LogicalIndex { get; } = logicalIndex;
+    /// <summary>Gets or sets whether the frame context request was handled by a subscriber.</summary>
     public bool Handled { get; set; }
 }
