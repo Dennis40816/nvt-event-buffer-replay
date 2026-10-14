@@ -5,18 +5,27 @@ using Nvt.Replay.Rendering;
 
 namespace Nvt.Replay.Avalonia.ViewModels;
 
+/// <summary>Specifies the direction for navigating visible review occurrences in timeline order.</summary>
 public enum ReviewFindingDirection
 {
+    /// <summary>Navigates to the preceding review occurrence, wrapping to the last occurrence when needed.</summary>
     Previous = -1,
+    /// <summary>Navigates to the following review occurrence, wrapping to the first occurrence when needed.</summary>
     Next = 1,
 }
 
+/// <summary>Describes the marker and human review state changes made by a workspace import.</summary>
+/// <param name="MarkerCount">Number of markers in the workspace after the import.</param>
+/// <param name="UnresolvedReviewGroupIds">Review group identifiers that could not be matched when importing saved state.</param>
+/// <param name="MarkersChanged">Whether the imported markers differ from the previous markers.</param>
+/// <param name="ReviewStateChanged">Whether the imported human review state differs from the previous state.</param>
 public sealed record ReviewWorkspaceImportResult(
     int MarkerCount,
     IReadOnlyList<string> UnresolvedReviewGroupIds,
     bool MarkersChanged,
     bool ReviewStateChanged)
 {
+    /// <summary>Indicates whether the import changed markers or human review state.</summary>
     public bool Changed => MarkersChanged || ReviewStateChanged;
 }
 
@@ -43,6 +52,7 @@ public sealed class ReviewInspectorWorkspace
     private ReviewSessionOptions reviewOptions;
     private ReplayRenderMode renderMode;
 
+    /// <summary>Creates review and inspector state from replay snapshots, diagnostics, and optional annotations and markers.</summary>
     public ReviewInspectorWorkspace(
         IReadOnlyList<ITouchReplaySnapshot> frames,
         IReadOnlyList<ReplayDiagnostic> diagnostics,
@@ -68,16 +78,22 @@ public sealed class ReviewInspectorWorkspace
         RefreshPresentation();
     }
 
+    /// <summary>Gets the replay snapshots supplied to this workspace.</summary>
     public IReadOnlyList<ITouchReplaySnapshot> Frames => frames;
 
+    /// <summary>Gets the original diagnostics supplied to this workspace, excluding generated marker diagnostics.</summary>
     public IReadOnlyList<ReplayDiagnostic> BaseDiagnostics => baseDiagnostics;
 
+    /// <summary>Gets a read-only view of the workspace's current replay markers.</summary>
     public IReadOnlyList<ReplayMarker> Markers => markerView;
 
+    /// <summary>Gets the current review session containing original and marker diagnostics with human review state.</summary>
     public ReviewSession ReviewSession => reviewSession;
 
+    /// <summary>Gets the options used by the current review session.</summary>
     public ReviewSessionOptions ReviewOptions => reviewSession.Options;
 
+    /// <summary>Gets the revision incremented whenever the workspace replaces its review session.</summary>
     public long ReviewSessionRevision { get; private set; }
 
     /// <summary>
@@ -88,28 +104,37 @@ public sealed class ReviewInspectorWorkspace
 
     internal long NavigationIndexRevision { get; private set; }
 
+    /// <summary>Gets the review queue filter used to select visible finding groups.</summary>
     public ReviewQueueFilter Filter { get; private set; }
 
     /// <summary>Gets the visible review groups in the session's urgency order.</summary>
     public IReadOnlyList<ReviewEventGroup> VisibleGroups => _presentationIndex.VisibleGroups;
 
+    /// <summary>Gets the selected replay snapshot's logical index, or -1 when the workspace has no frames.</summary>
     public int CurrentLogicalIndex { get; private set; }
 
+    /// <summary>Gets the selected replay snapshot, or null when no frame is selected.</summary>
     public ITouchReplaySnapshot? CurrentSnapshot =>
         CurrentLogicalIndex >= 0 ? frames[CurrentLogicalIndex] : null;
 
+    /// <summary>Gets the selected replay snapshot's primary source record, or null when no frame is selected.</summary>
     public SourceRecord? CurrentSource => CurrentSnapshot?.PrimarySource;
 
+    /// <summary>Gets the inspector presentation for the selected replay snapshot and current render mode.</summary>
     public InspectorFramePresentation? CurrentPresentation { get; private set; }
 
+    /// <summary>Gets the selected contact identifier, or null when no contact is selected.</summary>
     public byte? SelectedContactId { get; private set; }
 
+    /// <summary>Gets the selected contact row from the current inspector presentation, or null when unavailable.</summary>
     public InspectorContactRow? SelectedContact => SelectedContactId is { } id
         ? CurrentPresentation?.Contacts.FirstOrDefault(contact => contact.Id == id)
         : null;
 
+    /// <summary>Gets the selected review group identifier, or null when no finding is selected.</summary>
     public string? SelectedFindingGroupId { get; private set; }
 
+    /// <summary>Gets the selected review occurrence identifier, or null when no occurrence is selected.</summary>
     public string? SelectedOccurrenceId { get; private set; }
 
     /// <summary>Gets the selected review group when it is visible under the current filter.</summary>
@@ -118,15 +143,19 @@ public sealed class ReviewInspectorWorkspace
             ? group
             : null;
 
+    /// <summary>Gets the selected occurrence within the visible selected review group, or null when unavailable.</summary>
     public ReviewOccurrence? SelectedOccurrence => SelectedFinding?.Occurrences
         .FirstOrDefault(occurrence => occurrence.Id.Equals(SelectedOccurrenceId, StringComparison.Ordinal));
 
+    /// <summary>Gets the selected replay marker identifier, or null when no marker is selected.</summary>
     public string? SelectedMarkerId { get; private set; }
 
+    /// <summary>Gets the selected marker from the workspace's marker list, or null when unavailable.</summary>
     public ReplayMarker? SelectedMarker => SelectedMarkerId is { } id
         ? markers.FirstOrDefault(marker => marker.Id.Equals(id, StringComparison.Ordinal))
         : null;
 
+    /// <summary>Selects a replay snapshot by logical index and rebuilds its inspector presentation.</summary>
     public InspectorFramePresentation SelectFrame(int logicalIndex)
     {
         if ((uint)logicalIndex >= (uint)frames.Count)
@@ -136,6 +165,7 @@ public sealed class ReviewInspectorWorkspace
         return CurrentPresentation!;
     }
 
+    /// <summary>Changes the replay render mode and refreshes the selected frame's inspector presentation.</summary>
     public void SetRenderMode(ReplayRenderMode value)
     {
         if (renderMode == value) return;
@@ -143,6 +173,7 @@ public sealed class ReviewInspectorWorkspace
         RefreshPresentation();
     }
 
+    /// <summary>Updates the review session options and reports whether either stored option value changed.</summary>
     public bool SetReviewOptions(ReviewSessionOptions value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -152,6 +183,7 @@ public sealed class ReviewInspectorWorkspace
         return true;
     }
 
+    /// <summary>Selects a contact present in the current inspector presentation, clearing the selection if absent.</summary>
     public bool SelectContact(byte contactId)
     {
         if (CurrentPresentation?.Contacts.Any(contact => contact.Id == contactId) != true)
@@ -163,8 +195,10 @@ public sealed class ReviewInspectorWorkspace
         return true;
     }
 
+    /// <summary>Clears the selected contact identifier.</summary>
     public void ClearContactSelection() => SelectedContactId = null;
 
+    /// <summary>Changes the review queue filter and rebuilds the visible finding groups.</summary>
     public void SetFilter(ReviewQueueFilter value)
     {
         if (Filter == value) return;
@@ -183,6 +217,7 @@ public sealed class ReviewInspectorWorkspace
         return ApplyOccurrence(group, group.Occurrences[occurrenceIndex]);
     }
 
+    /// <summary>Selects an occurrence in the current review group and its replay frame, when available.</summary>
     public ReviewOccurrence SelectOccurrence(int occurrenceIndex)
     {
         var group = SelectedFinding ?? throw new InvalidOperationException("Select a review group first.");
@@ -223,6 +258,7 @@ public sealed class ReviewInspectorWorkspace
         return ApplyOccurrence(target.Group, target.Occurrence);
     }
 
+    /// <summary>Clears the selected review group, occurrence, and marker identifiers.</summary>
     public void ClearFindingSelection()
     {
         SelectedFindingGroupId = null;
@@ -230,15 +266,19 @@ public sealed class ReviewInspectorWorkspace
         SelectedMarkerId = null;
     }
 
+    /// <summary>Acknowledges a review group and refreshes the visible finding groups.</summary>
     public ReviewEventGroup AcknowledgeFinding(string groupId) =>
         MutateFinding(groupId, reviewSession.Acknowledge);
 
+    /// <summary>Sets a review group's human disposition and refreshes the visible finding groups.</summary>
     public ReviewEventGroup SetFindingDisposition(string groupId, ReviewDisposition disposition) =>
         MutateFinding(groupId, id => reviewSession.SetDisposition(id, disposition));
 
+    /// <summary>Resolves an acknowledged review group when its captured alarm state permits resolution.</summary>
     public ReviewEventGroup ResolveFinding(string groupId) =>
         MutateFinding(groupId, reviewSession.Resolve);
 
+    /// <summary>Creates and selects a uniquely named marker at the currently selected replay frame.</summary>
     public ReplayMarker AddMarker(string? label = null)
     {
         if (CurrentLogicalIndex < 0)
@@ -264,6 +304,7 @@ public sealed class ReviewInspectorWorkspace
         return marker;
     }
 
+    /// <summary>Assigns a trimmed, unique label to an existing marker and selects that marker.</summary>
     public ReplayMarker RenameMarker(string markerId, string label)
     {
         var (marker, index) = FindMarker(markerId);
@@ -282,6 +323,7 @@ public sealed class ReviewInspectorWorkspace
         return renamed;
     }
 
+    /// <summary>Replaces a marker's QA case identifiers with trimmed, nonempty, case-insensitively distinct values.</summary>
     public ReplayMarker SetMarkerQaCaseIds(string markerId, IEnumerable<string> qaCaseIds)
     {
         ArgumentNullException.ThrowIfNull(qaCaseIds);
@@ -293,6 +335,7 @@ public sealed class ReviewInspectorWorkspace
         return UpdateMarker(markerId, marker => marker with { QaCaseIds = normalized });
     }
 
+    /// <summary>Appends a validated evidence reference with a workspace-unique identifier to an existing marker.</summary>
     public ReplayMarker AddMarkerEvidence(string markerId, ReplayEvidenceReference evidence)
     {
         ArgumentNullException.ThrowIfNull(evidence);
@@ -308,6 +351,7 @@ public sealed class ReviewInspectorWorkspace
         });
     }
 
+    /// <summary>Removes a marker by identifier and rebuilds the review session, returning whether it existed.</summary>
     public bool RemoveMarker(string markerId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(markerId);
@@ -323,6 +367,7 @@ public sealed class ReviewInspectorWorkspace
         return true;
     }
 
+    /// <summary>Removes all replay markers, refreshes affected review state, and returns the number removed.</summary>
     public int ClearMarkers()
     {
         var count = markers.Count;
@@ -334,6 +379,7 @@ public sealed class ReviewInspectorWorkspace
         return count;
     }
 
+    /// <summary>Replaces workspace markers and imports human review state, reporting changes and unmatched group identifiers.</summary>
     public ReviewWorkspaceImportResult ReplaceMarkersAndImportState(
         IEnumerable<ReplayMarker> replacementMarkers,
         IEnumerable<ReviewStateSnapshot> reviewStates)
@@ -385,6 +431,7 @@ public sealed class ReviewInspectorWorkspace
         return true;
     }
 
+    /// <summary>Builds copyable text for the current inspector presentation, or an empty string when unavailable.</summary>
     public string BuildCopyPayload() => CurrentPresentation is { } presentation
         ? InspectorPresentationBuilder.BuildCopyText(presentation)
         : string.Empty;
