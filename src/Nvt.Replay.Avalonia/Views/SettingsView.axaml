@@ -101,18 +101,18 @@
           <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
           <TextBlock Text="Defaults and low-frequency preferences" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
         </StackPanel>
-        <Button x:Name="CloseSettingsButton" Grid.Column="1" Classes="actionIconButton" FontFamily="Segoe Fluent Icons" FontSize="16" Content="&#xE711;" Click="CloseSettingsButton_OnClick" ToolTip.Tip="Close settings (Esc)" AutomationProperties.Name="Close settings" />
+        <Button x:Name="CloseSettingsButton" Grid.Column="1" Classes="actionIconButton actionGhost flat" FontFamily="Segoe Fluent Icons" FontSize="16" Content="&#xE711;" Click="CloseSettingsButton_OnClick" ToolTip.Tip="Close settings (Esc)" AutomationProperties.Name="Close settings" />
       </Grid>
     </Border>
 
     <Grid Grid.Row="1" ColumnDefinitions="220,*">
       <Border Background="{DynamicResource NfcSurfaceSubtleBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,1,0">
         <StackPanel Margin="16,18" Spacing="8">
-          <Button x:Name="GeneralNavButton" Classes="chipAction settingsNav active" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="GENERAL" Click="GeneralNavButton_OnClick" />
-          <Button x:Name="PlaybackNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="PLAYBACK" Click="PlaybackNavButton_OnClick" />
-          <Button x:Name="OutputDefaultsNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="OUTPUT DEFAULTS" Click="OutputDefaultsNavButton_OnClick" />
-          <Button x:Name="ShortcutsNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="SHORTCUTS" Click="ShortcutsNavButton_OnClick" />
-          <Button x:Name="PerformanceNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="PERFORMANCE" Click="PerformanceNavButton_OnClick" />
+          <Button x:Name="GeneralNavButton" Classes="actionGhost flat settingsNav active" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="GENERAL" Click="GeneralNavButton_OnClick" />
+          <Button x:Name="PlaybackNavButton" Classes="actionGhost flat settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="PLAYBACK" Click="PlaybackNavButton_OnClick" />
+          <Button x:Name="OutputDefaultsNavButton" Classes="actionGhost flat settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="OUTPUT DEFAULTS" Click="OutputDefaultsNavButton_OnClick" />
+          <Button x:Name="ShortcutsNavButton" Classes="actionGhost flat settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="SHORTCUTS" Click="ShortcutsNavButton_OnClick" />
+          <Button x:Name="PerformanceNavButton" Classes="actionGhost flat settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="PERFORMANCE" Click="PerformanceNavButton_OnClick" />
         </StackPanel>
       </Border>
 

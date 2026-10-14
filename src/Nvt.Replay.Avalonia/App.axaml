@@ -35,5 +35,6 @@
         <FluentTheme DensityStyle="Compact" />
         <StyleInclude Source="avares://Nvt.Core.Avalonia/Theme/ButtonStyles.axaml" />
         <StyleInclude Source="avares://Nvt.Core.Avalonia/Theme/ScrollStyles.axaml" />
+        <StyleInclude Source="avares://Nvt.Replay.Avalonia/Styles/CoreRoleGaps.axaml" />
     </Application.Styles>
 </Application>

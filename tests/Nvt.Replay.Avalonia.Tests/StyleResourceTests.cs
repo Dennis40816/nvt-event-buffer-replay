@@ -67,13 +67,16 @@ public sealed class StyleResourceTests
             Assert.Contains("actionPrimary", load.Classes);
             Assert.Contains("actionGhost", save.Classes);
             Assert.Contains("actionIconButton", icon.Classes);
-            Assert.Contains("chipAction", selected.Classes);
-            foreach (var button in new Button[] { load, save, icon, selected })
+            Assert.Contains("flat", selected.Classes);
+            foreach (var button in new Button[] { load, save, icon })
             {
                 Assert.Equal(32, button.Height);
                 Assert.Equal(32, button.MinHeight);
                 Assert.Equal(new CornerRadius(999), button.CornerRadius);
             }
+            Assert.Equal(32, selected.Height);
+            Assert.Equal(new CornerRadius(0), selected.CornerRadius);
+            Assert.Equal(new Thickness(0), selected.BorderThickness);
             Assert.Equal(new Thickness(14, 0), load.Padding);
             Assert.Equal(32, icon.Width);
             Assert.Equal(new Thickness(0), icon.Padding);
