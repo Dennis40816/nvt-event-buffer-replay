@@ -12150,16 +12150,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "8a57929ad9c7b5c788db6d0aac138d5e8c8bd9af75a525e06b9913cc5628f10c",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayRangeExporter",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "0957a2d8c8ca9da5bb3fcfcfdffba4234c8876fd5fee981b00eda7fe871029cf",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/ReplayScene.cs",
@@ -17540,16 +17530,6 @@
       "symbol": "P:Avalonia.Threading.Dispatcher.UIThread"
     },
     {
-      "syntaxHash": "603f2aff115459de3d83186f0b840eb99a1b920b3912565b596454212084e92b",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/MainWindow.Playback.cs",
-      "rule": "RS0030",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.MainWindow.DelayUntilAsync(long,TimeSpan,CancellationToken)",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.Threading.CancellationToken)"
-    },
-    {
       "syntaxHash": "c23b9db14bd35aed015c3a8d17df2c01d6b1643b91f61d37640dd482e40c6f05",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs",
@@ -17748,16 +17728,6 @@
       "member": "Nvt.Replay.Rendering.FfmpegRuntime.ResolveExecutable(string?)",
       "project": "Nvt.Replay.Rendering",
       "symbol": "M:System.Environment.GetEnvironmentVariable(System.String)"
-    },
-    {
-      "syntaxHash": "30f34061d5790c6226a145020eb00f8635364711844c3af665fa74b706bee530",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReplayRangeExporter.cs",
-      "rule": "RS0030",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReplayRangeExporter.DeleteFileWithRetryAsync(string,int,TimeSpan?)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "M:System.Threading.Tasks.Task.Delay(System.TimeSpan)"
     },
     {
       "syntaxHash": "c62a18af282ab7c37f001f96e32491a5b332dbe7afc29ea1a035495817377a15",
