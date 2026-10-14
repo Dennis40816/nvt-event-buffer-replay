@@ -2,23 +2,23 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Nvt.Replay.Avalonia.ViewModels"
              x:Class="Nvt.Replay.Avalonia.Views.SettingsView"
-             Background="{DynamicResource WorkspaceBrush}">
+             Background="{DynamicResource NfcAppBackgroundBrush}">
   <UserControl.Styles>
     <Style Selector="TextBlock.settingsSectionTitle">
       <Setter Property="FontSize" Value="16" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextBrush}" />
     </Style>
     <Style Selector="TextBlock.settingsSectionDescription">
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="Medium" />
-      <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NfcTextMutedBrush}" />
       <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
     <Style Selector="Border.settingsRow">
-      <Setter Property="MinHeight" Value="54" />
-      <Setter Property="Padding" Value="0,9" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="Padding" Value="0,7" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderSoftBrush}" />
       <Setter Property="BorderThickness" Value="0,0,0,1" />
     </Style>
     <Style Selector="RadioButton.settingsChoice">
@@ -28,7 +28,7 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderSoftBrush}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Background" Value="Transparent" />
@@ -45,7 +45,7 @@
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center"
                       Background="Transparent"
-                      BorderBrush="{DynamicResource StrongBorderBrush}"
+                      BorderBrush="{DynamicResource NfcBorderBrush}"
                       BorderThickness="1.5"
                       CornerRadius="9">
                 <Border x:Name="SelectionIndicatorDot"
@@ -53,7 +53,7 @@
                         Height="8"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Background="{DynamicResource AccentBrush}"
+                        Background="{DynamicResource NfcAccentBrush}"
                         CornerRadius="4"
                         IsVisible="False" />
               </Border>
@@ -69,94 +69,69 @@
       </Setter>
     </Style>
     <Style Selector="RadioButton.settingsChoice:pointerover">
-      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcSelectionSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderBrush}" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:checked">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcAccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcAccentBrush}" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:checked:pointerover">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource NfcAccentSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcAccentBrush}" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:pointerover /template/ Border#SelectionIndicator">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcAccentBrush}" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:checked /template/ Border#SelectionIndicator">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcAccentBrush}" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:checked /template/ Border#SelectionIndicatorDot">
       <Setter Property="IsVisible" Value="True" />
     </Style>
     <Style Selector="RadioButton.settingsChoice:disabled /template/ Border#SelectionIndicator">
-      <Setter Property="BorderBrush" Value="{DynamicResource DisabledBorderBrush}" />
-    </Style>
-    <Style Selector="Button.settingsNav">
-      <Setter Property="Height" Value="38" />
-      <Setter Property="Padding" Value="12,0" />
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Left" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
-      <Setter Property="FontSize" Value="12.5" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-    <Style Selector="Button.settingsNav:pointerover">
-      <Setter Property="Background" Value="{DynamicResource HoverSurfaceBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
-    </Style>
-    <Style Selector="Button.settingsNav.active">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-    </Style>
-    <Style Selector="Button.settingsNav.active:pointerover">
-      <Setter Property="Background" Value="{DynamicResource AccentSurfaceBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NfcBorderMutedBrush}" />
     </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="72,*">
-    <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+    <Border Grid.Row="0" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,0,1">
       <Grid Margin="24,0" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
         <StackPanel Spacing="2">
-          <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-          <TextBlock Text="Defaults and low-frequency preferences" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource MutedTextBrush}" />
+          <TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+          <TextBlock Text="Defaults and low-frequency preferences" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextMutedBrush}" />
         </StackPanel>
-        <Button x:Name="CloseSettingsButton" Grid.Column="1" Classes="canvasIcon" Content="&#xE711;" Click="CloseSettingsButton_OnClick" ToolTip.Tip="Close settings (Esc)" AutomationProperties.Name="Close settings" />
+        <Button x:Name="CloseSettingsButton" Grid.Column="1" Classes="actionIconButton" FontFamily="Segoe Fluent Icons" FontSize="16" Content="&#xE711;" Click="CloseSettingsButton_OnClick" ToolTip.Tip="Close settings (Esc)" AutomationProperties.Name="Close settings" />
       </Grid>
     </Border>
 
     <Grid Grid.Row="1" ColumnDefinitions="220,*">
-      <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-        <StackPanel Margin="16,22" Spacing="4">
-          <Button x:Name="GeneralNavButton" Classes="settingsNav active" Content="GENERAL" Click="GeneralNavButton_OnClick" />
-          <Button x:Name="PlaybackNavButton" Classes="settingsNav" Content="PLAYBACK" Click="PlaybackNavButton_OnClick" />
-          <Button x:Name="OutputDefaultsNavButton" Classes="settingsNav" Content="OUTPUT DEFAULTS" Click="OutputDefaultsNavButton_OnClick" />
-          <Button x:Name="ShortcutsNavButton" Classes="settingsNav" Content="SHORTCUTS" Click="ShortcutsNavButton_OnClick" />
-          <Button x:Name="PerformanceNavButton" Classes="settingsNav" Content="PERFORMANCE" Click="PerformanceNavButton_OnClick" />
+      <Border Background="{DynamicResource NfcSurfaceSubtleBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,0,1,0">
+        <StackPanel Margin="16,18" Spacing="8">
+          <Button x:Name="GeneralNavButton" Classes="chipAction settingsNav active" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="GENERAL" Click="GeneralNavButton_OnClick" />
+          <Button x:Name="PlaybackNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="PLAYBACK" Click="PlaybackNavButton_OnClick" />
+          <Button x:Name="OutputDefaultsNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="OUTPUT DEFAULTS" Click="OutputDefaultsNavButton_OnClick" />
+          <Button x:Name="ShortcutsNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="SHORTCUTS" Click="ShortcutsNavButton_OnClick" />
+          <Button x:Name="PerformanceNavButton" Classes="chipAction settingsNav" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="PERFORMANCE" Click="PerformanceNavButton_OnClick" />
         </StackPanel>
       </Border>
 
       <ScrollViewer x:Name="SettingsScrollViewer" Grid.Column="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel MaxWidth="960" Margin="40,30,40,48" HorizontalAlignment="Stretch" Spacing="32">
+        <StackPanel MaxWidth="960" Margin="32,24,32,40" HorizontalAlignment="Stretch" Spacing="24">
           <StackPanel x:Name="GeneralSection" Spacing="10">
             <TextBlock Classes="settingsSectionTitle" Text="General" />
             <TextBlock Classes="settingsSectionDescription" Text="Appearance and window behavior are global; capture-specific panel settings stay in Paint." />
             <Border Classes="settingsRow">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Spacing="2">
-                  <TextBlock Text="Color theme" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="Color theme" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
                   <TextBlock Text="Switch between the dark and light engineering palettes." Classes="settingsSectionDescription" />
                 </StackPanel>
-                <Button x:Name="ThemeButton" Grid.Column="1" Classes="ghost" Content="Switch theme" Click="ThemeButton_OnClick" AutomationProperties.Name="Change color theme" />
+                <Button x:Name="ThemeButton" Grid.Column="1" Classes="actionGhost" Content="Switch theme" Click="ThemeButton_OnClick" AutomationProperties.Name="Change color theme" />
               </Grid>
             </Border>
             <Border Classes="settingsRow">
-              <CheckBox x:Name="StartMaximizedCheckBox" IsChecked="True" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" Content="Open the main window maximized" />
+              <CheckBox x:Name="StartMaximizedCheckBox" IsChecked="True" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" Content="Open the main window maximized" />
             </Border>
           </StackPanel>
 
@@ -164,13 +139,13 @@
             <TextBlock Classes="settingsSectionTitle" Text="Playback" />
             <TextBlock Classes="settingsSectionDescription" Text="Auto-pause rules apply during replay without occupying the Review queue." />
             <Border Classes="settingsRow">
-              <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause on Alarm or QA Fail" IsChecked="True" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
+              <CheckBox x:Name="PauseOnAlarmCheckBox" Content="Pause on Alarm or QA Fail" IsChecked="True" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
             </Border>
             <Border Classes="settingsRow">
-              <CheckBox x:Name="PauseOnBreakCheckBox" Content="Pause on reported contact Break" IsChecked="False" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
+              <CheckBox x:Name="PauseOnBreakCheckBox" Content="Pause on reported contact Break" IsChecked="False" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
             </Border>
             <Border Classes="settingsRow">
-              <CheckBox x:Name="PauseOnAllBreakCheckBox" Content="Pause on decoded All Break" IsChecked="False" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
+              <CheckBox x:Name="PauseOnAllBreakCheckBox" Content="Pause on decoded All Break" IsChecked="False" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" IsCheckedChanged="PlaybackOption_OnChanged" />
             </Border>
           </StackPanel>
 
@@ -180,14 +155,14 @@
             <Grid x:Name="DefaultOutputTimingGrid" ColumnDefinitions="*,12,*">
               <RadioButton x:Name="DefaultFramePacedRadioButton" Grid.Column="0" Classes="settingsChoice" GroupName="DefaultOutputClock" IsChecked="True">
                 <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
-                  <TextBlock Text="Frame-paced" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
-                  <TextBlock x:Name="DefaultFrameRateText" Grid.Column="1" Text="120 Hz" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" />
+                  <TextBlock Text="Frame-paced" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
+                  <TextBlock x:Name="DefaultFrameRateText" Grid.Column="1" Text="120 Hz" FontFamily="Cascadia Mono" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource NfcAccentBrush}" />
                   <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0" Text="Skip long recorded gaps while keeping original REC timestamps visible." Classes="settingsSectionDescription" />
                 </Grid>
               </RadioButton>
               <RadioButton x:Name="DefaultRecordedTimingRadioButton" Grid.Column="2" Classes="settingsChoice" GroupName="DefaultOutputClock">
                 <Grid RowDefinitions="Auto,Auto">
-                  <TextBlock Text="Recorded timing" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                  <TextBlock Text="Recorded timing" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
                   <TextBlock Grid.Row="1" Margin="0,4,0,0" Text="Reproduce elapsed time between captured transactions." Classes="settingsSectionDescription" />
                 </Grid>
               </RadioButton>
@@ -205,17 +180,17 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ReplayShortcutModule">
-                  <Border Width="360" Margin="0,0,12,16" Padding="0,10,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+                  <Border Width="360" Margin="0,0,12,16" Padding="0,10,0,0" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="0,1,0,0">
                     <StackPanel Spacing="5">
-                      <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                      <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
                       <TextBlock Text="{Binding Description}" Classes="settingsSectionDescription" />
                       <ItemsControl ItemsSource="{Binding Items}">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:ReplayShortcutDefinition">
                             <Grid MinHeight="34" ColumnDefinitions="*,Auto">
-                              <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                              <Border Grid.Column="1" Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="8,3">
-                                <TextBlock Text="{Binding Gesture}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" />
+                              <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" VerticalAlignment="Center" />
+                              <Border Grid.Column="1" Background="{DynamicResource NfcSurfaceBrush}" BorderBrush="{DynamicResource NfcBorderSoftBrush}" BorderThickness="1" CornerRadius="3" Padding="8,3">
+                                <TextBlock Text="{Binding Gesture}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource NfcTextBrush}" />
                               </Border>
                             </Grid>
                           </DataTemplate>
@@ -232,7 +207,7 @@
             <TextBlock Classes="settingsSectionTitle" Text="Performance" />
             <TextBlock Classes="settingsSectionDescription" Text="Diagnostics are opt-in so normal replay remains quiet and uncluttered." />
             <Border Classes="settingsRow">
-              <CheckBox x:Name="PerformanceOverlayCheckBox" Content="Show replay performance overlay" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" />
+              <CheckBox x:Name="PerformanceOverlayCheckBox" Content="Show replay performance overlay" FontSize="14" FontWeight="Medium" Foreground="{DynamicResource NfcTextSecondaryBrush}" />
             </Border>
           </StackPanel>
         </StackPanel>

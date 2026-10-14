@@ -17,14 +17,14 @@
       "nvt.replay.core": {
         "type": "Project",
         "dependencies": {
-          "Nvt.Core": "[0.9.0, 0.9.0]"
+          "Nvt.Core": "[0.9.3, 0.9.3]"
         }
       },
       "Nvt.Core": {
         "type": "CentralTransitive",
-        "requested": "[0.9.0, 0.9.0]",
-        "resolved": "0.9.0",
-        "contentHash": "D6SPx6FKlf4fVVD6zBSzi2zddwKOqHQy1srz2ZnGJGWd92yJwepFUqEI3Y5I1XOBtQ20zRo4bDdLUl5pPvYTDw=="
+        "requested": "[0.9.3, 0.9.3]",
+        "resolved": "0.9.3",
+        "contentHash": "eZqjjWA3HrbPqfgd/onS9oRuWaNEoItoCqCxLAhRbzK3oA9c2CAHCGldmrfK6D+N5/Mzu8e++oRbtatZR4WkHQ=="
       }
     },
     "net10.0/win-x64": {}

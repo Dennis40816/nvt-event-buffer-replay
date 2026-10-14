@@ -29,7 +29,7 @@ public sealed class MainWindowLayoutTests : IDisposable
     private readonly string temporaryDirectory = Path.Combine(
         Path.GetTempPath(), $"nvt-main-window-{Guid.NewGuid():N}");
 
-    public MainWindowLayoutTests() => Directory.CreateDirectory(temporaryDirectory);
+    public MainWindowLayoutTests() => new DirectoryInfo(temporaryDirectory).Create();
 
     public void Dispose()
     {
@@ -399,19 +399,15 @@ public sealed class MainWindowLayoutTests : IDisposable
             Assert.Equal("Select", version.PlaceholderText);
             Assert.Equal(32, version.Bounds.Height);
             Assert.Equal(32, profile.Bounds.Height);
-            Assert.Equal(34, panelWidth.Height);
+            Assert.Equal(32, panelWidth.Height);
             Assert.Equal(32, load.Bounds.Height);
             Assert.NotNull(window.Icon);
-            Assert.Contains("headerPrimary", load.Classes);
+            Assert.Contains("actionPrimary", load.Classes);
+            Assert.Contains("actionGhost", save.Classes);
             Assert.Equal(VerticalAlignment.Center, version.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, panelWidth.VerticalAlignment);
             Assert.Equal(VerticalAlignment.Center, load.VerticalContentAlignment);
-            Assert.Equal(
-                global::Avalonia.Media.Colors.Transparent,
-                Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(save.Background).Color);
-            Assert.Equal(
-                global::Avalonia.Media.Colors.Transparent,
-                Assert.IsAssignableFrom<global::Avalonia.Media.ISolidColorBrush>(save.BorderBrush).Color);
+            StyleResourceTests.AssertDisabledGhost(save);
         }
         finally
         {
@@ -643,8 +639,8 @@ public sealed class MainWindowLayoutTests : IDisposable
             Dispatcher.UIThread.RunJobs();
             Assert.Contains("inspectorDisclosure", flatBytes.Classes);
             Assert.Contains("inspectorDisclosure", sourceIdentity.Classes);
-            Assert.True(flatBytes.Bounds.Width > 250, $"Flat bytes disclosure width was {flatBytes.Bounds.Width:0.##}.");
-            Assert.True(sourceIdentity.Bounds.Width > 250, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
+            Assert.True(flatBytes.Bounds.Width > 238, $"Flat bytes disclosure width was {flatBytes.Bounds.Width:0.##}.");
+            Assert.True(sourceIdentity.Bounds.Width > 238, $"Source identity disclosure width was {sourceIdentity.Bounds.Width:0.##}.");
             sourceIdentity.IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
             var rawSections = Required<ItemsControl>(window, "RawByteSectionsItemsControl");
@@ -2089,7 +2085,7 @@ public sealed class MainWindowLayoutTests : IDisposable
     {
         var window = ShowWindow();
         var directory = Path.Combine(Path.GetTempPath(), $"nvt-reveal-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(directory);
+        new DirectoryInfo(directory).Create();
         try
         {
             var output = Path.Combine(directory, "replay.mp4");
@@ -2985,11 +2981,10 @@ public sealed class MainWindowLayoutTests : IDisposable
             Assert.True(saveBounds.Right <= loadReviewBounds.Left);
             Assert.True(loadReviewBounds.Right <= reviewActions.Bounds.Width + 0.5);
 
-            save.IsEnabled = false;
-            loadReview.IsEnabled = false;
+            window.Classes.Add("reducedMotion");
+            save.IsEnabled = loadReview.IsEnabled = false;
             Dispatcher.UIThread.RunJobs();
-            Assert.True(IsTransparent(save.Background), $"Disabled Save background must be transparent, got {save.Background}.");
-            Assert.True(IsTransparent(loadReview.Background), $"Disabled Open review background must be transparent, got {loadReview.Background}.");
+            Assert.All(new[] { save, loadReview }, StyleResourceTests.AssertDisabledGhost);
             Assert.All(
                 new[] { save, loadReview },
                 button => Assert.True(
