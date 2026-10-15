@@ -45,10 +45,15 @@ public sealed class ReplayPaintSurface : Control
     private byte? highlightedContactId;
     private readonly PaintOverlayState _overlay = new();
     private readonly PanGesture _pan = new();
+    private readonly ReplayLegendPainter _legendPainter;
 
+    /// <summary>Gets which contacts the surface draws: the host state, the reported frame, or both for comparison.</summary>
     public ReplayRenderMode Mode { get; private set; } = ReplayRenderMode.HostState;
+    /// <summary>Gets the current zoom factor. 1 is the fitted view.</summary>
     public double ZoomFactor => zoomFactor;
+    /// <summary>Gets the id of the contact drawn highlighted, or <see langword="null"/> when none is.</summary>
     public byte? HighlightedContactId => highlightedContactId;
+    /// <summary>Gets whether the grid is drawn with the stronger line style.</summary>
     public bool StrongGrid => strongGrid;
     /// <summary>Whether the legend is shown.</summary>
     public bool LegendVisible => _overlay.LegendVisible;
@@ -64,9 +69,12 @@ public sealed class ReplayPaintSurface : Control
     internal ReplayScene? CurrentScene => scene;
     internal int ScenePresentationCount { get; private set; }
     internal int FitCount { get; private set; }
+    /// <summary>Raised when the zoom factor changes, and when a fit resets it.</summary>
     public event EventHandler? ZoomChanged;
+    /// <summary>Raised when the legend changes between collapsed and expanded.</summary>
     public event EventHandler? LegendCollapsedChanged;
 
+    /// <summary>Highlights the contact with the given id, or clears the highlight when the id is <see langword="null"/>.</summary>
     public void SetHighlightedContact(byte? contactId)
     {
         if (highlightedContactId == contactId) return;
@@ -80,6 +88,7 @@ public sealed class ReplayPaintSurface : Control
     internal ReplayPaintSurface(Func<long> readTimestamp)
     {
         _crossfade = new LoopCrossfadeState(readTimestamp);
+        _legendPainter = new ReplayLegendPainter(_overlay);
         SizeChanged += (_, _) => { if (scene is not null && !labelAnchorsAdvancedForScene) AdvanceLabelAnchors(scene); };
         loopCrossfadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         loopCrossfadeTimer.Tick += (_, _) =>
@@ -93,6 +102,7 @@ public sealed class ReplayPaintSurface : Control
         };
     }
 
+    /// <summary>Selects which contact source is drawn. A change resets the label placement.</summary>
     public void SetMode(ReplayRenderMode mode)
     {
         if (Mode == mode) return;
@@ -171,10 +181,13 @@ public sealed class ReplayPaintSurface : Control
         InvalidateVisual();
     }
 
+    /// <summary>Zooms in by a factor of 1.25, up to a zoom factor of 8.</summary>
     public void ZoomIn() => SetZoom(zoomFactor * 1.25);
 
+    /// <summary>Zooms out by a factor of 1.25, down to a zoom factor of 0.5.</summary>
     public void ZoomOut() => SetZoom(zoomFactor / 1.25);
 
+    /// <summary>Resets the zoom factor to 1, clears the pan offset and ends any pan in progress.</summary>
     public void Fit()
     {
         FitCount++;
@@ -183,6 +196,7 @@ public sealed class ReplayPaintSurface : Control
         SetZoom(1, force: true);
     }
 
+    /// <summary>Switches the grid between the normal and the stronger line style.</summary>
     public void SetStrongGrid(bool value)
     {
         if (strongGrid == value) return;
@@ -246,6 +260,7 @@ public sealed class ReplayPaintSurface : Control
         ZoomChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <inheritdoc />
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
@@ -321,6 +336,7 @@ public sealed class ReplayPaintSurface : Control
         e.Handled = true;
     }
 
+    /// <inheritdoc />
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
     {
         base.OnPointerCaptureLost(e);
@@ -353,7 +369,13 @@ public sealed class ReplayPaintSurface : Control
             DrawSceneContacts(context, previousViewport, available, previous, outgoingTrailBatches, 1 - transition);
         }
         DrawSceneContacts(context, viewport, available, scene, sceneTrailBatches, transition);
-        DrawLegend(context, legendViewport, scene);
+        _legendPainter.Draw(
+            context,
+            legendViewport,
+            scene,
+            Mode,
+            new ReplayLegendBrushes(LabelSurfaceBrush, HoverLabelSurfaceBrush, AxisBrush, AxisLabelBrush, LabelTextBrush),
+            ContactColor);
     }
 
     private void DrawSceneContacts(
@@ -521,172 +543,6 @@ public sealed class ReplayPaintSurface : Control
             opacity));
     }
 
-    private void DrawLegend(DrawingContext context, Rect viewport, ReplayScene scene)
-    {
-        if (!_overlay.LegendVisible)
-        {
-            _overlay.LegendBounds = null;
-            return;
-        }
-
-        var entries = scene.ReportedContacts
-            .Concat(scene.HostContacts)
-            .Select(contact => (contact.Id, contact.Type))
-            .Concat(scene.ContactTrails.Select(trail => (trail.Id, trail.Type)))
-            .GroupBy(entry => entry.Id)
-            .Select(group => group.First())
-            .OrderBy(entry => entry.Id)
-            .Take(10)
-            .ToArray();
-        var activeContacts = (Mode switch
-        {
-            ReplayRenderMode.HostState => scene.HostContacts,
-            ReplayRenderMode.ReportedFrame => scene.ReportedContacts,
-            _ => scene.ReportedContacts.Concat(scene.HostContacts).ToArray(),
-        })
-            .Where(contact => contact.IsActive)
-            .GroupBy(contact => contact.Id)
-            .Select(group => group.First())
-            .OrderBy(contact => contact.Id)
-            .Take(10)
-            .ToArray();
-        if (entries.Length == 0)
-        {
-            _overlay.LegendBounds = null;
-            return;
-        }
-
-        if (_overlay.LegendCollapsed)
-        {
-            DrawCollapsedLegend(context, viewport, activeContacts);
-            return;
-        }
-
-        const double headerHeight = 28;
-        const double itemHeight = 24;
-        const double bottomPadding = 7;
-        var legendRect = PositionLegend(
-            viewport,
-            new Size(150, headerHeight + (entries.Length * itemHeight) + bottomPadding));
-        _overlay.LegendBounds = legendRect;
-        context.DrawRectangle(_overlay.LegendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 3, 3);
-
-        var heading = new FormattedText(
-            "CONTACTS",
-            CultureInfo.InvariantCulture,
-            FlowDirection.LeftToRight,
-            new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            12.5,
-            AxisLabelBrush);
-        var headingBounds = new Rect(legendRect.X + 10, legendRect.Y, legendRect.Width - 20, headerHeight);
-        context.DrawText(heading, new Point(headingBounds.X, CenteredTextY(headingBounds, heading)));
-
-        for (var index = 0; index < entries.Length; index++)
-        {
-            var entry = entries[index];
-            var rowBounds = new Rect(
-                legendRect.X + 10,
-                legendRect.Y + headerHeight + (index * itemHeight),
-                legendRect.Width - 20,
-                itemHeight);
-            var color = ContactColor(entry.Id);
-            var brush = new SolidColorBrush(color);
-            context.DrawEllipse(brush, null, new Point(rowBounds.X + 4, rowBounds.Center.Y), 3.5, 3.5);
-            var text = new FormattedText(
-                $"#{entry.Id}",
-                CultureInfo.InvariantCulture,
-                FlowDirection.LeftToRight,
-                new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.SemiBold),
-                13,
-                LabelTextBrush);
-            context.DrawText(text, new Point(rowBounds.X + 11, CenteredTextY(rowBounds, text)));
-            DrawLegendType(
-                context,
-                new Rect(rowBounds.X + 48, rowBounds.Y, rowBounds.Width - 48, rowBounds.Height),
-                entry.Type,
-                TypeLabel(entry.Type));
-        }
-    }
-
-    private void DrawCollapsedLegend(
-        DrawingContext context,
-        Rect viewport,
-        IReadOnlyList<ReplayContact> activeContacts)
-    {
-        var summary = ContactSummary(activeContacts);
-        var text = new FormattedText(
-            summary,
-            CultureInfo.InvariantCulture,
-            FlowDirection.LeftToRight,
-            new Typeface("Segoe UI Variable", FontStyle.Normal, FontWeight.SemiBold),
-            13,
-            LabelTextBrush);
-        var legendRect = PositionLegend(viewport, new Size(text.Width + 39, 32));
-        _overlay.LegendBounds = legendRect;
-        context.DrawRectangle(_overlay.LegendHovered ? HoverLabelSurfaceBrush : LabelSurfaceBrush, new Pen(AxisBrush, 1), legendRect, 15, 15);
-        context.DrawEllipse(AxisLabelBrush, null, new Point(legendRect.X + 13, legendRect.Center.Y), 3.5, 3.5);
-        var textBounds = new Rect(legendRect.X + 25, legendRect.Y, legendRect.Width - 31, legendRect.Height);
-        context.DrawText(text, new Point(textBounds.X, CenteredTextY(textBounds, text)));
-    }
-
-    private static string ContactSummary(IReadOnlyList<ReplayContact> activeContacts)
-    {
-        var fingers = activeContacts.Count(contact => contact.Type == TouchType.Finger);
-        var gloves = activeContacts.Count(contact => contact.Type == TouchType.Glove);
-        var palms = activeContacts.Count(contact => contact.Type == TouchType.Palm);
-        var other = activeContacts.Count - fingers - gloves - palms;
-        var parts = new List<string>(4);
-        AddContactCount(parts, fingers, "finger");
-        AddContactCount(parts, gloves, "glove");
-        AddContactCount(parts, palms, "palm");
-        AddContactCount(parts, other, "other", pluralize: false);
-        return parts.Count == 0 ? "0 contacts" : string.Join("  |  ", parts);
-    }
-
-    private static void AddContactCount(
-        ICollection<string> parts,
-        int count,
-        string label,
-        bool pluralize = true)
-    {
-        if (count == 0) return;
-        parts.Add($"{count} {label}{(pluralize && count != 1 ? "s" : string.Empty)}");
-    }
-
-    private Rect PositionLegend(Rect viewport, Size size)
-    {
-        const double inset = 12;
-        var rightAligned = _overlay.LegendPosition is ReplayLegendPosition.TopRight or ReplayLegendPosition.BottomRight;
-        var bottomAligned = _overlay.LegendPosition is ReplayLegendPosition.BottomLeft or ReplayLegendPosition.BottomRight;
-        var x = rightAligned ? viewport.Right - inset - size.Width : viewport.Left + inset;
-        var y = bottomAligned ? viewport.Bottom - inset - size.Height : viewport.Top + inset;
-        return new Rect(x, y, size.Width, size.Height);
-    }
-
-    private static string TypeLabel(TouchType type) => type switch
-    {
-        TouchType.Finger => "Finger",
-        TouchType.Glove => "Glove",
-        TouchType.Palm => "Palm",
-        _ => "Other",
-    };
-
-    private void DrawLegendType(DrawingContext context, Rect bounds, TouchType type, string label)
-    {
-        DrawTypeIcon(context, type, new Point(bounds.X + 4, bounds.Center.Y), AxisLabelBrush, 3.5);
-        var text = new FormattedText(
-            label,
-            CultureInfo.InvariantCulture,
-            FlowDirection.LeftToRight,
-            new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
-            12.5,
-            AxisLabelBrush);
-        context.DrawText(text, new Point(bounds.X + 11, CenteredTextY(bounds, text)));
-    }
-
-    private static double CenteredTextY(Rect bounds, FormattedText text) =>
-        Math.Round(bounds.Y + ((bounds.Height - text.Height) / 2), MidpointRounding.AwayFromZero);
-
     private void DrawContact(
         DrawingContext context,
         Rect viewport,
@@ -762,7 +618,7 @@ public sealed class ReplayPaintSurface : Control
             LabelTextBrush);
         var viewCoordinates = scene.ViewCoordinates(contact.X, contact.Y);
         var coordinateText = new FormattedText(
-            $"X {viewCoordinates.X:0}  Y {viewCoordinates.Y:0}  {TypeLabel(contact.Type).ToUpperInvariant()}",
+            $"X {viewCoordinates.X:0}  Y {viewCoordinates.Y:0}  {ReplayLegendPainter.TypeLabel(contact.Type).ToUpperInvariant()}",
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface("Cascadia Mono", FontStyle.Normal, FontWeight.Medium),
@@ -840,7 +696,7 @@ public sealed class ReplayPaintSurface : Control
         context.DrawText(text, new Point(x, y));
     }
 
-    private static void DrawTypeIcon(
+    internal static void DrawTypeIcon(
         DrawingContext context,
         TouchType type,
         Point center,

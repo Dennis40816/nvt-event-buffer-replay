@@ -1,6 +1,5 @@
 {
   "files": {
-    "src/Nvt.Replay.Avalonia/Controls/ReplayPaintSurface.cs": 939,
     "src/Nvt.Replay.Avalonia/MainWindow.axaml": 1538,
     "src/Nvt.Replay.Avalonia/MainWindow.Capture.cs": 1030,
     "src/Nvt.Replay.Avalonia/MainWindow.Output.cs": 1432,
