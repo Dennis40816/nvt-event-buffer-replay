@@ -3,10 +3,8 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
 
-/// <summary>Writes PNG heatmaps from capture analysis reports.</summary>
 public sealed class HeatmapPngWriter
 {
-    /// <summary>Writes the report's hotspot heatmap to a PNG file using the manifest's pixel dimensions.</summary>
     public Task WriteAsync(
         string outputPath,
         CaptureAnalysisReport report,

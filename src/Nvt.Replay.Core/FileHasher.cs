@@ -6,7 +6,6 @@ namespace Nvt.Replay.Core;
 /// <summary>Raised when a file is refused for hashing: too large, or changed while it was read.</summary>
 public sealed class FileNotHashableException : IOException
 {
-    /// <summary>Initializes a file-hashing exception with a short reason, a message, and an optional underlying exception.</summary>
     public FileNotHashableException(string reason, string message, Exception? innerException = null)
         : base(message, innerException)
     {

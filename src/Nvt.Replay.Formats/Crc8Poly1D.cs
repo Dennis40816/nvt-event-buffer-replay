@@ -1,9 +1,7 @@
 namespace Nvt.Replay.Formats;
 
-/// <summary>Computes CRC-8 checksums using polynomial 0x1D and an initial value of zero.</summary>
 public static class Crc8Poly1D
 {
-    /// <summary>Computes the CRC-8 checksum of the supplied bytes using polynomial 0x1D and an initial value of zero.</summary>
     public static byte Compute(ReadOnlySpan<byte> data)
     {
         byte crc = 0;

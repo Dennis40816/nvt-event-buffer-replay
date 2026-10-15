@@ -3,12 +3,10 @@ using Nvt.Replay.Sources;
 
 namespace Nvt.Replay.Analysis;
 
-/// <summary>Tracks firmware state, frame counter, and version register reads to produce sample diagnostics.</summary>
 public sealed class NvtRegisterActivityMonitor
 {
     private readonly Dictionary<string, byte[]> previousByRegister = [];
 
-    /// <summary>Returns register read diagnostics and updates the previous sample for each profile and address.</summary>
     public IReadOnlyList<ReplayDiagnostic> Observe(IEnumerable<SourceRecord> records)
     {
         var diagnostics = new List<ReplayDiagnostic>();

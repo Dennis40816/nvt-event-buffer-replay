@@ -17,7 +17,7 @@
   </PropertyGroup>
   <!-- BEGIN GENERATED HEALTH WARNING IDS -->
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Analysis'">
-    <HealthBaselineWarningIds>CA1068;CA1512;CA1822;CA1859;CA2000;CA2016;IDE0330;IDE1006;RS0030</HealthBaselineWarningIds>
+    <HealthBaselineWarningIds>CA1068;CA1512;CA1822;CA1859;CA2000;CA2016;CS1591;IDE0330;IDE1006;RS0030</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Architecture.Tests'">
     <HealthBaselineWarningIds>EnableGenerateDocumentationFile;RS0030</HealthBaselineWarningIds>
@@ -32,16 +32,16 @@
     <HealthBaselineWarningIds>CA1826;CA2016;IDE0005;IDE1006</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Core'">
-    <HealthBaselineWarningIds>IDE0005</HealthBaselineWarningIds>
+    <HealthBaselineWarningIds>CS1591;IDE0005</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Formats'">
-    <HealthBaselineWarningIds>CA1720;CA1822;CA1859;IDE0005;IDE1006</HealthBaselineWarningIds>
+    <HealthBaselineWarningIds>CA1720;CA1822;CA1859;CS1591;IDE0005;IDE1006</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Rendering'">
-    <HealthBaselineWarningIds>CA1031;CA1068;CA1305;CA1512;CA1822;CA1859;CA2000;CA2208;IDE0005;IDE0060;IDE0330;IDE1006;RS0030</HealthBaselineWarningIds>
+    <HealthBaselineWarningIds>CA1031;CA1068;CA1305;CA1512;CA1822;CA1859;CA2000;CA2208;CS1591;IDE0005;IDE0060;IDE0330;IDE1006;RS0030</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Sources'">
-    <HealthBaselineWarningIds>CA1307;CA1859;CA1861;IDE0005;IDE1006;RS0030</HealthBaselineWarningIds>
+    <HealthBaselineWarningIds>CA1307;CA1859;CA1861;CS1591;IDE0005;IDE1006;RS0030</HealthBaselineWarningIds>
   </PropertyGroup>
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Nvt.Replay.Tests'">
     <HealthBaselineWarningIds>CA1031;CA1305;CA1307;CA1825;CA1859;CA1869;EnableGenerateDocumentationFile;IDE0060;IDE1006;RS0030;VSTHRD003;VSTHRD103;VSTHRD200</HealthBaselineWarningIds>
