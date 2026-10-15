@@ -498,36 +498,6 @@
       "symbol": "Nvt.Replay.Avalonia.ViewModels.OutputReportService.nextGeneration"
     },
     {
-      "syntaxHash": "00ce48b3b86ad1a639630ea05a10ad7619303dc20fd5b5f9234c8d9bbf7898f6",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/AnalysisOutputWriter.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.AnalysisOutputWriter.WriteTextAsync(string,string,CancellationToken)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "a4ca2eeead3add26218f3141747c5ea3b9a73514dbef4daa1e963715ddd590c7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReadableCommunicationLogWriter.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReadableCommunicationLogWriter.WriteAsync(string,IReadOnlyList<SourceRecord>,RegisterAnnotationProjection?,CancellationToken)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "51fb233dde3bd5e86034405c6c1a9eb8623c9abe30feb82de355b365b12608af",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/ReadableCommunicationLogWriter.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.ReadableCommunicationLogWriter.WriteAsync(string,IReadOnlyList<SourceRecord>,RegisterAnnotationProjection?,CancellationToken)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
       "syntaxHash": "b3c4caf3d2db9afa8af05f6492e235ee66df0c68059a1575153a9ea7bb6b3a1a",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/ReplayOutputPlanService.cs",
@@ -556,56 +526,6 @@
       "member": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests",
       "project": "Nvt.Replay.Avalonia.Tests",
       "symbol": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests"
-    },
-    {
-      "syntaxHash": "09b8a2fec148a5674d1b66d24ac8ce912254b0c1c03d4902304130904e7b0c59",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Avalonia.Tests/AdvancedWorkspaceSnapshotTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Tests.AdvancedWorkspaceSnapshotTests.Output_export_progress_uses_the_info_rail_without_reducing_preview_controls()",
-      "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "a6f412aa12b7c0b9b2163f61bbf76c43164c1ca6a22e549026bd9d2286bffba4",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Avalonia.Tests/GapSnapshotTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Tests.GapSnapshotTests.CaptureOutputExportAsync(bool,string)",
-      "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "b799b3db308adee7d6e9d1c6cd14330350e279a1fa42b058e625a9d7b1fb8e30",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Background_output_job_reports_progress_allows_navigation_and_cancels_without_blocking()",
-      "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "05c3e323756bc44658d581580e60b5bbd37994f8228000f55a0a1456becd8130",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Evidence_attachment_is_discarded_when_a_capture_load_supersedes_the_picker()",
-      "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "8176c80a7cfe004c4a97372a325663f8083b69bef7d8b5c28ec4756aee245051",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Avalonia.Tests/MainWindowLayoutTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Avalonia.Tests.MainWindowLayoutTests.Sidecar_load_is_discarded_when_a_capture_load_supersedes_the_read()",
-      "project": "Nvt.Replay.Avalonia.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
     },
     {
       "syntaxHash": "cd0f63ae5d92697775955dd6177ab34187176f8bdd16e10acf37105b0ec89680",
@@ -838,26 +758,6 @@
       "symbol": "Nvt.Replay.Tests.DecodedI2cAdapterTests"
     },
     {
-      "syntaxHash": "5fe6b2f8925e6b5e2b0f8895e6c8a27afeb9ab76192618b02482b9a1e12701ff",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/DecodedI2cAdapterTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.DecodedI2cAdapterTests.Excel_malformed_timestamp_is_diagnosed_and_cancel_is_observed()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "5fe6b2f8925e6b5e2b0f8895e6c8a27afeb9ab76192618b02482b9a1e12701ff",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/DecodedI2cAdapterTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.DecodedI2cAdapterTests.Cancellation_is_observed_before_records_are_committed(ISourceAdapter,string,Func<string>)",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
       "syntaxHash": "6aab66d6ccf5cadddbd6cc518d5add9be1b0ebacdca7796f0e1c12b6948797cf",
       "owner": "NFU",
       "path": "tests/Nvt.Replay.Tests/Desay97NdsInspectorTests.cs",
@@ -866,56 +766,6 @@
       "member": "Nvt.Replay.Tests.Desay97NdsInspectorTests",
       "project": "Nvt.Replay.Tests",
       "symbol": "Nvt.Replay.Tests.Desay97NdsInspectorTests"
-    },
-    {
-      "syntaxHash": "ed1c470e319f02bb9476f3473e7835c0578a42f59739ebb266fc3456d61da8e9",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Runs_on_a_background_thread_reports_progress_and_allows_only_one_active_job()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "9a5f654e0bebf89011c4fdef59ec33e361ea75583491d53381aaa1fc97a0de48",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancel_is_idempotent_and_waits_for_a_cooperative_job_to_finish()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "cae1b6fb25e73277d0fcd7f3f3de07e740fd133dae1017ec6924a223bc2f46a8",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Cancellation_callbacks_can_read_service_state_without_running_under_the_service_lock()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "c018029d5449d7b6965b62913d67775a3f3b847d6334bb853f89ca268e7a7c8f",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.ExportJobServiceTests.A_result_returned_after_cancellation_is_suppressed()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
-    },
-    {
-      "syntaxHash": "fb6dcc913887fac5150cd98036bbc24a938e51a20d09889589786e60b17a299f",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/ExportJobServiceTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.ExportJobServiceTests.Late_progress_from_an_old_job_cannot_replace_the_new_job_snapshot()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
     },
     {
       "syntaxHash": "8711ad272d57772d83789313f284ed3e76083f1fc4cfd3a515cb8847229b6c47",
@@ -976,16 +826,6 @@
       "member": "Nvt.Replay.Tests.NdsCommunicationLogAdapterTests",
       "project": "Nvt.Replay.Tests",
       "symbol": "Nvt.Replay.Tests.NdsCommunicationLogAdapterTests"
-    },
-    {
-      "syntaxHash": "9e824845270a8640c61af0437e2f163595e2d1bdb6ed7ea39efe7cf1828a3115",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/NdsCommunicationLogAdapterTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.NdsCommunicationLogAdapterTests.Reader_observes_cancellation_before_publishing_a_record()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
     },
     {
       "syntaxHash": "2af10a3236dc165664eb01da077039a79465838e36a9bd667c64961446b09616",
@@ -1056,16 +896,6 @@
       "member": "Nvt.Replay.Tests.ReplaySidecarTests",
       "project": "Nvt.Replay.Tests",
       "symbol": "Nvt.Replay.Tests.ReplaySidecarTests"
-    },
-    {
-      "syntaxHash": "91e3868268810df1bcec20d957541d6792b31a2f38e6c1ef4a97cba4346bab8a",
-      "owner": "NFU",
-      "path": "tests/Nvt.Replay.Tests/ReplaySidecarTests.cs",
-      "rule": "asyncVoid",
-      "count": 1,
-      "member": "Nvt.Replay.Tests.ReplaySidecarTests.Interrupted_atomic_write_preserves_prior_output_and_removes_temporary_file()",
-      "project": "Nvt.Replay.Tests",
-      "symbol": "async-lambda:unresolved-void-delegate"
     },
     {
       "syntaxHash": "0870a4ef1f3849c9aab2663b510cf1cbbd65a6a5a41ba49b842e53e47677b4ae",
