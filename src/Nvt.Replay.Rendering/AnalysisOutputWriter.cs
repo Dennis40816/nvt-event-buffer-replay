@@ -8,6 +8,17 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Stores the output directory and paths of analysis artifacts and optional communication logs.</summary>
+/// <param name="Directory">The absolute path of the analysis output directory.</param>
+/// <param name="ReportJson">The path of the analysis report JSON file.</param>
+/// <param name="EventsJson">The path of the analysis events JSON file.</param>
+/// <param name="EventsCsv">The path of the analysis events CSV file.</param>
+/// <param name="DiagnosticsJson">The path of the analysis diagnostics JSON file.</param>
+/// <param name="DiagnosticsCsv">The path of the analysis diagnostics CSV file.</param>
+/// <param name="ManifestJson">The path of the analysis manifest JSON file.</param>
+/// <param name="HeatmapPng">The path of the analysis heatmap PNG file.</param>
+/// <param name="CommunicationCsv">The readable communication CSV path, or null when source records are not supplied.</param>
+/// <param name="CommunicationJsonl">The readable communication JSONL path, or null when source records are not supplied.</param>
 public sealed record AnalysisOutputResult(
     string Directory,
     string ReportJson,
@@ -20,6 +31,7 @@ public sealed record AnalysisOutputResult(
     string? CommunicationCsv,
     string? CommunicationJsonl);
 
+/// <summary>Writes analysis artifacts to an output directory with a recovery journal.</summary>
 public sealed class AnalysisOutputWriter
 {
     private const string JournalFileName = "analysis-journal.json";
@@ -30,6 +42,7 @@ public sealed class AnalysisOutputWriter
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
+    /// <summary>Writes analysis artifacts and optional communication logs, then returns their output paths.</summary>
     public async Task<AnalysisOutputResult> WriteAsync(
         string directory,
         CaptureAnalysisReport report,

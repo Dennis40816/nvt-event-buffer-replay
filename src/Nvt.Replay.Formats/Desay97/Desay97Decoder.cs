@@ -4,10 +4,13 @@ using Nvt.Replay.Formats.Common;
 
 namespace Nvt.Replay.Formats.Desay97;
 
+/// <summary>Decodes assembled Desay 0x97 packets using the selected profile and reports diagnostics.</summary>
 public sealed class Desay97Decoder
 {
+    /// <summary>The maximum expected number of touch contacts in a Desay 0x97 packet, above which a diagnostic is reported.</summary>
     public const int MaximumTouchCount = 10;
 
+    /// <summary>Decodes a packet into a frame (null for an invalid length) and collects length, CRC, contact, and header diagnostics.</summary>
     public Desay97DecodeResult Decode(Desay97AssembledPacket packet, Desay97Profile profile)
     {
         ArgumentNullException.ThrowIfNull(packet);

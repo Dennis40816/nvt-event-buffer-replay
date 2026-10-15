@@ -3,8 +3,10 @@ using Nvt.Replay.Formats.Desay97;
 
 namespace Nvt.Replay.Analysis;
 
+/// <summary>Reconstructs touch replay snapshots and host contact state from Desay 0x97 frames.</summary>
 public sealed class Desay97ReplaySession : TouchReplaySession<Desay97Frame>
 {
+    /// <summary>Creates a replay session for Desay 0x97 frames with optional touch replay settings.</summary>
     public Desay97ReplaySession(IReadOnlyList<Desay97Frame> frames, TouchReplayOptions? options = null)
         : base(frames, Project, options)
     {

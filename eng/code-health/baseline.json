@@ -4290,46 +4290,6 @@
       "symbol": "CA2208"
     },
     {
-      "syntaxHash": "e6dafe41a7dd7c8a7ab7fa1d575caca10ef9dfc620adb3332a7acba448a2658f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/CommonReplaySession.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.CommonReplaySession..ctor(IReadOnlyList<CommonEventBufferFrame>,TouchReplayOptions?)",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "70b3d205d373bd0ff37ef794e8383d1282d879c12d5f680514c6b1f4862b7d8a",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/CommonReplaySession.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.CommonReplaySession",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "383ddbcfcae706e69e8e6de4179ae2a9fd4c6769ff610aa3687b3b944f24ca21",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/Desay97ReplaySession.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.Desay97ReplaySession..ctor(IReadOnlyList<Desay97Frame>,TouchReplayOptions?)",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a84604ede62c1e6df591d607ae113a79daf74076e66c6ecbb920fd475b3765e9",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/Desay97ReplaySession.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Analysis.Desay97ReplaySession",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "11c6ff5367306daec22601e5d8e233d47da840f3113cae90e12bacb90e4a86f0",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Analysis/NvtRegisterActivityMonitor.cs",
@@ -4560,36 +4520,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "ad28ad29169060a1a1177f60aec4361cc7d5c38eff1feadbca1573a41f73a7e2",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonCrc8.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonCrc8.Compute(ReadOnlySpan<byte>)",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "d5ce69ad08f820fec2cbce39640a072cb8c94851c28f6b4be2f3470929504de5",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonCrc8.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonCrc8.Profiles",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "80ea7f55657c00ef3437ad323403ffe9173c3d1983abf603e98cb7c1a946a141",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonCrc8.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonCrc8",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "6b246c476a6799c18401d787f3187a737afca9f3afe37ac2a84f3bf1f42ff69f",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Formats/Common/CommonStreamMonitor.cs",
@@ -4627,66 +4557,6 @@
       "count": 1,
       "member": "Nvt.Replay.Formats.Crc8Poly1D",
       "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "870ec1cc7d16ccb066bfaa98cffc0025558928d0e781305a97c1dd049d5b63d7",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Desay97/Desay97Decoder.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Desay97.Desay97Decoder.Decode(Desay97AssembledPacket,Desay97Profile)",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "456c87116b75a73c302004418f8919885b7537690c9d7c9096d919ccc8417d21",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Desay97/Desay97Decoder.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Desay97.Desay97Decoder.fields:MaximumTouchCount",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "8f535d7c5251f9f9d9646c4d1a08e1070c57b0331a65fb3b21fac0c2a5028cff",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Desay97/Desay97Decoder.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Desay97.Desay97Decoder",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "acd8b54b255fdda36fe0c079a2cfc7f0fc36e5ed16e320aea5f7c8e1e7ec29bf",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/AnalysisOutputWriter.cs",
-      "rule": "CS1591",
-      "count": 12,
-      "member": "Nvt.Replay.Rendering.AnalysisOutputResult",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a9756561ea4e8dd8fefa0ba9360412f7b09f891b1952fab08aba5ce97eac4a92",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/AnalysisOutputWriter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.AnalysisOutputWriter.WriteAsync(string,CaptureAnalysisReport,CancellationToken,IReadOnlyList<SourceRecord>?)",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "396b9e572197850227919c4bff67ae98c6994542b2ec181c1d03b9869dbe6569",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/AnalysisOutputWriter.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Rendering.AnalysisOutputWriter",
-      "project": "Nvt.Replay.Rendering",
       "symbol": "CS1591"
     },
     {
