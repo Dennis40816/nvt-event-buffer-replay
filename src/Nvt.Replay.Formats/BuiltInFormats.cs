@@ -2,10 +2,12 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Formats;
 
+/// <summary>Provides built-in Common and Desay Event Buffer format descriptors.</summary>
 public static class BuiltInFormats
 {
     private static readonly IReadOnlyList<string> EventVersions = ["0x82", "0x83", "0x84", "0x85"];
 
+    /// <summary>Gets the built-in format descriptors, including evidence status and required configuration fields.</summary>
     public static IReadOnlyList<FormatDescriptor> All { get; } =
     [
         .. EventVersions.Select(version => new FormatDescriptor(
