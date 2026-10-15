@@ -3,11 +3,13 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Formats.Common;
 
+/// <summary>Tracks ASIL alarm state and bus counters across Common event-buffer frames and checks touch consistency.</summary>
 public sealed class CommonStreamMonitor
 {
     private (bool TpAsilError, byte AsilRaw)? previousAsil;
     private (byte NoResponse, byte Busy)? previousBus;
 
+    /// <summary>Returns diagnostics for ASIL alarms and clears, touch inconsistencies, and bus counter increases.</summary>
     public IReadOnlyList<ReplayDiagnostic> Observe(CommonEventBufferFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);

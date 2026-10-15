@@ -4480,16 +4480,6 @@
       "symbol": "CS1591"
     },
     {
-      "syntaxHash": "4d0171dd22a924acf936ac0f3e0f75d4b665240a722f6889b76ff34a8682f481",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Avalonia/ViewModels/SelectOption.cs",
-      "rule": "CS1591",
-      "count": 5,
-      "member": "Nvt.Replay.Avalonia.ViewModels.SelectOption",
-      "project": "Nvt.Replay.Avalonia",
-      "symbol": "CS1591"
-    },
-    {
       "syntaxHash": "500b488bb789764df85c75ce16aefa5624a9b6ff99a874d05d7e6b1c2317e245",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Core/FileHasher.cs",
@@ -4497,46 +4487,6 @@
       "count": 1,
       "member": "Nvt.Replay.Core.FileNotHashableException..ctor(string,string,Exception?)",
       "project": "Nvt.Replay.Core",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a6a539cc3dc437c8b9c3a4c8b90a7d54ce47fbff504ebda1c266ef62d15b617f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/BuiltInFormats.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.BuiltInFormats.All",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "dd4c6d6678ff24a63b6ba5bb4cb8608131527d524fbd105de2c488fe92e78436",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/BuiltInFormats.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.BuiltInFormats",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "6b246c476a6799c18401d787f3187a737afca9f3afe37ac2a84f3bf1f42ff69f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonStreamMonitor.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonStreamMonitor.Observe(CommonEventBufferFrame)",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "a2272761e0fcd26add6034a519c3a8b530e15d44daea68ea78861634d9c4af0d",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Common/CommonStreamMonitor.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Formats.Common.CommonStreamMonitor",
-      "project": "Nvt.Replay.Formats",
       "symbol": "CS1591"
     },
     {
@@ -4596,26 +4546,6 @@
       "rule": "CS1591",
       "count": 1,
       "member": "Nvt.Replay.Sources.BuiltInSources",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "ef6658a6331691a1b2351331da38432d67cc062244704e9aff3f0090f2e6930f",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/NvtRegisterProfileIdentity.cs",
-      "rule": "CS1591",
-      "count": 1,
-      "member": "Nvt.Replay.Sources.NvtRegisterProfileIdentity.Create(NvtRegisterProfile)",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "CS1591"
-    },
-    {
-      "syntaxHash": "7b14cf9604b994a9f359f26609bc4805dfc7fa2c5359695cd32c77f18011024e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/NvtRegisterProfileIdentity.cs",
-      "rule": "CS1591",
-      "count": 4,
-      "member": "Nvt.Replay.Sources.NvtRegisterProfileIdentity",
       "project": "Nvt.Replay.Sources",
       "symbol": "CS1591"
     },
