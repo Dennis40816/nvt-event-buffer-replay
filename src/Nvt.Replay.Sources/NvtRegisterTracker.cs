@@ -2,17 +2,20 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Tracks per-slave I2C page selections and pending writes to resolve and annotate register accesses.</summary>
 public sealed class NvtRegisterTracker
 {
     private readonly Dictionary<int, uint> pageBySlave = [];
     private readonly Dictionary<int, List<IReadOnlyList<byte>>> pendingWritesBySlave = [];
 
+    /// <summary>Clears all tracked I2C page selections and pending write commands.</summary>
     public void ResetEvidence()
     {
         pageBySlave.Clear();
         pendingWritesBySlave.Clear();
     }
 
+    /// <summary>Observes I2C traffic and returns the record with any resolved register address and annotations.</summary>
     public SourceRecord Observe(SourceRecord record)
     {
         if (record.I2c is not { } transport)
@@ -133,6 +136,7 @@ public sealed class NvtRegisterTracker
             : null;
     }
 
+    /// <summary>Extracts a page base from the two bytes after a leading 0xFF in commands containing at least three bytes.</summary>
     public static bool TryGetPageSelection(IReadOnlyList<byte> command, out uint page)
     {
         page = 0;

@@ -1,10 +1,16 @@
 namespace Nvt.Replay.Sources;
 
+/// <summary>Holds a firmware command byte, its name, and whether the name is confirmed.</summary>
+/// <param name="Code">The byte identifying the firmware command.</param>
+/// <param name="Name">The command name to display when confirmed.</param>
+/// <param name="Confirmed">Whether the command name is confirmed.</param>
 public sealed record NvtFwCommand(byte Code, string Name, bool Confirmed)
 {
+    /// <summary>Gets the command name when confirmed, or an unknown-command label with the hexadecimal command byte.</summary>
     public string Display => Confirmed ? Name : $"Unknown FW Command 0x{Code:X2}";
 }
 
+/// <summary>Resolves firmware command bytes using the common command-name table.</summary>
 public static class NvtFwCommandParser
 {
     private static readonly IReadOnlyDictionary<byte, string> CommonCommands = new Dictionary<byte, string>
@@ -40,6 +46,7 @@ public static class NvtFwCommandParser
         [0xD4] = "Auto Engineering: Stop FW Debug",
     };
 
+    /// <summary>Parses the first payload byte as a firmware command, or returns null for an empty payload.</summary>
     public static NvtFwCommand? Parse(IReadOnlyList<byte> payload)
     {
         if (payload.Count == 0) return null;
