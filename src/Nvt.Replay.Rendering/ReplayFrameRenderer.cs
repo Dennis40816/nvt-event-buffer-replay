@@ -4,8 +4,10 @@ using SkiaSharp;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Renders replay scenes into packed RGB pixel buffers.</summary>
 public static class ReplayFrameRenderer
 {
+    /// <summary>Renders a replay scene to a new packed RGB buffer using the specified render mode and default values for all other render settings.</summary>
     public static byte[] RenderRgb(
         ReplayScene scene,
         int width,
@@ -13,6 +15,7 @@ public static class ReplayFrameRenderer
         ReplayRenderMode mode = ReplayRenderMode.Compare) =>
         RenderRgb(scene, width, height, new ReplayRenderSettings(mode));
 
+    /// <summary>Renders a replay scene to a new packed RGB buffer using the supplied render settings.</summary>
     public static byte[] RenderRgb(
         ReplayScene scene,
         int width,
@@ -25,6 +28,7 @@ public static class ReplayFrameRenderer
         return pixels;
     }
 
+    /// <summary>Renders a replay scene into the supplied packed RGB buffer, requiring exactly three bytes per output pixel.</summary>
     public static void RenderRgb(
         ReplayScene scene,
         int width,
