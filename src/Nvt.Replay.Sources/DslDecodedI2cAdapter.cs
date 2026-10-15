@@ -6,11 +6,15 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Reconstructs I2C transactions from DSL decoded CSV events as source records.</summary>
 public sealed partial class DslDecodedI2cAdapter : ISourceAdapter
 {
+    /// <inheritdoc />
     public string Id => "dsl-decoded-i2c";
+    /// <inheritdoc />
     public string DisplayName => "DSL decoded I2C CSV";
 
+    /// <inheritdoc />
     public async ValueTask<SourceProbeResult> ProbeAsync(string path, CancellationToken cancellationToken = default)
     {
         if (!Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
@@ -22,6 +26,7 @@ public sealed partial class DslDecodedI2cAdapter : ISourceAdapter
             : None(reason);
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
         SourceOpenContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)

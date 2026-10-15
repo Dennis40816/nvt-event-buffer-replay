@@ -5,13 +5,17 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Reconstructs I2C transactions from Saleae decoded CSV rows as source records.</summary>
 public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
 {
     private static readonly string[] Header = ["Time [s]", "Packet ID", "Address", "Data", "Read/Write", "ACK/NAK"];
 
+    /// <inheritdoc />
     public string Id => "saleae-decoded-i2c";
+    /// <inheritdoc />
     public string DisplayName => "Saleae decoded I2C CSV";
 
+    /// <inheritdoc />
     public async ValueTask<SourceProbeResult> ProbeAsync(string path, CancellationToken cancellationToken = default)
     {
         if (!Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
@@ -25,6 +29,7 @@ public sealed class SaleaeDecodedI2cAdapter : ISourceAdapter
             : None("Saleae byte-per-row I2C columns were not found.");
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
         SourceOpenContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
