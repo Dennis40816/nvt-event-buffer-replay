@@ -5,21 +5,32 @@ using Nvt.Replay.Formats.Desay97;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Represents a labeled range of raw bytes with hexadecimal offsets and descriptive details.</summary>
+/// <param name="Offset">The hexadecimal byte offset or inclusive offset range.</param>
+/// <param name="Label">The label identifying the byte section.</param>
+/// <param name="Bytes">The section's bytes formatted as space-separated hexadecimal values.</param>
+/// <param name="Detail">The descriptive text associated with the byte section.</param>
 public sealed record RawByteSection(
     string Offset,
     string Label,
     string Bytes,
     string Detail);
 
+/// <summary>Contains the title, structural summary, and byte sections for displaying a raw frame.</summary>
+/// <param name="Title">The title identifying the decoded format or raw transaction.</param>
+/// <param name="Summary">The description of the frame structure or raw byte count.</param>
+/// <param name="Sections">The ordered sections of raw bytes and their descriptive details.</param>
 public sealed record RawFrameLayout(
     string Title,
     string Summary,
     IReadOnlyList<RawByteSection> Sections);
 
+/// <summary>Builds display layouts for Common and Desay frames or any other source bytes.</summary>
 public static class RawFrameLayoutBuilder
 {
     private const int GenericPreviewLimit = 256;
 
+    /// <summary>Creates a raw byte display layout using the decoded frame type or a generic preview.</summary>
     public static RawFrameLayout Build(SourceRecord record, object? decodedFrame)
     {
         ArgumentNullException.ThrowIfNull(record);

@@ -8,6 +8,12 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Rendering;
 
+/// <summary>Contains output file paths and row counts for readable communication log exports.</summary>
+/// <param name="CsvPath">The absolute path of the exported CSV communication log.</param>
+/// <param name="JsonlPath">The absolute path of the exported JSONL communication log.</param>
+/// <param name="RecordCount">The number of source records exported as rows.</param>
+/// <param name="AnnotatedRegisterCount">The number of exported rows with a non-null register display name.</param>
+/// <param name="AmbiguousRegisterCount">The number of exported rows whose register profile resolution is ambiguous.</param>
 public sealed record ReadableCommunicationLogResult(
     string CsvPath,
     string JsonlPath,
@@ -15,6 +21,7 @@ public sealed record ReadableCommunicationLogResult(
     int AnnotatedRegisterCount,
     int AmbiguousRegisterCount);
 
+/// <summary>Exports source records and register annotations as readable CSV and JSONL communication logs.</summary>
 public sealed class ReadableCommunicationLogWriter
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -23,12 +30,14 @@ public sealed class ReadableCommunicationLogWriter
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
+    /// <summary>Writes source records to readable CSV and JSONL logs in the specified directory.</summary>
     public async Task<ReadableCommunicationLogResult> WriteAsync(
         string directory,
         IReadOnlyList<SourceRecord> records,
         CancellationToken cancellationToken = default)
         => await WriteAsync(directory, records, null, cancellationToken);
 
+    /// <summary>Writes source records to readable CSV and JSONL logs with an optional register annotation projection.</summary>
     public async Task<ReadableCommunicationLogResult> WriteAsync(
         string directory,
         IReadOnlyList<SourceRecord> records,
