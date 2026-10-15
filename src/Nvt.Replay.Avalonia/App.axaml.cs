@@ -4,12 +4,14 @@ using Avalonia.Markup.Xaml;
 
 namespace Nvt.Replay.Avalonia;
 
+/// <summary>Provides Avalonia application initialization and desktop startup.</summary>
 public partial class App : Application
 {
     // UI thread only; subscribed once and released when the desktop lifetime exits.
     private UiExceptionHooks? _exceptionHooks;
     internal bool ExceptionHandlersRegistered => _exceptionHooks is not null;
 
+    /// <inheritdoc />
     public override void Initialize()
     {
         _exceptionHooks ??= UiExceptionHooks.Register(() =>
@@ -18,6 +20,7 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
+    /// <inheritdoc />
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
