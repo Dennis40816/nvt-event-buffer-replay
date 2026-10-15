@@ -1170,16 +1170,6 @@
       "symbol": "WarningsNotAsErrors:CA2016"
     },
     {
-      "syntaxHash": "aa7ae6eeb553d636ecbeafb4efb6f54ba5f1680ffc2f072c4d9b2f64fbf82c4e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Analysis/Nvt.Replay.Analysis.csproj",
-      "rule": "suppressions",
-      "count": 1,
-      "member": "MSBuild",
-      "project": "Nvt.Replay.Analysis",
-      "symbol": "WarningsNotAsErrors:CS1591"
-    },
-    {
       "syntaxHash": "bc367affce8c61f20132214d5a3e6f6387b65e648a8c29e55ad7454eb2b3860f",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Analysis/Nvt.Replay.Analysis.csproj",
@@ -1430,16 +1420,6 @@
       "symbol": "WarningsNotAsErrors:IDE1006"
     },
     {
-      "syntaxHash": "aa7ae6eeb553d636ecbeafb4efb6f54ba5f1680ffc2f072c4d9b2f64fbf82c4e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Core/Nvt.Replay.Core.csproj",
-      "rule": "suppressions",
-      "count": 1,
-      "member": "MSBuild",
-      "project": "Nvt.Replay.Core",
-      "symbol": "WarningsNotAsErrors:CS1591"
-    },
-    {
       "syntaxHash": "b803a8e0f6e8942d714e9ee7b9acef371e33479409a4667a8e6a252b738dbd54",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Core/Nvt.Replay.Core.csproj",
@@ -1478,16 +1458,6 @@
       "member": "MSBuild",
       "project": "Nvt.Replay.Formats",
       "symbol": "WarningsNotAsErrors:CA1859"
-    },
-    {
-      "syntaxHash": "aa7ae6eeb553d636ecbeafb4efb6f54ba5f1680ffc2f072c4d9b2f64fbf82c4e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Formats/Nvt.Replay.Formats.csproj",
-      "rule": "suppressions",
-      "count": 1,
-      "member": "MSBuild",
-      "project": "Nvt.Replay.Formats",
-      "symbol": "WarningsNotAsErrors:CS1591"
     },
     {
       "syntaxHash": "b803a8e0f6e8942d714e9ee7b9acef371e33479409a4667a8e6a252b738dbd54",
@@ -1590,16 +1560,6 @@
       "symbol": "WarningsNotAsErrors:CA2208"
     },
     {
-      "syntaxHash": "aa7ae6eeb553d636ecbeafb4efb6f54ba5f1680ffc2f072c4d9b2f64fbf82c4e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Rendering/Nvt.Replay.Rendering.csproj",
-      "rule": "suppressions",
-      "count": 1,
-      "member": "MSBuild",
-      "project": "Nvt.Replay.Rendering",
-      "symbol": "WarningsNotAsErrors:CS1591"
-    },
-    {
       "syntaxHash": "b803a8e0f6e8942d714e9ee7b9acef371e33479409a4667a8e6a252b738dbd54",
       "owner": "NFU",
       "path": "src/Nvt.Replay.Rendering/Nvt.Replay.Rendering.csproj",
@@ -1678,16 +1638,6 @@
       "member": "MSBuild",
       "project": "Nvt.Replay.Sources",
       "symbol": "WarningsNotAsErrors:CA1861"
-    },
-    {
-      "syntaxHash": "aa7ae6eeb553d636ecbeafb4efb6f54ba5f1680ffc2f072c4d9b2f64fbf82c4e",
-      "owner": "NFU",
-      "path": "src/Nvt.Replay.Sources/Nvt.Replay.Sources.csproj",
-      "rule": "suppressions",
-      "count": 1,
-      "member": "MSBuild",
-      "project": "Nvt.Replay.Sources",
-      "symbol": "WarningsNotAsErrors:CS1591"
     },
     {
       "syntaxHash": "b803a8e0f6e8942d714e9ee7b9acef371e33479409a4667a8e6a252b738dbd54",
