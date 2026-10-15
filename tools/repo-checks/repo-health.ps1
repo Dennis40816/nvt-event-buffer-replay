@@ -3,8 +3,9 @@
 <#
 C# health enforcement; syntax measurement contract roslyn-physical-v1. No package restore.
 The embedded host uses the global.json-selected SDK's Roslyn, in an isolated ALC.
-Narrow discovery choices (also in repo-health.md): unresolved async lambdas remain
-candidates; blockingWait is syntax only; viewTypeLines uses the 800-line budget, also for
+Narrow discovery choices (also in repo-health.md): an unresolved async lambda is a candidate;
+when a scanned file has a PackageReference to Microsoft.VisualStudio.Threading.Analyzers (VSTHRD101 covers the build)
+only a direct argument (call, constructor or indexer) is not one; blockingWait is syntax only; viewTypeLines uses the 800-line budget, also for
 a code-only Avalonia view above it;
 clock candidates are TimeProvider descendants or Fake/Manual/Test*Clock,
 Fake/Manual/Test*TimeProvider, ClockState; workspace lifecycle candidates contain
@@ -1206,7 +1207,7 @@ public static class HealthSyntaxHost
         return JsonSerializer.Serialize(output);
     }
 
-    public static string Measure(string root, string[] paths, string[] projects, string[] referencePaths)
+    public static string Measure(string root, string[] paths, string[] projects, string[] referencePaths, bool threadingAnalyzer)
     {
         var units = new List<Unit>();
         var entities = new List<Entity>();
@@ -1229,9 +1230,12 @@ public static class HealthSyntaxHost
             units.Add(new Unit { Path=paths[i], Project=projects[i], Tree=tree });
         }
         var references = referencePaths.Select(p => MetadataReference.CreateFromFile(p)).ToArray();
+        // The SDK adds these global usings (ImplicitUsings) at build time. This syntax-only compilation has no MSBuild
+        // evaluation, so without them Task, Func and Action do not resolve in files that rely on implicit usings.
+        var implicitUsings = CSharpSyntaxTree.ParseText("global using global::System; global using global::System.Collections.Generic; global using global::System.IO; global using global::System.Linq; global using global::System.Net.Http; global using global::System.Threading; global using global::System.Threading.Tasks;", new CSharpParseOptions(LanguageVersion.Latest), "ImplicitUsings.g.cs");
         foreach (var group in units.GroupBy(u => u.Project))
         {
-            var compilation = CSharpCompilation.Create("Health_" + group.Key, group.Select(u => u.Tree), references, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe:true));
+            var compilation = CSharpCompilation.Create("Health_" + group.Key, group.Select(u => u.Tree).Append(implicitUsings), references, new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe:true));
             foreach (var u in group) u.Model = compilation.GetSemanticModel(u.Tree, ignoreAccessibility:true);
         }
         foreach (var u in units)
@@ -1314,8 +1318,18 @@ public static class HealthSyntaxHost
             foreach (var lambda in nodes.OfType<AnonymousFunctionExpressionSyntax>().Where(l => l.AsyncKeyword.IsKind(SyntaxKind.AsyncKeyword)))
             {
                 var converted = u.Model.GetTypeInfo(lambda).ConvertedType as INamedTypeSymbol;
-                if (converted?.DelegateInvokeMethod?.ReturnsVoid == true || converted?.DelegateInvokeMethod == null)
-                    Find("asyncVoid",lambda,"async-lambda:" + (converted?.ToDisplayString() ?? "unresolved-void-delegate"),null,converted?.DelegateInvokeMethod == null,"Unresolved conversions are retained as candidates; H03 resolves project references.");
+                var invoke = converted?.DelegateInvokeMethod;
+                // Resolved to a void delegate: a finding. Resolved to any other delegate: not one.
+                if (invoke?.ReturnsVoid == true)
+                    Find("asyncVoid",lambda,"async-lambda:" + converted.ToDisplayString(),null);
+                // Not resolved (this compilation has framework references only, no NuGet or project references). A candidate
+                // when the tree does not reference Microsoft.VisualStudio.Threading.Analyzers: nothing else would report a
+                // real async void lambda. With the analyzer, VSTHRD101 reports it in the build, so a lambda that is a direct
+                // argument (call, constructor or indexer) is not a finding (nearly all are Func<Task> parameters). Every other
+                // position stays a candidate: a subscription (+=), an assignment, an initializer, a return value, a tuple
+                // element, or a parenthesized or cast operand.
+                else if (invoke == null && (!threadingAnalyzer || !(lambda.Parent is ArgumentSyntax argument && argument.Parent is BaseArgumentListSyntax)))
+                    Find("asyncVoid",lambda,"async-lambda:" + (converted?.ToDisplayString() ?? "unresolved-void-delegate"),null,true,"Unresolved conversions are retained as candidates; H03 resolves project references.");
             }
             foreach (var access in nodes.OfType<MemberAccessExpressionSyntax>().Where(m => Name(m.Name)=="Result")) Find("blockingWait",access,"Result",null,true,"Syntax candidate; domain Result access may need classification.");
             foreach (var access in nodes.OfType<MemberBindingExpressionSyntax>().Where(m => Name(m.Name)=="Result")) Find("blockingWait",access,"Result",null,true,"Conditional Result syntax candidate.");
@@ -1417,6 +1431,21 @@ public static class HealthSyntaxHost
 }
 '@
 
+function Test-ThreadingAnalyzerReference {
+    # True when a scanned file has a PackageReference to Microsoft.VisualStudio.Threading.Analyzers (VSTHRD101 reports
+    # async void lambdas in the build). A PackageVersion alone does not load the analyzer and does not count. Scanned: the
+    # root Directory.Packages.props and Directory.Build.props, the bundle props, and every project file.
+    foreach ($file in $script:Inventory) {
+        $name = Split-Path $file -Leaf
+        $scan = (Test-OrdinalIn $file @('Directory.Packages.props', 'Directory.Build.props', 'eng/core-health/Directory.Build.props')) -or $name.EndsWith('.csproj', [StringComparison]::OrdinalIgnoreCase)
+        if (-not $scan) { continue }
+        $path = Join-Path $Root $file
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            if ([regex]::IsMatch([IO.File]::ReadAllText($path), '<PackageReference\b[^>]*\bInclude\s*=\s*["'']Microsoft\.VisualStudio\.Threading\.Analyzers["'']', 'IgnoreCase')) { return $true }
+        }
+    }
+    return $false
+}
 function Measure-Syntax {
     $sdkVersion = Invoke-Checked 'dotnet' @('--version')
     if ($sdkVersion -notmatch '^\d+\.\d+\.\d+[^\r\n]*$') { throw 'Parser cannot be loaded: invalid SDK selection' }
@@ -1486,7 +1515,7 @@ function Measure-Syntax {
         [void]$context.LoadFromAssemblyPath((Join-Path $parser 'Microsoft.CodeAnalysis.CSharp.dll'))
         $stream = [IO.MemoryStream]::new([IO.File]::ReadAllBytes($dll))
         try { $hostAssembly = $context.LoadFromStream($stream) } finally { $stream.Dispose() }
-        $json = $hostAssembly.GetType('HealthSyntaxHost').GetMethod('Measure').Invoke($null, [object[]]@($Root, [string[]]$inputFiles, $projectNames.ToArray(), [string[]]$refs))
+        $json = $hostAssembly.GetType('HealthSyntaxHost').GetMethod('Measure').Invoke($null, [object[]]@($Root, [string[]]$inputFiles, $projectNames.ToArray(), [string[]]$refs, [bool](Test-ThreadingAnalyzerReference)))
         $m = ConvertFrom-Json -InputObject $json -AsHashtable -Depth 100
         if ($script:DiagnosticRequests.Count -or $script:HealthProjects.Count) {
             $contexts = @()

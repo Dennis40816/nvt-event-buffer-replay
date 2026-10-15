@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "coreCommit": "d2c39717cfe267066b999ed52782e35f52d60178",
+  "coreCommit": "cc04add5fd8107727f686ada40a362576bc5cefc",
   "files": {
     "Directory.Build.props": "7fb587f56f7c9184b9d9c739351b559a2818b8f6eb1888290f4a8de266678b01",
     ".editorconfig": "3845322a721254c76e9d4d851f64012726b0cee871b3eb01bbad823948f957c4",
@@ -8,6 +8,6 @@
     "BannedSymbols.Files.txt": "de16dd734fda8ee8bd1514eb52edb8873d5d21e1b6d7f3759b2094874bebc318",
     "BannedSymbols.Tests.txt": "a7c9797aac63eb1b4a4831ee0e8c4b5966aa4185528218cec5dbcb04579293f4",
     "schema.json": "2b811968ef8881056b20f87f622afc15d4204b588c1d06e8dd149600daa713ec",
-    "repo-health.ps1": "04bf1910b9552f29a2ad25dc44bfbe694f072127e493eabfd2bda6ad34eae75a"
+    "repo-health.ps1": "e0851474edfbcb5caa417f22c9b165dc6f5e0015d81e0ec646ec15bcd779c3cf"
   }
 }
