@@ -7,12 +7,16 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Reads decoded I2C transactions from supported Excel workbooks.</summary>
 public sealed class ExcelDecodedI2cAdapter : ISourceAdapter
 {
     private static readonly string[] Header = ["Transaction", "Start_Time_s", "Type", "Byte_Count", "Bytes_Hex"];
+    /// <inheritdoc />
     public string Id => "excel-decoded-i2c";
+    /// <inheritdoc />
     public string DisplayName => "Excel decoded I2C workbook";
 
+    /// <inheritdoc />
     public ValueTask<SourceProbeResult> ProbeAsync(string path, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -33,6 +37,7 @@ public sealed class ExcelDecodedI2cAdapter : ISourceAdapter
         }
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
         SourceOpenContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
