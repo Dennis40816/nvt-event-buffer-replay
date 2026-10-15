@@ -3,8 +3,10 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Formats.Desay97;
 
+/// <summary>Assembles validated Desay 0x97 packets from consecutive two-phase event-buffer reads.</summary>
 public sealed class Desay97Assembler
 {
+    /// <summary>Initializes the event-buffer base address and validates the target 7-bit I2C slave address.</summary>
     public Desay97Assembler(uint eventBufferBase = 0x99000, int targetI2cAddress = 0x01)
     {
         if (targetI2cAddress is < 0 or > 0x7F)
@@ -16,9 +18,12 @@ public sealed class Desay97Assembler
         TargetI2cAddress = targetI2cAddress;
     }
 
+    /// <summary>Gets the event-buffer base address used to select source reads for packet assembly.</summary>
     public uint EventBufferBase { get; }
+    /// <summary>Gets the target 7-bit I2C slave address used to filter source reads.</summary>
     public int TargetI2cAddress { get; }
 
+    /// <summary>Pairs Desay 0x97 read phases, validates length, header and CRC, and returns packets with diagnostics.</summary>
     public Desay97AssemblyResult Assemble(
         IEnumerable<SourceRecord> records,
         CancellationToken cancellationToken = default)

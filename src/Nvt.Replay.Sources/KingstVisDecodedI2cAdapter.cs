@@ -5,14 +5,18 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Reads decoded I2C transactions from KingstVIS transaction-row and legacy byte-row CSV files.</summary>
 public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
 {
     private static readonly string[] TransactionHeader = ["Time[s]", "Packet ID", "Address", "Read/Write", "Data"];
     private static readonly string[] LegacyByteHeader = ["Time [s]", "Packet ID", "Address", "Data", "Read/Write", "ACK"];
 
+    /// <inheritdoc />
     public string Id => "kingstvis-decoded-i2c";
+    /// <inheritdoc />
     public string DisplayName => "KingstVIS decoded I2C CSV";
 
+    /// <inheritdoc />
     public async ValueTask<SourceProbeResult> ProbeAsync(string path, CancellationToken cancellationToken = default)
     {
         if (!Path.GetExtension(path).Equals(".csv", StringComparison.OrdinalIgnoreCase))
@@ -28,6 +32,7 @@ public sealed class KingstVisDecodedI2cAdapter : ISourceAdapter
         };
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
         SourceOpenContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
