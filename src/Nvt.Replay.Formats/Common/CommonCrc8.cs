@@ -2,8 +2,10 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Formats.Common;
 
+/// <summary>Provides CRC-8 profiles and checksum computation for Common Event Buffer data.</summary>
 public static class CommonCrc8
 {
+    /// <summary>Gets CRC profiles and their evidence status for supported Common Event Buffer versions.</summary>
     public static IReadOnlyDictionary<CommonEventBufferVersion, CommonCrcProfile> Profiles { get; } =
         new Dictionary<CommonEventBufferVersion, CommonCrcProfile>
         {
@@ -13,6 +15,7 @@ public static class CommonCrc8
             [CommonEventBufferVersion.V85] = Profile(EvidenceStatus.Provisional),
         };
 
+    /// <summary>Computes the CRC-8 checksum of the supplied bytes using polynomial 0x1D.</summary>
     public static byte Compute(ReadOnlySpan<byte> data)
         => Crc8Poly1D.Compute(data);
 
