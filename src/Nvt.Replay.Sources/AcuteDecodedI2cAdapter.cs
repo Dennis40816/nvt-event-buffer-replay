@@ -6,11 +6,15 @@ using Nvt.Replay.Core;
 
 namespace Nvt.Replay.Sources;
 
+/// <summary>Converts Acute row-per-transaction I2C reports into source records.</summary>
 public sealed partial class AcuteDecodedI2cAdapter : ISourceAdapter
 {
+    /// <inheritdoc />
     public string Id => "acute-decoded-i2c";
+    /// <inheritdoc />
     public string DisplayName => "Acute decoded I2C report";
 
+    /// <inheritdoc />
     public async ValueTask<SourceProbeResult> ProbeAsync(string path, CancellationToken cancellationToken = default)
     {
         var extension = Path.GetExtension(path);
@@ -31,6 +35,7 @@ public sealed partial class AcuteDecodedI2cAdapter : ISourceAdapter
         return None("Acute Timestamp/Status/Address/D0 columns were not found in the first 20 lines.");
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<SourceRecord> ReadAsync(
         SourceOpenContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
