@@ -1,14 +1,100 @@
-# Log rule files (per-carmaker adaptation)
+# User value and log rule files (per-carmaker adaptation)
 
 Status: Proposed design draft. No product code, no accepted contract.
 Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR. If the
 owner accepts the direction, the decisions move into an ADR (see
 [open items](#open-items)).
 
+The file has two parts. The first part, "User value", starts from the work the
+user must finish. The rest is the design of log rule files, which is one piece
+of that work.
+
 Every sample in this file is synthetic. The "Acme Motors" log format below is
 invented. No real carmaker log, device name or firmware string appears here.
 
-## Purpose
+## User value
+
+Marks used in this section:
+
+- **[Doc]**: stated in an existing document, which is named.
+- **[Assumption]**: the author's hypothesis. The owner has not confirmed it.
+
+Nothing in this section is validated against a real case.
+
+### The user and the trigger
+
+- [Doc] The user is a firmware or failure-analysis engineer. The
+  [product specification](product-spec.md) ("Product outcome") says the
+  application helps this engineer reproduce what the head unit would have
+  observed from a captured touch stream.
+- [Assumption] The trigger is a customer report of a ghost point or a false
+  touch. The report comes with a package of logs: a touch capture and system
+  logs such as a kernel log and a firmware log.
+
+### The answers the user needs
+
+All four are [Assumption].
+
+1. Does this package show a problem?
+2. At which moment did it happen?
+3. What is the likely cause: the IC, the firmware, the host, or the
+   environment?
+4. What evidence can go back to the customer?
+
+### What NFU answers today
+
+[Doc] The product specification says a user can load a supported capture,
+locate the first important event, replay its context, annotate it, and export
+an MP4 in under two minutes. The application has Raw Explorer, replay, heatmap,
+markers, a Review Queue and exports with a manifest.
+
+NFU therefore answers "what happened on the touch bus". It covers question 4
+well: replay and exports are evidence. It covers question 2 only by hand and
+with the help of the Review Queue, which lists the diagnostics that the decoder
+raises.
+
+[Doc] The specification orders its priorities as replay fidelity, then
+exportable evidence, then automated anomaly discovery. So questions 1 and 3 are
+mostly the engineer's own work today. No existing document describes ranking
+suspicious moments across a capture and the system logs.
+
+### Three gaps
+
+All three are [Assumption].
+
+| Gap | Question it serves | What is missing | Where this file covers it |
+| --- | --- | --- | --- |
+| Find | 1, 2 | Pick suspicious moments automatically and rank them, across the capture and the logs | Not designed here (see open items) |
+| Explain | 3 | Put system log events and raw data on one timeline. Carmaker log formats differ, so data files adapt the tool | The rest of this file: log rule files |
+| Accumulate | 1 (faster next time), 4 | Save a solved case as a rule so the next package is recognized | Rule files are the container for the log-line half. Matching a case across sources is not designed here |
+
+### Synthetic walk-through
+
+This case is invented. A customer reports one ghost point near the top edge
+during a 30-minute drive. The package holds one I2C capture and one log in the
+invented Acme format used later in this file.
+
+Today [Assumption]: the engineer loads the capture, scans the Review Queue,
+marks a suspect frame, then reads the log by hand in a text editor and matches times
+mentally.
+
+With a rule file: the engineer selects the Acme rule file for the log. The log
+shows `esd detected` and `reset` events. The engineer aligns one log event to
+one capture frame. The events then appear next to the ghost point. The engineer
+exports that range with the log events. The rule file keeps the signature, so
+the next package with the same lines shows the same events without manual
+reading.
+
+Version 1 recognizes single lines only. A signature made of several lines in a
+sequence is a later step.
+
+### What would validate this
+
+The owner provides one real past case, de-identified: the customer's log
+package, how it was investigated, how long it took, and how the reply went. Until
+then only synthetic cases exist, and every [Assumption] above stays open.
+
+## Log rule files: purpose
 
 Each carmaker writes kernel and firmware logs in its own line format. An
 operator needs to see the lines that matter (resets, ESD recovery, lost frames)
@@ -18,7 +104,7 @@ release for each carmaker.
 A log rule file is a small data file the operator edits. It holds keywords,
 regular expressions and field captures. It maps log lines to event types. The
 application reads the file, applies it to a raw log, and shows the resulting
-events.
+events. It serves the "Explain" and "Accumulate" gaps above.
 
 ## Boundaries
 
@@ -433,29 +519,31 @@ Lines 1 and 5 create no event. Line 6 shows the "unknown stays unknown" rule.
 Each item needs an owner decision or owner evidence. The recommendation is the
 default this draft follows.
 
-1. Real log families. Which carmaker formats come first, and which log kinds
+1. A real past case. The owner provides one de-identified case: the customer's log package, how it was investigated, how long it took and how the reply went. Until then the value statements in "User value" stay [Assumption]. Recommendation: pick one recent ghost-point or false-touch case.
+2. The "Find" gap. Ranking suspicious moments across a capture and logs is not designed here. Recommendation: design it after item 1, from a real case, as a separate draft.
+3. Real log families. Which carmaker formats come first, and which log kinds
    (Linux kernel, Android, firmware simulator)? Needs de-identified samples from
    the owner. Recommendation: keep the version 1 file format as drafted. Add no
    format-specific feature until a real sample asks for it.
-2. Clock alignment. Is the manual one-point offset enough, or does the owner
+4. Clock alignment. Is the manual one-point offset enough, or does the owner
    want two-point alignment (offset and drift)? Recommendation: one point in
    version 1.
-3. Review Queue. Should log events join the Review Queue, and under which
+5. Review Queue. Should log events join the Review Queue, and under which
    category and lifecycle? Recommendation: not in version 1. Decide after the
    owner has seen real log events.
-4. Document form. Make this a new ADR, or extend ADR 0005? ADR 0005 is
+6. Document form. Make this a new ADR, or extend ADR 0005? ADR 0005 is
    specific to register profiles and says the first import activates base
    addresses only. Recommendation: a new ADR after the owner accepts this
    direction. It reuses the ADR 0005 identity and provenance rules by
    reference. Files under `docs/adr/` are owner-gated.
-5. Sidecar version. Share one schema bump with the custom register profile
+7. Sidecar version. Share one schema bump with the custom register profile
    work, or bump twice? Recommendation: one bump, planned with the register
    profile import.
-6. Regex dialect. Is the .NET non-backtracking subset acceptable for the
+8. Regex dialect. Is the .NET non-backtracking subset acceptable for the
    people who write rule files? Lookarounds and backreferences are not
    available. Recommendation: accept the subset for version 1 and list the
    limits in the editor.
-7. Provenance metadata format. ADR 0005 leaves the associated metadata format
+9. Provenance metadata format. ADR 0005 leaves the associated metadata format
    to its implementation. This work waits for that format.
-8. Where it ships. Whether the engine stays in this application or moves to a
+10. Where it ships. Whether the engine stays in this application or moves to a
    shared Core module is out of scope. It depends on the Launcher direction.
