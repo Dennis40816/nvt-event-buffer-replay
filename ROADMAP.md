@@ -77,6 +77,8 @@ Version route: customer `1.0.0` first, then `1.1.0` for these items, then `2.0.0
 | Approved snapshots added: Raw and Decoded at 1180 px with both rails open, Output loading and cancel, Data package PNG | 1.0.0 | Done | [#47](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/47) |
 | Split the Paint, Output, Review and Inspector XAML trees into separate views (code-behind is already split into partial classes) | 1.1.0 | Planned | none yet |
 | Fixed 11-slot array for the host state checkpoint (micro-optimization; the 100k and long-loop gates show no bottleneck) | unscheduled (version set if profiling shows a need) | Deferred | none yet |
+| Rendering characterization test: use fixtures where a custom `pointRadius` and a custom `labelGap` each change the label placement. Today `clearance: 80` hides a regression of either parameter (`A5RenderingCharacterizationTests.cs`, first finding of the review of #127) | unscheduled (version set when scheduled) | Planned | [#127](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/127) |
+| Rendering characterization test: add hand-derived expected bounds or independent geometry assertions to the repeatability test. It takes its expected values from `Place` itself, so a consistently wrong placement passes (`A5RenderingCharacterizationTests.cs`, second finding of the review of #127) | unscheduled (version set when scheduled) | Planned | [#127](https://github.com/Dennis40816/nvt-event-buffer-replay/pull/127) |
 
 ### Evidence gates and open questions
 
