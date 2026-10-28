@@ -3,23 +3,100 @@
 Status: Proposed design draft. No product code, no accepted contract.
 Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR. If the
 owner accepts the direction, the decisions move into an ADR (see
-[open items](#open-items)).
+[decisions for the owner](#decisions-for-the-owner)).
 
-The file has two parts. The first part, "User value", starts from the work the
-user must finish. The rest is the design of log rule files, which is one piece
-of that work.
+The file has three parts:
+
+1. "Decisions for the owner": four questions, each with a recommendation.
+2. "User value": the whole job from a customer log package to an answer, and
+   where NFU helps in each step.
+3. The design of log rule files. They act in two of the seven steps: finding
+   the cause and accumulating experience.
 
 Every sample in this file is synthetic. The "Acme Motors" log format below is
 invented. No real carmaker log, device name or firmware string appears here.
 
+## Decisions for the owner
+
+No reply means the owner adopts the recommendation. Each decision lists what it
+unblocks. Twelve smaller questions from the earlier draft are folded into these
+four. Items that need no decision are in
+[dependencies and follow-ups](#dependencies-and-follow-ups).
+
+### Decision 1: Direction and document form
+
+Question: Is a data file per carmaker (a log rule file) the way NFU adapts to
+different log formats?
+
+- Recommendation: yes. A rule file holds keywords and .NET non-backtracking
+  regular expressions. It holds no code. After the owner accepts, a new ADR
+  records the decision and reuses the identity rules of ADR 0005 by reference.
+  Files under `docs/adr/` are owner-gated.
+- The same recommendation settles three details of this draft: the regular
+  expression dialect is the .NET non-backtracking subset (no lookarounds, no
+  backreferences, the editor lists the limits); a failed typed-capture
+  conversion creates the event with an invalid field and a warning, so the
+  evidence stays visible; the rule file is a new ADR, not an extension of
+  ADR 0005, which covers register profiles only.
+- Alternative: a code plug-in per carmaker. This draft does not recommend it,
+  because the user could not review the plug-in as data.
+- Unblocks: the ADR, and the format work in "Rule file format (version 1)".
+
+### Decision 2: Real evidence
+
+Question: Can the owner provide one real past case, de-identified: the
+customer's log package, how it was investigated, how long it took, and how the
+reply went? The case should include the system log lines that a carmaker
+wrote.
+
+- Recommendation: pick one recent ghost-point or false-touch case.
+- Until then: every "done today" statement in "User value" stays an assumption.
+  This draft adds no feature that is specific to one log family. Ranking
+  suspicious moments across a capture and logs (the "judgment" step) is not
+  designed.
+- Unblocks: the first baseline for the five outcomes, the choice of the first
+  log families, and a separate draft for finding suspicious moments.
+
+### Decision 3: Time and the Review Queue in version 1
+
+Question: How far does version 1 go on aligning the log clock with the capture
+clock, and do log events join the Review Queue?
+
+- Recommendation: the engineer aligns one log event to one capture frame by
+  hand (one-point offset, no drift correction). Log events do not join the
+  Review Queue in version 1. Revisit both after the owner has seen real log
+  events.
+- Alternative: two-point alignment (offset and drift). It costs more work and
+  needs a real log that drifts.
+- Unblocks: the "Time" section and the walk-through in "User value". Both
+  stay marked as pending until the owner answers.
+
+### Decision 4: Shared contracts with the register profile work
+
+Question: Do log rule files share the sidecar schema bump with the custom
+register profile import?
+
+- Recommendation: one schema bump for both, planned with the register profile
+  import. A newer application loads existing reviews without inventing rule
+  bindings (see "Sidecar and exports").
+- Alternative: two bumps. This draft sees no gain in two.
+- Unblocks: the sidecar fields in "Relation to existing events".
+
 ## User value
+
+The goal: NFU shortens the time from receiving a customer log package to
+delivering an answer that is backed by evidence.
+
+NFU does not replace the engineer's judgment. It makes each step faster and
+better supported, and it lets the result stay for the next case.
 
 Marks used in this section:
 
 - **[Doc]**: stated in an existing document, which is named.
 - **[Assumption]**: the author's hypothesis. The owner has not confirmed it.
 
-Nothing in this section is validated against a real case.
+The "done today" column below is [Assumption] in every row. Nothing in this
+section is validated against a real case.
 
 ### The user and the trigger
 
@@ -31,42 +108,61 @@ Nothing in this section is validated against a real case.
   touch. The report comes with a package of logs: a touch capture and system
   logs such as a kernel log and a firmware log.
 
-### The answers the user needs
+### Seven steps from log package to answer
 
-All four are [Assumption].
+For each step: how it is mostly done today, what NFU can do now, and what could
+be added later. "Planned" means [ROADMAP.md](../ROADMAP.md) lists it. Everything
+else in the "later" column is an idea. It has no schedule.
 
-1. Does this package show a problem?
-2. At which moment did it happen?
-3. What is the likely cause: the IC, the firmware, the host, or the
-   environment?
-4. What evidence can go back to the customer?
-
-### What NFU answers today
-
-[Doc] The product specification says a user can load a supported capture,
-locate the first important event, replay its context, annotate it, and export
-an MP4 in under two minutes. The application has Raw Explorer, replay, heatmap,
-markers, a Review Queue and exports with a manifest.
-
-NFU therefore answers "what happened on the touch bus". It covers question 4
-well: replay and exports are evidence. It covers question 2 only by hand and
-with the help of the Review Queue, which lists the diagnostics that the decoder
-raises.
-
-[Doc] The specification orders its priorities as replay fidelity, then
-exportable evidence, then automated anomaly discovery. So questions 1 and 3 are
-mostly the engineer's own work today. No existing document describes ranking
-suspicious moments across a capture and the system logs.
-
-### Three gaps
-
-All three are [Assumption].
-
-| Gap | Question it serves | What is missing | Where this file covers it |
+| Step | Done today [Assumption] | NFU can do now | Could be added later |
 | --- | --- | --- | --- |
-| Find | 1, 2 | Pick suspicious moments automatically and rank them, across the capture and the logs | Not designed here (see open items) |
-| Explain | 3 | Put system log events and raw data on one timeline. Carmaker log formats differ, so data files adapt the tool | The rest of this file: log rule files |
-| Accumulate | 1 (faster next time), 4 | Save a solved case as a rule so the next package is recognized | Rule files are the container for the log-line half. Matching a case across sources is not designed here |
+| 1. Intake: the customer sends a package | Check the file format and source. Open the files in a text editor or a private script | Open the supported capture formats offline. NFU never changes the source file | Format probing for the first raw formats (planned, FWU-02). Batch analysis of a folder. Live viewing (ideas) |
+| 2. Judgment: is it a ghost point, a false touch, a stuck point, or something else? | Read the touch points by hand and rely on experience | Replay, heatmap and Review Queue turn the stream into pictures and a list of diagnostics. The engineer decides | Find and rank suspicious moments across the capture and logs. Jump between them. Filter by type (ideas; not designed here) |
+| 3. Find the cause: where, when, and what the system did at that moment | Find the same moment in the system logs by hand and match times in the head | Markers and notes on a suspect moment. NFU shows no system log | **Log rule files** (this draft): lines that match a rule appear as events on the timeline with a plain description. Alignment of the log clock. Keyword search |
+| 4. Fix: change firmware or parameters | The engineer changes them from the judgment | NFU does not change firmware. Its evidence shows where to look | Custom register profile import (planned): register values shown as names and units. Raw Data Analysis (planned, FWU-01) |
+| 5. Verify: is it fixed, and are there side effects? | Record again and compare by eye | The same capture, settings and range give the same result, so a result can be reproduced ([Doc] product specification: stable identifiers are deterministic) | Two captures side by side. A report-rate view (ideas) |
+| 6. Reply: give the customer an answer with evidence | Take screenshots, write the text, attach files by hand | Export MP4, heatmap PNG, and CSV or JSON, with a manifest ([Doc] product specification) | One-page summary. An evidence bundle. De-identified export (ideas) |
+| 7. Accumulate: what makes the next case faster? | Experience stays in people's heads and scattered documents | Not supported. The sidecar keeps the annotations of one capture only | **Log rule files** keep the signature of a solved case as data. A case library (idea; not designed here) |
+
+[Doc] The product specification orders its priorities as replay fidelity, then
+exportable evidence, then automated anomaly discovery. That order matches the
+table: steps 5 and 6 are strong today, and steps 2 and 3 are mostly the
+engineer's own work.
+
+### Where log rule files act
+
+Log rule files act in two steps only.
+
+- Step 3, find the cause. Carmaker log formats differ, so the engineer reads
+  each log by hand and matches times in the head. With a rule file, NFU
+  recognizes the known lines, shows them as events with a plain description,
+  and puts them next to the touch frames. The engineer reads fewer lines and
+  keeps the match as evidence.
+- Step 7, accumulate. The signature of a solved case is saved as data in a
+  rule file. The next package with the same lines shows the same events
+  without someone remembering them. A person can review, share and version the
+  file.
+
+They do not decide whether a package shows a problem (step 2). They do not
+rank causes. Version 1 recognizes single lines only. A signature made of
+several lines in a sequence is a later step.
+
+### Five outcomes and how to measure them
+
+| Outcome | What changes | How to measure |
+| --- | --- | --- |
+| Faster answers | The time from receiving the package to a reply with evidence gets shorter | Record the start and end time of each case |
+| Fewer round trips | Video, heatmap and markers go out together, so the customer asks less | Count the follow-up requests per case |
+| Not dependent on specific people | Carmaker experience lives in rule files, so a new engineer can follow it | Measure the time a new engineer needs to close a case alone |
+| Fixes backed by evidence | After a change, the same capture is compared before and after | Count how often the same problem is reopened |
+| Faster over time | Solved cases stay, so a repeat problem is recognized | Count the share of cases that match an existing rule |
+
+Log rule files feed three of the five: faster answers (step 3), not dependent
+on specific people, and faster over time (step 7).
+
+**None of the five outcomes has a baseline.** This draft therefore gives no
+time and no percentage. One real past case (Decision 2) gives the first
+baseline.
 
 ### Synthetic walk-through
 
@@ -80,20 +176,16 @@ mentally.
 
 With a rule file: the engineer selects the Acme rule file for the log. The log
 shows `esd detected` and `reset` events. The engineer aligns one log event to
-one capture frame (manual alignment is a pending owner decision, see "Time").
-The events then appear next to the ghost point. The engineer
-exports that range with the log events. The rule file keeps the signature, so
-the next package with the same lines shows the same events without manual
-reading.
-
-Version 1 recognizes single lines only. A signature made of several lines in a
-sequence is a later step.
+one capture frame (manual alignment is a pending owner decision, see
+Decision 3 and "Time"). The events then appear next to the ghost point. The
+engineer exports that range with the log events. The rule file keeps the
+signature, so the next package with the same lines shows the same events
+without manual reading.
 
 ### What would validate this
 
-The owner provides one real past case, de-identified: the customer's log
-package, how it was investigated, how long it took, and how the reply went. Until
-then only synthetic cases exist, and every [Assumption] above stays open.
+Decision 2: one real past case. Until then only synthetic cases exist, and
+every [Assumption] above stays open.
 
 ## Log rule files: purpose
 
@@ -182,7 +274,10 @@ hash:
 - `eventTypes` and `rules` sorted by `id`, `tests` sorted by `name`, `captures`
   sorted by `name`, and the `contains` list sorted, all with ordinal
   comparison;
-- keys of an `enum` `map` and of `scope` sorted by ordinal comparison.
+- every map whose keys the file author chooses is sorted by key with ordinal
+  comparison: the `map` of an `enum` capture, `scope`, and the `fields` map of
+  each self-test expectation (`tests[].expect[].fields`). A new map in a later
+  schema version follows the same rule.
 
 Existing ambiguity, not decided here: the
 [register profile schema](register-profile-schema.md) prose says canonical
@@ -279,7 +374,7 @@ Failure rules:
 
 Whether a conversion failure should create the event, or suppress it, is a
 choice this draft makes for visibility of evidence. The owner can change it
-(see [open items](#open-items)).
+(see [Decision 1](#decision-1-direction-and-document-form)).
 
 ### Regular expression dialect
 
@@ -303,12 +398,22 @@ checked at validation:
 - file size: 1 MiB;
 - rules: 500; event types: 100; tests: 1000;
 - pattern length: 1024 characters; capture groups per pattern: 20;
-- time to build one pattern: 1 second. A pattern that needs more is rejected;
+- repeat count in a counted quantifier such as `{n,m}`: 1000; group nesting
+  depth: 8; alternations in one pattern: 64;
 - line length: 8192 characters. A longer line is not matched. It creates a
   warning diagnostic and the line stays visible as unmatched.
 
-Preview, test, apply and the command line all check the cancellation token
-between lines. A cancelled run writes no output.
+Whether a file is valid never depends on elapsed time, so the same file passes
+or fails the same way on any machine. The limits above are counts and lengths
+that bound the cost of building a pattern. Building one pattern is a single
+synchronous call that cannot be interrupted, so the limits, not a timer, bound
+it. The numbers are proposals for version 1. Performance tests confirm them
+and are the only place where elapsed time is measured.
+
+Validation runs in the background, not on the interface thread. It builds the
+patterns one at a time and checks the cancellation token between patterns. Preview,
+test, apply and the command line check the token between patterns and between
+lines. A cancelled run writes no output.
 
 ### Timestamp
 
@@ -340,7 +445,7 @@ warning.
 
 The log clock is not the capture clock. The rule file does not align them.
 Whether the application offers any alignment is a pending owner decision (see
-[Time](#time) and [open items](#open-items)).
+[Time](#time) and [Decision 3](#decision-3-time-and-the-review-queue-in-version-1)).
 
 ## Evaluation
 
@@ -400,7 +505,7 @@ Every field is either copied from the log or produced by a named rule.
 
 | Field | Source |
 | --- | --- |
-| Log source ID | The evidence reference |
+| Evidence reference ID | The evidence reference |
 | Evaluated log SHA-256 | The application, computed from the exact bytes it evaluated |
 | Line number and byte offset | The log (`SourceLocation`) |
 | Raw line text | The log |
@@ -417,14 +522,28 @@ evidence reference. `ReplayEvidenceReference.Sha256` is optional, and the
 sidecar loader reports a hash mismatch or a failed verification without
 blocking the review. A copied value could be missing, or could name other bytes
 than the ones evaluated. The reference hash is only an expectation to compare
-with:
+with.
 
-| Reference hash | Evaluated hash | Result |
-| --- | --- | --- |
-| Present | Equal | Log events are available |
-| Absent | Computed | Log events are available. They are marked "no reference hash". The sidecar binding stores the evaluated hash after the operator confirms it once |
-| Present | Different | Log events are unavailable. The raw log stays visible. The operator can accept the evaluated hash as a new binding. That creates a new identity and does not rename the old events |
-| Present or absent | Not computable (file missing, unreadable, read error) | Log events are unavailable. The raw log stays visible |
+A binding is the sidecar record that one rule file identity applies to one
+evidence reference. It stores the evaluated log hash that the operator accepted.
+The check runs on first use and again on every reopen and every reapply. The
+expectation is the stored binding hash when a binding exists. Otherwise it is
+the reference hash.
+
+| Stored binding | Reference hash | Evaluated hash | Result |
+| --- | --- | --- | --- |
+| None | Present | Equal to the reference hash | Log events are available |
+| None | Absent | Computed | Log events are available and marked "no reference hash". The operator confirms the evaluated hash once, and that creates the binding |
+| None | Present | Different from the reference hash | Log events are unavailable. The raw log stays visible. The operator can bind the evaluated hash explicitly (see "Rebinding") |
+| Present | Any | Equal to the binding hash | Log events are available. If the reference hash is present and different, the application shows that the binding was set explicitly |
+| Present | Any | Different from the binding hash | Log events are unavailable. The raw log stays visible. The operator can rebind |
+| Any | Any | Not computable (file missing, unreadable, read error) | Log events are unavailable. The raw log stays visible |
+
+Rebinding is an explicit operator action. It adds a new binding entry with the
+new evaluated hash, the operator note and the time. The earlier entry stays in
+the history. The evidence reference is not edited, so its hash stays as it was.
+Events from before the rebinding keep their keys, because the evaluated hash is
+part of the key. They are not renamed.
 
 In every unavailable case the application keeps the raw evidence and shows no
 derived interpretation. It does not fall back to the reference hash.
@@ -434,14 +553,21 @@ derived interpretation. It does not fall back to the reference hash.
 The event key is the full tuple:
 
 ```text
-(profileId, contentSha256, evaluatedLogSha256, lineByteOffset, ruleId)
+(evidenceReferenceId, profileId, contentSha256, evaluatedLogSha256,
+ lineByteOffset, ruleId)
 ```
+
+`evidenceReferenceId` is the ID of the evidence reference that supplied the
+log. The sidecar workspace requires reference IDs to be unique, but it does not
+require different content. Two references can hold identical bytes, with
+different source paths, notes or alignment. Their events have different keys
+and are never merged, so each keeps its own provenance and alignment.
 
 `profileId` and `contentSha256` are the rule file identity. Rule IDs are unique
 only inside one file, so two rule files, or two revisions of one file, can
 produce events with the same `ruleId` on the same line. They have different
-keys and are never merged. One rule creates at most one event per line, so the
-key is unique. The line number is stored but is not part of the key, because
+keys and are never merged. One rule creates at most one event per line in one
+reference, so the key is unique. The line number is stored but is not part of the key, because
 the byte offset already names the line.
 
 A short ID may be shown to the operator, for example the first 16 hex
@@ -454,7 +580,7 @@ The log clock and the capture clock are different clocks. A boot-relative time
 such as `12.345678` has no fixed relation to the time in a capture.
 Multi-clock alignment is a deferred capability in the
 [product specification](product-spec.md). **Whether and how to align is a
-pending owner decision** (open item 4). The rule file format does not depend on
+pending owner decision** (Decision 3). The rule file format does not depend on
 it. This section only states what holds without any decision, and then the
 smallest step this draft proposes.
 
@@ -501,7 +627,7 @@ Proposal, pending owner decision (one-point manual alignment):
 - Log events export as their own JSON and CSV files. The manifest records the
   rule file identity. The existing analysis exports of a capture do not change.
 - Review Queue and the ASIL lifecycle do not include log events in version 1
-  (see [open items](#open-items)).
+  (see [Decision 3](#decision-3-time-and-the-review-queue-in-version-1)).
 
 ## Preview and test
 
@@ -668,43 +794,18 @@ Lines 1 and 5 create no event. Line 6 shows the "unknown stays unknown" rule.
 - Folder discovery of rule files.
 - Any meaning for a real Linux or Android log. That needs owner evidence first.
 
-## Open items
+## Dependencies and follow-ups
 
-Each item needs an owner decision or owner evidence. The recommendation is the
-default this draft follows.
+These items need no owner decision. They are the follow-up work that the four
+decisions leave behind.
 
-1. A real past case. The owner provides one de-identified case: the customer's log package, how it was investigated, how long it took and how the reply went. Until then the value statements in "User value" stay [Assumption]. Recommendation: pick one recent ghost-point or false-touch case.
-2. The "Find" gap. Ranking suspicious moments across a capture and logs is not designed here. Recommendation: design it after item 1, from a real case, as a separate draft.
-3. Real log families. Which carmaker formats come first, and which log kinds
-   (Linux kernel, Android, firmware simulator)? Needs de-identified samples from
-   the owner. Recommendation: keep the version 1 file format as drafted. Add no
-   format-specific feature until a real sample asks for it.
-4. Clock alignment. Is the manual one-point offset enough, or does the owner
-   want two-point alignment (offset and drift)? Recommendation: one point in
-   version 1.
-5. Review Queue. Should log events join the Review Queue, and under which
-   category and lifecycle? Recommendation: not in version 1. Decide after the
-   owner has seen real log events.
-6. Document form. Make this a new ADR, or extend ADR 0005? ADR 0005 is
-   specific to register profiles and says the first import activates base
-   addresses only. Recommendation: a new ADR after the owner accepts this
-   direction. It reuses the ADR 0005 identity and provenance rules by
-   reference. Files under `docs/adr/` are owner-gated.
-7. Sidecar version. Share one schema bump with the custom register profile
-   work, or bump twice? Recommendation: one bump, planned with the register
-   profile import.
-8. Regex dialect. Is the .NET non-backtracking subset acceptable for the
-   people who write rule files? Lookarounds and backreferences are not
-   available. Recommendation: accept the subset for version 1 and list the
-   limits in the editor.
-9. Provenance metadata format. ADR 0005 leaves the associated metadata format
-   to its implementation. This work waits for that format.
-10. Where it ships. Whether the engine stays in this application or moves to a
-    shared Core module is out of scope. It depends on the Launcher direction.
-11. Conversion failure. This draft creates the event with an invalid field and a
-    warning, so the evidence stays visible. The alternative is to suppress the
-    event. Recommendation: keep the draft behavior.
-12. Register profile prose. The register profile schema prose and code differ on
-    the final newline in the hash input (see "Identity and canonical form").
-    Recommendation: a separate small change that corrects the prose to match
-    the code. This draft does not change that document.
+1. Provenance metadata format. ADR 0005 leaves the associated metadata format
+   to its implementation. Rule file provenance waits for that format.
+2. Where the engine ships. Whether it stays in this application or moves to a
+   shared Core module depends on the Launcher direction and is out of scope.
+3. Register profile prose. The register profile schema prose and code differ on
+   the final newline in the hash input (see "Identity and canonical form"). A
+   separate small change corrects the prose to match the code. This draft does
+   not change that document.
+4. Finding suspicious moments. A separate draft, after Decision 2 gives a real
+   case.
