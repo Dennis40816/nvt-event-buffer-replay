@@ -168,9 +168,9 @@ public sealed class A5RenderingCharacterizationTests
         var frames = new List<ReplayContact[]>();
         frames.Add([new ReplayContact(1, TouchType.Finger, TouchStatus.Enter, 900, 900, "synthetic-first")]);
         foreach (var point in new (ushort X, ushort Y)[] { (100, 100), (900, 100), (100, 900) })
-        for (var index = 0; index < 12; index++)
-            frames.Add([new ReplayContact(1, TouchType.Finger, TouchStatus.Move,
-                point.X, point.Y, $"synthetic-{point.X}-{point.Y}-{index}")]);
+            for (var index = 0; index < 12; index++)
+                frames.Add([new ReplayContact(1, TouchType.Finger, TouchStatus.Move,
+                    point.X, point.Y, $"synthetic-{point.X}-{point.Y}-{index}")]);
         var extent = new ReplayExtent(1000, 1000);
 
         var position = ReplayLegendPositioner.Choose(frames.SelectMany(frame => frame), extent);
