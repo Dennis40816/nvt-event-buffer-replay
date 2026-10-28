@@ -80,7 +80,8 @@ mentally.
 
 With a rule file: the engineer selects the Acme rule file for the log. The log
 shows `esd detected` and `reset` events. The engineer aligns one log event to
-one capture frame. The events then appear next to the ghost point. The engineer
+one capture frame (manual alignment is a pending owner decision, see "Time").
+The events then appear next to the ghost point. The engineer
 exports that range with the log events. The rule file keeps the signature, so
 the next package with the same lines shows the same events without manual
 reading.
@@ -166,14 +167,34 @@ matches ADR 0005. Two files with the same `profileId` and different content
 are two immutable revisions. Neither replaces the other without an explicit
 operator choice.
 
-Canonical serialization follows the register profile rules: fixed property
-order, `eventTypes` and `rules` sorted by `id`, `tests` sorted by `name`,
-UTF-8 without a BOM, one final newline. Equivalent files give the same bytes
-and the same hash. The hash proves integrity. It does not prove that the rules
-are correct.
+Two byte sequences exist and they differ. The draft keeps them apart.
 
-The identity space is shared in the sense that the hash covers `fileKind`.
-A rule file and a register profile can never have the same hash by accident.
+- Saved bytes: the canonical JSON, indented, in UTF-8 without a BOM, with one
+  final LF.
+- Hash input bytes: the same canonical content written as compact JSON, with
+  no indentation, no final newline, and without the `contentSha256` field.
+  `contentSha256` is the lowercase SHA-256 of these bytes.
+
+Canonical order, so that equivalent files give the same bytes and the same
+hash:
+
+- object properties in the fixed order of the schema;
+- `eventTypes` and `rules` sorted by `id`, `tests` sorted by `name`, `captures`
+  sorted by `name`, and the `contains` list sorted, all with ordinal
+  comparison;
+- keys of an `enum` `map` and of `scope` sorted by ordinal comparison.
+
+Existing ambiguity, not decided here: the
+[register profile schema](register-profile-schema.md) prose says canonical
+serialization has "one final newline" and that this gives the same content
+identity. The code (`NvtRegisterProfileFile.ComputeContentSha256`) hashes the
+compact bytes without that newline, while `SerializeCanonical` writes indented
+JSON plus a final LF. This draft follows the code for rule files. Whether the
+register profile prose should be corrected is a separate change.
+
+The hash proves integrity. It does not prove that the rules are correct. The
+hash covers `fileKind`, so a rule file and a register profile never have the
+same hash by accident.
 
 ### Event types
 
@@ -213,9 +234,11 @@ A rule file and a register profile can never have the same hash by accident.
   one of `contains` and `regex`.
 - `captures`: the named groups of `regex` that become event fields. Each
   capture has a `name` that is a named group of the regex, and a `type`:
-  `string`, `integer` (decimal), `hex`, or `enum`. An `enum` capture has a
-  `map` from captured text to a label. Text that is not in the map is kept as
-  the raw text and marked unmapped. The application never invents a label.
+  `string`, `integer`, `hex`, or `enum`. The raw captured text is always kept.
+  The conversion rules are in [Typed captures](#typed-captures).
+  An `enum` capture has a `map` from captured text to a label. Text that is not
+  in the map is kept as the raw text and marked unmapped. The application never
+  invents a label.
 - `message`: a template. It may use `{name}` placeholders for captured fields.
   It has no operators, no functions and no conditions. This is the same
   placeholder style as the `{col}` placeholder planned in FWU-09 of the
@@ -227,20 +250,65 @@ on the order of the rules. This is why the file can be sorted into canonical
 form without changing its meaning. The preview marks lines that match more than
 one rule so the operator can decide whether that is intended.
 
+### Typed captures
+
+All conversions are culture-invariant and use ASCII characters only. The raw
+captured text is stored next to every converted value.
+
+| Type | Accepted text | Value |
+| --- | --- | --- |
+| `string` | Any text | The text, unchanged |
+| `integer` | `-?[0-9]+`, ASCII digits only, no `+`, no separators, no spaces | Signed 64-bit integer |
+| `hex` | `0x` or `0X`, then 1 to 16 ASCII hex digits | Unsigned 64-bit integer |
+| `enum` | Exact ordinal match of the text with a key of `map` | The label of that key |
+
+Failure rules:
+
+- A capture group that does not take part in the match (an optional group)
+  gives an absent field. The field is neither empty nor zero. A `message`
+  placeholder for an absent field renders as `<absent>`.
+- Text that does not fit the accepted form, or does not fit the 64-bit range,
+  is a conversion failure. The event is still created. The field has no value
+  and is marked invalid. The raw text stays. The application writes a warning
+  diagnostic with the rule ID, the field name and the source location.
+  It never substitutes zero or any other value.
+- `enum` text that is not a key of `map` is not a failure. The field is marked
+  unmapped and keeps its raw text.
+- Non-ASCII digits, which the `\d` class of the regular expression engine
+  accepts, fail the lexical form check of `integer` and `hex`.
+
+Whether a conversion failure should create the event, or suppress it, is a
+choice this draft makes for visibility of evidence. The owner can change it
+(see [open items](#open-items)).
+
 ### Regular expression dialect
 
 The dialect is the .NET regular expression syntax, run with the non-backtracking
-engine. This gives linear-time matching, so a bad expression cannot stall the
-application. The following constructs are not available in this engine, so the
-validator rejects them with a message: lookahead and lookbehind, backreferences,
-atomic groups, balancing groups.
+engine only. There is no fallback to the backtracking engine.
 
-Limits in version 1, all checked at validation:
+The engine, not this list, decides what is accepted. Every expression in the
+file is built with the non-backtracking engine at validation, including the
+`timestamp` expression and every `regex` in `rules`. The validator rejects
+what the engine rejects, and shows the engine's message. The known rejected
+constructs are: lookahead and lookbehind, backreferences, atomic groups,
+balancing groups, conditionals such as `(?(name)yes|no)`, and the `\G` anchor.
+Options that change the engine, such as right-to-left matching, are not
+allowed.
+
+Guarantee, stated narrowly: for one fixed pattern, matching time is linear in
+the length of the line. This does not limit the time to build a pattern or the
+total work of many patterns. Version 1 therefore also has these limits, all
+checked at validation:
 
 - file size: 1 MiB;
 - rules: 500; event types: 100; tests: 1000;
+- pattern length: 1024 characters; capture groups per pattern: 20;
+- time to build one pattern: 1 second. A pattern that needs more is rejected;
 - line length: 8192 characters. A longer line is not matched. It creates a
   warning diagnostic and the line stays visible as unmatched.
+
+Preview, test, apply and the command line all check the cancellation token
+between lines. A cancelled run writes no output.
 
 ### Timestamp
 
@@ -256,16 +324,42 @@ Limits in version 1, all checked at validation:
 value is stored as the time of the log clock. A line without a readable time
 still creates events. Such an event has no log time and is shown in log order.
 
-The log clock is not the capture clock. Version 1 does not align them (see
-[Relation to existing events](#relation-to-existing-events)).
+The accepted text of each format is fixed and culture-invariant:
+
+- `secondsSinceBoot` and `epochSeconds`: ASCII digits with one optional
+  decimal point. `epochSeconds` is UTC.
+- `isoOffset`: ISO 8601 date and time with an explicit offset. A value
+  without an offset is a conversion failure.
+- `timeOfDay`: `HH:mm:ss` with optional fraction. It carries no date and no
+  time zone. The application never applies the local date or the local time
+  zone of the PC.
+
+A time that does not fit its format follows the conversion failure rule in
+[Typed captures](#typed-captures): the event is created with no log time and a
+warning.
+
+The log clock is not the capture clock. The rule file does not align them.
+Whether the application offers any alignment is a pending owner decision (see
+[Time](#time) and [open items](#open-items)).
 
 ## Evaluation
 
 The evaluation is a pure function of the rule file and the log bytes. The same
-inputs always give the same events in the same order.
+inputs always give the same events in the same order. Determinism does not
+depend on the culture, the time zone or the sort order of the PC:
 
-1. Read the log as strict UTF-8. Split lines at LF or CRLF. The line keeps its
-   byte offset and its 1-based line number.
+- regular expressions run with culture-invariant matching. A case-insensitive
+  match, including an inline `(?i)`, uses invariant rules. `ignoreCase` on
+  `contains` means ordinal case-insensitive comparison;
+- all number and time conversions follow [Typed captures](#typed-captures) and
+  [Timestamp](#timestamp);
+- `id` values are ASCII. Every sort of IDs and keys uses ordinal comparison.
+
+1. Read the log once. Compute its SHA-256 from the same bytes that are
+   evaluated (the evaluated hash, see
+   [What a log event holds](#what-a-log-event-holds)). Read the bytes as strict
+   UTF-8. Split lines at LF or CRLF. The line keeps its byte offset and its
+   1-based line number.
 2. A line that is not valid UTF-8 is not matched. It creates a warning
    diagnostic with the line location. The raw bytes stay available.
 3. For each line, read the timestamp when the file defines one.
@@ -306,7 +400,8 @@ Every field is either copied from the log or produced by a named rule.
 
 | Field | Source |
 | --- | --- |
-| Log source ID and SHA-256 | The evidence reference |
+| Log source ID | The evidence reference |
+| Evaluated log SHA-256 | The application, computed from the exact bytes it evaluated |
 | Line number and byte offset | The log (`SourceLocation`) |
 | Raw line text | The log |
 | Rule ID and rule file identity `(profileId, contentSha256)` | The rule file |
@@ -315,33 +410,91 @@ Every field is either copied from the log or produced by a named rule.
 | Captures: name, type, raw text, mapped label or "unmapped" | The rule file and the line |
 | Log time: value, format, clock kind | The `timestamp` block, when it reads |
 
-The stable ID is deterministic: the first 16 characters of the log SHA-256,
-the line number and the rule ID. The same log and the same rule file always
-give the same IDs.
+#### Log hash
+
+The hash in an event is the evaluated hash. It is never copied from the
+evidence reference. `ReplayEvidenceReference.Sha256` is optional, and the
+sidecar loader reports a hash mismatch or a failed verification without
+blocking the review. A copied value could be missing, or could name other bytes
+than the ones evaluated. The reference hash is only an expectation to compare
+with:
+
+| Reference hash | Evaluated hash | Result |
+| --- | --- | --- |
+| Present | Equal | Log events are available |
+| Absent | Computed | Log events are available. They are marked "no reference hash". The sidecar binding stores the evaluated hash after the operator confirms it once |
+| Present | Different | Log events are unavailable. The raw log stays visible. The operator can accept the evaluated hash as a new binding. That creates a new identity and does not rename the old events |
+| Present or absent | Not computable (file missing, unreadable, read error) | Log events are unavailable. The raw log stays visible |
+
+In every unavailable case the application keeps the raw evidence and shows no
+derived interpretation. It does not fall back to the reference hash.
+
+#### Event key
+
+The event key is the full tuple:
+
+```text
+(profileId, contentSha256, evaluatedLogSha256, lineByteOffset, ruleId)
+```
+
+`profileId` and `contentSha256` are the rule file identity. Rule IDs are unique
+only inside one file, so two rule files, or two revisions of one file, can
+produce events with the same `ruleId` on the same line. They have different
+keys and are never merged. One rule creates at most one event per line, so the
+key is unique. The line number is stored but is not part of the key, because
+the byte offset already names the line.
+
+A short ID may be shown to the operator, for example the first 16 hex
+characters of the SHA-256 of the key written as one UTF-8 line. It is only a
+display alias. Storage, sidecars and exports use the full key.
 
 ### Time
 
 The log clock and the capture clock are different clocks. A boot-relative time
 such as `12.345678` has no fixed relation to the time in a capture.
 Multi-clock alignment is a deferred capability in the
-[product specification](product-spec.md). Version 1 takes the smallest step:
+[product specification](product-spec.md). **Whether and how to align is a
+pending owner decision** (open item 4). The rule file format does not depend on
+it. This section only states what holds without any decision, and then the
+smallest step this draft proposes.
+
+Holds without any decision:
 
 - No automatic alignment. The application never guesses an offset.
 - Log events are always listed in log order in a log panel, with their log
   time.
+- Events with no readable log time are never drawn on the timeline.
+
+Proposal, pending owner decision (one-point manual alignment):
+
 - An event is drawn on the timeline only after the operator sets an offset.
   The operator picks one log event and one capture frame and states that they
   are the same moment. The offset and the operator note go into the sidecar.
   Alignment lives in the sidecar, as ADR 0003 says.
-- Events with no readable log time are never drawn on the timeline.
+- If the owner chooses two-point alignment or no alignment, only this list
+  changes. The user-value walk-through that places events next to the ghost
+  point depends on this proposal.
 
 ### Sidecar and exports
 
 - The sidecar records which rule file, by identity, was applied to which
-  evidence reference. This needs a new sidecar schema version. Opening a newer
-  sidecar in an older application already fails safely. ADR 0005 also needs a
-  sidecar version for custom register profiles. Both changes should share one
-  version bump.
+  evidence reference, together with the evaluated log hash. This needs a new
+  sidecar schema version. Opening a newer sidecar in an older application
+  already fails safely. ADR 0005 also needs a sidecar version for custom
+  register profiles. Both changes should share one version bump.
+- Migration of existing reviews. A sidecar of the current schema version 1
+  opens in the newer application with no rule binding and no alignment. The
+  application invents neither. A binding or an alignment exists only after an
+  explicit operator action. The application does not rewrite the opened file.
+  Saving writes the new schema version, and the operator is told that older
+  applications can no longer open the saved file.
+- Migration of rule files. A rule file with a newer `schemaVersion` is rejected
+  by an application that does not know it. A later schema version never
+  changes a file in place. Moving a rule file to a new schema creates a new
+  immutable revision with a new hash. The original file and its identity stay.
+  Existing bindings keep pointing at the original identity until the operator
+  binds the new revision. Events derived from the two identities have
+  different event keys.
 - If the rule file named in the sidecar is missing, invalid or changed, the log
   events are unavailable. The raw log stays visible. There is no fallback to
   another rule file.
@@ -442,7 +595,8 @@ The log below is invented. The "Acme Motors" format does not exist.
 
 The rule file below is shown without a real hash. The tool computes
 `contentSha256` from the canonical form. A value written by hand would fail
-validation, so `<computed>` stands in for it.
+validation, so `<computed>` stands in for it. The sample is written in reading
+order. The tool saves it in the canonical order described above.
 
 ```json
 {
@@ -546,4 +700,11 @@ default this draft follows.
 9. Provenance metadata format. ADR 0005 leaves the associated metadata format
    to its implementation. This work waits for that format.
 10. Where it ships. Whether the engine stays in this application or moves to a
-   shared Core module is out of scope. It depends on the Launcher direction.
+    shared Core module is out of scope. It depends on the Launcher direction.
+11. Conversion failure. This draft creates the event with an invalid field and a
+    warning, so the evidence stays visible. The alternative is to suppress the
+    event. Recommendation: keep the draft behavior.
+12. Register profile prose. The register profile schema prose and code differ on
+    the final newline in the hash input (see "Identity and canonical form").
+    Recommendation: a separate small change that corrects the prose to match
+    the code. This draft does not change that document.
