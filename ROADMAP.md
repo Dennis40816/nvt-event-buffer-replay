@@ -94,7 +94,7 @@ Every item waits for owner evidence or a decision. The target is unscheduled; a 
 | Approved Paint PNG built from a public, reproducible fixture (a private KingstVIS long golden was only checked by hand; no private capture enters the repository) | 1.1.0 | Open | none yet |
 | Side-by-side check of the approved reference images (control position and size within 4 px, font size within 1 px, only existing design tokens) | 1.1.0 | Open | none yet |
 | Real-time measurement artifacts of every playback speed combination on the private capture (deterministic tests and the 21,600-advance gate cover them today) | unscheduled | Open | none yet |
-| Formal `v0.0.3` tag and GitHub release (gate from the 0.0.3 plan). `v0.1.0` and `v0.1.1` superseded it; confirm with the owner that it can be dropped | 1.0.0 | Decision needed | none yet |
+| Formal `v0.0.3` tag and GitHub release (gate from the 0.0.3 plan) | 1.0.0 | Dropped. The owner decided on 2026-10-28 to drop it; `v0.1.0` and `v0.1.1` superseded it | none yet |
 
 ## Line 3: Core integration
 
