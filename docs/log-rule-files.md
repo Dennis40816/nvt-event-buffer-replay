@@ -336,7 +336,14 @@ Two byte sequences exist and they differ. The draft keeps them apart.
 Canonical order, so that equivalent files give the same bytes and the same
 hash:
 
-- object properties in the fixed order of the schema;
+- object properties in the fixed order of the schema. An optional property
+  that is absent is left out, and an empty `contains`, `captures`, `map` or
+  `fields` counts as absent, so adding an optional property in a later
+  schema version does not change the hash of an older file. `ignoreCase` is
+  written only when it is true;
+- strings use the relaxed escaping of System.Text.Json, so characters such as
+  `+` and `<` stay readable. The indented form uses two spaces and LF line
+  breaks;
 - `eventTypes` and `rules` sorted by `id`, `tests` sorted by `name`, `captures`
   sorted by `name`, and the `contains` list sorted, all with ordinal
   comparison;
@@ -404,7 +411,9 @@ same hash by accident.
 - `message`: a template. It may use `{name}` placeholders for captured fields.
   It has no operators, no functions and no conditions. This is the same
   placeholder style as the `{col}` placeholder planned in FWU-09 of the
-  [ROADMAP](../ROADMAP.md).
+  [ROADMAP](../ROADMAP.md). `{{` and `}}` write a literal brace. Any other
+  brace must belong to a `{name}` placeholder, and `name` must be a capture
+  of the rule. The validator rejects any other use of a brace.
 
 Every rule is evaluated on every line, independently. A line can match more
 than one rule and then creates more than one event. The result does not depend
@@ -455,7 +464,9 @@ what the engine rejects, and shows the engine's message. The known rejected
 constructs are: lookahead and lookbehind, backreferences, atomic groups,
 balancing groups, conditionals such as `(?(name)yes|no)`, and the `\G` anchor.
 Options that change the engine, such as right-to-left matching, are not
-allowed.
+allowed. Inline comments `(?#...)` and the `x` option (`(?x)`) are not
+allowed either, because comments hide pattern text from the limit check
+below.
 
 Guarantee, stated narrowly: for one fixed pattern, matching time is linear in
 the length of the line. This does not limit the time to build a pattern or the
@@ -491,10 +502,15 @@ lines. A cancelled run writes no output.
 }
 ```
 
+The `regex` must declare a named group `ts`. The text of that group is the
+value that `format` reads.
+
 `format` is one of a closed list: `secondsSinceBoot`, `epochSeconds`,
 `isoOffset`, `timeOfDay`. The list grows only through a schema version. The
 value is stored as the time of the log clock. The `timestamp` object may also
-carry an optional `timeZone` default (proposal, see "Time"). A line without a
+carry an optional `timeZone` default (proposal, see "Time"). The first
+implementation of the rule file model does not have this property. It
+waits until the owner accepts the default. A line without a
 readable time still creates events. Such an event has no log time and is shown in log order.
 
 The accepted text of each format is fixed and culture-invariant:
