@@ -145,8 +145,9 @@ decision are in [dependencies and follow-ups](#dependencies-and-follow-ups).
 ### Decision 1: Direction and document form
 
 Status: answered by the owner on 2026-10-29 ("Q7 ok"), as recommended. The
-owner added that formats may also differ by project (see Decision 5). The
-ADR still needs the owner's approval on GitHub.
+owner added that formats may also differ by project (see Decision 5).
+The owner approved pull request #131 on GitHub at 15:01 and it merged on
+2026-10-29 at 15:41 (Taipei).
 
 Question: Is a data file per carmaker (a log rule file) the way NFU adapts to
 different log formats?
@@ -156,9 +157,9 @@ different log formats?
   records the decision and reuses the identity rules of ADR 0005 by reference.
   Files under `docs/adr/` are owner-gated.
 - The recommendation also covers three details of this draft. The owner
-  answered Q7 ("ok") for the whole recommendation. The ADR itself still waits
-  for the owner's formal approval on GitHub, so the details below are not yet
-  accepted contract text: the regular expression dialect is the .NET non-backtracking
+  answered Q7 ("ok") for the whole recommendation, and the ADR was approved and
+  merged (pull request #131), so the details below are part of the accepted
+  decision: the regular expression dialect is the .NET non-backtracking
   subset (no lookarounds, no backreferences, the editor lists the limits); a
   failed typed-capture conversion creates the event with an invalid field and a
   warning, so the evidence stays visible; the rule file is a new ADR, not an
@@ -202,7 +203,7 @@ clock, and do log events join the Review Queue?
   alignment (pick one log event and one capture frame) as one way to set the
   offset, and recommends no drift correction in version 1. Both are
   recommendations, not owner decisions. The details are in "Time" and stay a
-  proposal until the ADR is approved.
+  proposal. The ADR is approved, but it leaves both points open.
 - Review Queue, recommendation: log events do not join the Review Queue in
   version 1. Revisit it after the owner has seen real log events.
 - Alternative for the clock: two-point alignment (offset and drift). It costs
@@ -211,8 +212,9 @@ clock, and do log events join the Review Queue?
 
 ### Decision 4: Shared contracts with the register profile work
 
-Status: answered by the owner on 2026-10-29 ("Q10 ok"), as recommended. The
-ADR still needs the owner's approval on GitHub.
+Status: answered by the owner on 2026-10-29 ("Q10 ok"), as recommended.
+The owner approved pull request #131 on GitHub at 15:01 and it merged on
+2026-10-29 at 15:41 (Taipei).
 
 Question: How do log rule files share contracts with the custom register
 profile import?
@@ -546,10 +548,15 @@ The operator sets a time zone and an offset for each applied log (see
 The rule file model checks more than the tables above state. This section
 lists every check, so a reader does not have to read the code.
 
-PR #132 listed seven assumptions and asked the owner to confirm them (question
-Q11, with the recommendation to keep all seven). The owner answered "Ok" on
-2026-10-29 at 18:45 Taipei. PC-Commander read it as confirming all seven. They
-are:
+PR #132 listed seven assumptions. They are in the next list. The owner has not
+yet given an explicit answer to them. Question Q11 asked the owner to confirm
+all seven, with the recommendation to keep them as written.
+
+Record of the owner's reply, kept apart from the assumptions: on 2026-10-29 at
+18:45 (Taipei) the owner wrote the one word "Ok". The message it answered also
+asked for other actions. The reply is therefore not taken as an answer to Q11.
+PC-Commander then asked the owner for an explicit "Q11 ok". Until that answer
+arrives, the seven assumptions are awaiting the owner's explicit answer.
 
 1. The `timestamp` `regex` must declare a group named `ts`.
 2. A message writes a literal brace as `{{` or `}}`. Any other brace must be a
@@ -561,16 +568,17 @@ are:
    not an `enum`. An `enum` capture still needs a non-empty `map`.
 5. Strings use the relaxed escaping of System.Text.Json.
 6. The first model has no `timeZone` default in the rule file.
-7. A rule needs a `message`. IDs, event type IDs and test names use the
-   register profile ID pattern. Capture names match
-   `[A-Za-z_][A-Za-z0-9_]{0,63}`. Text fields are at most 1024 characters.
+7. A rule needs a `message`. IDs match the identifier pattern below. Capture
+   names match `[A-Za-z_][A-Za-z0-9_]{0,63}`. Text fields are at most 1024
+   characters.
 
-The model makes other choices that the "Ok" does not cover. The owner has not
-answered these. The recommendation is to keep them as written.
+The model makes other choices that no owner answer covers. The recommendation
+is to keep them as written. The character class choice is question Q12.
 
 | Check | Needs the owner |
 | --- | --- |
-| A character class cannot contain an unescaped `[` (see "Regular expression dialect"). | Yes |
+| A character class cannot contain an unescaped `[` (see "Regular expression dialect"). Question Q12. The recommendation is to keep rejecting it. | Yes |
+| Identifiers (`profileId`, `eventTypes[].id`, `rules[].id`, `tests[].name`): the whole string matches `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`. This is assumption 7. | Awaiting Q11 |
 | Labels (`displayName`, `scope` values, `map` labels, `message`): not empty, no leading or trailing white space, at most 1024 characters, no control characters. | Yes |
 | `contains` entries: not empty, at most 1024 characters, no line break, no duplicates (ordinal). Spaces at the start or end are kept. | Yes |
 | `map` keys of an `enum` capture: not empty, at most 1024 characters, no line break. | Yes |
@@ -734,8 +742,9 @@ Multi-clock alignment is a deferred capability in the
 [product specification](product-spec.md). On 2026-10-29 the owner decided that
 the time zone and the offset of the log clock must both be configurable
 (Decision 3). This section turns that into a design. The rule file format does
-not depend on it, and the details below are a proposal until
-[ADR 0006](adr/0006-log-rule-files.md) is approved.
+not depend on it, and the details below are a proposal.
+[ADR 0006](adr/0006-log-rule-files.md) is approved, but it leaves drift
+correction and the way the offset is set open.
 
 Holds without any further decision:
 
