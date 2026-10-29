@@ -8,12 +8,14 @@ internal static partial class LogRuleValidator
 {
     private const string TimestampGroup = "ts";
 
-    /// <summary>Validates the document. Cancellation is checked between patterns and nothing is written.</summary>
+    /// <summary>Validates the document. Cancellation is checked on entry, before the timestamp pattern and before each rule. Nothing is written.</summary>
     public static void Validate(LogRuleDocumentV1 document, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(document);
+        cancellationToken.ThrowIfCancellationRequested();
         ValidateHeader(document);
         var eventTypes = ValidateEventTypes(Require(document.EventTypes, "eventTypes"));
+        cancellationToken.ThrowIfCancellationRequested();
         ValidateTimestamp(document.Timestamp);
         var captureNames = ValidateRules(Require(document.Rules, "rules"), eventTypes, cancellationToken);
         ValidateTests(Require(document.Tests, "tests"), captureNames);
@@ -150,7 +152,7 @@ internal static partial class LogRuleValidator
             throw new LogRuleValidationException($"{field} has an unknown type.");
         if (capture.Type != LogCaptureType.Enum)
         {
-            if (capture.Map is not null)
+            if (capture.Map is { Count: > 0 })
                 throw new LogRuleValidationException($"{field} has a map, but only enum captures have one.");
             return;
         }

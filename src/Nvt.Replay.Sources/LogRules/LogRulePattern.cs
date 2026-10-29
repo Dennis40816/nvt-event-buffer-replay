@@ -66,7 +66,7 @@ internal static class LogRulePattern
             switch (pattern[index])
             {
                 case '\\':
-                    index++;
+                    index = SkipEscape(pattern, index);
                     break;
                 case '[':
                     index = SkipCharacterClass(pattern, index, field);
@@ -76,6 +76,8 @@ internal static class LogRulePattern
                     break;
                 case ')':
                     depth--;
+                    if (depth < 0)
+                        throw new LogRuleValidationException($"{field} closes a group that is not open.");
                     break;
                 case '|':
                     alternations++;
@@ -92,9 +94,16 @@ internal static class LogRulePattern
         }
     }
 
-    // A class ends at its first unescaped closing bracket. The engine may end a class with a subtraction
-    // such as [a-z-[aeiou]] later, never earlier. The scan therefore ends no later than the engine does, so
-    // it can count text the engine treats as class content but never skips text the engine treats as a group.
+    // Returns the index of the last character of the escape that starts at index. The engine reads \cX as
+    // one control character, three characters in all, and X may be a bracket or a backslash. The other
+    // escapes the engine accepts have no structural character after their second one.
+    private static int SkipEscape(string pattern, int index) =>
+        index + 1 < pattern.Length && pattern[index + 1] == 'c' ? index + 2 : index + 1;
+
+    // A class ends at its first unescaped closing bracket, except that a bracket right after the opening
+    // one (or after its ^) is a literal. An unescaped opening bracket inside a class is rejected: the
+    // engine reads it as the start of a subtraction such as [a-z-[aeiou]] or of a [:name:] form, each with
+    // its own rule for where the class ends. Without that syntax this scan ends where the engine does.
     private static int SkipCharacterClass(string pattern, int start, string field)
     {
         var index = start + 1;
@@ -102,10 +111,17 @@ internal static class LogRulePattern
         if (index < pattern.Length && pattern[index] == ']') index++;
         for (; index < pattern.Length; index++)
         {
-            if (pattern[index] == '\\')
-                index++;
-            else if (pattern[index] == ']')
-                return index;
+            switch (pattern[index])
+            {
+                case '\\':
+                    index = SkipEscape(pattern, index);
+                    break;
+                case '[':
+                    throw new LogRuleValidationException(
+                        $"{field} has an opening bracket inside a character class. Write \\[ for a literal bracket.");
+                case ']':
+                    return index;
+            }
         }
         throw new LogRuleValidationException($"{field} has a character class without a closing bracket.");
     }

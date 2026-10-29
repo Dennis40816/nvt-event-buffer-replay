@@ -52,8 +52,9 @@ internal static class LogRuleFile
             CheckEnvelope(utf8Json);
             var document = JsonSerializer.Deserialize<LogRuleDocumentV1>(utf8Json, _readOptions) ??
                 throw new LogRuleValidationException("The rule file is empty.");
-            Validate(document, cancellationToken);
-            return document;
+            var admitted = LogRuleAdmission.Freeze(document);
+            ValidateFrozen(admitted, cancellationToken);
+            return admitted;
         }
         catch (JsonException exception)
         {
@@ -61,10 +62,36 @@ internal static class LogRuleFile
         }
     }
 
-    /// <summary>Validates content and verifies that <c>contentSha256</c> matches the canonical content.</summary>
-    public static void Validate(LogRuleDocumentV1 document, CancellationToken cancellationToken = default)
+    /// <summary>Validates content, checks the size of the saved form and verifies that <c>contentSha256</c> matches the canonical content.</summary>
+    public static void Validate(LogRuleDocumentV1 document, CancellationToken cancellationToken = default) =>
+        ValidateFrozen(LogRuleAdmission.Freeze(document), cancellationToken);
+
+    /// <summary>Computes the lowercase SHA-256 of the compact canonical bytes without <c>contentSha256</c>. Validates the content first.</summary>
+    public static string ComputeContentSha256(LogRuleDocumentV1 document, CancellationToken cancellationToken = default) =>
+        ComputeHash(LogRuleAdmission.Freeze(document), cancellationToken);
+
+    /// <summary>
+    /// Returns a copy of the document whose <c>contentSha256</c> is computed from its content. The copy owns
+    /// immutable collections, so later changes to the source collections cannot change the sealed content.
+    /// </summary>
+    public static LogRuleDocumentV1 Seal(LogRuleDocumentV1 document, CancellationToken cancellationToken = default)
+    {
+        var snapshot = LogRuleAdmission.Freeze(document);
+        return snapshot with { ContentSha256 = ComputeHash(snapshot, cancellationToken) };
+    }
+
+    /// <summary>Validates the document and returns the saved bytes: indented canonical JSON in UTF-8 without a byte-order mark, LF line breaks and one final LF.</summary>
+    public static byte[] SerializeCanonical(LogRuleDocumentV1 document, CancellationToken cancellationToken = default)
+    {
+        var snapshot = LogRuleAdmission.Freeze(document);
+        ValidateFrozen(snapshot, cancellationToken);
+        return [.. LogRuleCanonicalWriter.Write(snapshot, includeHash: true, indented: true), (byte)'\n'];
+    }
+
+    private static void ValidateFrozen(LogRuleDocumentV1 document, CancellationToken cancellationToken)
     {
         LogRuleValidator.Validate(document, cancellationToken);
+        CheckSavedSize(document);
         if (document.ContentSha256 is null || !IsLowerHex64(document.ContentSha256))
             throw new LogRuleValidationException("contentSha256 must be a lowercase 64-character SHA-256 value.");
 
@@ -78,22 +105,26 @@ internal static class LogRuleFile
         }
     }
 
-    /// <summary>Computes the lowercase SHA-256 of the compact canonical bytes without <c>contentSha256</c>. Validates the content first.</summary>
-    public static string ComputeContentSha256(LogRuleDocumentV1 document, CancellationToken cancellationToken = default)
+    private static string ComputeHash(LogRuleDocumentV1 document, CancellationToken cancellationToken)
     {
         LogRuleValidator.Validate(document, cancellationToken);
+        CheckSavedSize(document);
         return HashCanonical(document);
     }
 
-    /// <summary>Returns a copy of the document whose <c>contentSha256</c> is computed from its content.</summary>
-    public static LogRuleDocumentV1 Seal(LogRuleDocumentV1 document, CancellationToken cancellationToken = default) =>
-        document with { ContentSha256 = ComputeContentSha256(document, cancellationToken) };
-
-    /// <summary>Validates the document and returns the saved bytes: indented canonical JSON in UTF-8 without a byte-order mark, LF line breaks and one final LF.</summary>
-    public static byte[] SerializeCanonical(LogRuleDocumentV1 document, CancellationToken cancellationToken = default)
+    // Parse refuses a file above the limit, so a document must not be admitted or returned when its saved
+    // form is above it. Indentation can make the saved form much larger than the compact input.
+    private static void CheckSavedSize(LogRuleDocumentV1 document)
     {
-        Validate(document, cancellationToken);
-        return [.. LogRuleCanonicalWriter.Write(document, includeHash: true, indented: true), (byte)'\n'];
+        var sized = document.ContentSha256 is { } hash && IsLowerHex64(hash)
+            ? document
+            : document with { ContentSha256 = new string('0', 64) };
+        var length = LogRuleCanonicalWriter.Write(sized, includeHash: true, indented: true).Length + 1;
+        if (length > LogRuleLimits.MaxFileBytes)
+        {
+            throw new LogRuleValidationException(
+                $"The rule file would be {length} bytes once saved in canonical form; the limit is {LogRuleLimits.MaxFileBytes} bytes.");
+        }
     }
 
     private static bool IsLowerHex64(string value) =>
@@ -118,6 +149,7 @@ internal static class LogRuleFile
                 $"fileKind must be '{FileKind}'. This is not a log rule file.");
         }
         if (!root.TryGetProperty("schemaVersion", out var versionElement) ||
+            versionElement.ValueKind != JsonValueKind.Number ||
             !versionElement.TryGetInt32(out var version))
         {
             throw new LogRuleValidationException("schemaVersion is required and must be an integer.");

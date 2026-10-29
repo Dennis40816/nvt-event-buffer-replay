@@ -1,6 +1,6 @@
 # ADR 0006: Log rule files
 
-Status: Draft. Proposed, not accepted. On 2026-10-29 the owner answered Decisions 1 and 4 and the clock part of Decision 3 in chat. PC-Commander relayed the words. This ADR becomes Accepted only when the owner approves this pull request on GitHub, because files under `docs/adr/` are owner-gated. Decision 2, the Review Queue part of Decision 3 and Decision 5 are still open.
+Status: Accepted for Decisions 1 and 4 and the clock part of Decision 3. The owner answered them in chat on 2026-10-29. The owner approved pull request #131 on GitHub at 15:01 and it merged at 15:41 (Taipei time). Decision 2, the Review Queue part of Decision 3 and Decision 5 are still open. The first code slice, the rule file model, is in pull request #132.
 
 ## Context
 

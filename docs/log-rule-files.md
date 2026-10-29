@@ -1,10 +1,13 @@
 # User value and log rule files (per-carmaker adaptation)
 
-Status: Proposed design draft. No product code, no accepted contract.
-Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR. The
-decisions move into [ADR 0006](adr/0006-log-rule-files.md), which is still a
-draft until the owner approves it (see
-[decisions for the owner](#decisions-for-the-owner)).
+Status: Design document. [ADR 0006](adr/0006-log-rule-files.md) is accepted
+for Decisions 1 and 4 and the clock part of Decision 3 (pull request #131
+merged on 2026-10-29 at 15:41 Taipei, after the owner's approval at 15:01).
+Decisions 2, 3 (Review Queue part) and 5 stay open (see
+[decisions for the owner](#decisions-for-the-owner)). The first code, the rule
+file model (parse, validate, canonical JSON and hash), is in pull request #132.
+It reads no file and runs no rule.
+Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR.
 
 The file has three parts:
 
@@ -131,9 +134,9 @@ Each decision below shows its status. A recommendation is what this draft
 follows. It is not an accepted decision, and no silence from the owner accepts
 it. A decision that has an owner answer says so, with the date and the
 owner's words. PC-Commander relayed those words from the owner's chat. The
-answers become part of [ADR 0006](adr/0006-log-rule-files.md) only when the
-owner approves that pull request on GitHub (files under `docs/adr/` are
-owner-gated). Until then the ADR is a draft.
+answers became part of [ADR 0006](adr/0006-log-rule-files.md) when the owner
+approved pull request #131 on GitHub (files under `docs/adr/` are
+owner-gated).
 
 Twelve smaller questions from the earlier draft are folded into the first
 four. The owner's answer to Decision 1 added a fifth. Items that need no
@@ -348,9 +351,11 @@ hash:
   sorted by `name`, and the `contains` list sorted, all with ordinal
   comparison;
 - every map whose keys the file author chooses is sorted by key with ordinal
-  comparison: the `map` of an `enum` capture, `scope`, and the `fields` map of
-  each self-test expectation (`tests[].expect[].fields`). A new map in a later
-  schema version follows the same rule.
+  comparison: the `map` of an `enum` capture, `scope` (`carmaker`, `note`,
+  `platform`, `project`), and the `fields` map of each self-test expectation
+  (`tests[].expect[].fields`). A new map in a later schema version follows the
+  same rule;
+- the `expect` list of a self-test is sorted by `rule` with ordinal comparison.
 
 Existing ambiguity, not decided here: the
 [register profile schema](register-profile-schema.md) prose says canonical
@@ -466,14 +471,18 @@ balancing groups, conditionals such as `(?(name)yes|no)`, and the `\G` anchor.
 Options that change the engine, such as right-to-left matching, are not
 allowed. Inline comments `(?#...)` and the `x` option (`(?x)`) are not
 allowed either, because comments hide pattern text from the limit check
-below.
+below. A character class cannot contain an unescaped `[`. Write `\[` for a
+literal bracket. This rejects the subtraction form `[a-z-[aeiou]]` and the
+`[[:name:]]` form, because the check below must end a class at the same place
+as the engine, and those forms change where a class ends.
 
 Guarantee, stated narrowly: for one fixed pattern, matching time is linear in
 the length of the line. This does not limit the time to build a pattern or the
 total work of many patterns. Version 1 therefore also has these limits, all
 checked at validation:
 
-- file size: 1 MiB;
+- file size: 1 MiB, for the bytes read and for the canonical saved form. A
+  compact file below 1 MiB is refused when its indented saved form is above it;
 - rules: 500; event types: 100; tests: 1000;
 - pattern length: 1024 characters; capture groups per pattern: 20;
 - repeat count in a counted quantifier such as `{n,m}`: 1000; group nesting
@@ -531,6 +540,45 @@ warning.
 The log clock is not the capture clock. The rule file does not align them.
 The operator sets a time zone and an offset for each applied log (see
 [Time](#time) and [Decision 3](#decision-3-time-and-the-review-queue-in-version-1)).
+
+### Admission checks of the first implementation
+
+The rule file model checks more than the tables above state. This section
+lists every check, so a reader does not have to read the code.
+
+PR #132 listed seven assumptions and asked the owner to confirm them (question
+Q11, with the recommendation to keep all seven). The owner answered "Ok" on
+2026-10-29 at 18:45 Taipei. PC-Commander read it as confirming all seven. They
+are:
+
+1. The `timestamp` `regex` must declare a group named `ts`.
+2. A message writes a literal brace as `{{` or `}}`. Any other brace must be a
+   `{name}` placeholder of a capture of the rule.
+3. A pattern cannot use inline comments `(?#...)` or the `x` option in any
+   spelling.
+4. An absent optional property is left out of the canonical JSON, and an empty
+   list or map counts as absent. This includes the `map` of a capture that is
+   not an `enum`. An `enum` capture still needs a non-empty `map`.
+5. Strings use the relaxed escaping of System.Text.Json.
+6. The first model has no `timeZone` default in the rule file.
+7. A rule needs a `message`. IDs, event type IDs and test names use the
+   register profile ID pattern. Capture names match
+   `[A-Za-z_][A-Za-z0-9_]{0,63}`. Text fields are at most 1024 characters.
+
+The model makes other choices that the "Ok" does not cover. The owner has not
+answered these. The recommendation is to keep them as written.
+
+| Check | Needs the owner |
+| --- | --- |
+| A character class cannot contain an unescaped `[` (see "Regular expression dialect"). | Yes |
+| Labels (`displayName`, `scope` values, `map` labels, `message`): not empty, no leading or trailing white space, at most 1024 characters, no control characters. | Yes |
+| `contains` entries: not empty, at most 1024 characters, no line break, no duplicates (ordinal). Spaces at the start or end are kept. | Yes |
+| `map` keys of an `enum` capture: not empty, at most 1024 characters, no line break. | Yes |
+| Empty `eventTypes`, `rules` and `tests` lists are accepted. | Yes |
+| A self-test `line` may be empty. It has up to 8192 characters (the line limit), not 1024. The values of expected `fields` have up to 1024 characters and no line break. | Yes |
+| A self-test lists a rule at most once in `expect`. | No. It follows from the canonical order. |
+| The canonical saved form is at most 1 MiB. Parse, seal and save check it. | No. It restates the file size limit. |
+| An admitted document holds immutable copies of its lists and maps. | No. It is a code rule. |
 
 ## Evaluation
 

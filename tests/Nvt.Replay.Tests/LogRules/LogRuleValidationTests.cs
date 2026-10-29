@@ -97,8 +97,9 @@ public sealed class LogRuleValidationTests
         { "escaped brace", @"a\{5000}" },
         { "class with leading bracket", "[]{5000}]" },
         { "negated class with leading bracket", "[^]{5000}]" },
-        { "literal bracket in a class", "[[{5000}]" },
-        { "class subtraction", "[a-z-[aeiou]]{5}" },
+        { "escaped bracket in a class", @"[\[{5000}]" },
+        { "control escape in a class", @"[\c[]{5}" },
+        { "control escape outside a class", @"\cA((((((((a))))))))" },
         { "parentheses in a class", "[((((((((((]" },
         { "escaped parentheses", @"\(\(\(\(\(\(\(\(\(\(\)" },
         { "group depth at the limit", "((((((((a))))))))" },
@@ -122,13 +123,20 @@ public sealed class LogRuleValidationTests
         { "enabled x option with another", "(?ix)a", "x option" },
         { "enabled x option in a group", "(?x:a)", "x option" },
         { "pattern too long", new string('a', 1025), "longer than 1024" },
-        { "quantifier after a class with a literal bracket", "[[]{5000}", "repeats more than" },
-        { "groups after a class with an escaped hyphen", @"[a\-[b]((((((((((a", "nests groups" },
+        { "quantifier after a class with an escaped bracket", @"[\[]{5000}", "repeats more than" },
+        { "groups after a class with an escaped hyphen", @"[a\-[b]((((((((((a", "opening bracket" },
+        { "opening bracket in a class", "[[{5000}]", "opening bracket inside a character class" },
+        { "class subtraction", "[a-z-[aeiou]]{5}", "opening bracket inside a character class" },
+        { "class named form", "[[:alpha:]]", "opening bracket inside a character class" },
+        { "subtraction class with a leading bracket", "[a-[])]](((((((((a)))))))))", "opening bracket" },
+        { "groups hidden by a control escape", @"\c[(((((((((a)))))))))]", "nests groups" },
+        { "alternations hidden by a control escape", @"\c[" + string.Join('|', Enumerable.Repeat("a", 66)) + "]", "alternations" },
+        { "class end hidden by a control escape", @"[\c\](((((((((a)))))))))]", "nests groups" },
+        { "closing parenthesis without a group", "a)b", "not open" },
         { "disabled x option", "(?-x)a", "x option" },
         { "uppercase x option", "(?X)a", "x option" },
         { "x option with a plus", "(?+x)a", "x option" },
         { "unterminated class", "[a((((((((((", "without a closing bracket" },
-        { "quantifier after a class subtraction", "[a-z-[aeiou]]{5000}", "repeats more than" },
         { "quantifier after a class with a leading bracket", "[]a]{5000}", "repeats more than" },
         { "group after an escaped parenthesis", @"\((((((((((a", "nests groups" },
     };
@@ -293,6 +301,60 @@ public sealed class LogRuleValidationTests
         source.Cancel();
 
         Assert.Throws<OperationCanceledException>(() => LogRuleFile.Validate(AcmeRuleFile.Create(), source.Token));
+    }
+
+    [Fact]
+    public void ValidateStopsOnEntryForADocumentWithoutRules()
+    {
+        var document = LogRuleFile.Seal(AcmeRuleFile.Unsealed() with { Rules = [], Tests = [] });
+        using var source = new CancellationTokenSource();
+        source.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() => LogRuleFile.Validate(document, source.Token));
+    }
+
+    [Fact]
+    public void ValidateAcceptsAnEmptyMapOnACaptureThatIsNotAnEnum()
+    {
+        var document = AcmeRuleFile.WithRule(
+            AcmeRuleFile.Unsealed(),
+            "frame-lost",
+            rule => rule with { Captures = [new("seq", LogCaptureType.Integer, new Dictionary<string, string>())] });
+
+        LogRuleFile.Validate(LogRuleFile.Seal(document));
+
+        Assert.Single(document.Rules, rule => rule.Id == "frame-lost");
+    }
+
+    [Fact]
+    public void ValidateRejectsADocumentWhoseCanonicalFormIsOverTheSizeLimit()
+    {
+        var document = AcmeRuleFile.WithManyKeywords(60_000);
+
+        var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.Seal(document));
+
+        Assert.Contains("once saved in canonical form", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SerializeCanonicalRejectsADocumentWhoseCanonicalFormIsOverTheSizeLimit()
+    {
+        var document = AcmeRuleFile.WithManyKeywords(60_000);
+
+        var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.SerializeCanonical(document));
+
+        Assert.Contains("once saved in canonical form", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SerializeCanonicalReturnsBytesThatParseAcceptsForALargeDocument()
+    {
+        var document = LogRuleFile.Seal(AcmeRuleFile.WithManyKeywords(50_000));
+
+        var bytes = LogRuleFile.SerializeCanonical(document);
+
+        Assert.InRange(bytes.Length, LogRuleLimits.MaxFileBytes / 2, LogRuleLimits.MaxFileBytes);
+        Assert.Equal(bytes, LogRuleFile.SerializeCanonical(LogRuleFile.Parse(bytes)));
     }
 
     private static LogRuleDocumentV1 WithManyRules(int count) => AcmeRuleFile.Unsealed() with

@@ -46,10 +46,12 @@ internal static class LogRuleCanonicalWriter
     private static void WriteScope(Utf8JsonWriter writer, LogRuleScopeV1 scope)
     {
         writer.WriteStartObject("scope");
+        // The keys of scope are chosen by the schema, not by the file author, but the contract sorts them
+        // with ordinal comparison like every other map, so a new key slots in without a rule.
         WriteOptionalString(writer, "carmaker", scope.Carmaker);
-        WriteOptionalString(writer, "project", scope.Project);
-        WriteOptionalString(writer, "platform", scope.Platform);
         WriteOptionalString(writer, "note", scope.Note);
+        WriteOptionalString(writer, "platform", scope.Platform);
+        WriteOptionalString(writer, "project", scope.Project);
         writer.WriteEndObject();
     }
 

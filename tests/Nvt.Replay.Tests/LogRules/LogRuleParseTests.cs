@@ -23,6 +23,16 @@ public sealed class LogRuleParseTests
         { "property case", "\"profileId\"", "\"ProfileId\"", "ProfileId" },
     };
 
+    public static TheoryData<string> SchemaVersionsThatAreNotIntegers() => new()
+    {
+        "\"1\"",
+        "null",
+        "true",
+        "[1]",
+        "{}",
+        "1.5",
+    };
+
     [Fact]
     public void ParseAcceptsTheGoldenText()
     {
@@ -76,6 +86,25 @@ public sealed class LogRuleParseTests
         Assert.Contains("Unknown log-rule schemaVersion 2", error.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [MemberData(nameof(SchemaVersionsThatAreNotIntegers))]
+    public void ParseReportsASchemaVersionThatIsNotAnInteger(string value)
+    {
+        var json = $$"""{"schemaVersion":{{value}},"fileKind":"logRules"}""";
+
+        var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.Parse(json));
+
+        Assert.Contains("schemaVersion is required and must be an integer", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseReportsAMissingSchemaVersion()
+    {
+        var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.Parse("""{"fileKind":"logRules"}"""));
+
+        Assert.Contains("schemaVersion is required and must be an integer", error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ParseRejectsARootThatIsNotAnObject()
     {
@@ -124,6 +153,18 @@ public sealed class LogRuleParseTests
         var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.Parse(bytes));
 
         Assert.Contains("larger than", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ParseRejectsAFileWhoseCanonicalFormIsOverTheLimitEvenWhenTheInputIsNot()
+    {
+        var document = AcmeRuleFile.WithManyKeywords(60_000) with { ContentSha256 = new string('0', 64) };
+        var compact = LogRuleCanonicalWriter.Write(document, includeHash: true, indented: false);
+
+        var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.Parse(compact));
+
+        Assert.InRange(compact.Length, 1, LogRuleLimits.MaxFileBytes);
+        Assert.Contains("once saved in canonical form", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

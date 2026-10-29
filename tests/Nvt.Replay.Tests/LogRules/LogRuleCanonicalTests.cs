@@ -9,6 +9,8 @@ public sealed class LogRuleCanonicalTests
 {
     private static readonly UTF8Encoding _strictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
+    private static readonly string[] _scopeKeysInOrder = ["carmaker", "note", "platform", "project"];
+
     // The document type is internal, so a public theory cannot take it. The theory takes the case name.
     private static readonly Dictionary<string, Func<LogRuleDocumentV1, LogRuleDocumentV1>> _contentChangeCases = new()
     {
@@ -124,6 +126,48 @@ public sealed class LogRuleCanonicalTests
         var empty = AcmeRuleFile.WithRule(AcmeRuleFile.Unsealed(), "frame-lost", rule => rule with { Keywords = [] });
 
         Assert.Equal(LogRuleFile.ComputeContentSha256(absent), LogRuleFile.ComputeContentSha256(empty));
+    }
+
+    [Fact]
+    public void EmptyMapsGiveTheSameHashAsAbsentMaps()
+    {
+        var absent = AcmeRuleFile.WithRule(
+            AcmeRuleFile.Unsealed(),
+            "frame-lost",
+            rule => rule with { Captures = [new("seq", LogCaptureType.Integer)] });
+        var empty = AcmeRuleFile.WithRule(
+            AcmeRuleFile.Unsealed(),
+            "frame-lost",
+            rule => rule with { Captures = [new("seq", LogCaptureType.Integer, new Dictionary<string, string>())] });
+
+        Assert.Equal(LogRuleFile.ComputeContentSha256(absent), LogRuleFile.ComputeContentSha256(empty));
+    }
+
+    [Fact]
+    public void EmptyExpectedFieldsGiveTheSameHashAsAbsentFields()
+    {
+        var absent = AcmeRuleFile.Unsealed() with { Tests = [new("t1", "line", [new("esd-detected")])] };
+        var empty = AcmeRuleFile.Unsealed() with
+        {
+            Tests = [new("t1", "line", [new("esd-detected", new Dictionary<string, string>())])],
+        };
+
+        Assert.Equal(LogRuleFile.ComputeContentSha256(absent), LogRuleFile.ComputeContentSha256(empty));
+    }
+
+    [Fact]
+    public void ScopeKeysAreWrittenInOrdinalOrder()
+    {
+        var document = LogRuleFile.Seal(AcmeRuleFile.Unsealed() with
+        {
+            Scope = new LogRuleScopeV1(Carmaker: "C", Project: "P", Platform: "L", Note: "N"),
+        });
+
+        using var parsed = System.Text.Json.JsonDocument.Parse(LogRuleFile.SerializeCanonical(document));
+
+        Assert.Equal(
+            _scopeKeysInOrder,
+            parsed.RootElement.GetProperty("scope").EnumerateObject().Select(property => property.Name));
     }
 
     [Theory]
