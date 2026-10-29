@@ -152,8 +152,10 @@ different log formats?
   regular expressions. It holds no code. After the owner accepts, a new ADR
   records the decision and reuses the identity rules of ADR 0005 by reference.
   Files under `docs/adr/` are owner-gated.
-- The recommendation also covers three details of this draft, which stay
-  pending with it: the regular expression dialect is the .NET non-backtracking
+- The recommendation also covers three details of this draft. The owner
+  answered Q7 ("ok") for the whole recommendation. The ADR itself still waits
+  for the owner's formal approval on GitHub, so the details below are not yet
+  accepted contract text: the regular expression dialect is the .NET non-backtracking
   subset (no lookarounds, no backreferences, the editor lists the limits); a
   failed typed-capture conversion creates the event with an invalid field and a
   warning, so the evidence stays visible; the rule file is a new ADR, not an
@@ -184,18 +186,20 @@ wrote.
 Status: the clock part is answered by the owner on 2026-10-29. The Review
 Queue part is a pending owner decision.
 
-Owner answer, clock (2026-10-29): "時鐘要可以設定時區和 offset". The time zone
-and the offset of the log clock must both be configurable. Drift correction
-was not asked for.
+Owner answer, clock (2026-10-29): "Q9 時鐘要可以設定時區和 offset". The time
+zone and the offset of the log clock must both be configurable. The answer
+says nothing about drift correction or about how the offset is set. Those
+two points are not decided. The recommendation below stays a recommendation.
 
 Question: How far does version 1 go on aligning the log clock with the capture
 clock, and do log events join the Review Queue?
 
 - Clock, as designed after the owner's answer: the operator sets a time zone
-  and an offset for each applied log. One-point alignment (pick one log event
-  and one capture frame) is one way to set the offset. There is no drift
-  correction in version 1. The details are in "Time" and stay a proposal
-  until the ADR is approved.
+  and an offset for each applied log. This draft recommends one-point
+  alignment (pick one log event and one capture frame) as one way to set the
+  offset, and recommends no drift correction in version 1. Both are
+  recommendations, not owner decisions. The details are in "Time" and stay a
+  proposal until the ADR is approved.
 - Review Queue, recommendation: log events do not join the Review Queue in
   version 1. Revisit it after the owner has seen real log events.
 - Alternative for the clock: two-point alignment (offset and drift). It costs
@@ -216,9 +220,9 @@ profile import?
   This draft sees no gain in two.
 - Canonical hash input. The [register profile schema](register-profile-schema.md)
   prose and its code differ on the final newline (see "Identity and canonical
-  form"). Recommendation: rule files follow the code, and a separate small
-  change corrects the register profile prose. This draft does not change that
-  document and does not treat the question as settled.
+  form"). The owner's answer to Q10 ("Q10 ok") chose the recommendation for
+  the rule file: rule files follow the code. Correcting the register profile
+  prose stays separate work. This draft does not change that document.
 - Unblocks: the sidecar fields in "Relation to existing events", and the hash
   rule in "Identity and canonical form".
 
@@ -697,7 +701,8 @@ Proposal (configurable time zone and offset):
   capture clock, in milliseconds. One way to set it is to pick one log event and
   one capture frame and state that they are the same moment (one-point
   alignment). The operator can also type the offset.
-- There is no drift correction in version 1. The owner did not ask for it.
+- Recommendation: no drift correction in version 1. The owner has not decided
+  this. Q9 did not mention drift.
 - An event is drawn on the timeline only after an offset is set. The time zone,
   the offset and the operator note go into the sidecar, as ADR 0003 says that
   alignment lives in the sidecar.

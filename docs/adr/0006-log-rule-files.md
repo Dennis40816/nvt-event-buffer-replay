@@ -57,7 +57,7 @@ Recommendation: The engineer aligns one log event to one capture frame by hand (
 
 Alternative: two-point alignment (offset and drift). It costs more work and needs a real log that drifts.
 
-Owner answer, clock (2026-10-29, Q9): "時鐘要可以設定時區和 offset". The time zone and the offset of the log clock must both be configurable. Version 1 therefore has a configurable time zone and a configurable offset for each applied log. One-point alignment may set the offset. The owner did not ask for drift correction, so version 1 has none.
+Owner answer, clock (2026-10-29): "Q9 時鐘要可以設定時區和 offset". The time zone and the offset of the log clock must both be configurable. Version 1 therefore has a configurable time zone and a configurable offset for each applied log. This answer does not say anything about drift correction or about how the offset is set. Whether version 1 has drift correction, and whether one-point alignment may set the offset, are not decided. The recommendation above (one-point alignment, no drift correction) stays a recommendation.
 
 Owner answer, Review Queue: _(empty)_. Still open. The recommendation is that log events do not join the Review Queue in version 1.
 
