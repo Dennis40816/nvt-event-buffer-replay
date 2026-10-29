@@ -7,7 +7,7 @@ namespace Nvt.Replay.Tests.LogRules;
 public sealed class LogRuleValidationTests
 {
     // The document type is internal, so a public theory cannot take it. The theory takes the case name.
-    private static readonly Dictionary<string, (Func<LogRuleDocumentV1, LogRuleDocumentV1> Change, string Fragment)> InvalidDocumentCases = new()
+    private static readonly Dictionary<string, (Func<LogRuleDocumentV1, LogRuleDocumentV1> Change, string Fragment)> _invalidDocumentCases = new()
     {
         ["schema version"] = (d => d with { SchemaVersion = 2 }, "schemaVersion"),
         ["file kind"] = (d => d with { FileKind = "registerProfile" }, "fileKind"),
@@ -82,7 +82,7 @@ public sealed class LogRuleValidationTests
     public static TheoryData<string> InvalidDocuments()
     {
         var data = new TheoryData<string>();
-        foreach (var name in InvalidDocumentCases.Keys) data.Add(name);
+        foreach (var name in _invalidDocumentCases.Keys) data.Add(name);
         return data;
     }
 
@@ -147,7 +147,7 @@ public sealed class LogRuleValidationTests
     [MemberData(nameof(InvalidDocuments))]
     public void ValidateRejectsAnInvalidDocument(string name)
     {
-        var (change, fragment) = InvalidDocumentCases[name];
+        var (change, fragment) = _invalidDocumentCases[name];
         var document = change(AcmeRuleFile.Create());
 
         var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.Validate(document));

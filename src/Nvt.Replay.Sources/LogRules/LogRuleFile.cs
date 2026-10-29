@@ -18,11 +18,11 @@ internal static class LogRuleFile
     /// <summary>The value of <c>fileKind</c>. A register profile has no such property, so each loader rejects the other kind.</summary>
     public const string FileKind = "logRules";
 
-    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+    private static readonly UTF8Encoding _strictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
-    private static readonly JsonSerializerOptions ReadOptions = CreateReadOptions();
+    private static readonly JsonSerializerOptions _readOptions = CreateReadOptions();
 
-    private static readonly JsonDocumentOptions DocumentOptions = new()
+    private static readonly JsonDocumentOptions _documentOptions = new()
     {
         AllowDuplicateProperties = false,
         MaxDepth = 32,
@@ -34,7 +34,7 @@ internal static class LogRuleFile
         ArgumentNullException.ThrowIfNull(json);
         try
         {
-            return Parse(StrictUtf8.GetBytes(json), cancellationToken);
+            return Parse(_strictUtf8.GetBytes(json), cancellationToken);
         }
         catch (EncoderFallbackException exception)
         {
@@ -50,7 +50,7 @@ internal static class LogRuleFile
         try
         {
             CheckEnvelope(utf8Json);
-            var document = JsonSerializer.Deserialize<LogRuleDocumentV1>(utf8Json, ReadOptions) ??
+            var document = JsonSerializer.Deserialize<LogRuleDocumentV1>(utf8Json, _readOptions) ??
                 throw new LogRuleValidationException("The rule file is empty.");
             Validate(document, cancellationToken);
             return document;
@@ -106,7 +106,7 @@ internal static class LogRuleFile
     // The envelope is checked before deserialization so a register profile or a newer file gets a clear error.
     private static void CheckEnvelope(ReadOnlySpan<byte> utf8Json)
     {
-        using var parsed = JsonDocument.Parse(utf8Json.ToArray(), DocumentOptions);
+        using var parsed = JsonDocument.Parse(utf8Json.ToArray(), _documentOptions);
         var root = parsed.RootElement;
         if (root.ValueKind != JsonValueKind.Object)
             throw new LogRuleValidationException("The rule file root must be a JSON object.");

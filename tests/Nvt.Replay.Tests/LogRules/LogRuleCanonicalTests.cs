@@ -7,10 +7,10 @@ namespace Nvt.Replay.Tests.LogRules;
 
 public sealed class LogRuleCanonicalTests
 {
-    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+    private static readonly UTF8Encoding _strictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     // The document type is internal, so a public theory cannot take it. The theory takes the case name.
-    private static readonly Dictionary<string, Func<LogRuleDocumentV1, LogRuleDocumentV1>> ContentChangeCases = new()
+    private static readonly Dictionary<string, Func<LogRuleDocumentV1, LogRuleDocumentV1>> _contentChangeCases = new()
     {
         ["profileId"] = d => d with { ProfileId = "acme.example.v2" },
         ["displayName"] = d => d with { DisplayName = "Acme Motors example (other)" },
@@ -44,14 +44,14 @@ public sealed class LogRuleCanonicalTests
     public static TheoryData<string> ContentChanges()
     {
         var data = new TheoryData<string>();
-        foreach (var name in ContentChangeCases.Keys) data.Add(name);
+        foreach (var name in _contentChangeCases.Keys) data.Add(name);
         return data;
     }
 
     [Fact]
     public void SerializeCanonicalMatchesTheGoldenText()
     {
-        var text = StrictUtf8.GetString(LogRuleFile.SerializeCanonical(AcmeRuleFile.Create()));
+        var text = _strictUtf8.GetString(LogRuleFile.SerializeCanonical(AcmeRuleFile.Create()));
 
         Assert.Equal(AcmeRuleFile.CanonicalText, text);
     }
@@ -79,7 +79,7 @@ public sealed class LogRuleCanonicalTests
     {
         var bytes = LogRuleCanonicalWriter.Write(AcmeRuleFile.Unsealed(), includeHash: false, indented: false);
 
-        Assert.Equal(AcmeRuleFile.CompactHashInput, StrictUtf8.GetString(bytes));
+        Assert.Equal(AcmeRuleFile.CompactHashInput, _strictUtf8.GetString(bytes));
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public sealed class LogRuleCanonicalTests
     [MemberData(nameof(ContentChanges))]
     public void EveryContentFieldChangesTheHash(string field)
     {
-        var changed = ContentChangeCases[field](AcmeRuleFile.Unsealed());
+        var changed = _contentChangeCases[field](AcmeRuleFile.Unsealed());
 
         Assert.NotEqual(AcmeRuleFile.ContentSha256, LogRuleFile.ComputeContentSha256(changed));
     }
@@ -154,7 +154,7 @@ public sealed class LogRuleCanonicalTests
             "frame-lost",
             rule => rule with { Pattern = "frame lost seq=(?<seq>[0-9]+)<'&>" });
 
-        var text = StrictUtf8.GetString(LogRuleFile.SerializeCanonical(LogRuleFile.Seal(document)));
+        var text = _strictUtf8.GetString(LogRuleFile.SerializeCanonical(LogRuleFile.Seal(document)));
 
         Assert.Contains("[0-9]+)<'&>", text, StringComparison.Ordinal);
     }
@@ -180,7 +180,7 @@ public sealed class LogRuleCanonicalTests
             Tests = [],
         };
 
-        var text = StrictUtf8.GetString(LogRuleFile.SerializeCanonical(LogRuleFile.Seal(document)));
+        var text = _strictUtf8.GetString(LogRuleFile.SerializeCanonical(LogRuleFile.Seal(document)));
 
         Assert.Contains("\"scope\": {}", text, StringComparison.Ordinal);
         Assert.DoesNotContain("timestamp", text, StringComparison.Ordinal);

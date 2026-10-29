@@ -41,7 +41,7 @@ internal sealed record LogRuleScopeV1(
 
 /// <summary>Describes how to read the time of a log line. <paramref name="Pattern"/> must declare a group named ts.</summary>
 internal sealed record LogRuleTimestampV1(
-    [property: JsonPropertyName("regex")] [property: JsonRequired] string Pattern,
+    [property: JsonPropertyName("regex"), JsonRequired] string Pattern,
     [property: JsonRequired] LogTimestampFormat Format);
 
 /// <summary>Declares one kind of event a rule file may create.</summary>
