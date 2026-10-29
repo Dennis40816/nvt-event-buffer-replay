@@ -569,7 +569,7 @@ the reference hash.
 | None | Present | Different from the reference hash | Log events are unavailable. The raw log stays visible. The operator can bind the evaluated hash explicitly (see "Rebinding") |
 | Present | Any | Equal to the binding hash | Log events are available. If the reference hash is present and different, the application shows that the binding was set explicitly |
 | Present | Any | Different from the binding hash | Log events are unavailable. The raw log stays visible. The operator can rebind |
-| Any | Any | Not computable (file missing, unreadable, read error) | Log events are unavailable. The raw log stays visible |
+| Any | Any | Not computable (file missing, unreadable, read error) | Log events are unavailable. The evidence reference, the log path, the expected hash and the failure reason stay visible. The raw log content shows only when the file can be read |
 
 Rebinding is an explicit operator action. It adds a new binding entry with the
 new evaluated hash, the operator note and the time. The earlier entry stays in
@@ -577,8 +577,10 @@ the history. The evidence reference is not edited, so its hash stays as it was.
 Events from before the rebinding keep their keys, because the evaluated hash is
 part of the key. They are not renamed.
 
-In every unavailable case the application keeps the raw evidence and shows no
-derived interpretation. It does not fall back to the reference hash.
+In every unavailable case the application shows no derived interpretation. It
+keeps the evidence reference, the log path, the expected hash and the failure
+reason visible. It shows the raw log content only when the file can be read.
+It does not fall back to the reference hash.
 
 The "not computable" row is proposed behavior. The existing loader does not
 yet turn every read or access error into an unavailable state. Version 1 of
@@ -707,7 +709,7 @@ names below are proposals.
 ```text
 nvt-replay log-rules validate <rules.json>
 nvt-replay log-rules test     <rules.json>
-nvt-replay log-rules apply    <rules.json> <log> --evidence-reference <id> [--json <events.json>]
+nvt-replay log-rules apply    <rules.json> <log> [--evidence-reference <id>] [--json <events.json>]
 ```
 
 `apply` needs the evidence reference ID, because the event key contains it.
