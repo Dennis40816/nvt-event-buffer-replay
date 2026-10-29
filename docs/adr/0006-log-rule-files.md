@@ -1,12 +1,12 @@
 # ADR 0006: Log rule files
 
-Status: Draft. Proposed, not accepted. On 2026-10-29 the owner answered Decisions 1 and 4 and the clock part of Decision 3 in chat. PC-Commander relayed the words. This ADR becomes Accepted only when the owner approves this pull request on GitHub, because files under `docs/adr/` are owner-gated. Decision 2, the Review Queue part of Decision 3 and Decision 5 are still open.
+Status: Accepted for Decisions 1 and 4 and the clock part of Decision 3. The owner answered them in chat on 2026-10-29. The owner approved pull request #131 on GitHub at 15:01 and it merged at 15:41 (Taipei time). Decision 2, the Review Queue part of Decision 3 and Decision 5 are still open. The first code slice, the rule file model, is in pull request #132.
 
 ## Context
 
 Customers send NFU a capture and, often, the system log of the host that ran the touch controller (a Linux or Android kernel log, a firmware log or another text file). Each carmaker writes a different log format. An engineer reads these logs by hand to find the lines that matter, such as a driver warning or a reset, and to see when they happened.
 
-[`docs/log-rule-files.md`](../log-rule-files.md) proposes a data file per carmaker, called a log rule file. It holds keywords and regular expressions, and no code. NFU applies the file to a raw log and shows the matching lines as log events next to the capture. That document is a proposal. It was reviewed and merged as a draft design (pull requests #126 and #130) and it states that it is not a contract.
+[`docs/log-rule-files.md`](../log-rule-files.md) proposes a data file per carmaker, called a log rule file. It holds keywords and regular expressions, and no code. NFU applies the file to a raw log and shows the matching lines as log events next to the capture. That document was reviewed and merged as a draft design (pull requests #126 and #130). This ADR accepts Decisions 1 and 4 and the clock part of Decision 3 from it. The other decisions stay open in that document.
 
 The owner asked for this work on 2026-10-28: editable keywords that adapt NFU to the log of each carmaker.
 
@@ -88,7 +88,7 @@ Owner answer: _(empty)_. Open. No selection rule is decided.
 
 ## Consequences
 
-Decisions 1 and 4 and the clock part of Decision 3 are answered. If the owner approves this ADR and accepts the remaining recommendations:
+Decisions 1 and 4 and the clock part of Decision 3 are answered, and the owner approved this ADR (pull request #131, merged on 2026-10-29 at 15:41 Taipei). Decision 2, the Review Queue part of Decision 3 and Decision 5 are open. If the owner accepts the remaining recommendations:
 
 - Version 1 needs: a rule file model and validator, an evaluation engine, a command line (`validate`, `test`, `apply`), event projection with hash binding, a sidecar version bump that records the rule binding, the time zone and the offset, export, and a user interface for import, preview, time settings and self-tests.
 - The work is split into several pull requests, each under `src/` and each approved by the owner. The first code pull request is the rule file model in `Nvt.Replay.Sources`.
@@ -97,4 +97,4 @@ Decisions 1 and 4 and the clock part of Decision 3 are answered. If the owner ap
 
 If the owner rejects or changes a decision, this ADR is edited before any code is written.
 
-This pull request changes documentation only. It adds no code. Until the owner approves it, no part of the design document is an accepted contract.
+Pull request #131 changed documentation only. The decisions this ADR records are accepted. Every decision that is still open stays a recommendation, and the design document does not make it an accepted contract.

@@ -1,10 +1,13 @@
 # User value and log rule files (per-carmaker adaptation)
 
-Status: Proposed design draft. No product code, no accepted contract.
-Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR. The
-decisions move into [ADR 0006](adr/0006-log-rule-files.md), which is still a
-draft until the owner approves it (see
-[decisions for the owner](#decisions-for-the-owner)).
+Status: Design document. [ADR 0006](adr/0006-log-rule-files.md) is accepted
+for Decisions 1 and 4 and the clock part of Decision 3 (pull request #131
+merged on 2026-10-29 at 15:41 Taipei, after the owner's approval at 15:01).
+Decisions 2, 3 (Review Queue part) and 5 stay open (see
+[decisions for the owner](#decisions-for-the-owner)). The first code, the rule
+file model (parse, validate, canonical JSON and hash), is in pull request #132.
+It reads no file and runs no rule.
+Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR.
 
 The file has three parts:
 
@@ -131,9 +134,9 @@ Each decision below shows its status. A recommendation is what this draft
 follows. It is not an accepted decision, and no silence from the owner accepts
 it. A decision that has an owner answer says so, with the date and the
 owner's words. PC-Commander relayed those words from the owner's chat. The
-answers become part of [ADR 0006](adr/0006-log-rule-files.md) only when the
-owner approves that pull request on GitHub (files under `docs/adr/` are
-owner-gated). Until then the ADR is a draft.
+answers became part of [ADR 0006](adr/0006-log-rule-files.md) when the owner
+approved pull request #131 on GitHub (files under `docs/adr/` are
+owner-gated).
 
 Twelve smaller questions from the earlier draft are folded into the first
 four. The owner's answer to Decision 1 added a fifth. Items that need no
@@ -142,8 +145,9 @@ decision are in [dependencies and follow-ups](#dependencies-and-follow-ups).
 ### Decision 1: Direction and document form
 
 Status: answered by the owner on 2026-10-29 ("Q7 ok"), as recommended. The
-owner added that formats may also differ by project (see Decision 5). The
-ADR still needs the owner's approval on GitHub.
+owner added that formats may also differ by project (see Decision 5).
+The owner approved pull request #131 on GitHub at 15:01 and it merged on
+2026-10-29 at 15:41 (Taipei).
 
 Question: Is a data file per carmaker (a log rule file) the way NFU adapts to
 different log formats?
@@ -153,9 +157,9 @@ different log formats?
   records the decision and reuses the identity rules of ADR 0005 by reference.
   Files under `docs/adr/` are owner-gated.
 - The recommendation also covers three details of this draft. The owner
-  answered Q7 ("ok") for the whole recommendation. The ADR itself still waits
-  for the owner's formal approval on GitHub, so the details below are not yet
-  accepted contract text: the regular expression dialect is the .NET non-backtracking
+  answered Q7 ("ok") for the whole recommendation, and the ADR was approved and
+  merged (pull request #131), so the details below are part of the accepted
+  decision: the regular expression dialect is the .NET non-backtracking
   subset (no lookarounds, no backreferences, the editor lists the limits); a
   failed typed-capture conversion creates the event with an invalid field and a
   warning, so the evidence stays visible; the rule file is a new ADR, not an
@@ -199,7 +203,7 @@ clock, and do log events join the Review Queue?
   alignment (pick one log event and one capture frame) as one way to set the
   offset, and recommends no drift correction in version 1. Both are
   recommendations, not owner decisions. The details are in "Time" and stay a
-  proposal until the ADR is approved.
+  proposal. The ADR is approved, but it leaves both points open.
 - Review Queue, recommendation: log events do not join the Review Queue in
   version 1. Revisit it after the owner has seen real log events.
 - Alternative for the clock: two-point alignment (offset and drift). It costs
@@ -208,8 +212,9 @@ clock, and do log events join the Review Queue?
 
 ### Decision 4: Shared contracts with the register profile work
 
-Status: answered by the owner on 2026-10-29 ("Q10 ok"), as recommended. The
-ADR still needs the owner's approval on GitHub.
+Status: answered by the owner on 2026-10-29 ("Q10 ok"), as recommended.
+The owner approved pull request #131 on GitHub at 15:01 and it merged on
+2026-10-29 at 15:41 (Taipei).
 
 Question: How do log rule files share contracts with the custom register
 profile import?
@@ -336,14 +341,23 @@ Two byte sequences exist and they differ. The draft keeps them apart.
 Canonical order, so that equivalent files give the same bytes and the same
 hash:
 
-- object properties in the fixed order of the schema;
+- object properties in the fixed order of the schema. An optional property
+  that is absent is left out, and an empty `contains`, `captures`, `map` or
+  `fields` counts as absent, so adding an optional property in a later
+  schema version does not change the hash of an older file. `ignoreCase` is
+  written only when it is true;
+- strings use the relaxed escaping of System.Text.Json, so characters such as
+  `+` and `<` stay readable. The indented form uses two spaces and LF line
+  breaks;
 - `eventTypes` and `rules` sorted by `id`, `tests` sorted by `name`, `captures`
   sorted by `name`, and the `contains` list sorted, all with ordinal
   comparison;
 - every map whose keys the file author chooses is sorted by key with ordinal
-  comparison: the `map` of an `enum` capture, `scope`, and the `fields` map of
-  each self-test expectation (`tests[].expect[].fields`). A new map in a later
-  schema version follows the same rule.
+  comparison: the `map` of an `enum` capture, `scope` (`carmaker`, `note`,
+  `platform`, `project`), and the `fields` map of each self-test expectation
+  (`tests[].expect[].fields`). A new map in a later schema version follows the
+  same rule;
+- the `expect` list of a self-test is sorted by `rule` with ordinal comparison.
 
 Existing ambiguity, not decided here: the
 [register profile schema](register-profile-schema.md) prose says canonical
@@ -404,7 +418,9 @@ same hash by accident.
 - `message`: a template. It may use `{name}` placeholders for captured fields.
   It has no operators, no functions and no conditions. This is the same
   placeholder style as the `{col}` placeholder planned in FWU-09 of the
-  [ROADMAP](../ROADMAP.md).
+  [ROADMAP](../ROADMAP.md). `{{` and `}}` write a literal brace. Any other
+  brace must belong to a `{name}` placeholder, and `name` must be a capture
+  of the rule. The validator rejects any other use of a brace.
 
 Every rule is evaluated on every line, independently. A line can match more
 than one rule and then creates more than one event. The result does not depend
@@ -455,14 +471,20 @@ what the engine rejects, and shows the engine's message. The known rejected
 constructs are: lookahead and lookbehind, backreferences, atomic groups,
 balancing groups, conditionals such as `(?(name)yes|no)`, and the `\G` anchor.
 Options that change the engine, such as right-to-left matching, are not
-allowed.
+allowed. Inline comments `(?#...)` and the `x` option (`(?x)`) are not
+allowed either, because comments hide pattern text from the limit check
+below. A character class cannot contain an unescaped `[`. Write `\[` for a
+literal bracket. This rejects the subtraction form `[a-z-[aeiou]]` and the
+`[[:name:]]` form, because the check below must end a class at the same place
+as the engine, and those forms change where a class ends.
 
 Guarantee, stated narrowly: for one fixed pattern, matching time is linear in
 the length of the line. This does not limit the time to build a pattern or the
 total work of many patterns. Version 1 therefore also has these limits, all
 checked at validation:
 
-- file size: 1 MiB;
+- file size: 1 MiB, for the bytes read and for the canonical saved form. A
+  compact file below 1 MiB is refused when its indented saved form is above it;
 - rules: 500; event types: 100; tests: 1000;
 - pattern length: 1024 characters; capture groups per pattern: 20;
 - repeat count in a counted quantifier such as `{n,m}`: 1000; group nesting
@@ -491,10 +513,15 @@ lines. A cancelled run writes no output.
 }
 ```
 
+The `regex` must declare a named group `ts`. The text of that group is the
+value that `format` reads.
+
 `format` is one of a closed list: `secondsSinceBoot`, `epochSeconds`,
 `isoOffset`, `timeOfDay`. The list grows only through a schema version. The
 value is stored as the time of the log clock. The `timestamp` object may also
-carry an optional `timeZone` default (proposal, see "Time"). A line without a
+carry an optional `timeZone` default (proposal, see "Time"). The first
+implementation of the rule file model does not have this property. It
+waits until the owner accepts the default. A line without a
 readable time still creates events. Such an event has no log time and is shown in log order.
 
 The accepted text of each format is fixed and culture-invariant:
@@ -515,6 +542,51 @@ warning.
 The log clock is not the capture clock. The rule file does not align them.
 The operator sets a time zone and an offset for each applied log (see
 [Time](#time) and [Decision 3](#decision-3-time-and-the-review-queue-in-version-1)).
+
+### Admission checks of the first implementation
+
+The rule file model checks more than the tables above state. This section
+lists every check, so a reader does not have to read the code.
+
+PR #132 listed seven assumptions. They are in the next list. The owner has not
+yet given an explicit answer to them. Question Q11 asked the owner to confirm
+all seven, with the recommendation to keep them as written.
+
+Record of the owner's reply, kept apart from the assumptions: on 2026-10-29 at
+18:45 (Taipei) the owner wrote the one word "Ok". The message it answered also
+asked for other actions. The reply is therefore not taken as an answer to Q11.
+PC-Commander then asked the owner for an explicit "Q11 ok". Until that answer
+arrives, the seven assumptions are awaiting the owner's explicit answer.
+
+1. The `timestamp` `regex` must declare a group named `ts`.
+2. A message writes a literal brace as `{{` or `}}`. Any other brace must be a
+   `{name}` placeholder of a capture of the rule.
+3. A pattern cannot use inline comments `(?#...)` or the `x` option in any
+   spelling.
+4. An absent optional property is left out of the canonical JSON, and an empty
+   list or map counts as absent. This includes the `map` of a capture that is
+   not an `enum`. An `enum` capture still needs a non-empty `map`.
+5. Strings use the relaxed escaping of System.Text.Json.
+6. The first model has no `timeZone` default in the rule file.
+7. A rule needs a `message`. IDs match the identifier pattern below. Capture
+   names match `[A-Za-z_][A-Za-z0-9_]{0,63}`. Text fields are at most 1024
+   characters.
+
+The model makes other choices that no owner answer covers. The recommendation
+is to keep them as written. The character class choice is question Q12.
+
+| Check | Needs the owner |
+| --- | --- |
+| A character class cannot contain an unescaped `[` (see "Regular expression dialect"). Question Q12. The recommendation is to keep rejecting it. | Yes |
+| Identifiers (`profileId`, `eventTypes[].id`, `rules[].id`, `tests[].name`): the whole string matches `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`. This is assumption 7. | Awaiting Q11 |
+| Labels (`displayName`, `scope` values, `map` labels, `message`): not empty, no leading or trailing white space, at most 1024 characters, no control characters. | Yes |
+| `contains` entries: not empty, at most 1024 characters, no line break, no duplicates (ordinal). Spaces at the start or end are kept. | Yes |
+| `map` keys of an `enum` capture: not empty, at most 1024 characters, no line break. | Yes |
+| Empty `eventTypes`, `rules` and `tests` lists are accepted. | Yes |
+| A self-test `line` may be empty. It has up to 8192 characters (the line limit), not 1024. The values of expected `fields` have up to 1024 characters and no line break. | Yes |
+| A self-test lists a rule at most once in `expect`. | No. It follows from the canonical order. |
+| The canonical saved form is at most 1 MiB. Parse, seal and save check it. | No. It restates the file size limit. |
+| An admitted document holds immutable copies of its lists and maps. | No. It is a code rule. |
 
 ## Evaluation
 
@@ -670,8 +742,9 @@ Multi-clock alignment is a deferred capability in the
 [product specification](product-spec.md). On 2026-10-29 the owner decided that
 the time zone and the offset of the log clock must both be configurable
 (Decision 3). This section turns that into a design. The rule file format does
-not depend on it, and the details below are a proposal until
-[ADR 0006](adr/0006-log-rule-files.md) is approved.
+not depend on it, and the details below are a proposal.
+[ADR 0006](adr/0006-log-rule-files.md) is approved, but it leaves drift
+correction and the way the offset is set open.
 
 Holds without any further decision:
 
