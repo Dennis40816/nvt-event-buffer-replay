@@ -548,15 +548,19 @@ The operator sets a time zone and an offset for each applied log (see
 The rule file model checks more than the tables above state. This section
 lists every check, so a reader does not have to read the code.
 
-PR #132 listed seven assumptions. They are in the next list. The owner has not
-yet given an explicit answer to them. Question Q11 asked the owner to confirm
-all seven, with the recommendation to keep them as written.
+PR #132 listed seven assumptions. They are in the next list. Question Q11 asked
+the owner to confirm all seven, with the recommendation to keep them as
+written.
 
-Record of the owner's reply, kept apart from the assumptions: on 2026-10-29 at
-18:45 (Taipei) the owner wrote the one word "Ok". The message it answered also
-asked for other actions. The reply is therefore not taken as an answer to Q11.
-PC-Commander then asked the owner for an explicit "Q11 ok". Until that answer
-arrives, the seven assumptions are awaiting the owner's explicit answer.
+Record of the owner's replies, kept apart from the assumptions:
+
+- On 2026-10-29 at 18:45 (Taipei) the owner wrote the one word "Ok". The
+  message it answered also asked for other actions. That reply is not taken as
+  an answer to Q11.
+- PC-Commander then asked the owner for an explicit answer. On 2026-10-29 at
+  22:28 (Taipei) the owner typed in the PC-Commander chat the whole reply
+  "Q11 ok、Q12 ok". It answers Q11 for all seven assumptions below, and it
+  answers Q12 (see the table).
 
 1. The `timestamp` `regex` must declare a group named `ts`.
 2. A message writes a literal brace as `{{` or `}}`. Any other brace must be a
@@ -573,12 +577,13 @@ arrives, the seven assumptions are awaiting the owner's explicit answer.
    characters.
 
 The model makes other choices that no owner answer covers. The recommendation
-is to keep them as written. The character class choice is question Q12.
+is to keep them as written. The character class choice was question Q12, and
+the owner answered it with the reply above.
 
 | Check | Needs the owner |
 | --- | --- |
-| A character class cannot contain an unescaped `[` (see "Regular expression dialect"). Question Q12. The recommendation is to keep rejecting it. | Yes |
-| Identifiers (`profileId`, `eventTypes[].id`, `rules[].id`, `tests[].name`): the whole string matches `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`. This is assumption 7. | Awaiting Q11 |
+| A character class cannot contain an unescaped `[` (see "Regular expression dialect"). Question Q12. The owner answered "Q12 ok" on 2026-10-29 at 22:28 (Taipei). | Answered |
+| Identifiers (`profileId`, `eventTypes[].id`, `rules[].id`, `tests[].name`): the whole string matches `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`. This is assumption 7. The owner answered "Q11 ok" on 2026-10-29 at 22:28 (Taipei). | Answered |
 | Labels (`displayName`, `scope` values, `map` labels, `message`): not empty, no leading or trailing white space, at most 1024 characters, no control characters. | Yes |
 | `contains` entries: not empty, at most 1024 characters, no line break, no duplicates (ordinal). Spaces at the start or end are kept. | Yes |
 | `map` keys of an `enum` capture: not empty, at most 1024 characters, no line break. | Yes |
