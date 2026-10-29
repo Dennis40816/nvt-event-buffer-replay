@@ -6,77 +6,85 @@ namespace Nvt.Replay.Tests.LogRules;
 
 public sealed class LogRuleValidationTests
 {
-    public static TheoryData<string, Func<LogRuleDocumentV1, LogRuleDocumentV1>, string> InvalidDocuments() => new()
+    // The document type is internal, so a public theory cannot take it. The theory takes the case name.
+    private static readonly Dictionary<string, (Func<LogRuleDocumentV1, LogRuleDocumentV1> Change, string Fragment)> InvalidDocumentCases = new()
     {
-        { "schema version", d => d with { SchemaVersion = 2 }, "schemaVersion" },
-        { "file kind", d => d with { FileKind = "registerProfile" }, "fileKind" },
-        { "profile id empty", d => d with { ProfileId = string.Empty }, "profileId" },
-        { "profile id space", d => d with { ProfileId = "bad id" }, "profileId" },
-        { "profile id trailing line break", d => d with { ProfileId = "acme\n" }, "profileId" },
-        { "profile id non-ascii", d => d with { ProfileId = "acme-é" }, "profileId" },
-        { "profile id too long", d => d with { ProfileId = new string('a', 129) }, "profileId" },
-        { "display name padded", d => d with { DisplayName = " Acme" }, "displayName" },
-        { "display name control", d => d with { DisplayName = "Ac\tme" }, "displayName" },
-        { "line encoding", d => d with { LineEncoding = "utf-16" }, "lineEncoding" },
-        { "scope null", d => d with { Scope = null! }, "scope is required" },
-        { "scope too long", d => d with { Scope = d.Scope with { Note = new string('n', 1025) } }, "scope.note" },
-        { "scope empty label", d => d with { Scope = d.Scope with { Project = string.Empty } }, "scope.project" },
-        { "timestamp without ts group", d => d with { Timestamp = d.Timestamp! with { Pattern = "^(?<time>[0-9.]+)" } }, "group named 'ts'" },
-        { "timestamp bad pattern", d => d with { Timestamp = d.Timestamp! with { Pattern = "^(?<ts>" } }, "timestamp.regex" },
-        { "timestamp format", d => d with { Timestamp = d.Timestamp! with { Format = (LogTimestampFormat)99 } }, "timestamp.format" },
-        { "event types null", d => d with { EventTypes = null! }, "eventTypes is required" },
-        { "event type null entry", d => d with { EventTypes = [null!] }, "null entries" },
-        { "event type duplicate", d => d with { EventTypes = [.. d.EventTypes, d.EventTypes[0]] }, "Duplicate event type" },
-        { "event type id", d => d with { EventTypes = [d.EventTypes[0] with { Id = "-x" }, .. d.EventTypes.Skip(1)] }, "eventTypes[].id" },
-        { "event type name", d => d with { EventTypes = [d.EventTypes[0] with { DisplayName = string.Empty }, .. d.EventTypes.Skip(1)] }, "eventTypes[].displayName" },
-        { "event type category", d => d with { EventTypes = [d.EventTypes[0] with { Category = (LogEventCategory)99 }, .. d.EventTypes.Skip(1)] }, "category" },
-        { "event type severity", d => d with { EventTypes = [d.EventTypes[0] with { Severity = (DiagnosticSeverity)99 }, .. d.EventTypes.Skip(1)] }, "severity" },
-        { "rules null", d => d with { Rules = null! }, "rules is required" },
-        { "rule null entry", d => d with { Rules = [null!] }, "null entries" },
-        { "rule duplicate", d => d with { Rules = [.. d.Rules, d.Rules[0]] }, "Duplicate rule id" },
-        { "rule id", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Id = "frame lost" }), "rules[].id" },
-        { "rule event type unknown", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { EventType = "touch.none" }), "unknown event type" },
-        { "rule severity", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Severity = (DiagnosticSeverity)99 }), "unknown severity" },
-        { "rule without contains and regex", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = null, Pattern = null, Captures = null, Message = "Lost" }), "at least one of contains and regex" },
-        { "rule empty keyword", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = [string.Empty] }), "cannot be empty" },
-        { "rule duplicate keyword", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = ["a", "a"] }), "twice" },
-        { "rule keyword line break", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = ["a\nb"] }), "line break" },
-        { "rule keyword too long", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = [new string('k', 1025)] }), "longer than" },
-        { "rule captures without regex", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = null, Message = "Lost" }), "captures but no regex" },
-        { "rule regex lookahead", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<seq>a)(?=b)" }), "non-backtracking" },
-        { "rule regex lookbehind", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<=a)(?<seq>b)" }), "non-backtracking" },
-        { "rule regex backreference", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<seq>a)\\k<seq>" }), "non-backtracking" },
-        { "rule regex atomic group", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?>(?<seq>a))" }), "non-backtracking" },
-        { "rule regex syntax", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<seq>a" }), "non-backtracking" },
-        { "rule regex empty", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = string.Empty }), "cannot be empty" },
-        { "rule capture null entry", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [null!] }), "null entries" },
-        { "rule capture not a group", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("other", LogCaptureType.Integer)] }), "not a named group" },
-        { "rule capture numbered group", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("1", LogCaptureType.Integer)], Message = "Lost" }), "capture name" },
-        { "rule capture duplicate", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("seq", LogCaptureType.Integer), new("seq", LogCaptureType.String)] }), "twice" },
-        { "rule capture type", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("seq", (LogCaptureType)99)] }), "unknown type" },
-        { "rule capture map on integer", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("seq", LogCaptureType.Integer, new Dictionary<string, string> { ["1"] = "one" })] }), "only enum captures" },
-        { "rule enum without map", d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum)] }), "non-empty map" },
-        { "rule enum with empty map", d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string>())] }), "non-empty map" },
-        { "rule enum empty key", d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { [string.Empty] = "x" })] }), "map key" },
-        { "rule enum empty label", d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { ["0x01"] = string.Empty })] }), "map label" },
-        { "rule message empty", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = string.Empty }), "message" },
-        { "rule message unknown placeholder", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost {other}" }), "placeholder" },
-        { "rule message empty placeholder", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost {}" }), "placeholder" },
-        { "rule message open brace", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost {seq" }), "closing" },
-        { "rule message close brace", d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost }" }), "opening" },
-        { "tests null", d => d with { Tests = null! }, "tests is required" },
-        { "test null entry", d => d with { Tests = [null!] }, "null entries" },
-        { "test duplicate name", d => d with { Tests = [.. d.Tests, d.Tests[0]] }, "Duplicate test name" },
-        { "test name", d => d with { Tests = [d.Tests[0] with { Name = "bad name" }] }, "tests[].name" },
-        { "test line break", d => d with { Tests = [d.Tests[0] with { Line = "a\nb" }] }, "line break" },
-        { "test line too long", d => d with { Tests = [d.Tests[0] with { Line = new string('x', 8193) }] }, "longer than 8192" },
-        { "test expect null", d => d with { Tests = [d.Tests[0] with { Expect = null! }] }, "expect is required" },
-        { "test expect null entry", d => d with { Tests = [d.Tests[0] with { Expect = [null!] }] }, "null entries" },
-        { "test unknown rule", d => d with { Tests = [d.Tests[0] with { Expect = [new("missing")] }] }, "unknown rule" },
-        { "test duplicate rule", d => d with { Tests = [d.Tests[0] with { Expect = [new("esd-detected"), new("esd-detected")] }] }, "twice" },
-        { "test unknown field", d => d with { Tests = [d.Tests[0] with { Expect = [new("esd-detected", new Dictionary<string, string> { ["other"] = "1" })] }] }, "does not capture" },
-        { "test field line break", d => d with { Tests = [d.Tests[0] with { Expect = [new("esd-detected", new Dictionary<string, string> { ["cnt"] = "1\n" })] }] }, "line break" },
+        ["schema version"] = (d => d with { SchemaVersion = 2 }, "schemaVersion"),
+        ["file kind"] = (d => d with { FileKind = "registerProfile" }, "fileKind"),
+        ["profile id empty"] = (d => d with { ProfileId = string.Empty }, "profileId"),
+        ["profile id space"] = (d => d with { ProfileId = "bad id" }, "profileId"),
+        ["profile id trailing line break"] = (d => d with { ProfileId = "acme\n" }, "profileId"),
+        ["profile id non-ascii"] = (d => d with { ProfileId = "acme-é" }, "profileId"),
+        ["profile id too long"] = (d => d with { ProfileId = new string('a', 129) }, "profileId"),
+        ["display name padded"] = (d => d with { DisplayName = " Acme" }, "displayName"),
+        ["display name control"] = (d => d with { DisplayName = "Ac\tme" }, "displayName"),
+        ["line encoding"] = (d => d with { LineEncoding = "utf-16" }, "lineEncoding"),
+        ["scope null"] = (d => d with { Scope = null! }, "scope is required"),
+        ["scope too long"] = (d => d with { Scope = d.Scope with { Note = new string('n', 1025) } }, "scope.note"),
+        ["scope empty label"] = (d => d with { Scope = d.Scope with { Project = string.Empty } }, "scope.project"),
+        ["timestamp without ts group"] = (d => d with { Timestamp = d.Timestamp! with { Pattern = "^(?<time>[0-9.]+)" } }, "group named 'ts'"),
+        ["timestamp bad pattern"] = (d => d with { Timestamp = d.Timestamp! with { Pattern = "^(?<ts>" } }, "timestamp.regex"),
+        ["timestamp format"] = (d => d with { Timestamp = d.Timestamp! with { Format = (LogTimestampFormat)99 } }, "timestamp.format"),
+        ["event types null"] = (d => d with { EventTypes = null! }, "eventTypes is required"),
+        ["event type null entry"] = (d => d with { EventTypes = [null!] }, "null entries"),
+        ["event type duplicate"] = (d => d with { EventTypes = [.. d.EventTypes, d.EventTypes[0]] }, "Duplicate event type"),
+        ["event type id"] = (d => d with { EventTypes = [d.EventTypes[0] with { Id = "-x" }, .. d.EventTypes.Skip(1)] }, "eventTypes[].id"),
+        ["event type name"] = (d => d with { EventTypes = [d.EventTypes[0] with { DisplayName = string.Empty }, .. d.EventTypes.Skip(1)] }, "eventTypes[].displayName"),
+        ["event type category"] = (d => d with { EventTypes = [d.EventTypes[0] with { Category = (LogEventCategory)99 }, .. d.EventTypes.Skip(1)] }, "category"),
+        ["event type severity"] = (d => d with { EventTypes = [d.EventTypes[0] with { Severity = (DiagnosticSeverity)99 }, .. d.EventTypes.Skip(1)] }, "severity"),
+        ["rules null"] = (d => d with { Rules = null! }, "rules is required"),
+        ["rule null entry"] = (d => d with { Rules = [null!] }, "null entries"),
+        ["rule duplicate"] = (d => d with { Rules = [.. d.Rules, d.Rules[0]] }, "Duplicate rule id"),
+        ["rule id"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Id = "frame lost" }), "rules[].id"),
+        ["rule event type unknown"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { EventType = "touch.none" }), "unknown event type"),
+        ["rule severity"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Severity = (DiagnosticSeverity)99 }), "unknown severity"),
+        ["rule without contains and regex"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = null, Pattern = null, Captures = null, Message = "Lost" }), "at least one of contains and regex"),
+        ["rule empty keyword"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = [string.Empty] }), "cannot be empty"),
+        ["rule duplicate keyword"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = ["a", "a"] }), "twice"),
+        ["rule keyword line break"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = ["a\nb"] }), "line break"),
+        ["rule keyword too long"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Keywords = [new string('k', 1025)] }), "longer than"),
+        ["rule captures without regex"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = null, Message = "Lost" }), "captures but no regex"),
+        ["rule regex lookahead"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<seq>a)(?=b)" }), "non-backtracking"),
+        ["rule regex lookbehind"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<=a)(?<seq>b)" }), "non-backtracking"),
+        ["rule regex backreference"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<seq>a)\\k<seq>" }), "non-backtracking"),
+        ["rule regex atomic group"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?>(?<seq>a))" }), "non-backtracking"),
+        ["rule regex syntax"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = "(?<seq>a" }), "non-backtracking"),
+        ["rule regex empty"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Pattern = string.Empty }), "cannot be empty"),
+        ["rule capture null entry"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [null!] }), "null entries"),
+        ["rule capture not a group"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("other", LogCaptureType.Integer)] }), "not a named group"),
+        ["rule capture numbered group"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("1", LogCaptureType.Integer)], Message = "Lost" }), "capture name"),
+        ["rule capture duplicate"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("seq", LogCaptureType.Integer), new("seq", LogCaptureType.String)] }), "twice"),
+        ["rule capture type"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("seq", (LogCaptureType)99)] }), "unknown type"),
+        ["rule capture map on integer"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Captures = [new("seq", LogCaptureType.Integer, new Dictionary<string, string> { ["1"] = "one" })] }), "only enum captures"),
+        ["rule enum without map"] = (d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum)] }), "non-empty map"),
+        ["rule enum with empty map"] = (d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string>())] }), "non-empty map"),
+        ["rule enum empty key"] = (d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { [string.Empty] = "x" })] }), "map key"),
+        ["rule enum empty label"] = (d => AcmeRuleFile.WithRule(d, "reset-reason", r => r with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { ["0x01"] = string.Empty })] }), "map label"),
+        ["rule message empty"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = string.Empty }), "message"),
+        ["rule message unknown placeholder"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost {other}" }), "placeholder"),
+        ["rule message empty placeholder"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost {}" }), "placeholder"),
+        ["rule message open brace"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost {seq" }), "closing"),
+        ["rule message close brace"] = (d => AcmeRuleFile.WithRule(d, "frame-lost", r => r with { Message = "Lost }" }), "opening"),
+        ["tests null"] = (d => d with { Tests = null! }, "tests is required"),
+        ["test null entry"] = (d => d with { Tests = [null!] }, "null entries"),
+        ["test duplicate name"] = (d => d with { Tests = [.. d.Tests, d.Tests[0]] }, "Duplicate test name"),
+        ["test name"] = (d => d with { Tests = [d.Tests[0] with { Name = "bad name" }] }, "tests[].name"),
+        ["test line break"] = (d => d with { Tests = [d.Tests[0] with { Line = "a\nb" }] }, "line break"),
+        ["test line too long"] = (d => d with { Tests = [d.Tests[0] with { Line = new string('x', 8193) }] }, "longer than 8192"),
+        ["test expect null"] = (d => d with { Tests = [d.Tests[0] with { Expect = null! }] }, "expect is required"),
+        ["test expect null entry"] = (d => d with { Tests = [d.Tests[0] with { Expect = [null!] }] }, "null entries"),
+        ["test unknown rule"] = (d => d with { Tests = [d.Tests[0] with { Expect = [new("missing")] }] }, "unknown rule"),
+        ["test duplicate rule"] = (d => d with { Tests = [d.Tests[0] with { Expect = [new("esd-detected"), new("esd-detected")] }] }, "twice"),
+        ["test unknown field"] = (d => d with { Tests = [d.Tests[0] with { Expect = [new("esd-detected", new Dictionary<string, string> { ["other"] = "1" })] }] }, "does not capture"),
+        ["test field line break"] = (d => d with { Tests = [d.Tests[0] with { Expect = [new("esd-detected", new Dictionary<string, string> { ["cnt"] = "1\n" })] }] }, "line break"),
     };
+
+    public static TheoryData<string> InvalidDocuments()
+    {
+        var data = new TheoryData<string>();
+        foreach (var name in InvalidDocumentCases.Keys) data.Add(name);
+        return data;
+    }
 
     public static TheoryData<string, string> AcceptedPatterns() => new()
     {
@@ -137,17 +145,14 @@ public sealed class LogRuleValidationTests
 
     [Theory]
     [MemberData(nameof(InvalidDocuments))]
-    public void ValidateRejectsAnInvalidDocument(
-        string name,
-        Func<LogRuleDocumentV1, LogRuleDocumentV1> change,
-        string fragment)
+    public void ValidateRejectsAnInvalidDocument(string name)
     {
+        var (change, fragment) = InvalidDocumentCases[name];
         var document = change(AcmeRuleFile.Create());
 
         var error = Assert.Throws<LogRuleValidationException>(() => LogRuleFile.Validate(document));
 
         Assert.Contains(fragment, error.Message, StringComparison.Ordinal);
-        Assert.False(string.IsNullOrEmpty(name));
     }
 
     [Theory]

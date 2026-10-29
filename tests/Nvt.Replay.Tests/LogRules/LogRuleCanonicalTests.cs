@@ -9,36 +9,44 @@ public sealed class LogRuleCanonicalTests
 {
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
-    public static TheoryData<string, Func<LogRuleDocumentV1, LogRuleDocumentV1>> ContentChanges() => new()
+    // The document type is internal, so a public theory cannot take it. The theory takes the case name.
+    private static readonly Dictionary<string, Func<LogRuleDocumentV1, LogRuleDocumentV1>> ContentChangeCases = new()
     {
-        { "profileId", d => d with { ProfileId = "acme.example.v2" } },
-        { "displayName", d => d with { DisplayName = "Acme Motors example (other)" } },
-        { "scope.carmaker", d => d with { Scope = d.Scope with { Carmaker = "Other" } } },
-        { "scope.project", d => d with { Scope = d.Scope with { Project = "P1" } } },
-        { "scope.platform", d => d with { Scope = d.Scope with { Platform = "other" } } },
-        { "scope.note", d => d with { Scope = d.Scope with { Note = "other" } } },
-        { "timestamp.removed", d => d with { Timestamp = null } },
-        { "timestamp.regex", d => d with { Timestamp = d.Timestamp! with { Pattern = "^(?<ts>[0-9.]+) " } } },
-        { "timestamp.format", d => d with { Timestamp = d.Timestamp! with { Format = LogTimestampFormat.EpochSeconds } } },
-        { "eventType.added", d => d with { EventTypes = [.. d.EventTypes, new("touch.extra", "Extra", LogEventCategory.Annotation, DiagnosticSeverity.Info)] } },
-        { "eventType.displayName", d => d with { EventTypes = [d.EventTypes[0] with { DisplayName = "Other" }, .. d.EventTypes.Skip(1)] } },
-        { "eventType.category", d => d with { EventTypes = [d.EventTypes[0] with { Category = LogEventCategory.QaResult }, .. d.EventTypes.Skip(1)] } },
-        { "eventType.severity", d => d with { EventTypes = [d.EventTypes[0] with { Severity = DiagnosticSeverity.Error }, .. d.EventTypes.Skip(1)] } },
-        { "rule.id", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Id = "frame-lost2" }) },
-        { "rule.eventType", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { EventType = "touch.esd" }) },
-        { "rule.message", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Message = "Lost {seq}" }) },
-        { "rule.contains", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Keywords = ["frame lost"] }) },
-        { "rule.ignoreCase", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { IgnoreCase = true }) },
-        { "rule.regex", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Pattern = "frame lost seq=(?<seq>[0-9]+)" }) },
-        { "rule.severity", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Severity = DiagnosticSeverity.Alarm }) },
-        { "capture.type", d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Captures = [new("seq", LogCaptureType.String)] }) },
-        { "capture.mapLabel", d => AcmeRuleFile.WithRule(d, "reset-reason", rule => rule with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { ["0x01"] = "power", ["0x04"] = "watchdog" })] }) },
-        { "capture.mapKey", d => AcmeRuleFile.WithRule(d, "reset-reason", rule => rule with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { ["0x02"] = "power-on", ["0x04"] = "watchdog" })] }) },
-        { "test.name", d => d with { Tests = [d.Tests[0] with { Name = "other-name" }, d.Tests[1]] } },
-        { "test.line", d => d with { Tests = [d.Tests[0] with { Line = "other line" }, d.Tests[1]] } },
-        { "test.expectRule", d => d with { Tests = [d.Tests[0], d.Tests[1] with { Expect = [new("esd-detected")] }] } },
-        { "test.expectField", d => d with { Tests = [d.Tests[0], d.Tests[1] with { Expect = [new("esd-detected", new Dictionary<string, string> { ["cnt"] = "4" })] }] } },
+        ["profileId"] = d => d with { ProfileId = "acme.example.v2" },
+        ["displayName"] = d => d with { DisplayName = "Acme Motors example (other)" },
+        ["scope.carmaker"] = d => d with { Scope = d.Scope with { Carmaker = "Other" } },
+        ["scope.project"] = d => d with { Scope = d.Scope with { Project = "P1" } },
+        ["scope.platform"] = d => d with { Scope = d.Scope with { Platform = "other" } },
+        ["scope.note"] = d => d with { Scope = d.Scope with { Note = "other" } },
+        ["timestamp.removed"] = d => d with { Timestamp = null },
+        ["timestamp.regex"] = d => d with { Timestamp = d.Timestamp! with { Pattern = "^(?<ts>[0-9.]+) " } },
+        ["timestamp.format"] = d => d with { Timestamp = d.Timestamp! with { Format = LogTimestampFormat.EpochSeconds } },
+        ["eventType.added"] = d => d with { EventTypes = [.. d.EventTypes, new("touch.extra", "Extra", LogEventCategory.Annotation, DiagnosticSeverity.Info)] },
+        ["eventType.displayName"] = d => d with { EventTypes = [d.EventTypes[0] with { DisplayName = "Other" }, .. d.EventTypes.Skip(1)] },
+        ["eventType.category"] = d => d with { EventTypes = [d.EventTypes[0] with { Category = LogEventCategory.QaResult }, .. d.EventTypes.Skip(1)] },
+        ["eventType.severity"] = d => d with { EventTypes = [d.EventTypes[0] with { Severity = DiagnosticSeverity.Error }, .. d.EventTypes.Skip(1)] },
+        ["rule.id"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Id = "frame-lost2" }),
+        ["rule.eventType"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { EventType = "touch.esd" }),
+        ["rule.message"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Message = "Lost {seq}" }),
+        ["rule.contains"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Keywords = ["frame lost"] }),
+        ["rule.ignoreCase"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { IgnoreCase = true }),
+        ["rule.regex"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Pattern = "frame lost seq=(?<seq>[0-9]+)" }),
+        ["rule.severity"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Severity = DiagnosticSeverity.Alarm }),
+        ["capture.type"] = d => AcmeRuleFile.WithRule(d, "frame-lost", rule => rule with { Captures = [new("seq", LogCaptureType.String)] }),
+        ["capture.mapLabel"] = d => AcmeRuleFile.WithRule(d, "reset-reason", rule => rule with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { ["0x01"] = "power", ["0x04"] = "watchdog" })] }),
+        ["capture.mapKey"] = d => AcmeRuleFile.WithRule(d, "reset-reason", rule => rule with { Captures = [new("code", LogCaptureType.Enum, new Dictionary<string, string> { ["0x02"] = "power-on", ["0x04"] = "watchdog" })] }),
+        ["test.name"] = d => d with { Tests = [d.Tests[0] with { Name = "other-name" }, d.Tests[1]] },
+        ["test.line"] = d => d with { Tests = [d.Tests[0] with { Line = "other line" }, d.Tests[1]] },
+        ["test.expectRule"] = d => d with { Tests = [d.Tests[0], d.Tests[1] with { Expect = [new("esd-detected")] }] },
+        ["test.expectField"] = d => d with { Tests = [d.Tests[0], d.Tests[1] with { Expect = [new("esd-detected", new Dictionary<string, string> { ["cnt"] = "4" })] }] },
     };
+
+    public static TheoryData<string> ContentChanges()
+    {
+        var data = new TheoryData<string>();
+        foreach (var name in ContentChangeCases.Keys) data.Add(name);
+        return data;
+    }
 
     [Fact]
     public void SerializeCanonicalMatchesTheGoldenText()
@@ -120,12 +128,11 @@ public sealed class LogRuleCanonicalTests
 
     [Theory]
     [MemberData(nameof(ContentChanges))]
-    public void EveryContentFieldChangesTheHash(string field, Func<LogRuleDocumentV1, LogRuleDocumentV1> change)
+    public void EveryContentFieldChangesTheHash(string field)
     {
-        var changed = change(AcmeRuleFile.Unsealed());
+        var changed = ContentChangeCases[field](AcmeRuleFile.Unsealed());
 
         Assert.NotEqual(AcmeRuleFile.ContentSha256, LogRuleFile.ComputeContentSha256(changed));
-        Assert.False(string.IsNullOrEmpty(field));
     }
 
     [Fact]

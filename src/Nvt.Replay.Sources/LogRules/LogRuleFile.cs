@@ -138,7 +138,6 @@ internal static class LogRuleFile
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
             AllowDuplicateProperties = false,
             RespectNullableAnnotations = true,
-            RespectRequiredProperties = true,
             MaxDepth = 32,
         };
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
