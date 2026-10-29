@@ -1,16 +1,18 @@
 # User value and log rule files (per-carmaker adaptation)
 
 Status: Proposed design draft. No product code, no accepted contract.
-Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR. If the
-owner accepts the direction, the decisions move into an ADR (see
+Target version: 1.1.0 or later, not 1.0.0. This file is not an ADR. The
+decisions move into [ADR 0006](adr/0006-log-rule-files.md), which is still a
+draft until the owner approves it (see
 [decisions for the owner](#decisions-for-the-owner)).
 
 The file has three parts:
 
 1. "User value": the whole job from a customer log package to an answer, and
    where NFU helps in each step.
-2. "Decisions for the owner": four questions. Each is a pending owner decision
-   with a recommendation.
+2. "Decisions for the owner": five questions. On 2026-10-29 the owner answered
+   Decisions 1 and 4 and the clock part of Decision 3. Every other question
+   is a pending owner decision with a recommendation.
 3. The design of log rule files. They act in two of the seven steps: finding
    the cause and accumulating experience.
 
@@ -111,8 +113,9 @@ mentally.
 
 With a rule file: the engineer selects the Acme rule file for the log. The log
 shows `esd detected` and `reset` events. The engineer aligns one log event to
-one capture frame (manual alignment is a pending owner decision, see
-Decision 3 and "Time"). The events then appear next to the ghost point. The
+one capture frame, which sets the offset of the log clock (the owner asked for
+a configurable time zone and offset, see Decision 3 and "Time"). The events
+then appear next to the ghost point. The
 engineer exports that range with the log events. The rule file keeps the
 signature, so the next package with the same lines shows the same events
 without manual reading.
@@ -124,28 +127,35 @@ every [Assumption] above stays open.
 
 ## Decisions for the owner
 
-Every decision below is a **pending owner decision**. A recommendation is what
-this draft follows. It is not an accepted decision, and no reply from the owner
-accepts it. Until the owner answers, each choice stays open and the text of the
-design that depends on it says so.
+Each decision below shows its status. A recommendation is what this draft
+follows. It is not an accepted decision, and no silence from the owner accepts
+it. A decision that has an owner answer says so, with the date and the
+owner's words. PC-Commander relayed those words from the owner's chat. The
+answers become part of [ADR 0006](adr/0006-log-rule-files.md) only when the
+owner approves that pull request on GitHub (files under `docs/adr/` are
+owner-gated). Until then the ADR is a draft.
 
-Twelve smaller questions from the earlier draft are folded into these four.
-Items that need no decision are in
-[dependencies and follow-ups](#dependencies-and-follow-ups).
+Twelve smaller questions from the earlier draft are folded into the first
+four. The owner's answer to Decision 1 added a fifth. Items that need no
+decision are in [dependencies and follow-ups](#dependencies-and-follow-ups).
 
 ### Decision 1: Direction and document form
 
-Status: pending owner decision.
+Status: answered by the owner on 2026-10-29 ("Q7 ok"), as recommended. The
+owner added that formats may also differ by project (see Decision 5). The
+ADR still needs the owner's approval on GitHub.
 
 Question: Is a data file per carmaker (a log rule file) the way NFU adapts to
 different log formats?
 
-- Recommendation: yes. A rule file holds keywords and .NET non-backtracking
+- Recommendation (answered: ok): yes. A rule file holds keywords and .NET non-backtracking
   regular expressions. It holds no code. After the owner accepts, a new ADR
   records the decision and reuses the identity rules of ADR 0005 by reference.
   Files under `docs/adr/` are owner-gated.
-- The recommendation also covers three details of this draft, which stay
-  pending with it: the regular expression dialect is the .NET non-backtracking
+- The recommendation also covers three details of this draft. The owner
+  answered Q7 ("ok") for the whole recommendation. The ADR itself still waits
+  for the owner's formal approval on GitHub, so the details below are not yet
+  accepted contract text: the regular expression dialect is the .NET non-backtracking
   subset (no lookarounds, no backreferences, the editor lists the limits); a
   failed typed-capture conversion creates the event with an invalid field and a
   warning, so the evidence stays visible; the rule file is a new ADR, not an
@@ -173,23 +183,33 @@ wrote.
 
 ### Decision 3: Time and the Review Queue in version 1
 
-Status: pending owner decision.
+Status: the clock part is answered by the owner on 2026-10-29. The Review
+Queue part is a pending owner decision.
+
+Owner answer, clock (2026-10-29): "Q9 時鐘要可以設定時區和 offset". The time
+zone and the offset of the log clock must both be configurable. The answer
+says nothing about drift correction or about how the offset is set. Those
+two points are not decided. The recommendation below stays a recommendation.
 
 Question: How far does version 1 go on aligning the log clock with the capture
 clock, and do log events join the Review Queue?
 
-- Recommendation: the engineer aligns one log event to one capture frame by
-  hand (one-point offset, no drift correction). Log events do not join the
-  Review Queue in version 1. Revisit both after the owner has seen real log
-  events.
-- Alternative: two-point alignment (offset and drift). It costs more work and
-  needs a real log that drifts.
-- Unblocks: the "Time" section and the walk-through in "User value". Both
-  stay marked as pending until the owner answers.
+- Clock, as designed after the owner's answer: the operator sets a time zone
+  and an offset for each applied log. This draft recommends one-point
+  alignment (pick one log event and one capture frame) as one way to set the
+  offset, and recommends no drift correction in version 1. Both are
+  recommendations, not owner decisions. The details are in "Time" and stay a
+  proposal until the ADR is approved.
+- Review Queue, recommendation: log events do not join the Review Queue in
+  version 1. Revisit it after the owner has seen real log events.
+- Alternative for the clock: two-point alignment (offset and drift). It costs
+  more work and needs a real log that drifts.
+- Unblocks: the "Time" section and the walk-through in "User value".
 
 ### Decision 4: Shared contracts with the register profile work
 
-Status: pending owner decision.
+Status: answered by the owner on 2026-10-29 ("Q10 ok"), as recommended. The
+ADR still needs the owner's approval on GitHub.
 
 Question: How do log rule files share contracts with the custom register
 profile import?
@@ -200,11 +220,38 @@ profile import?
   This draft sees no gain in two.
 - Canonical hash input. The [register profile schema](register-profile-schema.md)
   prose and its code differ on the final newline (see "Identity and canonical
-  form"). Recommendation: rule files follow the code, and a separate small
-  change corrects the register profile prose. This draft does not change that
-  document and does not treat the question as settled.
+  form"). The owner's answer to Q10 ("Q10 ok") chose the recommendation for
+  the rule file: rule files follow the code. Correcting the register profile
+  prose stays separate work. This draft does not change that document.
 - Unblocks: the sidecar fields in "Relation to existing events", and the hash
   rule in "Identity and canonical form".
+
+### Decision 5: Carmaker and project scope
+
+Status: pending owner decision. It comes from the owner's answer to Decision 1
+on 2026-10-29: "另外車廠可能也有不同 可能需要 by 專案". Even within one carmaker
+the log format may differ by project. This draft does not treat any selection
+rule as decided.
+
+Question: How does a rule file get its carmaker and project scope, and how is
+one rule file chosen for a capture?
+
+- Option A, recommendation: one independent rule file per carmaker and
+  project. The `scope` metadata names the carmaker and the project. There is
+  no inheritance. Two projects that share most rules use two files, one of
+  them a copy. This keeps identity simple: `(profileId, contentSha256)` names
+  exactly the rules that ran.
+- Option B: a project file that extends a carmaker file. It names the base by
+  identity and adds, replaces or disables rules by rule `id`. The identity of
+  the result must cover both files, and the merge result must be previewable.
+  This needs its own schema design, so it is a later schema version.
+- Selection in both options: the operator chooses the rule file explicitly for
+  each log. The application never picks a rule file from a log's content, its
+  file name or a project name. The choice and its identity are stored in the
+  sidecar. A project file in the sense of NFU's own project settings may
+  remember the last choice for convenience, and the sidecar stays the record.
+- Unblocks: the `scope` field of the format, the picker in the user interface,
+  and whether the schema needs an `extends` field in version 1.
 
 ## Log rule files: purpose
 
@@ -261,7 +308,7 @@ second identity scheme.
 | `fileKind` | Exactly `logRules`. A register profile file has no such field, so each loader rejects the other kind with a clear error. |
 | `profileId` | Stable ASCII ID (`A-Z`, `a-z`, `0-9`, `.`, `_`, `-`), same pattern as a register profile. |
 | `displayName` | Operator-facing name. |
-| `scope` | Opaque metadata: carmaker label, platform and firmware note. Stored and shown. Never executed or compared. |
+| `scope` | Opaque metadata: carmaker label, project label, platform and firmware note. Stored and shown. Never executed or compared. The project label comes from the owner's answer to Decision 1. How a rule file is chosen for a project is Decision 5. |
 | `lineEncoding` | `utf-8` in version 1. |
 | `timestamp` | Optional. How to read the time from a line (see below). |
 | `eventTypes` | The event types the file may create. |
@@ -303,9 +350,9 @@ Existing ambiguity, not decided here: the
 serialization has "one final newline" and that this gives the same content
 identity. The code (`NvtRegisterProfileFile.ComputeContentSha256`) hashes the
 compact bytes without that newline, while `SerializeCanonical` writes indented
-JSON plus a final LF. This draft proposes to follow the code for rule files. That is a
-recommendation and a pending owner decision (Decision 4). Whether the
-register profile prose should be corrected is a separate change.
+JSON plus a final LF. Rule files follow the code. The owner accepted that recommendation on
+2026-10-29 (Decision 4). Correcting the register profile prose is a separate
+small change.
 
 The hash proves integrity. It does not prove that the rules are correct. The
 hash covers `fileKind`, so a rule file and a register profile never have the
@@ -446,8 +493,9 @@ lines. A cancelled run writes no output.
 
 `format` is one of a closed list: `secondsSinceBoot`, `epochSeconds`,
 `isoOffset`, `timeOfDay`. The list grows only through a schema version. The
-value is stored as the time of the log clock. A line without a readable time
-still creates events. Such an event has no log time and is shown in log order.
+value is stored as the time of the log clock. The `timestamp` object may also
+carry an optional `timeZone` default (proposal, see "Time"). A line without a
+readable time still creates events. Such an event has no log time and is shown in log order.
 
 The accepted text of each format is fixed and culture-invariant:
 
@@ -457,14 +505,15 @@ The accepted text of each format is fixed and culture-invariant:
   without an offset is a conversion failure.
 - `timeOfDay`: `HH:mm:ss` with optional fraction. It carries no date and no
   time zone. The application never applies the local date or the local time
-  zone of the PC.
+  zone of the PC. Only a time zone that the operator configured applies (see
+  "Time").
 
 A time that does not fit its format follows the conversion failure rule in
 [Typed captures](#typed-captures): the event is created with no log time and a
 warning.
 
 The log clock is not the capture clock. The rule file does not align them.
-Whether the application offers any alignment is a pending owner decision (see
+The operator sets a time zone and an offset for each applied log (see
 [Time](#time) and [Decision 3](#decision-3-time-and-the-review-queue-in-version-1)).
 
 ## Evaluation
@@ -618,27 +667,48 @@ display alias. Storage, sidecars and exports use the full key.
 The log clock and the capture clock are different clocks. A boot-relative time
 such as `12.345678` has no fixed relation to the time in a capture.
 Multi-clock alignment is a deferred capability in the
-[product specification](product-spec.md). **Whether and how to align is a
-pending owner decision** (Decision 3). The rule file format does not depend on
-it. This section only states what holds without any decision, and then the
-smallest step this draft proposes.
+[product specification](product-spec.md). On 2026-10-29 the owner decided that
+the time zone and the offset of the log clock must both be configurable
+(Decision 3). This section turns that into a design. The rule file format does
+not depend on it, and the details below are a proposal until
+[ADR 0006](adr/0006-log-rule-files.md) is approved.
 
-Holds without any decision:
+Holds without any further decision:
 
-- No automatic alignment. The application never guesses an offset.
+- No automatic alignment. The application never guesses a time zone or an
+  offset.
 - Log events are always listed in log order in a log panel, with their log
   time.
 - Events with no readable log time are never drawn on the timeline.
 
-Proposal, pending owner decision (one-point manual alignment):
+Proposal (configurable time zone and offset):
 
-- An event is drawn on the timeline only after the operator sets an offset.
-  The operator picks one log event and one capture frame and states that they
-  are the same moment. The offset and the operator note go into the sidecar.
-  Alignment lives in the sidecar, as ADR 0003 says.
-- If the owner chooses two-point alignment or no alignment, only this list
-  changes. The user-value walk-through that places events next to the ghost
-  point depends on this proposal.
+- Time zone. The operator can set a time zone for the applied log. It applies
+  to log times that are wall-clock times: `timeOfDay`, and `isoOffset` values
+  are already exact and ignore it. `epochSeconds` is UTC and ignores it.
+  `secondsSinceBoot` has no wall clock and ignores it. A `timeOfDay` value has
+  no date, so the time zone only shifts its time of day and never invents a
+  date.
+- A rule file may carry a default time zone in the `timestamp` object, for
+  example for a carmaker whose logs always use one zone. The operator's choice
+  for an applied log overrides it. The default is part of the rule file and its
+  hash. The override is part of the sidecar.
+- A time zone is written as an IANA zone name or a fixed offset such as
+  `+09:00`. The sidecar stores the name and also the UTC offset that applied at
+  the moment the operator chose it, because the zone database can differ
+  between machines.
+- Offset. The operator sets a signed offset between the log clock and the
+  capture clock, in milliseconds. One way to set it is to pick one log event and
+  one capture frame and state that they are the same moment (one-point
+  alignment). The operator can also type the offset.
+- Recommendation: no drift correction in version 1. The owner has not decided
+  this. Q9 did not mention drift.
+- An event is drawn on the timeline only after an offset is set. The time zone,
+  the offset and the operator note go into the sidecar, as ADR 0003 says that
+  alignment lives in the sidecar.
+- The time zone and the offset change where an event is drawn. They do not
+  change the event key, because the key uses the byte offset of the line and not
+  the time.
 
 ### Sidecar and exports
 
@@ -648,9 +718,9 @@ Proposal, pending owner decision (one-point manual alignment):
   already fails safely. ADR 0005 also needs a sidecar version for custom
   register profiles. Both changes should share one version bump.
 - Migration of existing reviews. A sidecar of the current schema version 1
-  opens in the newer application with no rule binding and no alignment. The
-  application invents neither. A binding or an alignment exists only after an
-  explicit operator action. The application does not rewrite the opened file.
+  opens in the newer application with no rule binding, no time zone and no
+  offset. The application invents none of them. A binding, a time zone or an
+  offset exists only after an explicit operator action. The application does not rewrite the opened file.
   Saving writes the new schema version, and the operator is told that older
   applications can no longer open the saved file.
 - Migration of rule files. A rule file with a newer `schemaVersion` is rejected
